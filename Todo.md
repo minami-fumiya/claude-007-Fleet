@@ -6,31 +6,24 @@
 ## Sprint 0: 環境・インフラ整備
 
 ### GitHub セットアップ
-- [ ] `git init` でローカルリポジトリ初期化
-- [ ] `.gitignore` 作成 (node_modules / dist / .env / *.local)
-- [ ] GitHub に新規リポジトリ作成 (名前: `claude-007-Fleet`)
-- [ ] `git remote add origin https://github.com/<user>/claude-007-Fleet.git`
-- [ ] ブランチ戦略の設定
-  - [ ] `main` ブランチ = 本番 (Vercel 本番デプロイ)
-  - [ ] `develop` ブランチ = 統合 (Vercel プレビューデプロイ)
-  - [ ] feature ブランチ命名規則: `feature/sprint1-base-ship`
-- [ ] GitHub Settings → Branches → `main` を保護 (PR 必須・直接 push 禁止)
-- [ ] `.github/pull_request_template.md` 作成 (Sprint / 変更内容 / テスト確認)
-- [ ] `.github/workflows/ci.yml` 作成
+- [x] `git init` でローカルリポジトリ初期化
+- [x] `.gitignore` 作成 (node_modules / dist / .env / *.local)
+- [x] GitHub に新規リポジトリ作成 (名前: `claude-007-Fleet`)
+- [x] `git remote add origin https://github.com/minami-fumiya/claude-007-Fleet.git`
+- [x] ブランチ戦略の設定
+  - [x] `main` ブランチ = 本番 (Vercel 本番デプロイ)
+  - [x] `develop` ブランチ = 統合 (Vercel プレビューデプロイ)
+  - [x] feature ブランチ命名規則: `feature/sprint1-base-ship`
+- [x] GitHub Settings → Branches → `main` を保護 (PR 必須・直接 push 禁止)
+- [x] `.github/pull_request_template.md` 作成 (Sprint / 変更内容 / テスト確認)
+- [x] `.github/workflows/ci.yml` 作成
   - Trigger: PR → develop、develop → main
   - Jobs: `npm run typecheck` + `npm run test`
 
 ### Vercel セットアップ
 - [ ] vercel.com でプロジェクト作成 (名前: `claude-007-fleet`)
 - [ ] GitHub リポジトリ `claude-007-Fleet` を Vercel に連携
-- [ ] `vercel.json` 作成
-  ```json
-  {
-    "buildCommand": "npm run build",
-    "outputDirectory": "dist",
-    "installCommand": "npm install"
-  }
-  ```
+- [ ] `vercel.json` 作成 ✅ (ファイル作成済み)
 - [ ] Vercel → Settings → Git
   - Production Branch: `main`
   - Preview Branches: `develop` + `feature/**`
@@ -38,26 +31,26 @@
 - [ ] (任意) カスタムドメイン設定
 
 ### プロジェクト基盤ファイル
-- [ ] `package.json` 作成
+- [x] `package.json` 作成
   - 依存: `phaser@^3.88`
   - 開発: `typescript@^5` / `vite@^6` / `vitest@^3` / `@types/node` / `eslint`
   - scripts: `dev` / `build` / `preview` / `test` / `test:watch` / `typecheck` / `lint`
-- [ ] `tsconfig.json` 作成 (target: ES2022 / strict: true / paths: `@/*` → `src/*`)
-- [ ] `vite.config.ts` 作成 (alias: `@`→`/src` / phaser を別チャンクに分割)
-- [ ] `vitest.config.ts` 作成 (environment: jsdom / globals: true)
-- [ ] `.eslintrc.json` 作成 (TypeScript ESLint / no-explicit-any: error)
-- [ ] `index.html` 作成 (`<script type="module" src="/src/main.ts">`)
-- [ ] `CLAUDE.md` 作成 (プロジェクト概要・コマンド・仕様書読み順・規約)
+- [x] `tsconfig.json` 作成 (target: ES2022 / strict: true / paths: `@/*` → `src/*`)
+- [x] `vite.config.ts` 作成 (alias: `@`→`/src` / phaser を別チャンクに分割)
+- [x] `vitest.config.ts` 作成 (environment: jsdom / globals: true)
+- [x] `.eslintrc.json` 作成 (TypeScript ESLint / no-explicit-any: error)
+- [x] `index.html` 作成 (`<script type="module" src="/src/main.ts">`)
+- [x] `CLAUDE.md` 作成 (プロジェクト概要・コマンド・仕様書読み順・規約)
 
 ### 仕様書初期セット
-- [ ] `docs/specs/GDD.md` (ゲーム概要・コアループ・スコープ定義)
-- [ ] `docs/specs/ROADMAP.md` (Phase 1-4 マイルストーン)
-- [ ] `docs/specs/GLOSSARY.md` (日英用語集)
-- [ ] `docs/specs/systems/combat.md` (ダメージ式・武器種別テーブル)
-- [ ] `docs/specs/ships/_template.md` (艦船データ記述テンプレート)
-- [ ] `docs/specs/sprints/backlog.md` (未割り当てタスク一覧)
-- [ ] `docs/specs/sprints/current.md` (Sprint 1 計画)
-- [ ] 初回 commit `chore: initial project setup` → `develop` push
+- [x] `docs/specs/GDD.md` (ゲーム概要・コアループ・スコープ定義)
+- [x] `docs/specs/ROADMAP.md` (Phase 1-4 マイルストーン)
+- [x] `docs/specs/GLOSSARY.md` (日英用語集)
+- [x] `docs/specs/systems/combat.md` (ダメージ式・武器種別テーブル)
+- [x] `docs/specs/ships/_template.md` (艦船データ記述テンプレート)
+- [x] `docs/specs/sprints/backlog.md` (未割り当てタスク一覧)
+- [x] `docs/specs/sprints/current.md` (Sprint 1 計画)
+- [x] 初回 commit `chore: initial project setup` → `develop` push
 - [ ] develop → main への PR 作成・CI パス確認・マージ
 
 ---
