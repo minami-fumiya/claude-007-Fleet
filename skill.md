@@ -49,3 +49,14 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   and must not be committed.
 - Add `.gitattributes` with `* text=auto eol=lf` on Windows to prevent CRLF warnings
   and keep line endings consistent across platforms.
+
+### Sprint 0 — Vercel CLI
+- `vercel --yes` auto-detects `vercel.json` and deploys immediately. The `--name` flag
+  is deprecated; project name is derived from the directory name or `package.json` name.
+- Vercel CLI creates the project and deploys, but GitHub auto-deploy integration requires
+  the Vercel GitHub App to be installed on the repo. This cannot be done via CLI alone —
+  it must be authorized in the Vercel dashboard (Settings → Git → Connect).
+- `vercel --yes` automatically appends `.vercel` to `.gitignore`. Clean up duplicates if
+  `.vercel/` was already present in `.gitignore`.
+- After `vercel --yes`, the deploy URL is `https://<project>.vercel.app` plus a unique
+  preview URL. Use `vercel inspect <url>` to confirm status.

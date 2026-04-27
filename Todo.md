@@ -21,13 +21,13 @@
   - Jobs: `npm run typecheck` + `npm run test`
 
 ### Vercel セットアップ
-- [ ] vercel.com でプロジェクト作成 (名前: `claude-007-fleet`)
-- [ ] GitHub リポジトリ `claude-007-Fleet` を Vercel に連携
-- [ ] `vercel.json` 作成 ✅ (ファイル作成済み)
+- [x] vercel.com でプロジェクト作成 (名前: `claude-007-fleet`) — CLI で自動作成
+- [ ] GitHub リポジトリ `claude-007-Fleet` を Vercel に連携 ← **手動: Vercel Dashboard → Settings → Git**
+- [x] `vercel.json` 作成
 - [ ] Vercel → Settings → Git
   - Production Branch: `main`
   - Preview Branches: `develop` + `feature/**`
-- [ ] 初回デプロイ確認 (空の Phaser 画面が表示されること)
+- [x] 初回デプロイ確認 → https://claude-007-fleet.vercel.app (blank page — Sprint 1 待ち)
 - [ ] (任意) カスタムドメイン設定
 
 ### プロジェクト基盤ファイル
@@ -51,7 +51,7 @@
 - [x] `docs/specs/sprints/backlog.md` (未割り当てタスク一覧)
 - [x] `docs/specs/sprints/current.md` (Sprint 1 計画)
 - [x] 初回 commit `chore: initial project setup` → `develop` push
-- [ ] develop → main への PR 作成・CI パス確認・マージ
+- [x] develop → main への PR 作成・CI パス確認 → PR #1 open (マージ待ち)
 
 ---
 
