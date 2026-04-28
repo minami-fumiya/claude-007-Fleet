@@ -22,12 +22,10 @@
 
 ### Vercel セットアップ
 - [x] vercel.com でプロジェクト作成 (名前: `claude-007-fleet`) — CLI で自動作成
-- [ ] GitHub リポジトリ `claude-007-Fleet` を Vercel に連携 ← **手動: Vercel Dashboard → Settings → Git**
+- [x] GitHub リポジトリ `claude-007-Fleet` を Vercel に連携 (Vercel GitHub App)
 - [x] `vercel.json` 作成
-- [ ] Vercel → Settings → Git
-  - Production Branch: `main`
-  - Preview Branches: `develop` + `feature/**`
-- [x] 初回デプロイ確認 → https://claude-007-fleet.vercel.app (blank page — Sprint 1 待ち)
+- [x] Vercel → Settings → Git — Production Branch: `main` (自動デプロイ確認済み)
+- [x] 初回デプロイ確認 → https://claude-007-fleet.vercel.app ✅ (main push で自動デプロイ)
 - [ ] (任意) カスタムドメイン設定
 
 ### プロジェクト基盤ファイル
@@ -51,7 +49,7 @@
 - [x] `docs/specs/sprints/backlog.md` (未割り当てタスク一覧)
 - [x] `docs/specs/sprints/current.md` (Sprint 1 計画)
 - [x] 初回 commit `chore: initial project setup` → `develop` push
-- [x] develop → main への PR 作成・CI パス確認 → PR #1 open (マージ待ち)
+- [x] develop → main への PR 作成・CI パス確認・マージ ✅ (PR #1 merged)
 
 ---
 
