@@ -106,8 +106,8 @@
 
 #### Sprint 1 完了処理
 - [x] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint1]` タグ記入
-- [ ] feature/sprint1-* → develop PR → CI パス → マージ
-- [ ] Vercel Preview URL で動作確認
+- [x] feature/sprint1-* → develop PR → CI パス → マージ (PR #2 ✅)
+- [x] Vercel Preview URL で動作確認 ✅
 
 ---
 
