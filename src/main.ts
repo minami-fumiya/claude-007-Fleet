@@ -1,2 +1,4 @@
-// Sprint 1 entry point: new Phaser.Game(GameConfig)
-export {};
+import Phaser from 'phaser';
+import { GameConfig } from './config/GameConfig';
+
+new Phaser.Game(GameConfig);

@@ -58,54 +58,54 @@
 ### Sprint 1: 型定義・シーン基盤・大和1隻
 
 #### 型定義 (src/types/)
-- [ ] `src/types/Nation.ts` — `enum Nation { IJN, USN, KM, RN }`
-- [ ] `src/types/ShipClass.ts` — `enum ShipClass { Battleship, Cruiser, Destroyer, Carrier, Submarine }`
-- [ ] `src/types/Ship.ts` — `IShipData` (JSON 構造) / `IShipStats` (実行時ステータス)
-- [ ] `src/types/Weapon.ts` — `IWeaponData` / `WeaponType` enum
-- [ ] `src/types/Fleet.ts` — `IFleet` / `IFleetSlot`
-- [ ] `src/types/Scene.ts` — シーン間受け渡しデータ型
+- [x] `src/types/Nation.ts` — `enum Nation { IJN, USN, KM, RN }`
+- [x] `src/types/ShipClass.ts` — `enum ShipClass { Battleship, Cruiser, Destroyer, Carrier, Submarine }`
+- [x] `src/types/Ship.ts` — `IShipData` (JSON 構造) / `IShipStats` (実行時ステータス)
+- [x] `src/types/Weapon.ts` — `IWeaponData` / `WeaponType` enum
+- [x] `src/types/Fleet.ts` — `IFleet` / `IFleetSlot`
+- [x] `src/types/Scene.ts` — シーン間受け渡しデータ型
 
 #### 設定・定数 (src/config/)
-- [ ] `src/config/GameConstants.ts` — `CANVAS_W=1280` / `CANVAS_H=720` / レイヤー深度定数
-- [ ] `src/config/SceneKeys.ts` — `const SceneKeys = { BOOT, PRELOAD, MAIN_MENU, ... } as const`
-- [ ] `src/config/GameConfig.ts` — `Phaser.Types.Core.GameConfig` オブジェクト
+- [x] `src/config/GameConstants.ts` — `CANVAS_W=1280` / `CANVAS_H=720` / レイヤー深度定数
+- [x] `src/config/SceneKeys.ts` — `const SceneKeys = { BOOT, PRELOAD, MAIN_MENU, ... } as const`
+- [x] `src/config/GameConfig.ts` — `Phaser.Types.Core.GameConfig` オブジェクト
 
 #### エントリポイント
-- [ ] `src/main.ts` — `new Phaser.Game(GameConfig)` 呼び出し
+- [x] `src/main.ts` — `new Phaser.Game(GameConfig)` 呼び出し
 
 #### ユーティリティ (src/utils/)
-- [ ] `src/utils/MathUtils.ts` — `angleBetween` / `distanceBetween` / `clamp`
-- [ ] `src/utils/ObjectPool.ts` — 弾薬・エフェクト用プールクラス
-- [ ] `src/utils/DataLoader.ts` — JSON 読み込みヘルパー
+- [x] `src/utils/MathUtils.ts` — `angleBetween` / `distanceBetween` / `clamp`
+- [x] `src/utils/ObjectPool.ts` — 弾薬・エフェクト用プールクラス
+- [x] `src/utils/DataLoader.ts` — JSON 読み込みヘルパー
 
 #### シーン (src/scenes/)
-- [ ] `src/scenes/BootScene.ts` — 最小アセット読み込み → PreloadScene 遷移
-- [ ] `src/scenes/PreloadScene.ts` — 全アセット読み込み・ロードバー表示
+- [x] `src/scenes/BootScene.ts` — 最小アセット読み込み → PreloadScene 遷移
+- [x] `src/scenes/PreloadScene.ts` — 全アセット読み込み・ロードバー表示
 
 #### 艦船エンティティ (src/entities/ships/)
-- [ ] `src/entities/ships/BaseShip.ts` — `Phaser.Physics.Arcade.Sprite` 継承
+- [x] `src/entities/ships/BaseShip.ts` — `Phaser.Physics.Arcade.Sprite` 継承
   - HP / speed / armor プロパティ
   - `takeDamage(amount: number): void`
   - `update(time: number, delta: number): void`
 
 #### 武器・弾薬 (src/entities/weapons/)
-- [ ] `src/entities/weapons/BaseProjectile.ts`
-- [ ] `src/entities/weapons/Shell.ts` — 砲弾 (直線弾道・ObjectPool 使用)
+- [x] `src/entities/weapons/BaseProjectile.ts`
+- [x] `src/entities/weapons/Shell.ts` — 砲弾 (直線弾道・ObjectPool 使用)
 
 #### 最初の艦船データ
-- [ ] `src/data/ships/ijn.json` — 大和エントリのみ
-- [ ] `assets/ships/ijn/yamato.png` 配置 (仮スプライト可)
+- [x] `src/data/ships/ijn.json` — 大和エントリのみ
+- [x] `public/assets/ships/ijn/yamato.png` 配置 (仮スプライト: 64×32 グレー PNG)
 
 #### BattleScene 初期版
-- [ ] `src/scenes/BattleScene.ts`
+- [x] `src/scenes/BattleScene.ts`
   - create: プレイヤー艦 (大和) 生成
   - update: WASD 移動 / マウス方向に照準 / クリックで発射
 
 #### Vitest テスト
-- [ ] `tests/unit/MathUtils.test.ts`
+- [x] `tests/unit/MathUtils.test.ts` — 12 tests passing
 
 #### Sprint 1 完了処理
-- [ ] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint1]` タグ記入
+- [x] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint1]` タグ記入
 - [ ] feature/sprint1-* → develop PR → CI パス → マージ
 - [ ] Vercel Preview URL で動作確認
 
