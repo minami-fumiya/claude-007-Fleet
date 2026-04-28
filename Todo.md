@@ -114,43 +114,47 @@
 ### Sprint 2: 戦闘システム・HUD・敵AI
 
 #### システム (src/systems/)
-- [ ] `src/systems/CombatSystem.ts`
-  - `calculateDamage(weapon, target): number`
+- [x] `src/systems/CombatSystem.ts`
+  - `calculateDamage(weapon, targetClass, targetArmor): number`
   - `applyDamage(ship, damage): void`
-  - ダメージ式: `Math.max(1, weapon.firePower * multiplier - target.armor * reduction)`
-- [ ] `src/systems/WeaponSystem.ts`
-  - `fireWeapon(ship, targetAngle): void`
-  - リロードタイマー管理
-  - ObjectPool からシェル取得
+  - ダメージ式: `Math.max(1, weapon.firePower * multiplier - targetArmor * 0.5)`
+- [x] `src/systems/ReloadState.ts` — リロードタイマー (WeakMap ベース・テスト可能)
+- [x] `src/systems/WeaponSystem.ts`
+  - `fireWeapon(ship, weapon, targetAngle, now): boolean`
+  - リロードタイマー管理・ObjectPool からシェル取得
 
 #### 当たり判定
-- [ ] `BattleScene.ts` に `physics.add.overlap(shells, enemies, onHit)` 追加
-- [ ] `onHit` → `CombatSystem.applyDamage` 呼び出し
+- [x] `BattleScene.ts` に `physics.add.overlap(playerShells, enemies, onHit)` 追加
+- [x] `physics.add.overlap(enemyShells, [player], onHit)` 追加
+- [x] `onHit` → `CombatSystem.applyDamage` 呼び出し
 
 #### エフェクト (src/entities/effects/)
-- [ ] `src/entities/effects/Explosion.ts` — Phaser ParticleEmitter
-- [ ] `src/entities/effects/WaterSplash.ts` — 着弾水柱
+- [x] `src/entities/effects/Explosion.ts` — Phaser ParticleEmitter
+- [x] `src/entities/effects/WaterSplash.ts` — 着弾水柱 (Sprint 7 でフル組込)
 
 #### UI / HUD (src/ui/)
-- [ ] `src/ui/HUD.ts` — 戦闘中 HUD レイアウト
-- [ ] `src/ui/components/HealthBar.ts` — HP バー (Graphics 描画)
+- [x] `src/ui/HUD.ts` — 戦闘中 HUD (プレイヤー HP バー・撃沈カウンター)
+- [x] `src/ui/components/HealthBar.ts` — HP バー (Graphics 描画・HP で色変化)
 
 #### 敵 AI 基本版
-- [ ] `src/systems/AISystem.ts` v1
+- [x] `src/systems/AISystem.ts` v1
   - `Phaser.Math.Angle.Between` で向き計算
-  - 射程内で発射
+  - 射程内で発射・接近移動
 
 #### BattleScene 完成
-- [ ] 勝利条件: 全敵艦撃沈
-- [ ] 敗北条件: 旗艦 HP = 0
-- [ ] `src/scenes/ResultsScene.ts` 基本版 (勝敗表示・リトライ)
+- [x] 敵艦 3 隻スポーン (赤 tint)
+- [x] 勝利条件: 全敵艦撃沈
+- [x] 敗北条件: プレイヤー HP = 0
+- [x] `src/scenes/ResultsScene.ts` — 勝敗表示・RETRY ボタン
 
 #### テスト
-- [ ] `tests/unit/CombatSystem.test.ts` — ダメージ計算・境界値
-- [ ] `tests/unit/WeaponSystem.test.ts` — リロード・発射タイミング
+- [x] `tests/unit/CombatSystem.test.ts` — ダメージ計算・型倍率・境界値 (10 tests)
+- [x] `tests/unit/WeaponSystem.test.ts` — リロード状態管理 (7 tests)
 
 #### Sprint 2 完了処理
-- [ ] 仕様書タグ更新 → develop PR → Vercel Preview 確認 → main マージ
+- [x] 仕様書タグ更新 (`[IMPLEMENTED: sprint2]`)
+- [ ] feature/sprint2-* → develop PR → CI → merge
+- [ ] Vercel Preview URL 動作確認
 
 ---
 

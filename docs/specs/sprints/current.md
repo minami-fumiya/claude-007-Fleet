@@ -1,51 +1,47 @@
-# Sprint 1 — 型定義・シーン基盤・大和1隻
+# Sprint 2 — 戦闘システム・HUD・敵 AI
 
-**Status**: Implemented [IMPLEMENTED: sprint1] | **Branch**: `feature/sprint1-base-ship`
-**Goal**: Playable Yamato on screen with WASD movement and click-to-fire.
+**Status**: Implemented [IMPLEMENTED: sprint2] | **Branch**: `feature/sprint2-combat-hud-ai`
+**Goal**: CombatSystem with damage formula, HP bars, basic enemy AI, win/loss conditions.
 
 ## Tasks
 
-### 型定義 (src/types/)
-- [x] `Nation.ts` — `enum Nation { IJN, USN, KM, RN }`
-- [x] `ShipClass.ts` — `enum ShipClass { Battleship, Cruiser, Destroyer, Carrier, Submarine }`
-- [x] `Ship.ts` — `IShipData` / `IShipStats`
-- [x] `Weapon.ts` — `IWeaponData` / `WeaponType`
-- [x] `Fleet.ts` — `IFleet` / `IFleetSlot`
-- [x] `Scene.ts` — inter-scene data types
+### システム (src/systems/)
+- [x] `src/systems/CombatSystem.ts`
+  - `calculateDamage(weapon, targetClass, targetArmor): number`
+  - `applyDamage(ship, damage): void`
+  - ダメージ式: `Math.max(1, weapon.firePower * multiplier - targetArmor * 0.5)`
+- [x] `src/systems/ReloadState.ts` — リロードタイマー (WeakMap ベース、テスト可能)
+- [x] `src/systems/WeaponSystem.ts`
+  - `fireWeapon(ship, weapon, targetAngle, now): boolean`
+  - ObjectPool からシェル取得・管理
+- [x] `src/systems/AISystem.ts` v1
+  - `Phaser.Math.Angle.Between` で向き計算
+  - 射程内で発射・接近移動
 
-### 設定 (src/config/)
-- [x] `GameConstants.ts` — CANVAS_W=1280, CANVAS_H=720, layer depths
-- [x] `SceneKeys.ts` — scene name constants
-- [x] `GameConfig.ts` — Phaser.Types.Core.GameConfig
+### 当たり判定
+- [x] `BattleScene.ts` に `physics.add.overlap(playerShells, enemies, onHit)` 追加
+- [x] `physics.add.overlap(enemyShells, [player], onHit)` 追加
+- [x] `onHit` → `CombatSystem.applyDamage` 呼び出し
 
-### エントリポイント
-- [x] `src/main.ts` — `new Phaser.Game(GameConfig)`
+### エフェクト (src/entities/effects/)
+- [x] `src/entities/effects/Explosion.ts` — Phaser ParticleEmitter (sprint 7 で強化予定)
+- [x] `src/entities/effects/WaterSplash.ts` — 着弾水柱 (sprint 7 で BattleScene に組込予定)
 
-### ユーティリティ (src/utils/)
-- [x] `MathUtils.ts` — angleBetween / distanceBetween / clamp
-- [x] `ObjectPool.ts` — pool class for bullets/effects
-- [x] `DataLoader.ts` — JSON load helper
+### UI / HUD (src/ui/)
+- [x] `src/ui/HUD.ts` — 戦闘中 HUD (プレイヤー HP バー・撃沈カウンター)
+- [x] `src/ui/components/HealthBar.ts` — HP バー (Graphics 描画、HP に応じて色変化)
 
-### シーン (src/scenes/)
-- [x] `BootScene.ts` — minimal asset load → PreloadScene
-- [x] `PreloadScene.ts` — full asset load with progress bar
-
-### エンティティ (src/entities/)
-- [x] `ships/BaseShip.ts` — Arcade.Sprite, HP/speed/armor, takeDamage, update
-- [x] `weapons/BaseProjectile.ts`
-- [x] `weapons/Shell.ts` — straight trajectory, ObjectPool
-
-### データ
-- [x] `src/data/ships/ijn.json` — Yamato entry only
-- [x] `public/assets/ships/ijn/yamato.png` — placeholder sprite (64×32 gray PNG)
-
-### BattleScene
-- [x] `src/scenes/BattleScene.ts` — spawn Yamato, WASD move, mouse aim, click fire
+### BattleScene 完成
+- [x] 敵艦 3 隻スポーン (赤 tint・大和と同スプライト)
+- [x] 勝利条件: 全敵艦撃沈
+- [x] 敗北条件: プレイヤー HP = 0
+- [x] `src/scenes/ResultsScene.ts` — 勝敗表示・RETRY ボタン
 
 ### テスト
-- [x] `tests/unit/MathUtils.test.ts` — 12 tests passing
+- [x] `tests/unit/CombatSystem.test.ts` — ダメージ計算・型倍率・境界値 (10 tests)
+- [x] `tests/unit/WeaponSystem.test.ts` — リロード状態管理 (7 tests)
 
 ### 完了処理
-- [x] Mark `[IMPLEMENTED: sprint1]` in this file
-- [ ] feature/sprint1-* → develop PR → CI → merge
+- [x] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint2]` タグ記入
+- [ ] feature/sprint2-* → develop PR → CI → merge
 - [ ] Vercel Preview URL 動作確認
