@@ -1,0 +1,15 @@
+{
+  "ships": [
+    {
+      "id": "yamato",
+      "name": "大和 (Yamato)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 500,
+      "armor": 65,
+      "speed": 120,
+      "weapons": ["46cm_main_gun"],
+      "spriteKey": "yamato"
+    }
+  ]
+}
