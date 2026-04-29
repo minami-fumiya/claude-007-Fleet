@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
 import ijnData from '@/data/ships/ijn.json';
+import weaponsData from '@/data/weapons/weapons.json';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -11,11 +12,11 @@ export class PreloadScene extends Phaser.Scene {
   preload(): void {
     this.createProgressBar();
     this.cache.json.add('ijn', ijnData);
-    this.load.image('yamato', 'assets/ships/ijn/yamato.png');
+    this.cache.json.add('weapons', weaponsData);
   }
 
   create(): void {
-    this.scene.start(SceneKeys.BATTLE);
+    this.scene.start(SceneKeys.MAIN_MENU);
   }
 
   private createProgressBar(): void {

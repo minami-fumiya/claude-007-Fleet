@@ -14,9 +14,11 @@ export class HealthBar {
     this.bar = scene.add.graphics().setDepth(depth);
   }
 
-  update(current: number, max: number, cx: number, cy: number): void {
+  update(current: number, max: number, cx: number, cy: number, overrideColor?: number): void {
     const fraction = max > 0 ? Math.max(0, current / max) : 0;
-    const barColor = fraction > 0.5 ? 0x44ff44 : fraction > 0.25 ? 0xffff00 : 0xff4444;
+    const barColor =
+      overrideColor ??
+      (fraction > 0.5 ? 0x44ff44 : fraction > 0.25 ? 0xffff00 : 0xff4444);
 
     this.bg.clear();
     this.bg.fillStyle(0x000000, 0.55);
