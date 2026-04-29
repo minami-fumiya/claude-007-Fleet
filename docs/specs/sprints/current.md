@@ -1,47 +1,50 @@
-# Sprint 2 — 戦闘システム・HUD・敵 AI
+# Sprint 3 — Full IJN Roster, FleetBuilder, Formations
 
-**Status**: Implemented [IMPLEMENTED: sprint2] | **Branch**: `feature/sprint2-combat-hud-ai`
-**Goal**: CombatSystem with damage formula, HP bars, basic enemy AI, win/loss conditions.
+**Status**: In Progress | **Branch**: `feature/sprint3-ijn-fleet-builder`
+**Goal**: 5-ship IJN roster, FleetBuilder scene for pre-battle fleet composition, formation system for escort AI behavior.
 
 ## Tasks
 
+### データ (src/data/)
+- [x] `src/data/ships/ijn.json` — 5 隻に拡張 (Yamato, Musashi, Takao, Fubuki, Shokaku)
+- [x] `src/data/weapons/weapons.json` — 武器定義 (46cm, 20cm, 12cm, 93式魚雷)
+
+### 型定義 (src/types/)
+- [x] `src/types/Formation.ts` — `Formation` enum + `IFormationSlotOffset` + `IFormationConfig`
+
 ### システム (src/systems/)
-- [x] `src/systems/CombatSystem.ts`
-  - `calculateDamage(weapon, targetClass, targetArmor): number`
-  - `applyDamage(ship, damage): void`
-  - ダメージ式: `Math.max(1, weapon.firePower * multiplier - targetArmor * 0.5)`
-- [x] `src/systems/ReloadState.ts` — リロードタイマー (WeakMap ベース、テスト可能)
-- [x] `src/systems/WeaponSystem.ts`
-  - `fireWeapon(ship, weapon, targetAngle, now): boolean`
-  - ObjectPool からシェル取得・管理
-- [x] `src/systems/AISystem.ts` v1
-  - `Phaser.Math.Angle.Between` で向き計算
-  - 射程内で発射・接近移動
+- [x] `src/systems/FleetSystem.ts`
+  - `createFleet(...)`: IFleet 生成
+  - `isValid(fleet)`: 艦が 1 隻以上あるか検証
+  - `getShips(fleet)`: null 除外した艦リスト
+  - `getFlagship(fleet)`: 旗艦 IShipData 取得
+- [x] `src/systems/FormationSystem.ts`
+  - `getOffsets(formation)`: 陣形スロットオフセット配列
+  - `getWorldPosition(flagship, offset)`: 旗艦基準ワールド座標計算
+- [x] `src/systems/EscortAISystem.ts`
+  - 陣形ポジションへの移動
+  - 射程内の敵に自動攻撃
 
-### 当たり判定
-- [x] `BattleScene.ts` に `physics.add.overlap(playerShells, enemies, onHit)` 追加
-- [x] `physics.add.overlap(enemyShells, [player], onHit)` 追加
-- [x] `onHit` → `CombatSystem.applyDamage` 呼び出し
+### シーン (src/scenes/)
+- [x] `src/scenes/MainMenuScene.ts` — タイトル画面 → FleetBuilder 遷移
+- [x] `src/scenes/FleetBuilderScene.ts`
+  - IJN 艦選択 (最大 3 スロット)
+  - 陣形選択 (縦陣 / 複縦陣 / 輪形陣)
+  - 出撃ボタン → BattleScene に IBattleInitData を渡す
 
-### エフェクト (src/entities/effects/)
-- [x] `src/entities/effects/Explosion.ts` — Phaser ParticleEmitter (sprint 7 で強化予定)
-- [x] `src/entities/effects/WaterSplash.ts` — 着弾水柱 (sprint 7 で BattleScene に組込予定)
-
-### UI / HUD (src/ui/)
-- [x] `src/ui/HUD.ts` — 戦闘中 HUD (プレイヤー HP バー・撃沈カウンター)
-- [x] `src/ui/components/HealthBar.ts` — HP バー (Graphics 描画、HP に応じて色変化)
-
-### BattleScene 完成
-- [x] 敵艦 3 隻スポーン (赤 tint・大和と同スプライト)
-- [x] 勝利条件: 全敵艦撃沈
-- [x] 敗北条件: プレイヤー HP = 0
-- [x] `src/scenes/ResultsScene.ts` — 勝敗表示・RETRY ボタン
+### 既存ファイル更新
+- [x] `src/scenes/BootScene.ts` — 新艦プレースホルダーテクスチャ生成
+- [x] `src/scenes/PreloadScene.ts` — 武器 JSON キャッシュ・MainMenu 遷移
+- [x] `src/scenes/BattleScene.ts` — IBattleInitData 受取・護衛艦スポーン・EscortAI
+- [x] `src/scenes/ResultsScene.ts` — RETRY → FleetBuilderScene
+- [x] `src/config/GameConfig.ts` — MainMenuScene / FleetBuilderScene 登録
+- [x] `src/utils/DataLoader.ts` — `getWeapons()` / `getWeaponById()` 追加
 
 ### テスト
-- [x] `tests/unit/CombatSystem.test.ts` — ダメージ計算・型倍率・境界値 (10 tests)
-- [x] `tests/unit/WeaponSystem.test.ts` — リロード状態管理 (7 tests)
+- [x] `tests/unit/FleetSystem.test.ts` — 艦隊構成ロジック (6 tests)
+- [x] `tests/unit/FormationSystem.test.ts` — 陣形ポジション計算 (6 tests)
 
 ### 完了処理
-- [x] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint2]` タグ記入
-- [ ] feature/sprint2-* → develop PR → CI → merge
+- [ ] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint3]` タグ記入
+- [ ] feature/sprint3-* → develop PR → CI → merge
 - [ ] Vercel Preview URL 動作確認

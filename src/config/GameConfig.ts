@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { CANVAS_W, CANVAS_H } from './GameConstants';
 import { BootScene } from '@/scenes/BootScene';
 import { PreloadScene } from '@/scenes/PreloadScene';
+import { MainMenuScene } from '@/scenes/MainMenuScene';
+import { FleetBuilderScene } from '@/scenes/FleetBuilderScene';
 import { BattleScene } from '@/scenes/BattleScene';
 import { ResultsScene } from '@/scenes/ResultsScene';
 
@@ -17,5 +19,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, BattleScene, ResultsScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene],
 };

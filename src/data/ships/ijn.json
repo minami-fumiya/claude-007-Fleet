@@ -10,6 +10,50 @@
       "speed": 120,
       "weapons": ["46cm_main_gun"],
       "spriteKey": "yamato"
+    },
+    {
+      "id": "musashi",
+      "name": "武蔵 (Musashi)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 490,
+      "armor": 63,
+      "speed": 118,
+      "weapons": ["46cm_main_gun"],
+      "spriteKey": "musashi"
+    },
+    {
+      "id": "takao",
+      "name": "高雄 (Takao)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "hp": 250,
+      "armor": 40,
+      "speed": 180,
+      "weapons": ["20cm_twin_gun"],
+      "spriteKey": "takao"
+    },
+    {
+      "id": "fubuki",
+      "name": "吹雪 (Fubuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 130,
+      "armor": 15,
+      "speed": 240,
+      "weapons": ["12cm_gun", "torpedo_type93"],
+      "spriteKey": "fubuki"
+    },
+    {
+      "id": "shokaku",
+      "name": "翔鶴 (Shokaku)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 310,
+      "armor": 30,
+      "speed": 150,
+      "weapons": ["12cm_gun"],
+      "spriteKey": "shokaku"
     }
   ]
 }

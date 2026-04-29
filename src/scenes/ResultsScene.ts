@@ -34,6 +34,6 @@ export class ResultsScene extends Phaser.Scene {
 
     retryBtn.on('pointerover', () => retryBtn.setStyle({ color: '#4488ff' }));
     retryBtn.on('pointerout', () => retryBtn.setStyle({ color: '#ffffff' }));
-    retryBtn.on('pointerdown', () => this.scene.start(SceneKeys.BATTLE));
+    retryBtn.on('pointerdown', () => this.scene.start(SceneKeys.FLEET_BUILDER));
   }
 }

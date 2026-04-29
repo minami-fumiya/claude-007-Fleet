@@ -1,7 +1,12 @@
 import { IShipData } from '@/types/Ship';
+import { IWeaponData } from '@/types/Weapon';
 
 export interface IShipJsonFile {
   ships: IShipData[];
+}
+
+export interface IWeaponJsonFile {
+  weapons: IWeaponData[];
 }
 
 export class DataLoader {
@@ -12,6 +17,15 @@ export class DataLoader {
   static getShips(scene: Phaser.Scene, key: string): IShipData[] {
     const data = DataLoader.fromCache<IShipJsonFile>(scene, key);
     return data?.ships ?? [];
+  }
+
+  static getWeapons(scene: Phaser.Scene, key: string): IWeaponData[] {
+    const data = DataLoader.fromCache<IWeaponJsonFile>(scene, key);
+    return data?.weapons ?? [];
+  }
+
+  static getWeaponById(scene: Phaser.Scene, weaponId: string): IWeaponData | undefined {
+    return DataLoader.getWeapons(scene, 'weapons').find((w) => w.id === weaponId);
   }
 
   static async fetchJson<T>(url: string): Promise<T> {
