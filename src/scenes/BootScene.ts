@@ -7,11 +7,17 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Minimal load — graphics texture for shell projectile
     const gfx = this.make.graphics({ x: 0, y: 0 });
+
     gfx.fillStyle(0xffff00);
     gfx.fillRect(0, 0, 8, 4);
     gfx.generateTexture('shell', 8, 4);
+
+    gfx.clear();
+    gfx.fillStyle(0xffffff);
+    gfx.fillRect(0, 0, 4, 4);
+    gfx.generateTexture('particle', 4, 4);
+
     gfx.destroy();
   }
 

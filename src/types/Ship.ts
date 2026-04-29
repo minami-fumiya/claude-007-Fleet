@@ -19,4 +19,5 @@ export interface IShipStats {
   armor: number;
   speed: number;
   firePower: number;
+  shipClass: ShipClass;
 }

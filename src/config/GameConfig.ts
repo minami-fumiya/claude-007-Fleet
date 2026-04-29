@@ -3,6 +3,7 @@ import { CANVAS_W, CANVAS_H } from './GameConstants';
 import { BootScene } from '@/scenes/BootScene';
 import { PreloadScene } from '@/scenes/PreloadScene';
 import { BattleScene } from '@/scenes/BattleScene';
+import { ResultsScene } from '@/scenes/ResultsScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -16,5 +17,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, BattleScene],
+  scene: [BootScene, PreloadScene, BattleScene, ResultsScene],
 };

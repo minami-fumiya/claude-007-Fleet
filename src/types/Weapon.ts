@@ -1,7 +1,9 @@
 export enum WeaponType {
-  MainGun = 'MainGun',
+  ShellAP = 'ShellAP',
+  ShellHE = 'ShellHE',
   Torpedo = 'Torpedo',
-  Aircraft = 'Aircraft',
+  DepthCharge = 'DepthCharge',
+  Bomb = 'Bomb',
   AntiAir = 'AntiAir',
 }
 
