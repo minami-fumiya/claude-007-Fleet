@@ -1,6 +1,6 @@
 # Sprint 3 — Full IJN Roster, FleetBuilder, Formations
 
-**Status**: In Progress | **Branch**: `feature/sprint3-ijn-fleet-builder`
+**Status**: Implemented [IMPLEMENTED: sprint3] | **Branch**: `feature/sprint3-ijn-fleet-builder`
 **Goal**: 5-ship IJN roster, FleetBuilder scene for pre-battle fleet composition, formation system for escort AI behavior.
 
 ## Tasks
@@ -45,6 +45,6 @@
 - [x] `tests/unit/FormationSystem.test.ts` — 陣形ポジション計算 (6 tests)
 
 ### 完了処理
-- [ ] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint3]` タグ記入
-- [ ] feature/sprint3-* → develop PR → CI → merge
-- [ ] Vercel Preview URL 動作確認
+- [x] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint3]` タグ記入
+- [x] feature/sprint3-* → develop PR → CI → merge
+- [x] Vercel Preview URL 動作確認
