@@ -14,6 +14,7 @@ export interface IShipData {
 }
 
 export interface IShipStats {
+  name: string;
   maxHp: number;
   currentHp: number;
   armor: number;
