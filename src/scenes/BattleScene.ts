@@ -119,6 +119,13 @@ export class BattleScene extends Phaser.Scene {
   update(time: number, delta: number): void {
     if (this.gameOver) return;
 
+    // Flagship may have been destroyed by a physics overlap callback in the previous frame.
+    // Guard here before accessing .body in handleMovement to prevent a null-body crash.
+    if (!this.flagship.active) {
+      this.triggerGameOver(false);
+      return;
+    }
+
     this.handleMovement(delta);
     this.updateAim();
 
@@ -225,6 +232,7 @@ export class BattleScene extends Phaser.Scene {
 
   private shipDataToStats(shipData: IShipData, weapon?: IWeaponData): IShipStats {
     return {
+      name: shipData.name,
       maxHp: shipData.hp,
       currentHp: shipData.hp,
       armor: shipData.armor,
@@ -329,6 +337,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private triggerGameOver(victory: boolean): void {
+    if (this.gameOver) return;
     this.gameOver = true;
     this.time.delayedCall(1200, () => {
       this.scene.start(SceneKeys.RESULTS, { victory, score: 0, turnsElapsed: 0 } as IBattleResultData);
