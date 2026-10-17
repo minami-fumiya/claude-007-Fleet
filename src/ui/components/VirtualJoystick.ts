@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { DEPTH_HUD } from '@/config/GameConstants';
+import { Colors } from '@/ui/theme';
 import { IStickVector, stickVector, distanceBetween } from '@/utils/MathUtils';
 
-const BASE_COLOR = 0xffffff;
-const BASE_ALPHA = 0.15;
-const THUMB_ALPHA = 0.4;
+const BASE_COLOR = Colors.cyan;
+const BASE_ALPHA = 0.08;
+const THUMB_ALPHA = 0.55;
 
 /**
  * On-screen analog stick for touch devices.
@@ -26,12 +27,21 @@ export class VirtualJoystick {
     this.zoneRadius = radius * 1.8;
 
     scene.add
+      .circle(x, y, radius + 10, BASE_COLOR, 0.04)
+      .setDepth(DEPTH_HUD)
+      .setScrollFactor(0);
+    scene.add
+      .circle(x, y, radius, Colors.bgDeep, 0.45)
+      .setStrokeStyle(2, BASE_COLOR, 0.45)
+      .setDepth(DEPTH_HUD)
+      .setScrollFactor(0);
+    scene.add
       .circle(x, y, radius, BASE_COLOR, BASE_ALPHA)
-      .setStrokeStyle(2, BASE_COLOR, 0.35)
       .setDepth(DEPTH_HUD)
       .setScrollFactor(0);
     this.thumb = scene.add
       .circle(x, y, radius * 0.45, BASE_COLOR, THUMB_ALPHA)
+      .setStrokeStyle(2, 0xffffff, 0.6)
       .setDepth(DEPTH_HUD + 1)
       .setScrollFactor(0);
 

@@ -35,6 +35,10 @@ export class WeaponSystem {
     return true;
   }
 
+  reloadProgress(ship: BaseShip, weapon: IWeaponData, now: number): number {
+    return this.reload.progress(ship, weapon.reloadTime, now);
+  }
+
   update(time: number, delta: number): void {
     this.shells.forEach((s) => s.update(time, delta));
   }

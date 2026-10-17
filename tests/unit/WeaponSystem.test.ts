@@ -55,3 +55,37 @@ describe('ReloadState', () => {
     expect(state.isReady(owner, 1000, 2000)).toBe(true);
   });
 });
+
+describe('ReloadState.progress', () => {
+  it('is 1 when never fired', () => {
+    expect(new ReloadState().progress({}, 1000, 0)).toBe(1);
+  });
+
+  it('is 0 right after firing', () => {
+    const state = new ReloadState();
+    const owner = {};
+    state.markFired(owner, 1000);
+    expect(state.progress(owner, 1000, 1000)).toBe(0);
+  });
+
+  it('is halfway at half the reload time', () => {
+    const state = new ReloadState();
+    const owner = {};
+    state.markFired(owner, 1000);
+    expect(state.progress(owner, 1000, 1500)).toBeCloseTo(0.5);
+  });
+
+  it('clamps to 1 after reload completes', () => {
+    const state = new ReloadState();
+    const owner = {};
+    state.markFired(owner, 1000);
+    expect(state.progress(owner, 1000, 9000)).toBe(1);
+  });
+
+  it('is 1 for zero reload time', () => {
+    const state = new ReloadState();
+    const owner = {};
+    state.markFired(owner, 1000);
+    expect(state.progress(owner, 0, 1000)).toBe(1);
+  });
+});

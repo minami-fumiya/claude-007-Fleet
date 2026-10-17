@@ -68,3 +68,42 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   inside a Scene — addPointer accumulates every time the scene restarts.
 - Don't aim from `input.activePointer` on touch: it may be the joystick finger. Keep an
   explicit aim target updated by mouse move (`!pointer.wasTouch`) or by the firing tap.
+
+### UI Kit (src/ui/theme.ts, src/ui/components/UIKit.ts)
+- Gradients and glows are drawn once into canvas textures (`textures.createCanvas`), because
+  `Graphics.fillGradientStyle` is WebGL-only and not rendered by the Canvas renderer.
+- A Container's input hit area is centred on its position (Phaser adds `displayOriginX/Y`).
+  For cards laid out from their top-left, use `makeClickable()` which offsets the rectangle
+  by half its size; a centre-positioned button can use `Rectangle(0, 0, w, h)` directly.
+- In BattleScene, the global `pointerdown` fire handler skips events whose `currentlyOver`
+  list is non-empty, so tapping HUD buttons does not fire the main gun.
+
+### Portrait layout for phones
+- `src/config/Layout.ts` picks the orientation once at boot: touch-only devices get 720x1280,
+  anything with a mouse/trackpad gets 1280x720. `?layout=portrait` forces it for PC testing.
+- `CANVAS_W/H` and `IS_PORTRAIT` in GameConstants are module-level constants computed from that;
+  scenes branch their layout on `IS_PORTRAIT` (see FleetBuilderScene's `LAYOUT` table).
+- Canvas radial gradients: keep inner radius < outer radius for both orientations
+  (`min(w,h)` / `hypot(w,h)/2`), otherwise the vignette inverts in portrait.
+- New UI characters must be added to `src/ui/fontGlyphs.ts`; `fontGlyphs.test.ts` lists any missing.
+
+### Ship sprites
+- `ShipTextures.ts` draws top-down, bow-up sprites per ship class from the ship data. Arcade
+  bodies don't rotate, so BaseShip uses a circular body sized between beam and length.
+
+### Phone readability & controls
+- Text sizes go through `uiFontSize()` (theme.ts): ×1.5 with a 17px floor in portrait, 12px floor on PC.
+  Lay out with measured text (`text.width/height`, `getBounds()`) rather than fixed offsets.
+- Phaser `wordWrap` only breaks at spaces; Japanese needs `useAdvancedWrap: true`.
+- Portrait FleetBuilder scrolls the camera between fixed (scrollFactor 0) header/footer bars; the bars
+  are interactive so taps don't fall through, and tap handlers go through `onTap()` to ignore drags.
+- Touch battle controls live in `systems/AutoPilot.ts` (pure, tested): tap enemy = lock target,
+  tap sea = waypoint, auto-fire in range, AUTO = engage band (close in / back off / circle).
+
+### Battle world larger than the screen
+- BattleScene's `WORLD` is ~2x the canvas; `physics.world.setBounds` + `camera.setBounds/startFollow(flagship)`.
+- HUD (strip, buttons, chips, joystick, edge markers) uses `setScrollFactor(0)`; ship labels stay in world space,
+  so the strip sits at a higher depth than them.
+- Use `pointer.worldX/worldY` for world taps/clicks, and re-project the mouse every frame
+  (`camera.getWorldPoint`) because the camera moves while the cursor is still.
+- Shell out-of-bounds checks `physics.world.bounds`, not the canvas size.

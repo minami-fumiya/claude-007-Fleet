@@ -11,7 +11,7 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: CANVAS_W,
   height: CANVAS_H,
-  backgroundColor: '#0a1a2e',
+  backgroundColor: '#020814',
   parent: 'game',
   scale: {
     // Fit the fixed 1280x720 canvas into any screen (phones included) while keeping aspect ratio.

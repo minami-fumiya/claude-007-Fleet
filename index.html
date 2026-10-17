@@ -6,26 +6,36 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#0a0a0f" />
+    <meta name="theme-color" content="#020814" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" />
     <title>WW2 Naval Fleet</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; background: #0a0a0f; overflow: hidden; overscroll-behavior: none; }
+      html, body { width: 100%; height: 100%; background: #020814; overflow: hidden; overscroll-behavior: none; }
       body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
       #game { width: 100vw; height: 100vh; height: 100dvh; }
+      #boot-loader {
+        position: fixed; inset: 0; display: flex; flex-direction: column; gap: 10px;
+        align-items: center; justify-content: center;
+        color: #61e7ff; font: 700 13px/1 'Zen Kaku Gothic New', sans-serif; letter-spacing: 0.3em;
+      }
+      #boot-loader span { color: #8aa0c7; font-size: 12px; letter-spacing: 0.1em; }
       #rotate-hint {
         display: none; position: fixed; inset: 0; z-index: 10;
         align-items: center; justify-content: center; text-align: center;
-        background: #0a0a0f; color: #ffffff; font: 18px/1.6 sans-serif; padding: 16px;
+        background: #020814; color: #ffffff; font: 700 18px/1.6 'Zen Kaku Gothic New', sans-serif; padding: 16px;
       }
-      @media (orientation: portrait) and (pointer: coarse) {
-        #rotate-hint { display: flex; }
+      /* The phone layout is portrait-only (see src/config/Layout.ts). */
+      @media (orientation: landscape) {
+        body[data-layout="portrait"] #rotate-hint { display: flex; }
       }
     </style>
   </head>
   <body>
-    <div id="game"></div>
-    <div id="rotate-hint">📱 端末を横向きにしてプレイしてください<br />Rotate your device to landscape</div>
+    <div id="game"><div id="boot-loader">WW2 NAVAL FLEET<span>Loading…</span></div></div>
+    <div id="rotate-hint">📱 端末を縦向きにしてプレイしてください<br />Rotate your device to portrait</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

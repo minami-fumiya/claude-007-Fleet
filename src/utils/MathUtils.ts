@@ -46,3 +46,28 @@ export function rotateTowardsDegrees(currentDeg: number, targetDeg: number, maxS
   if (Math.abs(diff) <= maxStep) return currentDeg + diff;
   return currentDeg + Math.sign(diff) * maxStep;
 }
+
+export interface IRectArea {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * For a point outside `rect`, where the line from the rect's centre to that point crosses the rect's
+ * edge, plus the direction (radians) towards the point. Null when the point is inside the rect.
+ * Used to pin off-screen enemy markers to the screen border.
+ */
+export function edgePoint(px: number, py: number, rect: IRectArea): { x: number; y: number; angle: number } | null {
+  if (px >= rect.left && px <= rect.right && py >= rect.top && py <= rect.bottom) return null;
+  const cx = (rect.left + rect.right) / 2;
+  const cy = (rect.top + rect.bottom) / 2;
+  const dx = px - cx;
+  const dy = py - cy;
+  const halfW = (rect.right - rect.left) / 2;
+  const halfH = (rect.bottom - rect.top) / 2;
+  // Scale the direction so it just reaches whichever edge it hits first.
+  const t = Math.min(dx === 0 ? Infinity : halfW / Math.abs(dx), dy === 0 ? Infinity : halfH / Math.abs(dy));
+  return { x: cx + dx * t, y: cy + dy * t, angle: Math.atan2(dy, dx) };
+}
