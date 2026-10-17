@@ -60,3 +60,11 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   `.vercel/` was already present in `.gitignore`.
 - After `vercel --yes`, the deploy URL is `https://<project>.vercel.app` plus a unique
   preview URL. Use `vercel inspect <url>` to confirm status.
+
+### Mobile Support
+- Scale with `scale: { mode: Phaser.Scale.FIT, autoCenter: CENTER_BOTH }` + a `parent` div;
+  game logic keeps using fixed 1280x720 coordinates (pointer x/y are already in game space).
+- Set multi-touch via `input.activePointers` in GameConfig, not `this.input.addPointer()`
+  inside a Scene — addPointer accumulates every time the scene restarts.
+- Don't aim from `input.activePointer` on touch: it may be the joystick finger. Keep an
+  explicit aim target updated by mouse move (`!pointer.wasTouch`) or by the firing tap.

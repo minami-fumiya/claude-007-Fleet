@@ -12,6 +12,16 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
   width: CANVAS_W,
   height: CANVAS_H,
   backgroundColor: '#0a1a2e',
+  parent: 'game',
+  scale: {
+    // Fit the fixed 1280x720 canvas into any screen (phones included) while keeping aspect ratio.
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  input: {
+    // Two simultaneous touches so the player can steer and fire at once.
+    activePointers: 2,
+  },
   physics: {
     default: 'arcade',
     arcade: {
