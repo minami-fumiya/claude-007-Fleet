@@ -189,35 +189,46 @@
 
 ---
 
-### Sprint 4: USN・Kriegsmarine・AI 強化・潜水艦戦
+### Sprint 4: USN・Kriegsmarine・AI 強化・潜水艦戦 ✅
+
+> 詳細: `docs/specs/sprints/current.md`。各国 6 隻に絞って実装し、残りの艦は下の未チェック項目として残す。
 
 #### USN データ (`src/data/ships/usn.json`)
-- [ ] 戦艦: Iowa / Missouri / New Jersey / North Carolina 等
-- [ ] 巡洋艦: Baltimore / Des Moines 等
-- [ ] 駆逐艦: Fletcher / Gearing 等
-- [ ] 空母: Essex / Enterprise / Midway 等
-- [ ] 潜水艦: Gato / Balao 等
-- [ ] `docs/specs/ships/USN/` 仕様書
+- [x] 戦艦: Iowa / North Carolina
+- [ ] 戦艦: Missouri / New Jersey
+- [x] 巡洋艦: Baltimore
+- [ ] 巡洋艦: Des Moines
+- [x] 駆逐艦: Fletcher
+- [ ] 駆逐艦: Gearing
+- [x] 空母: Essex (艦載機は Sprint 5)
+- [ ] 空母: Enterprise / Midway
+- [x] 潜水艦: Gato
+- [ ] 潜水艦: Balao
+- [x] `docs/specs/ships/USN/` 仕様書
 
-#### Kriegsmarine データ (`src/data/ships/kriegsmarine.json`)
-- [ ] 戦艦: Bismarck / Tirpitz / Scharnhorst / Gneisenau
-- [ ] 巡洋艦: Admiral Hipper / Prinz Eugen 等
-- [ ] 駆逐艦: Z 級各艦
-- [ ] 空母: Graf Zeppelin (架空扱い)
-- [ ] 潜水艦: VIIC 型 / IXC 型 / XXI 型 等
-- [ ] `docs/specs/ships/Kriegsmarine/` 仕様書
+#### Kriegsmarine データ (`src/data/ships/km.json`)
+- [x] 戦艦: Bismarck / Tirpitz
+- [ ] 戦艦: Scharnhorst / Gneisenau
+- [x] 巡洋艦: Prinz Eugen
+- [ ] 巡洋艦: Admiral Hipper
+- [x] 駆逐艦: Z1 (Leberecht Maass)
+- [x] 空母: Graf Zeppelin (架空扱い)
+- [x] 潜水艦: VIIC 型
+- [ ] 潜水艦: IXC 型 / XXI 型
+- [x] `docs/specs/ships/KM/` 仕様書
 
 #### AI 強化
-- [ ] `AISystem.ts` v2: 優先目標選択 / 撤退判断 / 国籍別戦術差
+- [x] `AIBrain.ts` + `AISystem.ts` v2: 優先目標選択 / 撤退判断 / 国籍別戦術差 (`docs/specs/systems/ai.md`)
 
 #### 潜水艦戦メカニクス
-- [ ] `Submarine.ts` 潜航 / 浮上 状態管理 (alpha=0 / 速度低下 / 魚雷のみ)
-- [ ] `src/entities/weapons/DepthCharge.ts` — 爆雷 (AOE・遅延爆発)
-- [ ] ソナー探知: 探知範囲内の潜水艦をミニマップに表示
-- [ ] ASW モード基本版 (護衛艦 vs 潜水艦群)
+- [x] 潜航 / 浮上 状態管理 (`SubmarineSystem.ts`: 半透明 / 速度低下 / 魚雷のみ / 潜航時間制限)
+- [x] `src/entities/weapons/DepthCharge.ts` — 爆雷 (AOE・遅延爆発)
+- [x] `src/entities/weapons/Torpedo.ts` — 魚雷 (Sprint 3 から持ち越し)
+- [x] ソナー探知 (`SonarSystem.ts`): 探知中のみ表示 + ソナー波紋 (ミニマップ表示は Sprint 7)
+- [x] ASW モード基本版 (Fleet Builder の「対潜戦」で敵が潜水艦群)
 
 #### Sprint 4 完了処理
-- [ ] develop PR → CI → Vercel Preview → main マージ
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 

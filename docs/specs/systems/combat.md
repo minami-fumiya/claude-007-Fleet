@@ -22,6 +22,13 @@ damage = max(1, firePower * typeMultiplier - armor * reductionFactor)
 | Depth Charge | 0.2 | 0.2 | 0.2 | 0.2 | 2.0 |
 | Bomb | 0.8 | 0.9 | 1.3 | 1.2 | 0.3 |
 
+## Projectiles (Sprint 4)
+- Ships fire their whole loadout (`IShipData.weapons`); each projectile carries the weapon that fired it,
+  which decides its damage, speed (`projectileSpeed`) and reach (expires after 115% of `range`).
+- Torpedo salvos are 2 torpedoes sharing the weapon's `firePower`.
+- Depth charges deal area damage with distance falloff — see `submarine.md`.
+- Shells and torpedoes cannot hit a submerged submarine.
+
 ## Critical Hit System (Sprint 7)
 - Roll chance based on weapon accuracy and target speed
 - Critical types: Main gun destroyed / Engine damage / Rudder damage

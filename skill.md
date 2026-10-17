@@ -107,3 +107,20 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Use `pointer.worldX/worldY` for world taps/clicks, and re-project the mouse every frame
   (`camera.getWorldPoint`) because the camera moves while the cursor is still.
 - Shell out-of-bounds checks `physics.world.bounds`, not the canvas size.
+
+### Sprint 4 — Multi-nation, AI v2, submarines
+- Don't name a Scene field `registry`: `Phaser.Scene` already has one, and TS reports "not assignable
+  to Scene" at every `this` passed as a Scene (FleetBuilderScene uses `shipRegistry`).
+- The old WeaponSystem took shells from ObjectPool but never released them, so after 20 shots every shot
+  created a new Shell. Pools of Phaser objects are simpler as "find an inactive one, else create" over the
+  same array that the overlap collider was registered with (the collider reads the array each step, so
+  pushing new projectiles into it keeps hit detection working).
+- Projectiles carry their `IWeaponData`; one WeaponSystem per side serves the whole fleet.
+- Keep decisions pure (`AIBrain`, `WeaponSelector`, `SubmarineSystem`, `SonarSystem`) and feed them plain
+  views built once per frame; the Phaser classes only steer and fire.
+- Torpedo balance: full `firePower` per torpedo plus perfect lead aim wiped a fleet in 20 s. Split the
+  weapon's firePower across the salvo and give AI aim a small random error.
+- Depth charges with a long fuse miss a moving boat (it travels ~100 px in 1.2 s); 0.8 s / 110 px works.
+- Playwright smoke tests: map game coordinates to the canvas bounding box; `?layout=portrait` plus
+  `hasTouch` for the phone UI. Mouse-wheel scrolling in the portrait Fleet Builder is not pixel-predictable.
+- Long ship names: `fitName()` in FleetBuilderScene drops the "(English)" part, then scales the text down.
