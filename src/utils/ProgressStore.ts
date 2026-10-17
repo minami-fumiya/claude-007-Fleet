@@ -3,6 +3,9 @@
  * when available; every access is guarded so a blocked or missing storage only loses persistence.
  */
 
+import { IDockJob, IResources } from '@/types/Progression';
+import { resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
+
 const STORAGE_KEY = 'ww2fleet.progress.v1';
 
 export interface IProgress {
@@ -10,11 +13,19 @@ export interface IProgress {
   captainXp: Record<string, number>;
   /** Ship id → fitted upgrade ids */
   upgrades: Record<string, string[]>;
+  resources: IResources;
+  /** Ship id → HP fraction it came home with (absent = undamaged) */
+  damage: Record<string, number>;
+  docks: IDockJob[];
+  /** Finished research ids */
+  research: string[];
 }
 
 export function emptyProgress(): IProgress {
-  return { captainXp: {}, upgrades: {} };
+  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [] };
 }
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 let memory: IProgress | null = null;
 
@@ -31,7 +42,19 @@ export function parseProgress(raw: string | null): IProgress {
     for (const [id, list] of Object.entries(data.upgrades ?? {})) {
       if (Array.isArray(list)) upgrades[id] = list.filter((u): u is string => typeof u === 'string');
     }
-    return { captainXp, upgrades };
+    const r = (data.resources ?? {}) as Partial<IResources>;
+    const res = data.resources
+      ? resources({ fuel: isNum(r.fuel) ? r.fuel : 0, ammo: isNum(r.ammo) ? r.ammo : 0, steel: isNum(r.steel) ? r.steel : 0, bauxite: isNum(r.bauxite) ? r.bauxite : 0 })
+      : { ...STARTING_RESOURCES };
+    const damage: Record<string, number> = {};
+    for (const [id, f] of Object.entries(data.damage ?? {})) {
+      if (isNum(f)) damage[id] = Math.min(1, Math.max(0, f));
+    }
+    const docks = (Array.isArray(data.docks) ? data.docks : []).filter(
+      (d): d is IDockJob => typeof d?.shipId === 'string' && isNum(d?.endsAt),
+    );
+    const research = (Array.isArray(data.research) ? data.research : []).filter((id): id is string => typeof id === 'string');
+    return { captainXp, upgrades, resources: res, damage, docks, research };
   } catch {
     return emptyProgress();
   }

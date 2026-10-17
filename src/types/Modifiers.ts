@@ -28,4 +28,6 @@ export interface IUpgradeData {
   description: string;
   /** Partial modifiers; missing fields mean "no change" */
   effects: Partial<IShipModifiers>;
+  /** Research id that unlocks this upgrade (always available when absent) */
+  requires?: string;
 }

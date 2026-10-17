@@ -65,9 +65,16 @@ describe('ProgressStore.parseProgress', () => {
   it('tolerates missing or malformed data', () => {
     expect(parseProgress(null)).toEqual(emptyProgress());
     expect(parseProgress('not json')).toEqual(emptyProgress());
-    expect(parseProgress('{"captainXp":{"a":"x","b":120},"upgrades":{"s":["boiler",3],"t":"no"}}')).toEqual({
-      captainXp: { b: 120 },
-      upgrades: { s: ['boiler'] },
-    });
+    const p = parseProgress('{"captainXp":{"a":"x","b":120},"upgrades":{"s":["boiler",3],"t":"no"}}');
+    expect(p.captainXp).toEqual({ b: 120 });
+    expect(p.upgrades).toEqual({ s: ['boiler'] });
+    // Saves from before Sprint 6 get starting resources and no damage.
+    expect(p.resources).toEqual(emptyProgress().resources);
+    expect(p.damage).toEqual({});
+    const q = parseProgress('{"resources":{"fuel":5,"ammo":"x"},"damage":{"a":2,"b":0.5,"c":"x"},"docks":[{"shipId":"b","endsAt":10},{"shipId":3}],"research":["x",1]}');
+    expect(q.resources).toEqual({ fuel: 5, ammo: 0, steel: 0, bauxite: 0 });
+    expect(q.damage).toEqual({ a: 1, b: 0.5 });
+    expect(q.docks).toEqual([{ shipId: 'b', endsAt: 10 }]);
+    expect(q.research).toEqual(['x']);
   });
 });

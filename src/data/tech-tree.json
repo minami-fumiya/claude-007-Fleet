@@ -1,0 +1,13 @@
+{
+  "tech": [
+    { "id": "gunnery_1", "name": "砲術研究 I", "description": "全艦の砲火力 +5%", "cost": { "ammo": 300, "steel": 200 }, "requires": [], "effects": { "gunPowerMul": 1.05 } },
+    { "id": "gunnery_2", "name": "砲術研究 II", "description": "全艦の砲装填 -6%", "cost": { "ammo": 600, "steel": 500 }, "requires": ["gunnery_1"], "effects": { "gunReloadMul": 0.94 } },
+    { "id": "fire_control", "name": "射撃管制", "description": "射撃指揮装置を解放・砲火力 +3%", "cost": { "ammo": 500, "steel": 600, "bauxite": 100 }, "requires": ["gunnery_1"], "effects": { "gunPowerMul": 1.03 } },
+    { "id": "torpedo_1", "name": "魚雷研究", "description": "全艦の魚雷火力 +8%・魚雷改良を解放", "cost": { "fuel": 200, "ammo": 300 }, "requires": [], "effects": { "torpedoPowerMul": 1.08 } },
+    { "id": "armor_1", "name": "装甲研究", "description": "全艦の耐久 +5%・追加装甲を解放", "cost": { "steel": 500 }, "requires": [], "effects": { "hpMul": 1.05 } },
+    { "id": "engine_1", "name": "機関研究", "description": "全艦の速力 +4%・機関強化を解放", "cost": { "fuel": 400, "steel": 300 }, "requires": [], "effects": { "speedMul": 1.04 } },
+    { "id": "damage_control_1", "name": "ダメージコントロール", "description": "全艦の耐久 +5%・応急修理班を解放", "cost": { "fuel": 300, "steel": 700 }, "requires": ["armor_1"], "effects": { "hpMul": 1.05 } },
+    { "id": "radar_1", "name": "電探研究", "description": "全艦の視界 +5%・水上レーダーを解放", "cost": { "steel": 600, "bauxite": 300 }, "requires": ["fire_control"], "effects": { "visionMul": 1.05 } },
+    { "id": "aa_1", "name": "対空研究", "description": "全艦の対空 +10%・対空機銃増設を解放", "cost": { "ammo": 400, "bauxite": 300 }, "requires": [], "effects": { "aaMul": 1.1 } }
+  ]
+}
