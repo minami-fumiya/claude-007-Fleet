@@ -1,0 +1,16 @@
+{
+  "captains": [
+    { "id": "ijn_sakai", "name": "坂井 悟", "nation": "IJN", "skill": "Gunnery" },
+    { "id": "ijn_murase", "name": "村瀬 健", "nation": "IJN", "skill": "Torpedo" },
+    { "id": "ijn_hayakawa", "name": "早川 透", "nation": "IJN", "skill": "Engineering" },
+    { "id": "usn_miller", "name": "J. ミラー", "nation": "USN", "skill": "Gunnery" },
+    { "id": "usn_carter", "name": "R. カーター", "nation": "USN", "skill": "Torpedo" },
+    { "id": "usn_hayes", "name": "T. ヘイズ", "nation": "USN", "skill": "Engineering" },
+    { "id": "km_weber", "name": "K. ヴェーバー", "nation": "KM", "skill": "Gunnery" },
+    { "id": "km_braun", "name": "H. ブラウン", "nation": "KM", "skill": "Torpedo" },
+    { "id": "km_vogel", "name": "F. フォーゲル", "nation": "KM", "skill": "Engineering" },
+    { "id": "rn_hughes", "name": "A. ヒューズ", "nation": "RN", "skill": "Gunnery" },
+    { "id": "rn_clarke", "name": "E. クラーク", "nation": "RN", "skill": "Torpedo" },
+    { "id": "rn_grant", "name": "W. グラント", "nation": "RN", "skill": "Engineering" }
+  ]
+}

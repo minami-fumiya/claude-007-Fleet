@@ -8,6 +8,15 @@ export interface IBattleInitData {
   mapKey: string;
   formation?: Formation;
   mode?: BattleMode;
+  /** Captain id per player fleet slot (same indices as playerFleet.slots) */
+  captainIds?: (string | null)[];
+}
+
+export interface ICaptainReport {
+  name: string;
+  level: number;
+  gained: number;
+  leveledUp: boolean;
 }
 
 export interface IBattleResultData {
@@ -20,4 +29,5 @@ export interface IBattleResultData {
   survivors: number;
   fleetSize: number;
   durationSec: number;
+  captainReports?: ICaptainReport[];
 }

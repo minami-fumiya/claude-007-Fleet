@@ -12,6 +12,9 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   loadout: IWeaponData[] = [];
   /** Dive state; null for surface ships */
   sub: ISubmarineState | null;
+  /** From upgrades: radar widens vision, extra guns strengthen AA */
+  visionMul = 1;
+  aaMul = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, stats: IShipStats) {
     super(scene, x, y, texture);

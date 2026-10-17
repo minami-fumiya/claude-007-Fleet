@@ -38,7 +38,7 @@ export interface IAirContext {
 export function aaGuns(ships: BaseShip[]): IAAGun[] {
   return ships
     .filter((s) => s.isAlive && !s.submerged)
-    .map((s) => ({ x: s.x, y: s.y, strength: aaStrength(s.stats.shipClass) }));
+    .map((s) => ({ x: s.x, y: s.y, strength: aaStrength(s.stats.shipClass) * s.aaMul }));
 }
 
 /**

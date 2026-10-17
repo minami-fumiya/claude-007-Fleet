@@ -36,7 +36,12 @@ import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { IFleet } from '@/types/Fleet';
 import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
-import { IBattleInitData, IBattleResultData } from '@/types/Scene';
+import { IBattleInitData, IBattleResultData, ICaptainReport } from '@/types/Scene';
+import { ICaptain } from '@/types/Captain';
+import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
+import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers } from '@/systems/CustomizationSystem';
+import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/CaptainSystem';
+import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -112,6 +117,8 @@ export class BattleScene extends Phaser.Scene {
   private seenByEnemy = new Set<BaseShip>();
   /** Enemy ships the player currently sees */
   private seenByPlayer = new Set<BaseShip>();
+  /** Captains in command of player ships this battle */
+  private captains = new Map<BaseShip, ICaptain>();
 
   private explosion!: Explosion;
   private splash!: WaterSplash;
@@ -164,6 +171,7 @@ export class BattleScene extends Phaser.Scene {
     this.escortAISystems = [];
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
+    this.captains = new Map();
     this.diveBtn = null;
     this.diveText = null;
     this.airText = null;
@@ -300,30 +308,52 @@ export class BattleScene extends Phaser.Scene {
     return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
   }
 
-  private spawnShip(shipData: IShipData, x: number, y: number): BaseShip {
-    const loadout = this.loadoutOf(shipData);
-    const ship = new BaseShip(this, x, y, shipData.spriteKey, this.shipDataToStats(shipData, primaryWeapon(loadout)));
+  private spawnShip(shipData: IShipData, x: number, y: number, mods: IShipModifiers = NO_MODIFIERS): BaseShip {
+    const loadout = applyToWeapons(this.loadoutOf(shipData), mods);
+    const stats = applyToStats(this.shipDataToStats(shipData, primaryWeapon(loadout)), mods);
+    const ship = new BaseShip(this, x, y, shipData.spriteKey, stats);
     ship.loadout = loadout;
+    ship.visionMul = mods.visionMul;
+    ship.aaMul = mods.aaMul;
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
     (ship.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
     return ship;
+  }
+
+  /** Captain of fleet slot `index`, with saved progress. */
+  private captainFor(index: number): ICaptain | null {
+    const id = this.battleData?.captainIds?.[index];
+    const data = id ? DataLoader.getCaptains(this).find((c) => c.id === id) : undefined;
+    return data ? withProgress(data, loadProgress().captainXp[data.id] ?? 0) : null;
+  }
+
+  /** Upgrades fitted to the ship plus its captain's bonus. */
+  private playerModifiers(shipData: IShipData, captain: ICaptain | null): IShipModifiers {
+    const fitted = loadProgress().upgrades[shipData.id] ?? [];
+    return combineModifiers(upgradeModifiers(fitted, DataLoader.getUpgrades(this)), captainModifiers(captain));
   }
 
   private spawnPlayerFleet(fleet: IFleet, formation: Formation): void {
     const flagshipData = FleetSystem.getFlagship(fleet);
     if (!flagshipData) return;
 
-    this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y);
+    const flagCaptain = this.captainFor(fleet.flagshipIndex);
+    this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, this.playerModifiers(flagshipData, flagCaptain));
+    if (flagCaptain) this.captains.set(this.flagship, flagCaptain);
     this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData));
     this.playerRecon.register(this.flagship);
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
     const offsets = FormationSystem.getOffsets(formation);
     const profile = TACTICS[fleet.nation];
-    FleetSystem.getEscorts(fleet).forEach((escortData, i) => {
+    const escortSlots = fleet.slots.filter((s, i) => i !== fleet.flagshipIndex && s.shipData !== null);
+    escortSlots.forEach((slot, i) => {
+      const escortData = slot.shipData as IShipData;
       const offset = offsets[Math.min(i, offsets.length - 1)];
       const spawnPos = FormationSystem.getWorldPositionFromValues(FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, 0, offset);
-      const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y);
+      const captain = this.captainFor(slot.slotIndex);
+      const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain));
+      if (captain) this.captains.set(escort, captain);
       this.playerAir.register(escort, AirOpsSystem.wingFor(escortData));
       this.playerRecon.register(escort);
       this.escorts.push(escort);
@@ -394,7 +424,7 @@ export class BattleScene extends Phaser.Scene {
   private visionSources(ships: BaseShip[], recon: ReconSystem, air: AirOpsSystem): VisionSource[] {
     const sources: VisionSource[] = [];
     for (const s of ships) {
-      if (s.isAlive) sources.push({ kind: 'circle', x: s.x, y: s.y, radius: shipVision(s.stats.shipClass, s.submerged) });
+      if (s.isAlive) sources.push({ kind: 'circle', x: s.x, y: s.y, radius: shipVision(s.stats.shipClass, s.submerged) * s.visionMul });
     }
     sources.push(...recon.cones());
     for (const sq of air.squadrons) {
@@ -868,19 +898,37 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** Gives every captain in the fleet their battle XP and saves it. */
+  private awardCaptains(victory: boolean, enemiesSunk: number): ICaptainReport[] {
+    if (this.captains.size === 0) return [];
+    const progress = loadProgress();
+    const captainXp = { ...progress.captainXp };
+    const reports: ICaptainReport[] = [];
+    for (const [ship, captain] of this.captains) {
+      const gained = battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive });
+      const award = awardXp(captain, gained);
+      captainXp[captain.id] = award.captain.xp;
+      reports.push({ name: captain.name, level: award.captain.level, gained, leveledUp: award.leveledUp });
+    }
+    saveProgress({ ...progress, captainXp });
+    return reports;
+  }
+
   private triggerGameOver(victory: boolean): void {
     if (this.gameOver) return;
     this.gameOver = true;
     const fleet = this.friendlies();
+    const enemiesSunk = this.enemies.filter((e) => !e.isAlive).length;
     const result: IBattleResultData = {
       victory,
       score: 0,
       turnsElapsed: 0,
-      enemiesSunk: this.enemies.filter((e) => !e.isAlive).length,
+      enemiesSunk,
       enemiesTotal: this.enemies.length,
       survivors: fleet.filter((s) => s.isAlive).length,
       fleetSize: fleet.length,
       durationSec: (this.time.now - this.battleStartedAt) / 1000,
+      captainReports: this.awardCaptains(victory, enemiesSunk),
     };
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }
