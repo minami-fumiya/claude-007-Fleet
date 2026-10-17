@@ -12,7 +12,8 @@
         "15in_mk1",
         "4_5in_mk1"
       ],
-      "spriteKey": "hood"
+      "spriteKey": "hood",
+      "description": "巡洋戦艦。長く世界最大の軍艦として英海軍の象徴だった。1941年5月、デンマーク海峡でビスマルクに撃沈された。"
     },
     {
       "id": "king_george_v",
@@ -26,7 +27,8 @@
         "14in_mk7",
         "4_5in_mk1"
       ],
-      "spriteKey": "king_george_v"
+      "spriteKey": "king_george_v",
+      "description": "キング・ジョージ5世級戦艦1番艦。14インチ4連装砲を備え、ビスマルク追撃戦に参加した。"
     },
     {
       "id": "warspite",
@@ -40,7 +42,8 @@
         "15in_mk1",
         "6in_mk23"
       ],
-      "spriteKey": "warspite"
+      "spriteKey": "warspite",
+      "description": "クイーン・エリザベス級戦艦。二度の世界大戦で数多くの海戦に参加した殊勲艦。"
     },
     {
       "id": "rodney",
@@ -54,7 +57,8 @@
         "16in_mk1",
         "6in_mk23"
       ],
-      "spriteKey": "rodney"
+      "spriteKey": "rodney",
+      "description": "ネルソン級戦艦2番艦。16インチ砲を艦の前部に集中配置した独特の艦形。ビスマルク撃沈に大きく貢献した。"
     },
     {
       "id": "belfast",
@@ -68,7 +72,8 @@
         "6in_mk23",
         "mk8_torpedo"
       ],
-      "spriteKey": "belfast"
+      "spriteKey": "belfast",
+      "description": "タウン級軽巡洋艦。北岬沖海戦に参加した。現在はロンドンのテムズ川で博物館船として保存されている。"
     },
     {
       "id": "southampton",
@@ -82,7 +87,8 @@
         "6in_mk23",
         "mk8_torpedo"
       ],
-      "spriteKey": "southampton"
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦1番艦。1941年1月、地中海でドイツ空軍の急降下爆撃を受けて沈没した。"
     },
     {
       "id": "cossack",
@@ -97,7 +103,8 @@
         "mk8_torpedo",
         "depth_charge"
       ],
-      "spriteKey": "cossack"
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦。1940年のアルトマルク号事件で捕虜を救出し、ビスマルク追撃戦では夜間雷撃に加わった。"
     },
     {
       "id": "javelin",
@@ -112,7 +119,8 @@
         "mk8_torpedo",
         "depth_charge"
       ],
-      "spriteKey": "javelin"
+      "spriteKey": "javelin",
+      "description": "J級駆逐艦。大戦を通じて地中海などで行動し、終戦まで生き残った。"
     },
     {
       "id": "illustrious",
@@ -130,7 +138,8 @@
         "fighters": 3,
         "diveBombers": 2,
         "torpedoBombers": 4
-      }
+      },
+      "description": "イラストリアス級航空母艦1番艦。装甲飛行甲板を持ち、1940年のタラント空襲でイタリア艦隊を攻撃した。"
     },
     {
       "id": "ark_royal",
@@ -148,7 +157,8 @@
         "fighters": 3,
         "diveBombers": 2,
         "torpedoBombers": 5
-      }
+      },
+      "description": "航空母艦。搭載するソードフィッシュの雷撃でビスマルクの舵を損傷させた。1941年11月、U-81の雷撃で沈没。"
     },
     {
       "id": "truant",
@@ -161,7 +171,8 @@
       "weapons": [
         "mk8_sub_torpedo"
       ],
-      "spriteKey": "truant"
+      "spriteKey": "truant",
+      "description": "T級潜水艦。地中海や極東で多くの戦果を挙げた。"
     },
     {
       "id": "upholder",
@@ -174,7 +185,8 @@
       "weapons": [
         "mk8_sub_torpedo"
       ],
-      "spriteKey": "upholder"
+      "spriteKey": "upholder",
+      "description": "U級潜水艦。地中海で活躍したエース潜水艦。1942年4月に消息を絶った。"
     }
   ]
 }

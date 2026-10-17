@@ -12,7 +12,8 @@
         "46cm_main_gun",
         "15_5cm_triple"
       ],
-      "spriteKey": "yamato"
+      "spriteKey": "yamato",
+      "description": "大和型戦艦1番艦。史上最大の46cm砲を搭載した戦艦。1945年4月、沖縄へ向かう途中の坊ノ岬沖で米艦載機の攻撃を受け沈没。"
     },
     {
       "id": "musashi",
@@ -26,7 +27,8 @@
         "46cm_main_gun",
         "15_5cm_triple"
       ],
-      "spriteKey": "musashi"
+      "spriteKey": "musashi",
+      "description": "大和型戦艦2番艦。1944年10月のレイテ沖海戦 (シブヤン海) で多数の魚雷と爆弾を受けて沈没。"
     },
     {
       "id": "nagato",
@@ -40,7 +42,8 @@
         "41cm_main_gun",
         "12cm_gun"
       ],
-      "spriteKey": "nagato"
+      "spriteKey": "nagato",
+      "description": "長門型戦艦1番艦。41cm砲を搭載し、長く連合艦隊旗艦を務めた。終戦まで生き残り、1946年のビキニ環礁の原爆実験で沈没。"
     },
     {
       "id": "mutsu",
@@ -54,7 +57,8 @@
         "41cm_main_gun",
         "12cm_gun"
       ],
-      "spriteKey": "mutsu"
+      "spriteKey": "mutsu",
+      "description": "長門型戦艦2番艦。1943年6月、柱島泊地で原因不明の爆発事故により沈没。"
     },
     {
       "id": "kongo",
@@ -68,7 +72,8 @@
         "36cm_main_gun",
         "12cm_gun"
       ],
-      "spriteKey": "kongo"
+      "spriteKey": "kongo",
+      "description": "金剛型戦艦1番艦。英ヴィッカース社で建造された巡洋戦艦を改装した高速戦艦。1944年11月、米潜水艦の雷撃で沈没。"
     },
     {
       "id": "takao",
@@ -82,7 +87,8 @@
         "20cm_twin_gun",
         "torpedo_type93"
       ],
-      "spriteKey": "takao"
+      "spriteKey": "takao",
+      "description": "高雄型重巡洋艦1番艦。大きな艦橋が特徴。レイテ沖海戦で米潜水艦の雷撃により大破し、シンガポールで終戦を迎えた。"
     },
     {
       "id": "atago",
@@ -96,7 +102,8 @@
         "20cm_twin_gun",
         "torpedo_type93"
       ],
-      "spriteKey": "atago"
+      "spriteKey": "atago",
+      "description": "高雄型重巡洋艦2番艦。レイテ沖海戦で栗田艦隊の旗艦を務めたが、1944年10月に米潜水艦ダーターの雷撃で沈没。"
     },
     {
       "id": "tone",
@@ -110,7 +117,8 @@
         "20cm_twin_gun",
         "torpedo_type93"
       ],
-      "spriteKey": "tone"
+      "spriteKey": "tone",
+      "description": "利根型重巡洋艦1番艦。主砲を前部に集中し、後部を水上偵察機の運用に充てた。1945年7月、呉付近で空襲を受け大破着底。"
     },
     {
       "id": "fubuki",
@@ -125,7 +133,8 @@
         "torpedo_type93",
         "depth_charge"
       ],
-      "spriteKey": "fubuki"
+      "spriteKey": "fubuki",
+      "description": "特型駆逐艦 (吹雪型) 1番艦。重武装の新型駆逐艦として列強に衝撃を与えた。1942年10月、サボ島沖海戦で沈没。"
     },
     {
       "id": "shimakaze",
@@ -140,7 +149,8 @@
         "torpedo_type93",
         "depth_charge"
       ],
-      "spriteKey": "shimakaze"
+      "spriteKey": "shimakaze",
+      "description": "島風型駆逐艦。40ノットを超える高速と5連装魚雷発射管3基を備えた。1944年11月、オルモック湾で空襲により沈没。"
     },
     {
       "id": "yukikaze",
@@ -155,7 +165,8 @@
         "torpedo_type93",
         "depth_charge"
       ],
-      "spriteKey": "yukikaze"
+      "spriteKey": "yukikaze",
+      "description": "陽炎型駆逐艦。数多くの激戦を生き抜いた「幸運艦」。戦後は中華民国に引き渡され「丹陽」となった。"
     },
     {
       "id": "shokaku",
@@ -173,7 +184,8 @@
         "fighters": 4,
         "diveBombers": 4,
         "torpedoBombers": 4
-      }
+      },
+      "description": "翔鶴型航空母艦1番艦。真珠湾攻撃に参加した主力空母。1944年6月、マリアナ沖海戦で米潜水艦の雷撃により沈没。"
     },
     {
       "id": "akagi",
@@ -191,7 +203,8 @@
         "fighters": 4,
         "diveBombers": 5,
         "torpedoBombers": 4
-      }
+      },
+      "description": "巡洋戦艦から改造された航空母艦。真珠湾攻撃では機動部隊の旗艦を務めた。1942年6月、ミッドウェー海戦で沈没。"
     },
     {
       "id": "kaga",
@@ -209,7 +222,8 @@
         "fighters": 4,
         "diveBombers": 5,
         "torpedoBombers": 5
-      }
+      },
+      "description": "戦艦から改造された航空母艦。多くの艦載機を搭載できた。1942年6月、ミッドウェー海戦で沈没。"
     },
     {
       "id": "i19",
@@ -222,7 +236,8 @@
       "weapons": [
         "type95_torpedo"
       ],
-      "spriteKey": "i19"
+      "spriteKey": "i19",
+      "description": "乙型潜水艦。1942年9月、一度の雷撃で空母ワスプを撃沈し、戦艦ノースカロライナにも損傷を与えた。"
     },
     {
       "id": "i400",
@@ -235,7 +250,8 @@
       "weapons": [
         "type95_torpedo"
       ],
-      "spriteKey": "i400"
+      "spriteKey": "i400",
+      "description": "伊四百型潜水艦。攻撃機「晴嵐」3機を搭載できる当時最大の潜水艦。終戦後に米軍に接収された。"
     }
   ]
 }

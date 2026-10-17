@@ -19,16 +19,16 @@ const L = IS_PORTRAIT
   ? {
       resources: { x: 16, y: 150, w: CANVAS_W - 32 } as { x: number; y: number; w: number },
       resourceCols: 2,
-      menu: { x: 16, y: 290, w: CANVAS_W - 32, h: 110 } as IRect,
-      menuFlow: 'row' as const,
-      dock: { x: 16, y: 420, w: CANVAS_W - 32, h: CANVAS_H - 436 } as IRect,
+      menu: { x: 16, y: 290, w: CANVAS_W - 32, h: 214 } as IRect,
+      menuCols: 3,
+      dock: { x: 16, y: 524, w: CANVAS_W - 32, h: CANVAS_H - 540 } as IRect,
       rowH: 92,
     }
   : {
       resources: { x: 444, y: 96, w: 812 } as { x: number; y: number; w: number },
       resourceCols: 4,
       menu: { x: 24, y: 96, w: 400, h: 600 } as IRect,
-      menuFlow: 'column' as const,
+      menuCols: 1,
       dock: { x: 444, y: 164, w: 812, h: 532 } as IRect,
       rowH: 62,
     };
@@ -39,6 +39,7 @@ const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gol
   { label: '史実', caption: 'SCENARIO', scene: SceneKeys.SCENARIO, variant: 'primary' },
   { label: '工廠', caption: 'ARSENAL · 研究', scene: SceneKeys.ARSENAL, variant: 'secondary' },
   { label: '改装', caption: 'REFIT', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
+  { label: '図鑑', caption: 'ENCYCLOPEDIA', scene: SceneKeys.ENCYCLOPEDIA, variant: 'secondary' },
 ];
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 6 : 5;
 
@@ -104,12 +105,12 @@ export class HomeScene extends Phaser.Scene {
   private buildMenu(): void {
     const m = L.menu;
     const gap = 14;
+    const cols = L.menuCols;
+    const rows = Math.ceil(MENU.length / cols);
+    const cw = (m.w - gap * (cols - 1)) / cols;
+    const ch = (m.h - gap * (rows - 1)) / rows;
     MENU.forEach((item, i) => {
-      const n = MENU.length;
-      const r =
-        L.menuFlow === 'row'
-          ? { w: (m.w - gap * (n - 1)) / n, h: m.h, x: m.x + i * ((m.w - gap * (n - 1)) / n + gap), y: m.y }
-          : { w: m.w, h: (m.h - gap * (n - 1)) / n, x: m.x, y: m.y + i * ((m.h - gap * (n - 1)) / n + gap) };
+      const r = { w: cw, h: ch, x: m.x + (i % cols) * (cw + gap), y: m.y + Math.floor(i / cols) * (ch + gap) };
       new UIButton(this, r.x + r.w / 2, r.y + r.h / 2, item.label, () => {
         // Free battles are not campaign sorties.
         if (item.scene === SceneKeys.FLEET_BUILDER) this.registry.remove(CAMPAIGN_AREA_KEY);

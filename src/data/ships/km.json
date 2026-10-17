@@ -12,7 +12,8 @@
         "38cm_skc34",
         "15cm_skc28"
       ],
-      "spriteKey": "bismarck"
+      "spriteKey": "bismarck",
+      "description": "ビスマルク級戦艦1番艦。1941年5月、デンマーク海峡で巡洋戦艦フッドを撃沈したが、英艦隊の追撃を受けて撃沈された。"
     },
     {
       "id": "tirpitz",
@@ -26,7 +27,8 @@
         "38cm_skc34",
         "15cm_skc28"
       ],
-      "spriteKey": "tirpitz"
+      "spriteKey": "tirpitz",
+      "description": "ビスマルク級戦艦2番艦。ノルウェーのフィヨルドに潜んで英艦隊を牽制し続けたが、1944年11月に英空軍の爆撃で転覆した。"
     },
     {
       "id": "scharnhorst",
@@ -40,7 +42,8 @@
         "28cm_skc34",
         "15cm_skc28"
       ],
-      "spriteKey": "scharnhorst"
+      "spriteKey": "scharnhorst",
+      "description": "シャルンホルスト級戦艦1番艦。28cm砲を搭載した高速戦艦。1943年12月、北岬沖海戦で英艦隊に撃沈された。"
     },
     {
       "id": "gneisenau",
@@ -54,7 +57,8 @@
         "28cm_skc34",
         "15cm_skc28"
       ],
-      "spriteKey": "gneisenau"
+      "spriteKey": "gneisenau",
+      "description": "シャルンホルスト級戦艦2番艦。姉妹艦とともに通商破壊で戦果を挙げた。1942年の空襲で損傷し、戦線に戻らなかった。"
     },
     {
       "id": "prinz_eugen",
@@ -68,7 +72,8 @@
         "20cm_skc34",
         "g7a_torpedo"
       ],
-      "spriteKey": "prinz_eugen"
+      "spriteKey": "prinz_eugen",
+      "description": "アドミラル・ヒッパー級重巡洋艦3番艦。ビスマルクとともに出撃し、終戦まで生き残った。"
     },
     {
       "id": "admiral_hipper",
@@ -82,7 +87,8 @@
         "20cm_skc34",
         "g7a_torpedo"
       ],
-      "spriteKey": "admiral_hipper"
+      "spriteKey": "admiral_hipper",
+      "description": "アドミラル・ヒッパー級重巡洋艦1番艦。ノルウェー侵攻や大西洋での通商破壊に参加した。"
     },
     {
       "id": "z1",
@@ -97,7 +103,8 @@
         "g7a_torpedo",
         "depth_charge"
       ],
-      "spriteKey": "z1"
+      "spriteKey": "z1",
+      "description": "1934年型駆逐艦の1番艦「レーベレヒト・マース」。1940年2月、味方機の誤爆と触雷により沈没した。"
     },
     {
       "id": "graf_zeppelin",
@@ -115,7 +122,8 @@
         "fighters": 3,
         "diveBombers": 4,
         "torpedoBombers": 2
-      }
+      },
+      "description": "ドイツ唯一の航空母艦として建造されたが、未完成のまま終戦を迎えた。本ゲームでは完成した姿を想定している。"
     },
     {
       "id": "u_boat_viic",
@@ -128,7 +136,8 @@
       "weapons": [
         "g7e_torpedo"
       ],
-      "spriteKey": "u_boat_viic"
+      "spriteKey": "u_boat_viic",
+      "description": "VIIC型Uボート。大西洋の戦いで群狼戦術を担った、最も多く建造された潜水艦。"
     },
     {
       "id": "u_boat_ixc",
@@ -141,7 +150,8 @@
       "weapons": [
         "g7e_torpedo"
       ],
-      "spriteKey": "u_boat_ixc"
+      "spriteKey": "u_boat_ixc",
+      "description": "IXC型Uボート。航続距離の長い大型潜水艦で、遠方の海域で通商破壊を行った。"
     },
     {
       "id": "u_boat_xxi",
@@ -154,7 +164,8 @@
       "weapons": [
         "g7e_torpedo"
       ],
-      "spriteKey": "u_boat_xxi"
+      "spriteKey": "u_boat_xxi",
+      "description": "XXI型Uボート。大容量の電池で長時間の水中高速航行ができた「エレクトロボート」。実戦投入は終戦直前だった。"
     }
   ]
 }

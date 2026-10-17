@@ -12,7 +12,8 @@
         "16in_mk7",
         "5in_38"
       ],
-      "spriteKey": "iowa"
+      "spriteKey": "iowa",
+      "description": "アイオワ級戦艦1番艦。33ノットの高速と16インチ砲9門を備える。朝鮮戦争や冷戦期にも現役を務め、1990年に退役した。"
     },
     {
       "id": "north_carolina",
@@ -26,7 +27,8 @@
         "16in_mk6",
         "5in_38"
       ],
-      "spriteKey": "north_carolina"
+      "spriteKey": "north_carolina",
+      "description": "ノースカロライナ級戦艦1番艦。軍縮条約明けに建造された最初の米新戦艦。1942年9月、伊19の雷撃で損傷した。"
     },
     {
       "id": "missouri",
@@ -40,7 +42,8 @@
         "16in_mk7",
         "5in_38"
       ],
-      "spriteKey": "missouri"
+      "spriteKey": "missouri",
+      "description": "アイオワ級戦艦3番艦。1945年9月2日、東京湾に停泊した本艦の艦上で日本の降伏文書調印式が行われた。"
     },
     {
       "id": "new_jersey",
@@ -54,7 +57,8 @@
         "16in_mk7",
         "5in_38"
       ],
-      "spriteKey": "new_jersey"
+      "spriteKey": "new_jersey",
+      "description": "アイオワ級戦艦2番艦。第二次大戦後も朝鮮戦争、ベトナム戦争、レバノン沖に投入された。"
     },
     {
       "id": "baltimore",
@@ -68,7 +72,8 @@
         "8in_mk12",
         "5in_38"
       ],
-      "spriteKey": "baltimore"
+      "spriteKey": "baltimore",
+      "description": "ボルチモア級重巡洋艦1番艦。大戦後半、空母機動部隊の護衛として活躍した。"
     },
     {
       "id": "des_moines",
@@ -82,7 +87,8 @@
         "8in_mk16",
         "5in_38"
       ],
-      "spriteKey": "des_moines"
+      "spriteKey": "des_moines",
+      "description": "デ・モイン級重巡洋艦1番艦。自動装填式の8インチ砲を備えた最後の重巡洋艦。完成は大戦後の1948年。"
     },
     {
       "id": "fletcher",
@@ -97,7 +103,8 @@
         "mk15_torpedo",
         "depth_charge"
       ],
-      "spriteKey": "fletcher"
+      "spriteKey": "fletcher",
+      "description": "フレッチャー級駆逐艦1番艦。同級は175隻が建造され、米海軍の主力駆逐艦となった。"
     },
     {
       "id": "gearing",
@@ -112,7 +119,8 @@
         "mk15_torpedo",
         "depth_charge"
       ],
-      "spriteKey": "gearing"
+      "spriteKey": "gearing",
+      "description": "ギアリング級駆逐艦1番艦。フレッチャー級を発展させた大型駆逐艦で、1945年に就役した。"
     },
     {
       "id": "essex",
@@ -130,7 +138,8 @@
         "fighters": 5,
         "diveBombers": 5,
         "torpedoBombers": 4
-      }
+      },
+      "description": "エセックス級航空母艦1番艦。同級は24隻が建造され、太平洋戦争後半の米機動部隊の中核となった。"
     },
     {
       "id": "enterprise",
@@ -148,7 +157,8 @@
         "fighters": 4,
         "diveBombers": 5,
         "torpedoBombers": 4
-      }
+      },
+      "description": "ヨークタウン級航空母艦2番艦。ミッドウェー海戦をはじめ太平洋戦争の主要な海戦の多くに参加し、生き残った。"
     },
     {
       "id": "midway",
@@ -166,7 +176,8 @@
         "fighters": 6,
         "diveBombers": 6,
         "torpedoBombers": 5
-      }
+      },
+      "description": "ミッドウェイ級航空母艦1番艦。装甲飛行甲板を持つ大型空母で、完成は終戦直後の1945年9月。"
     },
     {
       "id": "gato",
@@ -179,7 +190,8 @@
       "weapons": [
         "mk14_torpedo"
       ],
-      "spriteKey": "gato"
+      "spriteKey": "gato",
+      "description": "ガトー級潜水艦1番艦。同級は太平洋で日本の商船と艦艇に大きな打撃を与えた。"
     },
     {
       "id": "balao",
@@ -192,7 +204,8 @@
       "weapons": [
         "mk14_torpedo"
       ],
-      "spriteKey": "balao"
+      "spriteKey": "balao",
+      "description": "バラオ級潜水艦1番艦。ガトー級の改良型で、より深く潜航できる。"
     }
   ]
 }

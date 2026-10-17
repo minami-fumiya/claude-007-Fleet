@@ -14,6 +14,8 @@ export interface IShipData {
   spriteKey: string;
   /** Carriers only: embarked aircraft */
   airWing?: IAirWing;
+  /** Short history for the encyclopedia */
+  description?: string;
 }
 
 export interface IShipStats {

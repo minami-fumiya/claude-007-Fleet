@@ -79,3 +79,10 @@ describe('ship data files', () => {
     }
   });
 });
+
+describe('encyclopedia', () => {
+  it('every ship has a history blurb', () => {
+    const missing = ALL.filter((s) => !s.description || s.description.length < 10).map((s) => s.id);
+    expect(missing).toEqual([]);
+  });
+});

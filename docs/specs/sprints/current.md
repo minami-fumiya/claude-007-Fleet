@@ -26,8 +26,8 @@
 - [x] テスト
 
 ### D. 図鑑
-- [ ] 全艦に短い史実解説 (`description`)
-- [ ] `src/scenes/EncyclopediaScene.ts` — 国籍 / 艦種フィルタ、性能・武装・解説
+- [x] 全艦に短い史実解説 (`description`)
+- [x] `src/scenes/EncyclopediaScene.ts` — 国籍 / 艦種フィルタ、性能・武装・解説
 
 ### 完了処理
 - [ ] `docs/specs/systems/scenario.md` / `refit.md`
