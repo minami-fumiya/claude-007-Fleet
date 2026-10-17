@@ -13,7 +13,10 @@ import weapons from '@/data/weapons/weapons.json';
 /** Balance invariants over the ship data (see docs/specs/systems/balance.md). */
 
 const W = new Map((weapons.weapons as IWeaponData[]).map((w) => [w.id, w]));
-const ALL = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[];
+const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[];
+/** Historical ships; fictional ones are a research reward and are checked separately. */
+const ALL = EVERY.filter((s) => !s.fictional);
+const FICTIONAL = EVERY.filter((s) => s.fictional);
 const loadout = (s: IShipData): IWeaponData[] => s.weapons.map((id) => W.get(id)!);
 const of = (cls: ShipClass): IShipData[] => ALL.filter((s) => s.shipClass === cls);
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -65,5 +68,28 @@ describe('balance', () => {
     const avg = (cls: ShipClass): number => of(cls).reduce((n, s) => n + s.speed, 0) / of(cls).length;
     expect(avg(ShipClass.Destroyer)).toBeGreaterThan(avg(ShipClass.Cruiser));
     expect(avg(ShipClass.Cruiser)).toBeGreaterThan(avg(ShipClass.Battleship));
+  });
+
+  it('makes each fictional battleship a step above its nation\'s best historical one, but not overwhelming', () => {
+    for (const f of FICTIONAL) {
+      const rivals = of(ShipClass.Battleship).filter((s) => s.nation === f.nation);
+      const best = rivals.sort((a, b) => b.hp * shipDps(loadout(b), BB_TARGET) - a.hp * shipDps(loadout(a), BB_TARGET))[0];
+      const r = duelRatio(loadout(f), f, loadout(best), best);
+      // duelRatio < 1 means the first ship wins.
+      expect(r, `${f.id} vs ${best.id}`).toBeLessThan(0.95);
+      expect(r, `${f.id} vs ${best.id}`).toBeGreaterThan(0.6);
+    }
+  });
+
+  it('keeps the fictional battleships even with each other', () => {
+    expect(FICTIONAL.length).toBe(4);
+    for (const a of FICTIONAL) {
+      for (const b of FICTIONAL) {
+        if (a === b) continue;
+        const r = duelRatio(loadout(a), a, loadout(b), b);
+        expect(r, `${a.id} vs ${b.id}`).toBeGreaterThan(0.7);
+        expect(r, `${a.id} vs ${b.id}`).toBeLessThan(1.4);
+      }
+    }
   });
 });

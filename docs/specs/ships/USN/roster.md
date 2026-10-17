@@ -8,6 +8,7 @@ Source of truth: `src/data/ships/usn.json`. Stats use the game scale (Yamato = H
 | `north_carolina` | ノースカロライナ (North Carolina) | Battleship | 705 | 56 | 135 | 16in Mk.6 主砲, 5in/38 両用砲 |
 | `missouri` | ミズーリ (Missouri) | Battleship | 750 | 58 | 160 | 16in Mk.7 主砲, 5in/38 両用砲 |
 | `new_jersey` | ニュージャージー (New Jersey) | Battleship | 750 | 58 | 160 | 16in Mk.7 主砲, 5in/38 両用砲 |
+| `montana` | モンタナ (Montana) | Battleship (架空) | 830 | 63 | 135 | 16in Mk.7 4連装砲, 5in/38 両用砲 |
 | `baltimore` | ボルチモア (Baltimore) | Cruiser | 415 | 42 | 175 | 8in Mk.12 主砲, 5in/38 両用砲 |
 | `des_moines` | デ・モイン (Des Moines) | Cruiser | 450 | 44 | 170 | 8in Mk.16 速射砲, 5in/38 両用砲 |
 | `fletcher` | フレッチャー (Fletcher) | Destroyer | 225 | 14 | 250 | 5in/38 両用砲, Mk.15 魚雷, 爆雷投射機 |
@@ -25,6 +26,7 @@ Source of truth: `src/data/ships/usn.json`. Stats use the game scale (Yamato = H
 | `16in_mk7` | 16in Mk.7 主砲 | ShellAP | 115 | 650 | 1500 | 620 |
 | `5in_38` | 5in/38 両用砲 | ShellHE | 32 | 420 | 700 | 540 |
 | `16in_mk6` | 16in Mk.6 主砲 | ShellAP | 105 | 620 | 1600 | 600 |
+| `16in_mk7_quad` | 16in Mk.7 4連装砲 | ShellAP | 115 | 650 | 1300 | 620 |
 | `8in_mk12` | 8in Mk.12 主砲 | ShellAP | 62 | 520 | 1150 | 560 |
 | `8in_mk16` | 8in Mk.16 速射砲 | ShellAP | 66 | 530 | 800 | 570 |
 | `mk15_torpedo` | Mk.15 魚雷 | Torpedo | 170 | 320 | 4500 | 280 |
@@ -35,3 +37,4 @@ Source of truth: `src/data/ships/usn.json`. Stats use the game scale (Yamato = H
 
 - 遠距離砲戦が得意 (16in 主砲の射程 650 は全艦中最長)。
 - 空母 Essex の艦載機は Sprint 5 で実装。現状は 5in 両用砲のみ。
+- 架空艦 (`fictional: true`) は工廠の研究「架空艦計画」で建造可能になり、敵艦隊には出現しない (Sprint 10)。

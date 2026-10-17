@@ -61,6 +61,22 @@
       "description": "ネルソン級戦艦2番艦。16インチ砲を艦の前部に集中配置した独特の艦形。ビスマルク撃沈に大きく貢献した。"
     },
     {
+      "id": "lion",
+      "name": "ライオン (Lion)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 820,
+      "armor": 61,
+      "speed": 150,
+      "weapons": [
+        "16in_mk2",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "lion",
+      "fictional": true,
+      "description": "キング・ジョージ5世級に続く戦艦。16インチ砲9門を搭載する予定で起工されたが、建造は中止された (架空艦)。"
+    },
+    {
       "id": "belfast",
       "name": "ベルファスト (Belfast)",
       "nation": "RN",

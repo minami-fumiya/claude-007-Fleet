@@ -9,6 +9,7 @@ Source of truth: `src/data/ships/ijn.json`. Stats use the game scale (Yamato = H
 | `nagato` | 長門 (Nagato) | Battleship | 690 | 58 | 130 | 41cm 連装砲, 12cm 単装砲 |
 | `mutsu` | 陸奥 (Mutsu) | Battleship | 680 | 57 | 130 | 41cm 連装砲, 12cm 単装砲 |
 | `kongo` | 金剛 (Kongo) | Battleship | 610 | 45 | 170 | 35.6cm 連装砲, 12cm 単装砲 |
+| `a150` | 超大和型 (A-150) | Battleship (架空) | 880 | 70 | 120 | 51cm 連装砲, 15.5cm 3 連装副砲 |
 | `takao` | 高雄 (Takao) | Cruiser | 400 | 40 | 180 | 20cm 連装砲, 93式酸素魚雷 |
 | `atago` | 愛宕 (Atago) | Cruiser | 400 | 40 | 180 | 20cm 連装砲, 93式酸素魚雷 |
 | `tone` | 利根 (Tone) | Cruiser | 385 | 38 | 178 | 20cm 連装砲, 93式酸素魚雷 |
@@ -30,6 +31,7 @@ Source of truth: `src/data/ships/ijn.json`. Stats use the game scale (Yamato = H
 | `41cm_main_gun` | 41cm 連装砲 | ShellAP | 110 | 580 | 1550 | 590 |
 | `12cm_gun` | 12cm 単装砲 | ShellHE | 35 | 400 | 800 | 520 |
 | `36cm_main_gun` | 35.6cm 連装砲 | ShellAP | 95 | 560 | 1400 | 600 |
+| `51cm_main_gun` | 51cm 連装砲 | ShellAP | 135 | 640 | 1750 | 600 |
 | `20cm_twin_gun` | 20cm 連装砲 | ShellAP | 65 | 500 | 1200 | 550 |
 | `torpedo_type93` | 93式酸素魚雷 | Torpedo | 200 | 350 | 4000 | 300 |
 | `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 80 | 2200 | 0 |
@@ -39,3 +41,4 @@ Source of truth: `src/data/ships/ijn.json`. Stats use the game scale (Yamato = H
 
 - 酸素魚雷 (93式 / 95式) は全国籍で最も火力が高い。
 - 伊19 は Sprint 4 で追加した潜水艦。
+- 架空艦 (`fictional: true`) は工廠の研究「架空艦計画」で建造可能になり、敵艦隊には出現しない (Sprint 10)。

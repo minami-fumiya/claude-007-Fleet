@@ -17,6 +17,7 @@ import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/
 import { ICaptain, ICaptainData } from '@/types/Captain';
 import { SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { availableShips } from '@/systems/ResearchSystem';
 import { paySortie, sortieBlockers } from '@/systems/ProgressionSystem';
 import { formatResources, sortieCost } from '@/systems/ResourceSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
@@ -212,7 +213,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.mode = saved?.mode ?? BattleMode.Surface;
     this.weatherChoice = saved?.weather ?? RANDOM;
     this.timeChoice = saved?.time ?? TimeOfDay.Day;
-    this.ships = this.shipRegistry.byNation(this.nation);
+    this.ships = availableShips(this.shipRegistry.byNation(this.nation), loadProgress().research);
     this.slots = [0, 1, 2].map((i) => {
       const id = saved?.slotIds[i];
       return id ? this.shipRegistry.byId(id) ?? null : null;
@@ -442,7 +443,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   private selectNation(nation: Nation): void {
     if (nation === this.nation) return;
     this.nation = nation;
-    this.ships = this.shipRegistry.byNation(nation);
+    this.ships = availableShips(this.shipRegistry.byNation(nation), loadProgress().research);
     this.slots = [null, null, null];
     this.captainIds = [null, null, null];
     this.page = 0;

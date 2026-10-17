@@ -14,6 +14,8 @@ export interface IShipData {
   spriteKey: string;
   /** Carriers only: embarked aircraft */
   airWing?: IAirWing;
+  /** Planned-only design: needs the 架空艦計画 research and never appears in enemy fleets */
+  fictional?: boolean;
   /** Short history for the encyclopedia */
   description?: string;
 }

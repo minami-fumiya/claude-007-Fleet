@@ -33,18 +33,19 @@ export function generateEnemyFleet(
   mode: BattleMode,
   rng: () => number = Math.random,
 ): IShipData[] {
-  const roster = registry.byNation(nation);
+  // Fictional ships are the player's research reward; the enemy only fields historical ones.
+  const roster = registry.byNation(nation).filter((s) => !s.fictional);
   if (roster.length === 0) return [];
 
   if (mode === BattleMode.ASW) {
-    const subs = registry.byClass(nation, ShipClass.Submarine);
+    const subs = roster.filter((s) => s.shipClass === ShipClass.Submarine);
     const pool = subs.length > 0 ? subs : roster;
     return Array.from({ length: ENEMY_FLEET_SIZE }, () => pick(pool, rng));
   }
 
   return (mode === BattleMode.CarrierStrike ? CARRIER_SLOTS : SURFACE_SLOTS).map((wanted) => {
     for (const shipClass of wanted) {
-      const candidates = registry.byClass(nation, shipClass);
+      const candidates = roster.filter((s) => s.shipClass === shipClass);
       if (candidates.length > 0) return pick(candidates, rng);
     }
     const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);

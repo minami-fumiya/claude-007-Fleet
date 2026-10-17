@@ -8,6 +8,7 @@ Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP
 | `tirpitz` | ティルピッツ (Tirpitz) | Battleship | 775 | 63 | 143 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
 | `scharnhorst` | シャルンホルスト (Scharnhorst) | Battleship | 640 | 55 | 175 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
 | `gneisenau` | グナイゼナウ (Gneisenau) | Battleship | 640 | 55 | 173 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `h39` | H級 (H-39) | Battleship (架空) | 830 | 64 | 150 | 40.6cm SK C/34 主砲, 15cm SK C/28 副砲 |
 | `prinz_eugen` | プリンツ・オイゲン (Prinz Eugen) | Cruiser | 410 | 41 | 178 | 20.3cm SK C/34 主砲, G7a 魚雷 |
 | `admiral_hipper` | アドミラル・ヒッパー (Admiral Hipper) | Cruiser | 400 | 40 | 176 | 20.3cm SK C/34 主砲, G7a 魚雷 |
 | `z1` | Z1 レーベレヒト・マース (Z1) | Destroyer | 215 | 15 | 235 | 12.7cm SK C/34 砲, G7a 魚雷, 爆雷投射機 |
@@ -23,6 +24,7 @@ Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP
 | `38cm_skc34` | 38cm SK C/34 主砲 | ShellAP | 108 | 600 | 1400 | 600 |
 | `15cm_skc28` | 15cm SK C/28 副砲 | ShellHE | 45 | 450 | 1000 | 540 |
 | `28cm_skc34` | 28cm SK C/34 主砲 | ShellAP | 85 | 540 | 1100 | 640 |
+| `40_6cm_skc34` | 40.6cm SK C/34 主砲 | ShellAP | 120 | 630 | 1450 | 610 |
 | `20cm_skc34` | 20.3cm SK C/34 主砲 | ShellAP | 64 | 520 | 1150 | 560 |
 | `g7a_torpedo` | G7a 魚雷 | Torpedo | 175 | 330 | 4500 | 290 |
 | `12cm_skc34` | 12.7cm SK C/34 砲 | ShellHE | 34 | 400 | 800 | 520 |
@@ -33,3 +35,4 @@ Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP
 
 - 戦艦は装甲が厚く、巡洋艦 Prinz Eugen も魚雷を装備。
 - Graf Zeppelin は史実では未完成のため架空扱い。艦載機は Sprint 5。
+- 架空艦 (`fictional: true`) は工廠の研究「架空艦計画」で建造可能になり、敵艦隊には出現しない (Sprint 10)。

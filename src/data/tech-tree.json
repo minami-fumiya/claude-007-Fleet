@@ -8,6 +8,7 @@
     { "id": "engine_1", "name": "機関研究", "description": "全艦の速力 +4%・機関強化を解放", "cost": { "fuel": 400, "steel": 300 }, "requires": [], "effects": { "speedMul": 1.04 } },
     { "id": "damage_control_1", "name": "ダメージコントロール", "description": "全艦の耐久 +5%・応急修理班を解放", "cost": { "fuel": 300, "steel": 700 }, "requires": ["armor_1"], "effects": { "hpMul": 1.05 } },
     { "id": "radar_1", "name": "電探研究", "description": "全艦の視界 +5%・水上レーダーを解放", "cost": { "steel": 600, "bauxite": 300 }, "requires": ["fire_control"], "effects": { "visionMul": 1.05 } },
-    { "id": "aa_1", "name": "対空研究", "description": "全艦の対空 +10%・対空機銃増設を解放", "cost": { "ammo": 400, "bauxite": 300 }, "requires": [], "effects": { "aaMul": 1.1 } }
+    { "id": "aa_1", "name": "対空研究", "description": "全艦の対空 +10%・対空機銃増設を解放", "cost": { "ammo": 400, "bauxite": 300 }, "requires": [], "effects": { "aaMul": 1.1 } },
+    { "id": "fictional_ships", "name": "架空艦計画", "description": "計画のみの戦艦 (超大和型など) を建造可能にする", "cost": { "ammo": 2000, "steel": 3000, "bauxite": 600 }, "requires": ["gunnery_2", "damage_control_1"], "effects": {} }
   ]
 }

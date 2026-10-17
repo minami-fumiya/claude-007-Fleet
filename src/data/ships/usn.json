@@ -61,6 +61,22 @@
       "description": "アイオワ級戦艦2番艦。第二次大戦後も朝鮮戦争、ベトナム戦争、レバノン沖に投入された。"
     },
     {
+      "id": "montana",
+      "name": "モンタナ (Montana)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 830,
+      "armor": 63,
+      "speed": 135,
+      "weapons": [
+        "16in_mk7_quad",
+        "5in_38"
+      ],
+      "spriteKey": "montana",
+      "fictional": true,
+      "description": "アイオワ級に続く戦艦として5隻が計画された。16インチ砲12門を備える予定だったが、1943年に建造が中止された (架空艦)。"
+    },
+    {
       "id": "baltimore",
       "name": "ボルチモア (Baltimore)",
       "nation": "USN",

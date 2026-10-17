@@ -8,6 +8,7 @@ Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP
 | `king_george_v` | キング・ジョージ5世 (King George V) | Battleship | 735 | 60 | 140 | 14in Mk.VII 4 連装砲, 4.5in Mk.I 両用砲 |
 | `warspite` | ウォースパイト (Warspite) | Battleship | 690 | 56 | 128 | 15in Mk.I 主砲, 6in Mk.XXIII 砲 |
 | `rodney` | ロドニー (Rodney) | Battleship | 750 | 60 | 115 | 16in Mk.I 主砲, 6in Mk.XXIII 砲 |
+| `lion` | ライオン (Lion) | Battleship (架空) | 820 | 61 | 150 | 16in Mk.II 主砲, 4.5in Mk.I 両用砲 |
 | `belfast` | ベルファスト (Belfast) | Cruiser | 410 | 38 | 180 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
 | `southampton` | サウサンプトン (Southampton) | Cruiser | 385 | 36 | 178 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
 | `cossack` | コサック (Cossack) | Destroyer | 225 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
@@ -26,6 +27,7 @@ Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP
 | `14in_mk7` | 14in Mk.VII 4 連装砲 | ShellAP | 98 | 580 | 1300 | 600 |
 | `6in_mk23` | 6in Mk.XXIII 砲 | ShellHE | 48 | 480 | 850 | 560 |
 | `16in_mk1` | 16in Mk.I 主砲 | ShellAP | 110 | 600 | 1650 | 580 |
+| `16in_mk2` | 16in Mk.II 主砲 | ShellAP | 116 | 630 | 1450 | 600 |
 | `mk8_torpedo` | Mk.VIII 魚雷 | Torpedo | 165 | 330 | 4500 | 280 |
 | `4_7in_mk12` | 4.7in Mk.XII 砲 | ShellHE | 33 | 410 | 750 | 530 |
 | `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 80 | 2200 | 0 |
@@ -36,3 +38,4 @@ Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP
 - 戦艦は射程・火力のバランス型。King George V の 14in 4 連装砲は装填が速い。
 - Illustrious は装甲飛行甲板のため空母としては装甲が厚い。
 - ファイル名は他国に合わせて `rn.json` (Todo の `royal-navy.json` から変更)。
+- 架空艦 (`fictional: true`) は工廠の研究「架空艦計画」で建造可能になり、敵艦隊には出現しない (Sprint 10)。

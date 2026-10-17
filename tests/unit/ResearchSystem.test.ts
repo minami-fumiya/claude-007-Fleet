@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { canResearch, research, researchModifiers, techTier, unlockedUpgrades } from '@/systems/ResearchSystem';
+import { availableShips, canResearch, FICTIONAL_TECH, research, researchModifiers, techTier, unlockedUpgrades } from '@/systems/ResearchSystem';
+import { IShipData } from '@/types/Ship';
+import { Nation } from '@/types/Nation';
+import { ShipClass } from '@/types/ShipClass';
 import { resources } from '@/systems/ResourceSystem';
 import { ITechNode } from '@/types/Progression';
 import { IUpgradeData } from '@/types/Modifiers';
@@ -46,3 +49,22 @@ describe('ResearchSystem', () => {
     expect(techTier(tree, 'radar_1')).toBe(2);
   });
 });
+
+describe('fictional ships research', () => {
+  const ship = (id: string, fictional?: boolean): IShipData => ({
+    id, name: id, nation: Nation.IJN, shipClass: ShipClass.Battleship, hp: 1, armor: 1, speed: 1, weapons: [], spriteKey: id, fictional,
+  });
+  const ships = [ship('yamato'), ship('a150', true)];
+
+  it('hides fictional ships until the research is done', () => {
+    expect(availableShips(ships, []).map((s) => s.id)).toEqual(['yamato']);
+    expect(availableShips(ships, [FICTIONAL_TECH]).map((s) => s.id)).toEqual(['yamato', 'a150']);
+  });
+
+  it('is a late node in the tech tree', () => {
+    const tree = techTree.tech as ITechNode[];
+    expect(tree.some((n) => n.id === FICTIONAL_TECH)).toBe(true);
+    expect(techTier(tree, FICTIONAL_TECH)).toBeGreaterThanOrEqual(2);
+  });
+});
+

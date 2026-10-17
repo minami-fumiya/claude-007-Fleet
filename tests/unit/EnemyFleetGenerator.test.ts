@@ -55,3 +55,15 @@ describe('generateEnemyFleet', () => {
     expect(generateEnemyFleet(new ShipRegistry([]), Nation.RN, BattleMode.Surface)).toEqual([]);
   });
 });
+
+describe('fictional ships', () => {
+  it('never appear in generated enemy fleets', () => {
+    for (const nation of [Nation.IJN, Nation.USN, Nation.KM, Nation.RN]) {
+      for (const mode of [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW]) {
+        for (const rng of [first, last, () => 0.5]) {
+          expect(generateEnemyFleet(registry, nation, mode, rng).some((s) => s.fictional), `${nation} ${mode}`).toBe(false);
+        }
+      }
+    }
+  });
+});

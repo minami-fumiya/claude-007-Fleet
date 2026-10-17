@@ -1,4 +1,5 @@
 import { IShipModifiers, IUpgradeData } from '@/types/Modifiers';
+import { IShipData } from '@/types/Ship';
 import { IResources, ITechNode } from '@/types/Progression';
 import { combineModifiers } from './CustomizationSystem';
 import { canAfford, pay } from './ResourceSystem';
@@ -28,6 +29,14 @@ export function researchModifiers(tree: ITechNode[], done: string[]): IShipModif
 /** Upgrades the player may fit: those without a requirement, or whose research is done. */
 export function unlockedUpgrades(catalog: IUpgradeData[], done: string[]): IUpgradeData[] {
   return catalog.filter((u) => !u.requires || done.includes(u.requires));
+}
+
+/** Research that unlocks the fictional (planned-only) ships. */
+export const FICTIONAL_TECH = 'fictional_ships';
+
+/** Ships the player may build: historical ones, plus fictional ones once their research is done. */
+export function availableShips(ships: IShipData[], done: string[]): IShipData[] {
+  return done.includes(FICTIONAL_TECH) ? ships : ships.filter((s) => !s.fictional);
 }
 
 /** Depth of a node in the tree (0 = no prerequisites), for laying the tree out in columns. */

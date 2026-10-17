@@ -120,7 +120,7 @@ export class EncyclopediaScene extends Phaser.Scene {
       const icon = this.add.image(26, L.rowH / 2, ship.spriteKey).setAngle(90);
       icon.setScale(Math.min(1, 40 / Math.max(1, icon.height)));
       const name = this.add.text(52, L.rowH / 2, ship.name.replace(/\s*\(.*\)\s*$/, ''), textStyle(IS_PORTRAIT ? 16 : 14, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
-      const cls = this.add.text(colW - 12, L.rowH / 2, CLASS_JA[ship.shipClass], eyebrowStyle(10, Css.dim)).setOrigin(1, 0.5);
+      const cls = this.add.text(colW - 12, L.rowH / 2, `${ship.fictional ? '架空  ' : ''}${CLASS_JA[ship.shipClass]}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.dim)).setOrigin(1, 0.5);
       const card = this.track(this.add.container(x + PAD + col * (colW + 8), top + row * (L.rowH + 6), [frame, icon, name, cls]));
       makeClickable(card, colW, L.rowH);
       card.on('pointerup', () => {
@@ -145,11 +145,16 @@ export class EncyclopediaScene extends Phaser.Scene {
     const x = d.x + 26;
     const w = d.w - 52;
     const wrap = { wordWrap: { width: w, useAdvancedWrap: true } };
-    this.track(this.add.text(x, d.y + 20, `${NATION_INFO[ship.nation].ja}  ·  ${CLASS_JA[ship.shipClass]}`, eyebrowStyle(10, Css.cyan)));
+    const kind = ship.fictional ? `${CLASS_JA[ship.shipClass]}  ·  架空艦` : CLASS_JA[ship.shipClass];
+    this.track(this.add.text(x, d.y + 20, `${NATION_INFO[ship.nation].ja}  ·  ${kind}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.cyan)));
     const title = this.track(this.add.text(x, d.y + 42, ship.name, displayStyle(IS_PORTRAIT ? 24 : 26)));
+    let y = title.y + title.height + 18;
+    if (ship.fictional) {
+      this.track(this.add.text(x, title.y + title.height + 2, '工廠の研究「架空艦計画」で建造可能', textStyle(12, Css.gold)));
+      y += 20;
+    }
     const icon = this.track(this.add.image(d.x + d.w - 30, d.y + 22, ship.spriteKey).setOrigin(1, 0));
     icon.setScale(Math.min(2, (IS_PORTRAIT ? 150 : 140) / Math.max(1, icon.height)));
-    let y = title.y + title.height + 18;
 
     // Stat meters
     const meters = this.track(this.add.graphics());

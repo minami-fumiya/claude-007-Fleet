@@ -76,6 +76,22 @@
       "description": "金剛型戦艦1番艦。英ヴィッカース社で建造された巡洋戦艦を改装した高速戦艦。1944年11月、米潜水艦の雷撃で沈没。"
     },
     {
+      "id": "a150",
+      "name": "超大和型 (A-150)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 880,
+      "armor": 70,
+      "speed": 120,
+      "weapons": [
+        "51cm_main_gun",
+        "15_5cm_triple"
+      ],
+      "spriteKey": "a150",
+      "fictional": true,
+      "description": "大和型に続いて計画された戦艦。51cm砲を搭載する予定だったが、戦局の悪化により建造されなかった (架空艦)。"
+    },
+    {
       "id": "takao",
       "name": "高雄 (Takao)",
       "nation": "IJN",

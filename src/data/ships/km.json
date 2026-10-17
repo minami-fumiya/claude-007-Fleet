@@ -61,6 +61,22 @@
       "description": "シャルンホルスト級戦艦2番艦。姉妹艦とともに通商破壊で戦果を挙げた。1942年の空襲で損傷し、戦線に戻らなかった。"
     },
     {
+      "id": "h39",
+      "name": "H級 (H-39)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 830,
+      "armor": 64,
+      "speed": 150,
+      "weapons": [
+        "40_6cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "h39",
+      "fictional": true,
+      "description": "Z計画で起工された戦艦。40.6cm砲8門を搭載する予定だったが、開戦により建造は中止された (架空艦)。"
+    },
+    {
       "id": "prinz_eugen",
       "name": "プリンツ・オイゲン (Prinz Eugen)",
       "nation": "KM",
