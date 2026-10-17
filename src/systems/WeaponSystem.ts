@@ -63,6 +63,12 @@ export class WeaponSystem {
     return true;
   }
 
+  /** Launches a projectile without a reload check (aircraft drops). Depth charges are not supported. */
+  launchProjectile(x: number, y: number, angle: number, weapon: IWeaponData): void {
+    const type = weaponKind(weapon) === WeaponKind.Torpedo ? Torpedo : Shell;
+    this.acquire<BaseProjectile>(type).fire(x, y, angle, weapon);
+  }
+
   reloadProgress(ship: BaseShip, weapon: IWeaponData, now: number): number {
     return this.reload.progress(ship, weapon.reloadTime, now, weapon.id);
   }

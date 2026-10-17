@@ -269,6 +269,24 @@
       "range": 370,
       "reloadTime": 8000,
       "projectileSpeed": 255
+    },
+    {
+      "id": "aerial_bomb",
+      "name": "航空爆弾",
+      "type": "Bomb",
+      "firePower": 75,
+      "range": 0,
+      "reloadTime": 0,
+      "projectileSpeed": 0
+    },
+    {
+      "id": "aerial_torpedo",
+      "name": "航空魚雷",
+      "type": "Torpedo",
+      "firePower": 110,
+      "range": 300,
+      "reloadTime": 0,
+      "projectileSpeed": 260
     }
   ]
 }

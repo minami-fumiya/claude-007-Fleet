@@ -5,6 +5,7 @@ import { AIMode, decide, IAISelf, IAITarget, ITacticsProfile, submarineWantsDive
 import { engageSteer, IBounds } from './AutoPilot';
 import { maxSurfaceRange, selectWeapons, weaponKind, WeaponKind } from './WeaponSelector';
 import { interceptAngle } from '@/utils/MathUtils';
+import { ShipClass } from '@/types/ShipClass';
 
 /** One ship as seen by the other side this frame. */
 export interface IShipView extends IAITarget {
@@ -29,12 +30,16 @@ export function shipView(ship: BaseShip, detected: boolean): IShipView {
   };
 }
 
+/** Carriers fight with their aircraft, so they hold position as if their reach were this long. */
+const CARRIER_STANDOFF_RANGE = 1000;
+
 export function aiSelf(ship: BaseShip): IAISelf {
+  const gunRange = maxSurfaceRange(ship.loadout);
   return {
     x: ship.x,
     y: ship.y,
     hpFraction: ship.stats.maxHp > 0 ? ship.stats.currentHp / ship.stats.maxHp : 0,
-    maxRange: maxSurfaceRange(ship.loadout),
+    maxRange: ship.stats.shipClass === ShipClass.Carrier ? Math.max(gunRange, CARRIER_STANDOFF_RANGE) : gunRange,
     hasDepthCharges: ship.loadout.some((w) => weaponKind(w) === WeaponKind.DepthCharge),
   };
 }

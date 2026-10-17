@@ -1,5 +1,6 @@
 import { Nation } from './Nation';
 import { ShipClass } from './ShipClass';
+import { IAirWing } from './Aircraft';
 
 export interface IShipData {
   id: string;
@@ -11,6 +12,8 @@ export interface IShipData {
   speed: number;
   weapons: string[];
   spriteKey: string;
+  /** Carriers only: embarked aircraft */
+  airWing?: IAirWing;
 }
 
 export interface IShipStats {

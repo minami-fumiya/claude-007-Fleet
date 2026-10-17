@@ -52,6 +52,24 @@ export class PreloadScene extends Phaser.Scene {
     g.lineStyle(1.5, 0xcfe3f2, 0.9);
     g.strokeCircle(5, 5, 4);
     g.generateTexture('depth-charge', 10, 10);
+
+    // Aircraft, nose along +x: fighters slim, dive bombers broad-winged, torpedo bombers with a torpedo.
+    const plane = (key: string, span: number, body: number, extra?: () => void): void => {
+      g.clear();
+      g.fillStyle(0xf4f7fb, 1);
+      g.fillRect(2, 5 - 1, body, 2);
+      g.fillTriangle(body * 0.55, 5, body * 0.35, 5 - span / 2, body * 0.25, 5);
+      g.fillTriangle(body * 0.55, 5, body * 0.35, 5 + span / 2, body * 0.25, 5);
+      g.fillRect(2, 5 - 2.5, 2, 5);
+      extra?.();
+      g.generateTexture(key, 14, 10);
+    };
+    plane('plane-fighter', 8, 11);
+    plane('plane-dive', 10, 10);
+    plane('plane-torpedo', 10, 11, () => {
+      g.fillStyle(0x9fb4c8, 1);
+      g.fillRect(5, 6, 6, 1.5);
+    });
     g.destroy();
   }
 

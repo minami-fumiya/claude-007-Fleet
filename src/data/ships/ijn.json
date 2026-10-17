@@ -165,7 +165,12 @@
       "weapons": [
         "12cm_gun"
       ],
-      "spriteKey": "shokaku"
+      "spriteKey": "shokaku",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 4
+      }
     },
     {
       "id": "akagi",
@@ -178,7 +183,12 @@
       "weapons": [
         "12cm_gun"
       ],
-      "spriteKey": "akagi"
+      "spriteKey": "akagi",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      }
     },
     {
       "id": "kaga",
@@ -191,7 +201,12 @@
       "weapons": [
         "12cm_gun"
       ],
-      "spriteKey": "kaga"
+      "spriteKey": "kaga",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 5
+      }
     },
     {
       "id": "i19",

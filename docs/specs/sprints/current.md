@@ -18,14 +18,15 @@
 - [x] `docs/specs/ships/RN/roster.md`
 
 ### B. 艦載機
-- [ ] `src/types/Aircraft.ts` — `AircraftType` (Fighter / DiveBomber / TorpedoBomber / Recon)、`IAirWing`
-- [ ] `src/systems/AirWingSystem.ts` — 搭載機数・発艦・帰還・再装備・損耗 (純粋)
-- [ ] `src/systems/AirCombat.ts` — 対空砲火による撃墜・戦闘機の迎撃 (純粋)
-- [ ] `src/entities/aircraft/Squadron.ts` — 編隊エンティティ (進出 → 攻撃 → 帰還)
+- [x] `src/types/Aircraft.ts` — `AircraftType` (Fighter / DiveBomber / TorpedoBomber / Recon)、`IAirWing`
+- [x] `src/systems/AirWingSystem.ts` — 搭載機数・発艦・帰還・再装備・損耗 (純粋)
+- [x] `src/systems/AirCombat.ts` — 対空砲火による撃墜・戦闘機の迎撃 (純粋)
+- [x] `src/entities/aircraft/Squadron.ts` — 編隊エンティティ (進出 → 攻撃 → 帰還)
   - 急降下爆撃: 目標上空で爆弾 (Bomb) / 雷撃: 目標手前で魚雷投下 / 戦闘機: 空母上空で直掩・敵編隊を迎撃
-- [ ] 空母の艦載機データ (`airWing`) と AI の攻撃隊発艦、プレイヤーの「攻撃隊発艦」ボタン
-- [ ] `tests/unit/AirWingSystem.test.ts` / `AirCombat.test.ts`
-- [ ] `docs/specs/systems/aircraft.md`
+- [x] 空母の艦載機データ (`airWing`) と AI の攻撃隊発艦、プレイヤーの「攻撃隊発艦」ボタン (`F`)
+- [x] Fleet Builder に交戦モード「機動部隊」(敵が空母・巡洋艦・駆逐艦) を追加
+- [x] `tests/unit/AirWingSystem.test.ts` / `AirCombat.test.ts`
+- [x] `docs/specs/systems/aircraft.md`
 
 ### C. 偵察機と FogOfWar
 - [ ] `src/systems/VisionSystem.ts` — 艦の視界・偵察機の扇形索敵範囲・可視判定 (純粋)

@@ -32,6 +32,11 @@ describe('generateEnemyFleet', () => {
     expect(a.id).not.toBe(b.id);
   });
 
+  it('builds a carrier task force', () => {
+    const fleet = generateEnemyFleet(registry, Nation.RN, BattleMode.CarrierStrike, first);
+    expect(fleet.map((s) => s.shipClass)).toEqual([ShipClass.Carrier, ShipClass.Cruiser, ShipClass.Destroyer]);
+  });
+
   it('builds a submarine wolfpack in ASW mode', () => {
     const fleet = generateEnemyFleet(registry, Nation.KM, BattleMode.ASW, first);
     expect(fleet).toHaveLength(ENEMY_FLEET_SIZE);

@@ -125,7 +125,12 @@
       "weapons": [
         "5in_38"
       ],
-      "spriteKey": "essex"
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      }
     },
     {
       "id": "enterprise",
@@ -138,7 +143,12 @@
       "weapons": [
         "5in_38"
       ],
-      "spriteKey": "enterprise"
+      "spriteKey": "enterprise",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      }
     },
     {
       "id": "midway",
@@ -151,7 +161,12 @@
       "weapons": [
         "5in_38"
       ],
-      "spriteKey": "midway"
+      "spriteKey": "midway",
+      "airWing": {
+        "fighters": 6,
+        "diveBombers": 6,
+        "torpedoBombers": 5
+      }
     },
     {
       "id": "gato",

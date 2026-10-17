@@ -116,6 +116,13 @@ function fitName(text: Phaser.GameObjects.Text, name: string, room: number): voi
   if (text.width > room) text.setScale(room / text.width);
 }
 
+const BATTLE_MODES: BattleMode[] = [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW];
+const MODE_LABEL: Record<BattleMode, string> = {
+  [BattleMode.Surface]: '水上戦',
+  [BattleMode.CarrierStrike]: '機動部隊',
+  [BattleMode.ASW]: '対潜戦',
+};
+
 /** Last Fleet Builder setup, kept in the game registry so RETRY / 撤退 come back to the same fleet. */
 const SELECTION_KEY = 'fleetBuilder.selection';
 interface ISelection {
@@ -341,8 +348,8 @@ export class FleetBuilderScene extends Phaser.Scene {
         this.refreshEnemyPanel();
       },
     );
-    this.modeButtons = this.addToggleRow(x, top + h + rowGap + h / 2, w, h, ['水上戦', '対潜戦 (潜水艦隊)'], (i) => {
-      this.mode = i === 0 ? BattleMode.Surface : BattleMode.ASW;
+    this.modeButtons = this.addToggleRow(x, top + h + rowGap + h / 2, w, h, BATTLE_MODES.map((m) => MODE_LABEL[m]), (i) => {
+      this.mode = BATTLE_MODES[i];
       this.refreshEnemyPanel();
     });
     this.refreshEnemyPanel();
@@ -350,7 +357,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private refreshEnemyPanel(): void {
     FleetBuilderScene.setToggle(this.enemyNationButtons, PLAYABLE_NATIONS.indexOf(this.enemyNation));
-    FleetBuilderScene.setToggle(this.modeButtons, this.mode === BattleMode.Surface ? 0 : 1);
+    FleetBuilderScene.setToggle(this.modeButtons, BATTLE_MODES.indexOf(this.mode));
   }
 
   /** Switching nation swaps the ship list; a fleet is single-nation, so the slots are cleared. */

@@ -125,7 +125,12 @@
       "weapons": [
         "4_5in_mk1"
       ],
-      "spriteKey": "illustrious"
+      "spriteKey": "illustrious",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 4
+      }
     },
     {
       "id": "ark_royal",
@@ -138,7 +143,12 @@
       "weapons": [
         "4_5in_mk1"
       ],
-      "spriteKey": "ark_royal"
+      "spriteKey": "ark_royal",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 5
+      }
     },
     {
       "id": "truant",

@@ -6,9 +6,11 @@ import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
 import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
-import { AISystem, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
+import { AISystem, aiSelf, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
-import { TACTICS } from '@/systems/AIBrain';
+import { chooseTarget, TACTICS } from '@/systems/AIBrain';
+import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
+import { AircraftType } from '@/types/Aircraft';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -44,6 +46,7 @@ const WAYPOINT_ARRIVE_RADIUS = 24;
 /** AUTO mode holds the target at this fraction of the main gun's range. */
 const AUTO_RANGE_FRACTION = 0.75;
 const AUTO_EDGE_MARGIN = 70;
+const AUTO_CARRIER_STANDOFF = 850;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
 /** Torpedo / dive buttons sit above the bottom-right corner. */
 const ACTION_BUTTON = IS_PORTRAIT ? { w: 172, h: 64, gap: 14, bottom: 120 } : { w: 150, h: 46, gap: 10, bottom: 90 };
@@ -90,6 +93,11 @@ export class BattleScene extends Phaser.Scene {
 
   private playerWeapons!: WeaponSystem;
   private enemyWeapons!: WeaponSystem;
+  private playerAir!: AirOpsSystem;
+  private enemyAir!: AirOpsSystem;
+  private airText: Phaser.GameObjects.Text | null = null;
+  private strikeBtn: UIButton | null = null;
+  private enemyNation: Nation = Nation.USN;
 
   private aiSystems: AISystem[] = [];
   private escortAISystems: EscortAISystem[] = [];
@@ -152,6 +160,8 @@ export class BattleScene extends Phaser.Scene {
     this.seenByPlayer = new Set();
     this.diveBtn = null;
     this.diveText = null;
+    this.airText = null;
+    this.strikeBtn = null;
     this.wantDive = false;
 
     addOceanWorld(this, WORLD.w, WORLD.h);
@@ -165,9 +175,15 @@ export class BattleScene extends Phaser.Scene {
 
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(DataLoader.getRegistry(this));
     this.playerNation = playerFleet.nation;
+    this.enemyNation = enemyFleet.nation;
 
     this.playerWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.enemies));
     this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.friendlies()));
+    const bomb = DataLoader.getWeaponById(this, 'aerial_bomb') ?? FALLBACK_WEAPON;
+    const aerialTorpedo = DataLoader.getWeaponById(this, 'aerial_torpedo') ?? FALLBACK_WEAPON;
+    const onBomb = (x: number, y: number): void => this.explosion.play(x, y);
+    this.playerAir = new AirOpsSystem(this, false, this.playerWeapons, bomb, aerialTorpedo, onBomb);
+    this.enemyAir = new AirOpsSystem(this, true, this.enemyWeapons, bomb, aerialTorpedo, onBomb);
 
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
@@ -217,6 +233,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.playerWeapons.update(time, delta);
     this.enemyWeapons.update(time, delta);
+    this.updateAir(time, delta, playerView, enemyView);
 
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
@@ -234,6 +251,7 @@ export class BattleScene extends Phaser.Scene {
       elapsedSec: (time - this.battleStartedAt) / 1000,
     });
     this.refreshDiveUi();
+    this.refreshAirUi();
     this.drawReticle();
     this.drawSonar(time);
     this.drawEdgeMarkers();
@@ -285,6 +303,7 @@ export class BattleScene extends Phaser.Scene {
     if (!flagshipData) return;
 
     this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y);
+    this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData));
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
     const offsets = FormationSystem.getOffsets(formation);
@@ -292,7 +311,9 @@ export class BattleScene extends Phaser.Scene {
     FleetSystem.getEscorts(fleet).forEach((escortData, i) => {
       const offset = offsets[Math.min(i, offsets.length - 1)];
       const spawnPos = FormationSystem.getWorldPositionFromValues(FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, 0, offset);
-      this.escorts.push(this.spawnShip(escortData, spawnPos.x, spawnPos.y));
+      const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y);
+      this.playerAir.register(escort, AirOpsSystem.wingFor(escortData));
+      this.escorts.push(escort);
       this.escortAISystems.push(new EscortAISystem(this.playerWeapons, offset, profile));
     });
   }
@@ -305,6 +326,7 @@ export class BattleScene extends Phaser.Scene {
       enemy.setTint(0xdd4444);
       enemy.setAngle(180);
       this.enemies.push(enemy);
+      this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
       this.aiSystems.push(new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS));
     });
   }
@@ -408,6 +430,57 @@ export class BattleScene extends Phaser.Scene {
     this.diveText.setText(`${state}  ·  酸素 ${air}%`).setColor(sub.air < 0.25 ? Css.danger : Css.cyan);
   }
 
+  // -------------------------------------------------------------------------
+  // Carrier aviation
+  // -------------------------------------------------------------------------
+
+  private updateAir(time: number, delta: number, playerView: IShipView[], enemyView: IShipView[]): void {
+    const pick = (nation: Nation) => (carrier: BaseShip, foes: IShipView[]): IShipView | null =>
+      chooseTarget(aiSelf(carrier), foes, TACTICS[nation]);
+    // The player's own carrier strikes on command, unless touch / AUTO play is handling the fighting.
+    const playerAuto = (carrier: BaseShip): boolean => carrier !== this.flagship || this.isTouch || this.autoMode;
+    this.playerAir.update(
+      time,
+      delta,
+      { foes: enemyView, foeSquadrons: this.enemyAir.squadrons, foeGuns: aaGuns(this.enemies) },
+      playerAuto,
+      (carrier, foes) => {
+        if (carrier === this.flagship) {
+          const locked = foes.find((f) => f.ship === this.currentTarget());
+          if (locked) return locked;
+        }
+        return pick(this.playerNation)(carrier, foes);
+      },
+    );
+    this.enemyAir.update(
+      time,
+      delta,
+      { foes: playerView, foeSquadrons: this.playerAir.squadrons, foeGuns: aaGuns(this.friendlies()) },
+      () => true,
+      pick(this.enemyNation),
+    );
+  }
+
+  /** F / strike button: send the flagship's ready bombers at the current target. */
+  private launchPlayerStrike(): void {
+    if (this.gameOver || !this.playerAir.hasCarrier(this.flagship)) return;
+    const enemyView = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
+    const targets = this.playerAir.strikeTargets(this.flagship, enemyView);
+    const target =
+      targets.find((t) => t.ship === this.currentTarget()) ?? chooseTarget(aiSelf(this.flagship), targets, TACTICS[this.playerNation]);
+    if (target) this.playerAir.launchStrike(this.flagship, target.ship);
+  }
+
+  private refreshAirUi(): void {
+    const wing = this.playerAir.wing(this.flagship);
+    if (!wing || !this.airText || !this.strikeBtn) return;
+    const r = wing.ready;
+    const rearming = wing.rearming.reduce((n, x) => n + x.count, 0);
+    const extra = rearming > 0 ? `  ·  再装備 ${rearming}` : '';
+    this.airText.setText(`戦 ${r[AircraftType.Fighter]}  爆 ${r[AircraftType.DiveBomber]}  攻 ${r[AircraftType.TorpedoBomber]}${extra}`);
+    this.strikeBtn.setEnabled(r[AircraftType.DiveBomber] + r[AircraftType.TorpedoBomber] > 0);
+  }
+
   /** A depth charge went off: area damage to every ship of the target side in the blast. */
   private onDepthCharge(x: number, y: number, weapon: IWeaponData, targets: BaseShip[]): void {
     this.splash.play(x, y);
@@ -437,6 +510,7 @@ export class BattleScene extends Phaser.Scene {
     };
     kb.on('keydown-Q', () => this.toggleDive());
     kb.on('keydown-E', () => this.fireTorpedoes());
+    kb.on('keydown-F', () => this.launchPlayerStrike());
   }
 
   private setupClickFire(): void {
@@ -579,7 +653,8 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (this.autoMode && target) {
-      const range = this.playerWeapon.range * AUTO_RANGE_FRACTION;
+      // A carrier fights with its aircraft and keeps well clear of the enemy's guns.
+      const range = this.playerAir.hasCarrier(this.flagship) ? AUTO_CARRIER_STANDOFF : this.playerWeapon.range * AUTO_RANGE_FRACTION;
       this.flagship.steer(engageSteer(this.flagship, target, range, WORLD_BOUNDS, AUTO_EDGE_MARGIN), dtSec, SHIP_ROTATE_SPEED);
       return;
     }
@@ -639,6 +714,16 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.flagship.loadout.some((w) => weaponKind(w) === WeaponKind.Torpedo)) {
       new UIButton(this, x, y, keyHint ? '魚雷  [E]' : '魚雷', () => this.fireTorpedoes(), opts)
+        .setDepth(DEPTH_HUD + 2)
+        .setScrollFactor(0);
+      y -= a.h + a.gap;
+    }
+    if (this.playerAir.hasCarrier(this.flagship)) {
+      this.strikeBtn = new UIButton(this, x, y, keyHint ? '攻撃隊  [F]' : '攻撃隊発艦', () => this.launchPlayerStrike(), opts);
+      this.strikeBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
+      this.airText = this.add
+        .text(x + a.w / 2, y - a.h / 2 - 8, '', textStyle(12, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+        .setOrigin(1, 1)
         .setDepth(DEPTH_HUD + 2)
         .setScrollFactor(0);
       y -= a.h + a.gap;

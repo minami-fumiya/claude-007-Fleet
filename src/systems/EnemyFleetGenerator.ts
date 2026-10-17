@@ -12,6 +12,11 @@ const SURFACE_SLOTS: ShipClass[][] = [
   [ShipClass.Cruiser, ShipClass.Destroyer],
   [ShipClass.Destroyer, ShipClass.Cruiser],
 ];
+const CARRIER_SLOTS: ShipClass[][] = [
+  [ShipClass.Carrier, ShipClass.Battleship],
+  [ShipClass.Cruiser, ShipClass.Destroyer],
+  [ShipClass.Destroyer, ShipClass.Cruiser],
+];
 
 /** Picks a random element; `rng` returns [0, 1) like Math.random. */
 function pick<T>(items: T[], rng: () => number): T {
@@ -37,7 +42,7 @@ export function generateEnemyFleet(
     return Array.from({ length: ENEMY_FLEET_SIZE }, () => pick(pool, rng));
   }
 
-  return SURFACE_SLOTS.map((wanted) => {
+  return (mode === BattleMode.CarrierStrike ? CARRIER_SLOTS : SURFACE_SLOTS).map((wanted) => {
     for (const shipClass of wanted) {
       const candidates = registry.byClass(nation, shipClass);
       if (candidates.length > 0) return pick(candidates, rng);

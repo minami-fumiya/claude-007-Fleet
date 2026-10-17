@@ -110,7 +110,12 @@
       "weapons": [
         "15cm_skc28"
       ],
-      "spriteKey": "graf_zeppelin"
+      "spriteKey": "graf_zeppelin",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 4,
+        "torpedoBombers": 2
+      }
     },
     {
       "id": "u_boat_viic",
