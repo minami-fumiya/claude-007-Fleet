@@ -215,8 +215,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.timeChoice = saved?.time ?? TimeOfDay.Day;
     this.ships = availableShips(this.shipRegistry.byNation(this.nation), loadProgress().research);
     this.slots = [0, 1, 2].map((i) => {
+      // Only ships still available (a reset or imported save can take away a fictional ship).
       const id = saved?.slotIds[i];
-      return id ? this.shipRegistry.byId(id) ?? null : null;
+      return id ? this.ships.find((s) => s.id === id) ?? null : null;
     });
     this.formation = saved?.formation ?? Formation.LineAhead;
     this.captainData = DataLoader.getCaptains(this);
