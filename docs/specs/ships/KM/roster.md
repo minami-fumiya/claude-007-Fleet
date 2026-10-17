@@ -6,10 +6,15 @@ Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP
 |---|---|---|---|---|---|---|
 | `bismarck` | ビスマルク (Bismarck) | Battleship | 480 | 62 | 145 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
 | `tirpitz` | ティルピッツ (Tirpitz) | Battleship | 485 | 63 | 143 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `scharnhorst` | シャルンホルスト (Scharnhorst) | Battleship | 400 | 55 | 175 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `gneisenau` | グナイゼナウ (Gneisenau) | Battleship | 400 | 55 | 173 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
 | `prinz_eugen` | プリンツ・オイゲン (Prinz Eugen) | Cruiser | 255 | 41 | 178 | 20.3cm SK C/34 主砲, G7a 魚雷 |
+| `admiral_hipper` | アドミラル・ヒッパー (Admiral Hipper) | Cruiser | 250 | 40 | 176 | 20.3cm SK C/34 主砲, G7a 魚雷 |
 | `z1` | Z1 レーベレヒト・マース (Z1) | Destroyer | 135 | 15 | 235 | 12.7cm SK C/34 砲, G7a 魚雷, 爆雷投射機 |
 | `graf_zeppelin` | グラーフ・ツェッペリン (Graf Zeppelin) | Carrier | 300 | 32 | 150 | 15cm SK C/28 副砲 |
 | `u_boat_viic` | U ボート VIIC 型 (Type VIIC) | Submarine | 85 | 5 | 145 | G7e 魚雷 (潜水艦) |
+| `u_boat_ixc` | U ボート IXC 型 (Type IXC) | Submarine | 95 | 6 | 150 | G7e 魚雷 (潜水艦) |
+| `u_boat_xxi` | U ボート XXI 型 (Type XXI) | Submarine | 100 | 6 | 165 | G7e 魚雷 (潜水艦) |
 
 ## Weapons
 
@@ -17,11 +22,12 @@ Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP
 |---|---|---|---|---|---|---|
 | `38cm_skc34` | 38cm SK C/34 主砲 | ShellAP | 108 | 600 | 1400 | 600 |
 | `15cm_skc28` | 15cm SK C/28 副砲 | ShellHE | 45 | 450 | 1000 | 540 |
+| `28cm_skc34` | 28cm SK C/34 主砲 | ShellAP | 85 | 540 | 1100 | 640 |
 | `20cm_skc34` | 20.3cm SK C/34 主砲 | ShellAP | 64 | 520 | 1150 | 560 |
 | `g7a_torpedo` | G7a 魚雷 | Torpedo | 175 | 330 | 4500 | 290 |
 | `12cm_skc34` | 12.7cm SK C/34 砲 | ShellHE | 34 | 400 | 800 | 520 |
-| `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 60 | 3000 | 0 |
-| `g7e_torpedo` | G7e 魚雷 (潜水艦) | Torpedo | 170 | 360 | 4800 | 250 |
+| `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 80 | 2200 | 0 |
+| `g7e_torpedo` | G7e 魚雷 (潜水艦) | Torpedo | 125 | 360 | 8000 | 250 |
 
 ## Notes
 

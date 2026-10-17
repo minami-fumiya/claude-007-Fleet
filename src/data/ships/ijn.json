@@ -27,6 +27,48 @@
       "spriteKey": "musashi"
     },
     {
+      "id": "nagato",
+      "name": "長門 (Nagato)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 430,
+      "armor": 58,
+      "speed": 130,
+      "weapons": [
+        "41cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "nagato"
+    },
+    {
+      "id": "mutsu",
+      "name": "陸奥 (Mutsu)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 425,
+      "armor": 57,
+      "speed": 130,
+      "weapons": [
+        "41cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "mutsu"
+    },
+    {
+      "id": "kongo",
+      "name": "金剛 (Kongo)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 360,
+      "armor": 45,
+      "speed": 170,
+      "weapons": [
+        "36cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "kongo"
+    },
+    {
       "id": "takao",
       "name": "高雄 (Takao)",
       "nation": "IJN",
@@ -38,6 +80,34 @@
         "20cm_twin_gun"
       ],
       "spriteKey": "takao"
+    },
+    {
+      "id": "atago",
+      "name": "愛宕 (Atago)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "hp": 250,
+      "armor": 40,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "atago"
+    },
+    {
+      "id": "tone",
+      "name": "利根 (Tone)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "hp": 240,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "tone"
     },
     {
       "id": "fubuki",
@@ -55,6 +125,36 @@
       "spriteKey": "fubuki"
     },
     {
+      "id": "shimakaze",
+      "name": "島風 (Shimakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 125,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shimakaze"
+    },
+    {
+      "id": "yukikaze",
+      "name": "雪風 (Yukikaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 135,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze"
+    },
+    {
       "id": "shokaku",
       "name": "翔鶴 (Shokaku)",
       "nation": "IJN",
@@ -68,6 +168,32 @@
       "spriteKey": "shokaku"
     },
     {
+      "id": "akagi",
+      "name": "赤城 (Akagi)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 340,
+      "armor": 32,
+      "speed": 145,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "akagi"
+    },
+    {
+      "id": "kaga",
+      "name": "加賀 (Kaga)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 350,
+      "armor": 34,
+      "speed": 135,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "kaga"
+    },
+    {
       "id": "i19",
       "name": "伊19 (I-19)",
       "nation": "IJN",
@@ -79,6 +205,19 @@
         "type95_torpedo"
       ],
       "spriteKey": "i19"
+    },
+    {
+      "id": "i400",
+      "name": "伊400 (I-400)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 110,
+      "armor": 7,
+      "speed": 140,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i400"
     }
   ]
 }

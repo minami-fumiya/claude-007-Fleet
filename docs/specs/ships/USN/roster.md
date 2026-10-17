@@ -6,10 +6,17 @@ Source of truth: `src/data/ships/usn.json`. Stats use the game scale (Yamato = H
 |---|---|---|---|---|---|---|
 | `iowa` | アイオワ (Iowa) | Battleship | 470 | 58 | 160 | 16in Mk.7 主砲, 5in/38 両用砲 |
 | `north_carolina` | ノースカロライナ (North Carolina) | Battleship | 440 | 56 | 135 | 16in Mk.6 主砲, 5in/38 両用砲 |
+| `missouri` | ミズーリ (Missouri) | Battleship | 470 | 58 | 160 | 16in Mk.7 主砲, 5in/38 両用砲 |
+| `new_jersey` | ニュージャージー (New Jersey) | Battleship | 470 | 58 | 160 | 16in Mk.7 主砲, 5in/38 両用砲 |
 | `baltimore` | ボルチモア (Baltimore) | Cruiser | 260 | 42 | 175 | 8in Mk.12 主砲, 5in/38 両用砲 |
+| `des_moines` | デ・モイン (Des Moines) | Cruiser | 280 | 44 | 170 | 8in Mk.16 速射砲, 5in/38 両用砲 |
 | `fletcher` | フレッチャー (Fletcher) | Destroyer | 140 | 14 | 250 | 5in/38 両用砲, Mk.15 魚雷, 爆雷投射機 |
+| `gearing` | ギアリング (Gearing) | Destroyer | 150 | 14 | 245 | 5in/38 両用砲, Mk.15 魚雷, 爆雷投射機 |
 | `essex` | エセックス (Essex) | Carrier | 330 | 28 | 165 | 5in/38 両用砲 |
+| `enterprise` | エンタープライズ (Enterprise) | Carrier | 320 | 27 | 170 | 5in/38 両用砲 |
+| `midway` | ミッドウェイ (Midway) | Carrier | 380 | 36 | 155 | 5in/38 両用砲 |
 | `gato` | ガトー (Gato) | Submarine | 90 | 6 | 150 | Mk.14 魚雷 (潜水艦) |
+| `balao` | バラオ (Balao) | Submarine | 95 | 7 | 150 | Mk.14 魚雷 (潜水艦) |
 
 ## Weapons
 
@@ -19,9 +26,10 @@ Source of truth: `src/data/ships/usn.json`. Stats use the game scale (Yamato = H
 | `5in_38` | 5in/38 両用砲 | ShellHE | 32 | 420 | 700 | 540 |
 | `16in_mk6` | 16in Mk.6 主砲 | ShellAP | 105 | 620 | 1600 | 600 |
 | `8in_mk12` | 8in Mk.12 主砲 | ShellAP | 62 | 520 | 1150 | 560 |
+| `8in_mk16` | 8in Mk.16 速射砲 | ShellAP | 66 | 530 | 800 | 570 |
 | `mk15_torpedo` | Mk.15 魚雷 | Torpedo | 170 | 320 | 4500 | 280 |
-| `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 60 | 3000 | 0 |
-| `mk14_torpedo` | Mk.14 魚雷 (潜水艦) | Torpedo | 180 | 380 | 5000 | 260 |
+| `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 80 | 2200 | 0 |
+| `mk14_torpedo` | Mk.14 魚雷 (潜水艦) | Torpedo | 130 | 380 | 8000 | 260 |
 
 ## Notes
 

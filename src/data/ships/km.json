@@ -29,6 +29,34 @@
       "spriteKey": "tirpitz"
     },
     {
+      "id": "scharnhorst",
+      "name": "シャルンホルスト (Scharnhorst)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 400,
+      "armor": 55,
+      "speed": 175,
+      "weapons": [
+        "28cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "scharnhorst"
+    },
+    {
+      "id": "gneisenau",
+      "name": "グナイゼナウ (Gneisenau)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 400,
+      "armor": 55,
+      "speed": 173,
+      "weapons": [
+        "28cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "gneisenau"
+    },
+    {
       "id": "prinz_eugen",
       "name": "プリンツ・オイゲン (Prinz Eugen)",
       "nation": "KM",
@@ -41,6 +69,20 @@
         "g7a_torpedo"
       ],
       "spriteKey": "prinz_eugen"
+    },
+    {
+      "id": "admiral_hipper",
+      "name": "アドミラル・ヒッパー (Admiral Hipper)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "hp": 250,
+      "armor": 40,
+      "speed": 176,
+      "weapons": [
+        "20cm_skc34",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "admiral_hipper"
     },
     {
       "id": "z1",
@@ -82,6 +124,32 @@
         "g7e_torpedo"
       ],
       "spriteKey": "u_boat_viic"
+    },
+    {
+      "id": "u_boat_ixc",
+      "name": "U ボート IXC 型 (Type IXC)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 95,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_ixc"
+    },
+    {
+      "id": "u_boat_xxi",
+      "name": "U ボート XXI 型 (Type XXI)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 100,
+      "armor": 6,
+      "speed": 165,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_xxi"
     }
   ]
 }

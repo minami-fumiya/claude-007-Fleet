@@ -44,12 +44,12 @@ interface IBuilderLayout {
   footer: IRect;
 }
 
-/** Largest roster of any nation; the ship panel is sized for it. */
-const MAX_ROSTER = 6;
+/** Ships shown per page of the ship list; the panel is sized for one full page. */
+const PAGE_SIZE = 6;
 const P_SHIP_ITEM_H = 120;
 const P_TAB_H = 64;
 const P_SHIPS_Y = 618;
-const P_SHIPS_H = 84 + P_TAB_H + 12 + MAX_ROSTER * P_SHIP_ITEM_H + (MAX_ROSTER - 1) * 8 + 14;
+const P_SHIPS_H = 84 + P_TAB_H + 12 + PAGE_SIZE * P_SHIP_ITEM_H + (PAGE_SIZE - 1) * 8 + 14;
 const P_FORMATIONS_Y = P_SHIPS_Y + P_SHIPS_H + 18;
 const P_FORMATIONS_H = 84 + 180 + 14;
 const P_ENEMY_Y = P_FORMATIONS_Y + P_FORMATIONS_H + 18;
@@ -131,6 +131,9 @@ export class FleetBuilderScene extends Phaser.Scene {
   private enemyNation: Nation = Nation.USN;
   private mode: BattleMode = BattleMode.Surface;
 
+  private page = 0;
+  private pageText!: Phaser.GameObjects.Text;
+  private pageButtons: UIButton[] = [];
   private nationTabs: UIButton[] = [];
   private enemyNationButtons: UIButton[] = [];
   private modeButtons: UIButton[] = [];
@@ -162,6 +165,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.slotViews = [];
     this.formationFrames = [];
     this.shipCards = [];
+    this.page = 0;
+    this.pageButtons = [];
     this.nationTabs = [];
     this.enemyNationButtons = [];
     this.modeButtons = [];
@@ -182,6 +187,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.buildPanelFrame(LAYOUT.formations, 'FORMATION', '陣形');
     this.buildPanelFrame(LAYOUT.enemy, 'OPPONENT', '交戦相手');
     this.buildNationTabs();
+    this.buildPager();
     this.buildShipList();
     this.buildSlotPanel();
     this.buildFormationPanel();
@@ -339,12 +345,50 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.nation = nation;
     this.ships = this.shipRegistry.byNation(nation);
     this.slots = [null, null, null];
+    this.page = 0;
     FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(nation));
+    this.rebuildShipList();
+    this.refreshHeader();
+    this.refresh();
+  }
+
+  private get pageCount(): number {
+    return Math.max(1, Math.ceil(this.ships.length / PAGE_SIZE));
+  }
+
+  /** ‹ n / m › in the ship panel header. */
+  private buildPager(): void {
+    const p = LAYOUT.ships;
+    const bw = IS_PORTRAIT ? 64 : 40;
+    const bh = IS_PORTRAIT ? 52 : 32;
+    const cy = p.y + (IS_PORTRAIT ? 42 : 32);
+    const right = p.x + p.w - PANEL_PAD - bw / 2;
+    const opts = { variant: 'secondary' as const, width: bw, height: bh, fontSize: 18 };
+    const next = new UIButton(this, right, cy, '›', this.onTap(() => this.turnPage(1)), opts);
+    this.pageText = this.add.text(right - bw / 2 - (IS_PORTRAIT ? 52 : 36), cy, '', textStyle(13, Css.muted, { fontStyle: 'bold' })).setOrigin(0.5);
+    const prev = new UIButton(this, right - bw - (IS_PORTRAIT ? 104 : 72), cy, '‹', this.onTap(() => this.turnPage(-1)), opts);
+    this.pageButtons = [prev, next];
+    this.refreshPager();
+  }
+
+  private refreshPager(): void {
+    this.pageText.setText(`${this.page + 1} / ${this.pageCount}`);
+    this.pageButtons[0].setEnabled(this.page > 0);
+    this.pageButtons[1].setEnabled(this.page < this.pageCount - 1);
+  }
+
+  private turnPage(step: number): void {
+    const page = Math.min(this.pageCount - 1, Math.max(0, this.page + step));
+    if (page === this.page) return;
+    this.page = page;
+    this.rebuildShipList();
+  }
+
+  private rebuildShipList(): void {
     for (const card of this.shipCards) card.destroy();
     this.shipCards = [];
     this.buildShipList();
-    this.refreshHeader();
-    this.refresh();
+    this.refreshPager();
   }
 
   /** Keeps objects in place while the portrait page scrolls underneath them. */
@@ -377,7 +421,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const plusR = IS_PORTRAIT ? 26 : 17;
     const statSpacing = (w - statX - plusR * 2 - 30) / 3;
 
-    this.ships.forEach((ship, i) => {
+    this.ships.slice(this.page * PAGE_SIZE, (this.page + 1) * PAGE_SIZE).forEach((ship, i) => {
       const y = startY + i * (itemH + ITEM_GAP);
       const bg = drawPanel(this.add.graphics(), 0, 0, w, itemH, { radius: 16, fill: Colors.panelHi, fillAlpha: 0.55 });
       const hover = this.add.graphics();

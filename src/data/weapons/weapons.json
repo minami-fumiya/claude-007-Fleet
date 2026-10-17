@@ -161,6 +161,42 @@
       "range": 360,
       "reloadTime": 8000,
       "projectileSpeed": 250
+    },
+    {
+      "id": "41cm_main_gun",
+      "name": "41cm 連装砲",
+      "type": "ShellAP",
+      "firePower": 110,
+      "range": 580,
+      "reloadTime": 1550,
+      "projectileSpeed": 590
+    },
+    {
+      "id": "36cm_main_gun",
+      "name": "35.6cm 連装砲",
+      "type": "ShellAP",
+      "firePower": 95,
+      "range": 560,
+      "reloadTime": 1400,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "8in_mk16",
+      "name": "8in Mk.16 速射砲",
+      "type": "ShellAP",
+      "firePower": 66,
+      "range": 530,
+      "reloadTime": 800,
+      "projectileSpeed": 570
+    },
+    {
+      "id": "28cm_skc34",
+      "name": "28cm SK C/34 主砲",
+      "type": "ShellAP",
+      "firePower": 85,
+      "range": 540,
+      "reloadTime": 1100,
+      "projectileSpeed": 640
     }
   ]
 }

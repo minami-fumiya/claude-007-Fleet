@@ -19,8 +19,8 @@ Sprint 3 は専用システム (FleetSystem / FormationSystem / EscortAISystem) 
 当初 `Todo.md` に計画していた以下は未実装のまま持ち越し。
 
 - [ ] 艦種別エンティティ (`Battleship.ts` / `Cruiser.ts` / `Destroyer.ts` / `Carrier.ts` / `Submarine.ts`)
-- [ ] IJN ロースター拡充 (長門 / 陸奥 / 金剛 / 愛宕 / 利根 / 島風 / 雪風 / 赤城 / 加賀 / 伊400 等)
-- [ ] `src/entities/weapons/Torpedo.ts` (魚雷エンティティ。武器データ `torpedo_type93` は定義済み)
+- [x] IJN ロースター拡充 (長門 / 陸奥 / 金剛 / 愛宕 / 利根 / 島風 / 雪風 / 赤城 / 加賀 / 伊400) — Sprint 4 で実装
+- [x] `src/entities/weapons/Torpedo.ts` — Sprint 4 で実装
 - [ ] 武器 JSON の分割 (`torpedoes.json` / `main-guns.json` / `secondary.json`)
 - [ ] `src/ui/FleetPanel.ts` / `src/ui/components/ShipCard.ts`
 - [ ] `docs/specs/ships/IJN/` 仕様書一式

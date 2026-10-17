@@ -191,30 +191,30 @@
 
 ### Sprint 4: USN・Kriegsmarine・AI 強化・潜水艦戦 ✅
 
-> 詳細: `docs/specs/sprints/current.md`。各国 6 隻に絞って実装し、残りの艦は下の未チェック項目として残す。
+> 詳細: `docs/specs/sprints/current.md`。Fleet Builder の艦リストは 6 隻ごとのページ切替。
 
 #### USN データ (`src/data/ships/usn.json`)
 - [x] 戦艦: Iowa / North Carolina
-- [ ] 戦艦: Missouri / New Jersey
+- [x] 戦艦: Missouri / New Jersey
 - [x] 巡洋艦: Baltimore
-- [ ] 巡洋艦: Des Moines
+- [x] 巡洋艦: Des Moines
 - [x] 駆逐艦: Fletcher
-- [ ] 駆逐艦: Gearing
+- [x] 駆逐艦: Gearing
 - [x] 空母: Essex (艦載機は Sprint 5)
-- [ ] 空母: Enterprise / Midway
+- [x] 空母: Enterprise / Midway
 - [x] 潜水艦: Gato
-- [ ] 潜水艦: Balao
+- [x] 潜水艦: Balao
 - [x] `docs/specs/ships/USN/` 仕様書
 
 #### Kriegsmarine データ (`src/data/ships/km.json`)
 - [x] 戦艦: Bismarck / Tirpitz
-- [ ] 戦艦: Scharnhorst / Gneisenau
+- [x] 戦艦: Scharnhorst / Gneisenau
 - [x] 巡洋艦: Prinz Eugen
-- [ ] 巡洋艦: Admiral Hipper
+- [x] 巡洋艦: Admiral Hipper
 - [x] 駆逐艦: Z1 (Leberecht Maass)
 - [x] 空母: Graf Zeppelin (架空扱い)
 - [x] 潜水艦: VIIC 型
-- [ ] 潜水艦: IXC 型 / XXI 型
+- [x] 潜水艦: IXC 型 / XXI 型
 - [x] `docs/specs/ships/KM/` 仕様書
 
 #### AI 強化

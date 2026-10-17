@@ -4,7 +4,7 @@
 **Goal**: 3 国籍 (IJN / USN / KM) から艦隊を編成でき、国籍ごとに戦い方の違う AI と戦える。潜水艦は潜航して魚雷で戦い、駆逐艦はソナーと爆雷で対抗する。
 
 ## スコープ判断
-- 艦船データは 1 国あたり 6 隻 (戦艦 2・巡洋艦・駆逐艦・空母・潜水艦) に絞り、ゲームバランスは既存 IJN の数値スケールに合わせる。
+- 艦船データは Todo.md の主要艦 (IJN 16 / USN 13 / KM 11 隻) を実装。ゲームバランスは既存 IJN の数値スケールに合わせる。Fleet Builder は 6 隻ごとのページ切替。
 - 空母は艦載機が Sprint 5 のため、今スプリントは副砲のみの扱いを継続。
 - ミニマップは Sprint 7 のため、ソナー探知は「探知中の潜水艦を半透明表示 + ソナー波紋」で表現する。
 - 純粋ロジックは `src/systems/` に置き Vitest でテストする (Phaser 非依存)。
@@ -12,9 +12,9 @@
 ## Tasks
 
 ### A. 国籍データ・多国籍編成
-- [x] `src/data/ships/usn.json` — Iowa / North Carolina / Baltimore / Fletcher / Essex / Gato
-- [x] `src/data/ships/km.json` — Bismarck / Tirpitz / Prinz Eugen / Z1 / Graf Zeppelin / U-boat VIIC
-- [x] `src/data/ships/ijn.json` — 伊19 (潜水艦) 追加
+- [x] `src/data/ships/usn.json` — Iowa / Missouri / New Jersey / North Carolina / Baltimore / Des Moines / Fletcher / Gearing / Essex / Enterprise / Midway / Gato / Balao
+- [x] `src/data/ships/km.json` — Bismarck / Tirpitz / Scharnhorst / Gneisenau / Prinz Eugen / Admiral Hipper / Z1 / Graf Zeppelin / U-boat VIIC / IXC / XXI
+- [x] `src/data/ships/ijn.json` — 伊19 / 伊400 (潜水艦) と Sprint 3 持ち越しの長門・陸奥・金剛・愛宕・利根・島風・雪風・赤城・加賀を追加
 - [x] `src/data/weapons/weapons.json` — 各国の主砲・副砲・魚雷・爆雷を追加
 - [x] `src/systems/ShipRegistry.ts` — 国籍別の艦リスト取得 (純粋ロジック)
 - [x] `src/systems/EnemyFleetGenerator.ts` — 敵国籍・戦力に応じた敵艦隊生成
