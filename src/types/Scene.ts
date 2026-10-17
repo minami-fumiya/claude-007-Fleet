@@ -44,6 +44,8 @@ export interface IBattleResultData {
   cost?: string;
   /** Campaign / scenario line, e.g. "海域攻略: 南洋前哨  初回報酬 …" */
   campaign?: string;
+  /** Medals awarded in this battle */
+  medals?: string[];
   /** Scene the "back" button returns to (default: the home port) */
   returnScene?: string;
   /** Battle setup RETRY replays directly (scenarios); absent = back to the Fleet Builder */

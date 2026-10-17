@@ -17,8 +17,10 @@ import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { list: { x: 16, y: 150, w: CANVAS_W - 32, h: 300 } as IRect, cardH: 92, detail: { x: 16, y: 466, w: CANVAS_W - 32, h: CANVAS_H - 482 } as IRect }
-  : { list: { x: 24, y: 96, w: 380, h: 604 } as IRect, cardH: 120, detail: { x: 420, y: 96, w: 836, h: 604 } as IRect };
+  ? { list: { x: 16, y: 150, w: CANVAS_W - 32, h: 320 } as IRect, cols: 2, cardH: 100, detail: { x: 16, y: 486, w: CANVAS_W - 32, h: CANVAS_H - 502 } as IRect }
+  : { list: { x: 24, y: 96, w: 380, h: 604 } as IRect, cols: 1, cardH: 110, detail: { x: 420, y: 96, w: 836, h: 604 } as IRect };
+const GAP = 10;
+const CARD_W = (L.list.w - GAP * (L.cols - 1)) / L.cols;
 
 /**
  * 史実シナリオ: pick a historical battle and a side. Fleets, positions, weather and the special victory
@@ -51,14 +53,18 @@ export class ScenarioScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '史実シナリオ', displayStyle(24)).setOrigin(0.5);
 
     this.scenarios.forEach((sc, i) => {
-      const r = { x: L.list.x, y: L.list.y + i * (L.cardH + 10), w: L.list.w, h: L.cardH };
+      const col = i % L.cols;
+      const row = Math.floor(i / L.cols);
+      const r = { x: L.list.x + col * (CARD_W + GAP), y: L.list.y + row * (L.cardH + GAP), w: CARD_W, h: L.cardH };
       const frame = this.add.graphics();
       this.cardFrames.push(frame);
       const card = this.add.container(r.x, r.y, [
         frame,
         this.add.text(18, 14, sc.date, eyebrowStyle(10, Css.gold)),
         this.add.text(18, IS_PORTRAIT ? 40 : 36, sc.name, displayStyle(20)),
-        this.add.text(18, r.h - (IS_PORTRAIT ? 28 : 30), `${NATION_INFO[sc.forces.A.nation].short} vs ${NATION_INFO[sc.forces.B.nation].short}`, textStyle(12, Css.muted)),
+        IS_PORTRAIT
+          ? this.add.text(r.w - 16, 14, `${NATION_INFO[sc.forces.A.nation].short} vs ${NATION_INFO[sc.forces.B.nation].short}`, textStyle(12, Css.muted)).setOrigin(1, 0)
+          : this.add.text(18, r.h - 30, `${NATION_INFO[sc.forces.A.nation].short} vs ${NATION_INFO[sc.forces.B.nation].short}`, textStyle(12, Css.muted)),
       ]);
       makeClickable(card, r.w, r.h);
       card.on('pointerup', () => {
@@ -75,7 +81,7 @@ export class ScenarioScene extends Phaser.Scene {
     this.cardFrames.forEach((g, i) => {
       g.clear();
       const on = i === this.selected;
-      drawPanel(g, 0, 0, L.list.w, L.cardH, { radius: 18, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.85 : 0.2, glow: on ? 1 : 0 });
+      drawPanel(g, 0, 0, CARD_W, L.cardH, { radius: 18, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.85 : 0.2, glow: on ? 1 : 0 });
     });
     for (const o of this.detail) o.destroy();
     this.detail = [];

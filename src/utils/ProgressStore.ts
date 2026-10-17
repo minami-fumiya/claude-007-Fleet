@@ -5,6 +5,8 @@
 
 import { IDockJob, IResources } from '@/types/Progression';
 import { resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
+import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
+import { IServiceRecord } from '@/types/Record';
 
 const STORAGE_KEY = 'ww2fleet.progress.v1';
 
@@ -25,10 +27,12 @@ export interface IProgress {
   proficiency: Record<string, number>;
   /** Ship id → refit stage (0 = original) */
   refits: Record<string, number>;
+  /** Career totals and medals */
+  record: IServiceRecord;
 }
 
 export function emptyProgress(): IProgress {
-  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [], campaign: [], proficiency: {}, refits: {} };
+  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [], campaign: [], proficiency: {}, refits: {}, record: emptyRecord() };
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -70,6 +74,7 @@ export function parseProgress(raw: string | null): IProgress {
       captainXp, upgrades, resources: res, damage, docks, research, campaign,
       proficiency: numbers(data.proficiency),
       refits: numbers(data.refits),
+      record: parseRecord(data.record),
     };
   } catch {
     return emptyProgress();

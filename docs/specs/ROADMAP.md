@@ -17,4 +17,5 @@
 ## Phase 4: Advanced (Sprints 8–10+)
 - Sprint 8: Campaign map, convoy ops, shore bombardment, FogOfWar
 - Sprint 9: Historical scenarios, refit system, encyclopedia
-- Sprint 10+: Fictional ships, additional content, multiplayer (TBD)
+- Sprint 10: Fictional ships, more scenarios and a third theater, service record and medals (implemented)
+- Sprint 11+: Multiplayer (TBD — needs a server)

@@ -20,7 +20,7 @@ const L = IS_PORTRAIT
       resources: { x: 16, y: 150, w: CANVAS_W - 32 } as { x: number; y: number; w: number },
       resourceCols: 2,
       menu: { x: 16, y: 290, w: CANVAS_W - 32, h: 214 } as IRect,
-      menuCols: 3,
+      menuCols: 4,
       dock: { x: 16, y: 524, w: CANVAS_W - 32, h: CANVAS_H - 540 } as IRect,
       rowH: 92,
     }
@@ -37,9 +37,10 @@ const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gol
   { label: '作戦', caption: 'CAMPAIGN', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
   { label: '演習', caption: 'FREE BATTLE', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
   { label: '史実', caption: 'SCENARIO', scene: SceneKeys.SCENARIO, variant: 'primary' },
-  { label: '工廠', caption: 'ARSENAL · 研究', scene: SceneKeys.ARSENAL, variant: 'secondary' },
+  { label: '工廠', caption: 'ARSENAL', scene: SceneKeys.ARSENAL, variant: 'secondary' },
   { label: '改装', caption: 'REFIT', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
   { label: '図鑑', caption: 'ENCYCLOPEDIA', scene: SceneKeys.ENCYCLOPEDIA, variant: 'secondary' },
+  { label: '戦績', caption: 'RECORD', scene: SceneKeys.RECORD, variant: 'secondary' },
 ];
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 6 : 5;
 

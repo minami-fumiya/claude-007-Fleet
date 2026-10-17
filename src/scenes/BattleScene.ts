@@ -51,7 +51,7 @@ import { ICaptain } from '@/types/Captain';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers } from '@/systems/CustomizationSystem';
 import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/CaptainSystem';
-import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { researchModifiers, unlockedUpgrades } from '@/systems/ResearchSystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
@@ -59,7 +59,8 @@ import { ITechNode } from '@/types/Progression';
 import techTree from '@/data/tech-tree.json';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
-import { recordClear } from '@/systems/CampaignSystem';
+import { recordClear, theaterProgress } from '@/systems/CampaignSystem';
+import { awardMedals, newMedals, recordBattle } from '@/systems/RecordSystem';
 import { evaluateObjective, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
 import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
@@ -1341,9 +1342,28 @@ export class BattleScene extends Phaser.Scene {
       result.campaign = `作戦失敗: ${area.name}`;
       result.returnScene = SceneKeys.CAMPAIGN;
     }
+    progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
     saveProgress(progress);
     result.reward = formatResources(settlement.reward);
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }
+
+  /** Adds this battle to the service record and awards any medals it earned. */
+  private updateRecord(progress: IProgress, victory: boolean, shipsLost: number, result: IBattleResultData): IProgress {
+    const campaign = campaignData as ICampaignData;
+    let record = recordBattle(progress.record, {
+      victory,
+      sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
+      damageDealt: Object.values(this.damageLog.player).reduce((a, n) => a + n, 0),
+      shipsLost,
+    });
+    const medals = newMedals(record, {
+      clearedTheaters: campaign.theaters.filter((t) => theaterProgress(campaign, t.id, progress.campaign) >= 1).map((t) => t.id),
+    });
+    record = awardMedals(record, medals);
+    if (medals.length > 0) result.medals = medals.map((m) => m.name);
+    return { ...progress, record };
+  }
+
 }

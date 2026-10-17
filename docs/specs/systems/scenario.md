@@ -15,12 +15,15 @@ Scenarios are exhibitions: no resources, carried-over damage, captain XP or prof
 | `sides[]` | Playable sides: which force, label, `objective`, `brief`, and optional `targets`, `zone`, `timeLimitSec`, `enemyGoesForZone` |
 
 Placements and zones use normalised coordinates (`x`, `y` of the world size, `r` of the shorter side), like maps.
+A test checks every placement and zone is at sea in both the landscape and portrait worlds.
 
 ## Scenarios
 | Scenario | Map / conditions | Sides |
 |---|---|---|
 | ミッドウェー海戦 | open-sea, clear, day — 赤城・加賀・利根 vs Enterprise・Essex・Fletcher | Both: SinkTargets (the enemy carriers) in 6 min |
 | レイテ沖海戦 | strait, overcast, day — 大和・長門・金剛 vs Enterprise・Fletcher・Gearing | IJN: Breakthrough to レイテ湾 in 5 min · USN: Delay (keep 大和 out of the zone for 4 min, or sink it) |
+| 第三次ソロモン海戦 (Sprint 10) | archipelago, clear, night — 金剛 (霧島の代役)・愛宕・吹雪 vs North Carolina (Washington の代役)・Fletcher ×2 | IJN: Breakthrough to 飛行場沖 (diagonal across the islands, 5 min) · USN: Delay (keep 金剛 out for 4 min, or sink it) |
+| 北岬沖海戦 (Sprint 10) | open-sea, overcast, night — Scharnhorst alone vs KGV (Duke of York の代役)・Belfast・Javelin closing from both flanks | RN: PreventEscape (sink Scharnhorst before it reaches ノルウェー沿岸, 5 min) · KM: Breakthrough |
 | ビスマルク追撃戦 | open-sea, storm, day — Bismarck・Prinz Eugen vs KGV・Hood・Cossack | RN: PreventEscape (sink Bismarck before it reaches the escape area, 5 min) · KM: Breakthrough |
 
 ## Objectives (`evaluateObjective`)

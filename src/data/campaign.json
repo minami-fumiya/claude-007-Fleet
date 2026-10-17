@@ -1,7 +1,8 @@
 {
   "theaters": [
     { "id": "pacific", "name": "太平洋", "en": "PACIFIC" },
-    { "id": "atlantic", "name": "大西洋", "en": "ATLANTIC" }
+    { "id": "atlantic", "name": "大西洋", "en": "ATLANTIC" },
+    { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN" }
   ],
   "areas": [
     {
@@ -80,6 +81,41 @@
       "enemy": { "nation": "KM", "ships": ["tirpitz", "admiral_hipper", "z1"] },
       "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 800, "ammo": 900, "steel": 1200, "bauxite": 400 }
+    },
+    {
+      "id": "m1", "theater": "mediterranean", "name": "マルタ沖船団", "description": "英潜水艦が待ち伏せる海域を、輸送船団を護衛して突破せよ。",
+      "x": 0.14, "y": 0.5, "requires": [],
+      "enemy": { "nation": "RN", "ships": ["upholder", "truant", "javelin"] },
+      "objective": "Convoy", "map": "convoy-route", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 400, "ammo": 300, "steel": 400, "bauxite": 150 }
+    },
+    {
+      "id": "m2", "theater": "mediterranean", "name": "シドラ湾夜戦", "description": "夜の湾内で英巡洋艦戦隊を迎え撃て。",
+      "x": 0.32, "y": 0.68, "requires": ["m1"],
+      "enemy": { "nation": "RN", "ships": ["southampton", "belfast", "cossack"] },
+      "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
+      "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }
+    },
+    {
+      "id": "m3", "theater": "mediterranean", "name": "タラント港砲撃", "description": "英艦隊の拠点となった港の砲台と施設を破壊せよ。",
+      "x": 0.5, "y": 0.4, "requires": ["m2"],
+      "enemy": { "nation": "RN", "ships": ["javelin"] },
+      "objective": "Bombard", "map": "atoll", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 800, "steel": 900, "bauxite": 300 }
+    },
+    {
+      "id": "m4", "theater": "mediterranean", "name": "セイロン沖海戦", "description": "インド洋へ進出し、英空母部隊を撃滅せよ。",
+      "x": 0.7, "y": 0.64, "requires": ["m3"],
+      "enemy": { "nation": "RN", "ships": ["illustrious", "southampton", "javelin"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 700, "ammo": 500, "steel": 700, "bauxite": 600 }
+    },
+    {
+      "id": "m5", "theater": "mediterranean", "name": "東洋艦隊決戦", "description": "英東洋艦隊の主力戦艦部隊と雌雄を決せよ。",
+      "x": 0.86, "y": 0.36, "requires": ["m4"],
+      "enemy": { "nation": "RN", "ships": ["king_george_v", "warspite", "cossack"] },
+      "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }
     }
   ]
 }

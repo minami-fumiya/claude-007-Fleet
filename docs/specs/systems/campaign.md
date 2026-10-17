@@ -13,6 +13,7 @@ map, weather and time come from the area) → battle → results show 海域攻�
 |---|---|
 | 太平洋 (vs USN) | 南洋前哨 → 諸島沖海戦 → 輸送船団護衛 (convoy) → 海峡夜戦 (night) → 機動部隊決戦 (carrier) → 環礁要塞攻略 (bombard) |
 | 大西洋 (vs KM) | 群狼の海 (ASW) → 北大西洋船団 (convoy, storm) → ビスマルク追撃 (storm) → 沿岸要塞砲撃 (bombard, fog) → フィヨルドの巨艦 (night) |
+| 地中海 (vs RN, Sprint 10) | マルタ沖船団 (convoy vs subs) → シドラ湾夜戦 (night) → タラント港砲撃 (bombard) → セイロン沖海戦 (carrier, インド洋) → 東洋艦隊決戦 |
 An area unlocks when every area in `requires` is cleared; the first clear pays the area's `reward`.
 
 ## Objectives (`ObjectiveSystem`)

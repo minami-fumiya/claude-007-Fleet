@@ -11,9 +11,17 @@ import rn from '@/data/ships/rn.json';
 import midway from '@/data/scenarios/midway.json';
 import leyte from '@/data/scenarios/leyte-gulf.json';
 import bismarck from '@/data/scenarios/bismarck-chase.json';
+import guadalcanal from '@/data/scenarios/guadalcanal.json';
+import northCape from '@/data/scenarios/north-cape.json';
+import { onIsland, resolveMap } from '@/systems/MapSystem';
+import { IMapData } from '@/types/Map';
+import openSea from '@/data/maps/open-sea.json';
+import archipelago from '@/data/maps/archipelago.json';
+import strait from '@/data/maps/strait.json';
 
 const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[]);
-const SCENARIOS = [midway, leyte, bismarck] as unknown as IScenario[];
+const SCENARIOS = [midway, leyte, bismarck, guadalcanal, northCape] as unknown as IScenario[];
+const MAPS = new Map(([openSea, archipelago, strait] as IMapData[]).map((m) => [m.id, m]));
 
 describe('ScenarioSystem', () => {
   it('gives the player the side force and the AI the other', () => {
@@ -45,4 +53,20 @@ describe('ScenarioSystem', () => {
       expect((side.targets?.length ?? 0) > 0, `${sc.id} targets`).toBe(needsTargets);
     }
   });
+
+  it.each(SCENARIOS)('$id: ships and zones start at sea in both layouts', (sc) => {
+    const data = MAPS.get(sc.map);
+    expect(data, sc.map).toBeDefined();
+    // BattleScene's landscape and portrait worlds
+    for (const [w, h] of [[2400, 1440], [1440, 2240]]) {
+      const map = resolveMap(data!, w, h);
+      for (const f of [sc.forces.A, sc.forces.B]) {
+        for (const p of f.positions) expect(onIsland(map, p.x * w, p.y * h, 40), `${sc.id} ${p.x},${p.y}`).toBe(false);
+      }
+      for (const side of sc.sides) {
+        if (side.zone) expect(onIsland(map, side.zone.x * w, side.zone.y * h), `${sc.id} zone`).toBe(false);
+      }
+    }
+  });
 });
+

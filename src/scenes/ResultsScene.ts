@@ -33,7 +33,7 @@ export class ResultsScene extends Phaser.Scene {
 
     // Captain XP lines push the buttons down and grow the card.
     const reports = data?.captainReports ?? [];
-    const rewardLines = [data?.campaign ?? '', data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : ''].filter((l) => l);
+    const rewardLines = [data?.campaign ?? '', data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : ''].filter((l) => l);
     const lineCount = reports.length + rewardLines.length;
     const reportH = lineCount > 0 ? 18 + lineCount * REPORT_LINE_H : 0;
     const cardH = CARD_H + reportH;

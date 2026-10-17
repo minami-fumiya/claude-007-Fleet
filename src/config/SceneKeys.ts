@@ -10,6 +10,7 @@ export const SceneKeys = {
   CAMPAIGN: 'CampaignMapScene',
   SCENARIO: 'ScenarioScene',
   ENCYCLOPEDIA: 'EncyclopediaScene',
+  RECORD: 'RecordScene',
   HOME: 'HomeScene',
 } as const;
 

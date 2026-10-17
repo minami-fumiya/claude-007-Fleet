@@ -23,6 +23,8 @@ describe('CampaignSystem', () => {
   it('opens the first area of each theater and gates the rest', () => {
     expect(isUnlocked(area('p1'), [])).toBe(true);
     expect(isUnlocked(area('a1'), [])).toBe(true);
+    expect(isUnlocked(area('m1'), [])).toBe(true);
+    expect(isUnlocked(area('m2'), ['p1', 'a1'])).toBe(false);
     expect(isUnlocked(area('p2'), [])).toBe(false);
     expect(isUnlocked(area('p2'), ['p1'])).toBe(true);
   });
@@ -52,6 +54,7 @@ describe('CampaignSystem', () => {
     const theaters = new Set(data.theaters.map((t) => t.id));
     for (const a of data.areas) {
       expect(enemyShips(a, registry), a.id).toHaveLength(a.enemy.ships.length);
+      expect(enemyShips(a, registry).some((sh) => sh.fictional), `${a.id} fields a fictional ship`).toBe(false);
       expect(maps.has(a.map), a.id).toBe(true);
       expect(theaters.has(a.theater), a.id).toBe(true);
       for (const r of a.requires) expect(ids.has(r), `${a.id} -> ${r}`).toBe(true);

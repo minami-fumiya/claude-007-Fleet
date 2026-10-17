@@ -177,3 +177,13 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   serves every mode.
 - Generated docs (ship rosters) are rebuilt from JSON by a script that keeps the hand-written Notes section.
 - Six menu buttons don't fit one portrait row — lay menus out as a grid (`menuCols`) rather than a row/column flag.
+
+### Sprint 10 — Fictional ships, more content, service record
+- Gate optional content with a data flag plus one pure filter (`availableShips`) used at the single place lists are
+  built; the enemy generator filters independently so research never leaks into enemy fleets.
+- Keep balance invariants on the historical set and give special ships their own bounded tests, instead of
+  loosening the shared ones.
+- Scenario geometry needs sims from both sides: the first layouts were won in under 30 s by whichever side the AUTO
+  pilot played. Placement tests (at sea in both worlds) catch islands, not balance.
+- Career stats are a plain record object updated by a pure `recordBattle`; medals are rules over that record plus a
+  small context (cleared theaters), so new medals are one table row.
