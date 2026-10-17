@@ -21,6 +21,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   dataId = '';
   /** Sea state (storms slow every ship) */
   envSpeedMul = 1;
+  /** Turns a wanted heading away from land (set by the battle when the map has islands) */
+  avoid: ((x: number, y: number, headingDeg: number) => number) | null = null;
   /** Component damage (expiry times) */
   criticals: CriticalState = {};
 
@@ -54,12 +56,13 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   }
 
   /** Turns toward the requested heading at `turnRateDeg` and moves along the bow at the throttle. */
-  steer(s: ISteer, dtSec: number, turnRateDeg: number): void {
+  steer(s: ISteer, dtSec: number, turnRateDeg: number, avoidLand = true): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const spd = this.currentSpeed * s.throttle;
-    this.angle = rotateTowardsDegrees(this.angle, s.headingDeg, turnRateDeg * this.critEffects().turnMul * dtSec);
-    const heading = Phaser.Math.DegToRad(this.angle - 90);
-    body.setVelocity(Math.cos(heading) * spd, Math.sin(heading) * spd);
+    const heading = avoidLand && this.avoid ? this.avoid(this.x, this.y, s.headingDeg) : s.headingDeg;
+    this.angle = rotateTowardsDegrees(this.angle, heading, turnRateDeg * this.critEffects().turnMul * dtSec);
+    const bow = Phaser.Math.DegToRad(this.angle - 90);
+    body.setVelocity(Math.cos(bow) * spd, Math.sin(bow) * spd);
   }
 
   takeDamage(amount: number): void {

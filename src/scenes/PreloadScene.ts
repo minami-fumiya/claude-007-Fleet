@@ -12,6 +12,13 @@ import { generateShipTextures } from '@/entities/ships/ShipTextures';
 import weaponsData from '@/data/weapons/weapons.json';
 import captainsData from '@/data/captains.json';
 import upgradesData from '@/data/upgrades.json';
+import openSea from '@/data/maps/open-sea.json';
+import archipelago from '@/data/maps/archipelago.json';
+import strait from '@/data/maps/strait.json';
+import atoll from '@/data/maps/atoll.json';
+import convoyRoute from '@/data/maps/convoy-route.json';
+
+const MAPS = [openSea, archipelago, strait, atoll, convoyRoute];
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -27,6 +34,7 @@ export class PreloadScene extends Phaser.Scene {
     this.cache.json.add('weapons', weaponsData);
     this.cache.json.add('captains', captainsData);
     this.cache.json.add('upgrades', upgradesData);
+    for (const m of MAPS) this.cache.json.add(`map:${m.id}`, m);
   }
 
   create(): void {

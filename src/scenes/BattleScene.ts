@@ -21,6 +21,9 @@ import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/syst
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
+import { drawMap } from '@/ui/MapView';
+import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
+import { IResolvedMap } from '@/types/Map';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
@@ -118,6 +121,8 @@ export class BattleScene extends Phaser.Scene {
   private playerRecon!: ReconSystem;
   private enemyRecon!: ReconSystem;
   private fog!: FogOfWar;
+  private map!: IResolvedMap;
+  private islands!: Phaser.Physics.Arcade.StaticGroup;
   private trails!: ShipTrails;
   private muteBtn: UIButton | null = null;
   private minimap!: Minimap;
@@ -196,6 +201,8 @@ export class BattleScene extends Phaser.Scene {
     this.wantDive = false;
 
     addOceanWorld(this, WORLD.w, WORLD.h);
+    this.map = resolveMap(DataLoader.getMap(this, this.battleData?.mapKey || 'open-sea'), WORLD.w, WORLD.h);
+    this.islands = drawMap(this, this.map);
     this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
     this.battleStartedAt = this.time.now;
     this.aimTarget = { x: FLAGSHIP_SPAWN.x, y: FLAGSHIP_SPAWN.y - 300 };
@@ -244,6 +251,7 @@ export class BattleScene extends Phaser.Scene {
     for (const s of [...this.friendlies(), ...this.enemies]) this.trails.add(s);
     const mm = IS_PORTRAIT ? { w: 150, x: CANVAS_W - 20 - 150, y: 252 } : { w: 200, x: CANVAS_W - 20 - 200, y: 80 };
     this.minimap = new Minimap(this, mm.x, mm.y, mm.w, WORLD.w, WORLD.h);
+    this.minimap.drawIslands(this.map);
     const splashAt = (x: number, y: number): void => {
       // Only splashes the player could see.
       if (isVisible(x, y, this.visionSources(this.friendlies(), this.playerRecon, this.playerAir))) this.splash.play(x, y, 0.8);
@@ -300,6 +308,7 @@ export class BattleScene extends Phaser.Scene {
     else if (target) this.autoSecondaries(target, enemyView, time);
     this.autoDepthCharge(enemyView, time);
 
+    this.applySea(dtSec);
     this.playerWeapons.update(time, delta);
     this.enemyWeapons.update(time, delta);
     this.updateAir(time, delta, playerView, enemyView);
@@ -360,13 +369,15 @@ export class BattleScene extends Phaser.Scene {
     return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
   }
 
-  private spawnShip(shipData: IShipData, x: number, y: number, mods: IShipModifiers = NO_MODIFIERS): BaseShip {
+  private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS): BaseShip {
+    const { x, y } = clearSpawn(this.map, wantX, wantY);
     const loadout = applyToWeapons(this.loadoutOf(shipData), mods);
     const stats = applyToStats(this.shipDataToStats(shipData, primaryWeapon(loadout)), mods);
     const ship = new BaseShip(this, x, y, shipData.spriteKey, stats);
     ship.loadout = loadout;
     ship.dataId = shipData.id;
     ship.envSpeedMul = this.conditions.speedMul;
+    if (this.map.islands.length > 0) ship.avoid = (px, py, h) => avoidHeading(this.map, px, py, h);
     ship.visionMul = mods.visionMul;
     ship.aaMul = mods.aaMul;
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
@@ -486,6 +497,19 @@ export class BattleScene extends Phaser.Scene {
     return ships
       .filter((s) => s.isAlive && !s.submerged)
       .map((s) => ({ x: s.x, y: s.y, sonarRange: sonarRange(s.stats.shipClass) }));
+  }
+
+  /** Currents push every ship; shoal water slows it. */
+  private applySea(dtSec: number): void {
+    for (const ship of [...this.friendlies(), ...this.enemies]) {
+      if (!ship.isAlive) continue;
+      ship.envSpeedMul = this.conditions.speedMul * (inShoal(this.map, ship.x, ship.y) ? SHOAL_SPEED : 1);
+      const c = currentAt(this.map, ship.x, ship.y);
+      if (c.vx !== 0 || c.vy !== 0) {
+        ship.x += c.vx * dtSec;
+        ship.y += c.vy * dtSec;
+      }
+    }
   }
 
   /** Everything one side sees with: ship vision circles, recon cones and its aircraft. */
@@ -795,6 +819,17 @@ export class BattleScene extends Phaser.Scene {
     // The projectile arrays grow in place as new projectiles are created, so the colliders keep up.
     this.physics.add.overlap(this.playerWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], enemyObjs, hit);
     this.physics.add.overlap(this.enemyWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], friendlyObjs, hit);
+    // Land stops ships and everything fired at them.
+    this.physics.add.collider([...friendlyObjs, ...enemyObjs], this.islands);
+    const intoLand: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p) => {
+      const projectile = p as unknown as BaseProjectile;
+      if (!projectile.active) return;
+      this.explosion.play(projectile.x, projectile.y);
+      projectile.deactivate();
+    };
+    for (const ws of [this.playerWeapons, this.enemyWeapons]) {
+      this.physics.add.overlap(ws.projectiles as unknown as Phaser.GameObjects.GameObject[], this.islands, intoLand);
+    }
   }
 
   private onProjectileHit(projectile: BaseProjectile, target: BaseShip): void {
@@ -844,7 +879,8 @@ export class BattleScene extends Phaser.Scene {
       // Touch: steer toward the stick direction, throttle by how far it is pushed.
       this.waypoint = null;
       const targetDeg = Phaser.Math.RadToDeg(Math.atan2(stick.y, stick.x)) + 90;
-      this.flagship.steer({ headingDeg: targetDeg, throttle: stick.magnitude }, dtSec, SHIP_ROTATE_SPEED);
+      // The stick is direct control: no automatic land avoidance.
+      this.flagship.steer({ headingDeg: targetDeg, throttle: stick.magnitude }, dtSec, SHIP_ROTATE_SPEED, false);
       return;
     }
 

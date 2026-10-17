@@ -1,40 +1,36 @@
-# Sprint 7 — 演出・品質・バランス (v1.0 候補)
+# Sprint 8 — 作戦マップ・キャンペーン・特殊作戦
 
-**Status**: Implemented [IMPLEMENTED: sprint7] | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
-**Goal**: 戦闘の見た目・音・状況 (天候 / 夜戦) が揃い、損傷とバランスが整った v1.0 候補にする。
+**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
+**Goal**: 島・浅瀬・潮流のある海域で戦い、作戦マップの海域を順に攻略していく。護衛作戦と砲撃支援の特殊作戦がある。
 
 ## スコープ判断
-- 音声アセットは用意できないため、効果音と BGM は WebAudio で合成する (`assets/audio/` は使わない)。ミュート切替あり。
-- v1.0 タグは main へのマージ後にユーザーが付ける (このブランチではタグを作らない)。
-- 純粋ロジックは `src/systems/` に置き Vitest でテストする。
+- Tiled エディタは使えないため、マップは独自 JSON (`src/data/maps/*.json`: 島・浅瀬は円の集合、潮流は矩形ゾーン) で定義する。
+- FogOfWar は Sprint 5 で完全実装済み (視界外は不可視) のため本スプリントでは扱わない。
+- キャンペーンの進行 (攻略済み海域) は `ProgressStore` に保存する。
 
 ## Tasks
 
-### A. 損傷とクリティカル
-- [x] `src/types/ShipDamage.ts` — 部位損傷 (主砲 / 機関 / 舵)
-- [x] `CombatSystem.rollCriticalHit` — 命中時に確率で部位損傷 (火力・速力・旋回の低下、時間で応急修理)
-- [x] HUD / ラベルに損傷アイコン
+### A. 海域マップ
+- [x] `src/types/Map.ts` / `src/data/maps/*.json` — 島 (衝突)・浅瀬 (減速)・潮流ゾーン
+- [x] `src/systems/MapSystem.ts` — 潮流ベクトル・浅瀬判定・島回避の操舵 (純粋)
+- [x] 戦闘: 島の描画と衝突、砲弾は島に当たって消える、潮流で艦が流される、浅瀬で減速
 - [x] テスト
 
-### B. 天候と夜戦
-- [x] `src/systems/WeatherSystem.ts` — 晴天 / 曇天 / 嵐 / 霧 (視界・命中 (照準誤差)・速力の補正)
-- [x] 夜戦: 視界を縮小、暗い画面、発砲した艦は一時的に発見される
-- [x] Fleet Builder で天候 / 昼夜を選択 (ランダムも)
-- [x] テスト
+### B. キャンペーン
+- [ ] `src/data/campaign.json` — 太平洋 / 大西洋の海域 (解放条件・敵艦隊・目標・初回報酬)
+- [ ] `src/systems/CampaignSystem.ts` — 解放判定・攻略記録・報酬 (純粋)
+- [ ] `src/scenes/CampaignMapScene.ts` — 戦略マップ (海域ノード・航路・詳細パネル)
+- [ ] 鎮守府 → 作戦 → Fleet Builder (作戦の敵を使用) → 戦闘 → 結果で攻略記録
+- [ ] テスト
 
-### C. 演出
-- [x] 爆発の黒煙・炎上、着弾の水柱と波紋、航跡
-- [x] `src/ui/Minimap.ts` — 味方 (青) / 視界内の敵 (赤) / 視界範囲
-- [x] `src/systems/AudioSystem.ts` — 合成効果音 (砲撃・爆発・着水・魚雷・爆雷・航空機) と BGM (フェード)、ミュート
+### C. 護衛作戦
+- [ ] `ConvoyShip` — 武装のない輸送船、航路に沿って進む
+- [ ] 勝利: 輸送船 2 隻以上が脱出 / 敗北: 旗艦撃沈か輸送船 2 隻喪失
 
-### D. バランス
-- [x] 解析モデル (`BalanceModel`) と不変条件テスト、ブラウザでの AUTO 対戦で国籍・艦種のバランスを確認し、HP / 火力 / AI を調整
-- [x] 調整結果を `docs/specs/systems/balance.md` に記録
+### D. 砲撃支援
+- [ ] `LandTarget` — 砲台 (反撃する) / 港湾 / 飛行場、魚雷は当たらない
+- [ ] 勝利: 陸上目標をすべて破壊
 
 ### 完了処理
-- [x] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint7]` タグ
-
-## 実装メモ
-- 音声はファイルを使わず WebAudio で合成 (`AudioSystem`)。最初のクリック / キー入力で有効化され、ミュート設定は localStorage に保存。
-- 夜戦では発砲した艦が 1.5 秒間、1000px 以内の敵に発見される。霧は画面を白っぽく、嵐は雨・速力低下・照準誤差。
-- v1.0 タグは main へのマージ後に付ける (このブランチでは作成していない)。
+- [ ] `docs/specs/systems/campaign.md`
+- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint8]` タグ

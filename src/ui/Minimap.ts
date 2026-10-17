@@ -3,6 +3,7 @@ import { DEPTH_HUD } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { Colors } from '@/ui/theme';
 import { drawPanel } from '@/ui/components/UIKit';
+import { IResolvedMap } from '@/types/Map';
 
 /**
  * Corner overview of the whole sea: the camera's view box, friendly ships (blue), enemies the player
@@ -26,6 +27,15 @@ export class Minimap {
       .setScrollFactor(0)
       .setDepth(DEPTH_HUD + 1);
     this.g = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH_HUD + 2);
+  }
+
+  /** Static land masses, drawn once under the ship dots. */
+  drawIslands(map: IResolvedMap): void {
+    const land = this.scene.add.graphics().setScrollFactor(0).setDepth(DEPTH_HUD + 1);
+    land.fillStyle(0x6f8f5a, 0.9);
+    for (const island of map.islands) {
+      for (const c of island) land.fillCircle(this.x + c.x * this.scale, this.y + c.y * this.scale, Math.max(1.5, c.r * this.scale));
+    }
   }
 
   get height(): number {

@@ -4,6 +4,7 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { ICaptainData } from '@/types/Captain';
 import { IUpgradeData } from '@/types/Modifiers';
+import { IMapData } from '@/types/Map';
 
 export interface IShipJsonFile {
   ships: IShipData[];
@@ -34,6 +35,10 @@ export class DataLoader {
 
   static getUpgrades(scene: Phaser.Scene): IUpgradeData[] {
     return DataLoader.fromCache<{ upgrades: IUpgradeData[] }>(scene, 'upgrades')?.upgrades ?? [];
+  }
+
+  static getMap(scene: Phaser.Scene, id: string): IMapData {
+    return DataLoader.fromCache<IMapData>(scene, `map:${id}`) ?? DataLoader.fromCache<IMapData>(scene, 'map:open-sea');
   }
 
   static getWeapons(scene: Phaser.Scene, key: string): IWeaponData[] {
