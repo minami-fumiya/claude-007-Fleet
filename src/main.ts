@@ -7,5 +7,7 @@ document.body.dataset.layout = ORIENTATION;
 
 loadUiFonts().then(() => {
   document.getElementById('boot-loader')?.remove();
-  new Phaser.Game(GameConfig);
+  const game = new Phaser.Game(GameConfig);
+  // Dev builds expose the game for browser smoke tests (Playwright).
+  if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
 });

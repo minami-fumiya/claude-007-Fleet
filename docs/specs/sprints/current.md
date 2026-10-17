@@ -1,36 +1,35 @@
-# Sprint 6 — 鎮守府・資源・入渠・工廠 (研究)
+# Sprint 7 — 演出・品質・バランス (v1.0 候補)
 
-**Status**: Implemented [IMPLEMENTED: sprint6] | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
-**Goal**: 戦闘の外に「母港」ができる。出撃には資源を使い、損傷は入渠で直し、資源で研究を進めて艦隊を強化する。
+**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
+**Goal**: 戦闘の見た目・音・状況 (天候 / 夜戦) が揃い、損傷とバランスが整った v1.0 候補にする。
 
 ## スコープ判断
-- 進捗 (資源・損傷・入渠・研究) は Sprint 5 の `ProgressStore` (localStorage) に追加する。
-- 入渠時間は実時間 (Date.now) で進む。2 隻まで並行して修理し、資源 (高速修理) で即時完了もできる。
-- 研究は資源を払うと即時に完了。効果は全艦への補正 (`IShipModifiers`) と改装装備の解放。
+- 音声アセットは用意できないため、効果音と BGM は WebAudio で合成する (`assets/audio/` は使わない)。ミュート切替あり。
+- v1.0 タグは main へのマージ後にユーザーが付ける (このブランチではタグを作らない)。
 - 純粋ロジックは `src/systems/` に置き Vitest でテストする。
 
 ## Tasks
 
-### A. ロジック (純粋)
-- [x] `src/systems/ResourceSystem.ts` — 燃料 / 弾薬 / 鋼材 / ボーキサイト、出撃コスト・報酬・支払い
-- [x] `src/systems/DockSystem.ts` — 損傷 (艦ごとの HP 割合)、修理時間・費用、2 ドック並行、高速修理
-- [x] `src/systems/ResearchSystem.ts` + `src/data/tech-tree.json` — 前提研究・費用・全艦補正・装備の解放
-- [x] `src/systems/ProgressionSystem.ts` — 戦闘結果 → 資源報酬・損傷・艦長 XP をまとめて進捗に反映
-- [x] テスト: `ResourceSystem` / `DockSystem` / `ResearchSystem` / `ProgressionSystem`
+### A. 損傷とクリティカル
+- [x] `src/types/ShipDamage.ts` — 部位損傷 (主砲 / 機関 / 舵)
+- [x] `CombatSystem.rollCriticalHit` — 命中時に確率で部位損傷 (火力・速力・旋回の低下、時間で応急修理)
+- [x] HUD / ラベルに損傷アイコン
+- [x] テスト
 
-### B. シーン
-- [x] `src/scenes/HomeScene.ts` — 鎮守府ハブ (資源表示、出撃 / 入渠 / 工廠 / 改装)
-- [x] 入渠パネル (HomeScene 内) — 損傷艦の一覧、ドック 2 つ、修理開始・高速修理
-- [x] `src/scenes/ArsenalScene.ts` — 工廠: 研究ツリーの一覧・研究実行
-- [x] Fleet Builder: 出撃コストの表示、資源不足・入渠中の艦は出撃不可、損傷艦の HP 表示
-- [x] 戦闘: 損傷艦は減った HP で出撃、研究補正の適用、結果で資源・損傷を反映 (Results に表示)
-- [x] 画面遷移: タイトル → 鎮守府 → 各画面
+### B. 天候と夜戦
+- [ ] `src/systems/WeatherSystem.ts` — 晴天 / 曇天 / 嵐 / 霧 (視界・命中 (照準誤差)・速力の補正)
+- [ ] 夜戦: 視界を縮小、暗い画面、発砲した艦は一時的に発見される
+- [ ] Fleet Builder で天候 / 昼夜を選択 (ランダムも)
+- [ ] テスト
+
+### C. 演出
+- [ ] 爆発の黒煙・炎上、着弾の水柱と波紋、航跡
+- [ ] `src/ui/Minimap.ts` — 味方 (青) / 視界内の敵 (赤) / 視界範囲
+- [ ] `src/systems/AudioSystem.ts` — 合成効果音 (砲撃・爆発・着水・魚雷・爆雷・航空機) と BGM (フェード)、ミュート
+
+### D. バランス
+- [ ] 戦闘シミュレーション (headless の純粋モデル) で国籍・艦種の勝率を確認し、HP / 火力 / AI を調整
+- [ ] 調整結果を `docs/specs/systems/balance.md` に記録
 
 ### 完了処理
-- [x] `docs/specs/systems/progression.md`
-- [x] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint6]` タグ
-
-## 実装メモ
-- 入渠は HomeScene 内のパネルとして実装 (専用シーンは作らない)。`update()` で実時間の完了を監視。
-- 撃沈された艦は失われず「大破 (10%)」で帰還する。資源不足・入渠中は出撃ボタンが無効になり理由を表示。
-- 研究は即時完了 (研究時間は無し)。改装装備のうち 7 種は研究で解放。
+- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint7]` タグ

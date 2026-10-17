@@ -4,6 +4,7 @@ import { HealthBar } from './components/HealthBar';
 import { CANVAS_W, DEPTH_HUD, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawMeter, drawPanel } from '@/ui/components/UIKit';
+import { activeCriticals, CRITICAL_BADGE } from '@/systems/DamageSystem';
 
 // Friendly ships carry their name + HP just below the hull, enemies just above it, so the
 // labels never cover the sprite. Gaps are measured from the hull's outer radius.
@@ -65,6 +66,18 @@ export interface IHudStatus {
   /** Main gun reload progress, 0..1 */
   reload: number;
   elapsedSec: number;
+}
+
+/** Name plus badges for component damage, e.g. "大和 (Yamato) [機舵]". */
+function labelFor(ship: BaseShip): string {
+  const crits = activeCriticals(ship.criticals, ship.scene?.time.now ?? 0);
+  return crits.length > 0 ? `${ship.stats.name} [${crits.map((c) => CRITICAL_BADGE[c]).join('')}]` : ship.stats.name;
+}
+
+/** Updates a label's text only when it changed (setText re-renders the texture). */
+function syncLabel(label: Phaser.GameObjects.Text, ship: BaseShip): void {
+  const text = labelFor(ship);
+  if (label.text !== text) label.setText(text);
 }
 
 export class HUD {
@@ -165,6 +178,7 @@ export class HUD {
     if (status) this.status = status;
     // Player HP bar and name follow the flagship
     if (player.active) {
+      syncLabel(this.playerNameLabel, player);
       this.playerNameLabel
         .setPosition(player.x, player.y + hullRadius(player) + LABEL_GAP)
         .setVisible(true);
@@ -183,6 +197,7 @@ export class HUD {
       const label = this.enemyLabels.get(ship)!;
       // Hidden enemies (submerged boats off sonar) don't give themselves away with a label.
       if (ship.active && ship.visible) {
+        syncLabel(label, ship);
         const top = ship.y - hullRadius(ship) - LABEL_GAP;
         bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, top - 7);
         label.setPosition(ship.x, top - 9).setVisible(true);
@@ -195,6 +210,7 @@ export class HUD {
     for (const [ship, bar] of this.escortBars) {
       const label = this.escortLabels.get(ship)!;
       if (ship.active) {
+        syncLabel(label, ship);
         const bottom = ship.y + hullRadius(ship) + LABEL_GAP;
         label.setPosition(ship.x, bottom).setVisible(true);
         bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, Colors.cyan);

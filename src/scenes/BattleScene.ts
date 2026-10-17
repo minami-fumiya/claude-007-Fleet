@@ -16,6 +16,7 @@ import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
+import { applyCritical, CRITICAL_LABEL, rollCriticalHit } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
@@ -200,7 +201,10 @@ export class BattleScene extends Phaser.Scene {
     this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.friendlies()));
     const bomb = DataLoader.getWeaponById(this, 'aerial_bomb') ?? FALLBACK_WEAPON;
     const aerialTorpedo = DataLoader.getWeaponById(this, 'aerial_torpedo') ?? FALLBACK_WEAPON;
-    const onBomb = (x: number, y: number): void => this.explosion.play(x, y);
+    const onBomb = (target: BaseShip, weapon: IWeaponData, dmg: number): void => {
+      this.explosion.play(target.x, target.y);
+      this.rollCritical(target, weapon, dmg);
+    };
     this.playerAir = new AirOpsSystem(this, false, this.playerWeapons, bomb, aerialTorpedo, onBomb);
     this.enemyAir = new AirOpsSystem(this, true, this.enemyWeapons, bomb, aerialTorpedo, onBomb);
     this.playerRecon = new ReconSystem(this, false);
@@ -574,6 +578,7 @@ export class BattleScene extends Phaser.Scene {
       if (f <= 0) continue;
       const dmg = CombatSystem.calculateDamage(weapon, ship.stats.shipClass, ship.stats.armor) * f;
       CombatSystem.applyDamage(ship, dmg);
+      this.rollCritical(ship, weapon, dmg);
       this.explosion.play(ship.x, ship.y);
     }
   }
@@ -697,8 +702,24 @@ export class BattleScene extends Phaser.Scene {
     const weapon = projectile.weapon ?? FALLBACK_WEAPON;
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
     CombatSystem.applyDamage(target, dmg);
+    this.rollCritical(target, weapon, dmg);
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
+  }
+
+  /** A hit may knock out a component; show it over the ship. */
+  private rollCritical(target: BaseShip, weapon: IWeaponData, dmg: number): void {
+    if (!target.isAlive) return;
+    const crit = rollCriticalHit(weapon.type, dmg, target.stats.maxHp);
+    if (!crit) return;
+    target.criticals = applyCritical(target.criticals, crit, this.time.now);
+    if (!target.visible) return;
+    const friendly = this.friendlies().includes(target);
+    const t = this.add
+      .text(target.x, target.y - 30, CRITICAL_LABEL[crit], textStyle(13, friendly ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+      .setOrigin(0.5)
+      .setDepth(DEPTH_HUD - 2);
+    this.tweens.add({ targets: t, y: t.y - 36, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   }
 
   /**
@@ -722,10 +743,11 @@ export class BattleScene extends Phaser.Scene {
     const keys = this.wasd;
     if (keys.W.isDown || keys.A.isDown || keys.S.isDown || keys.D.isDown) {
       this.waypoint = null;
+      const turn = SHIP_ROTATE_SPEED * this.flagship.critEffects().turnMul * dtSec;
       if (keys.A.isDown) {
-        this.flagship.angle -= SHIP_ROTATE_SPEED * dtSec;
+        this.flagship.angle -= turn;
       } else if (keys.D.isDown) {
-        this.flagship.angle += SHIP_ROTATE_SPEED * dtSec;
+        this.flagship.angle += turn;
       }
       const rad = Phaser.Math.DegToRad(this.flagship.angle - 90);
       if (keys.W.isDown) {

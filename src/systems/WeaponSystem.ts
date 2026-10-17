@@ -36,8 +36,13 @@ export class WeaponSystem {
     private readonly onDetonate: DetonationHandler = () => undefined,
   ) {}
 
+  /** Reload time with a damaged main battery taken into account. */
+  private reloadTime(ship: BaseShip, weapon: IWeaponData): number {
+    return weaponKind(weapon) === WeaponKind.Gun ? weapon.reloadTime * ship.critEffects().gunReloadMul : weapon.reloadTime;
+  }
+
   isReady(ship: BaseShip, weapon: IWeaponData, now: number): boolean {
-    return this.reload.isReady(ship, weapon.reloadTime, now, weapon.id);
+    return this.reload.isReady(ship, this.reloadTime(ship, weapon), now, weapon.id);
   }
 
   /** Fires `weapon` from `ship` towards `targetAngle` (radians) if it has reloaded. */
@@ -70,7 +75,7 @@ export class WeaponSystem {
   }
 
   reloadProgress(ship: BaseShip, weapon: IWeaponData, now: number): number {
-    return this.reload.progress(ship, weapon.reloadTime, now, weapon.id);
+    return this.reload.progress(ship, this.reloadTime(ship, weapon), now, weapon.id);
   }
 
   update(time: number, delta: number): void {

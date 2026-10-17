@@ -5,6 +5,8 @@ import { ShipClass } from '@/types/ShipClass';
 import { ISteer } from '@/systems/AutoPilot';
 import { createSubmarineState, ISubmarineState, speedFactor } from '@/systems/SubmarineSystem';
 import { rotateTowardsDegrees } from '@/utils/MathUtils';
+import { CriticalState, ICriticalEffects } from '@/types/ShipDamage';
+import { criticalEffects } from '@/systems/DamageSystem';
 
 export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   stats: IShipStats;
@@ -17,6 +19,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   aaMul = 1;
   /** Ship data id (for saving damage after the battle) */
   dataId = '';
+  /** Component damage (expiry times) */
+  criticals: CriticalState = {};
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, stats: IShipStats) {
     super(scene, x, y, texture);
@@ -37,16 +41,21 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
     return this.sub?.submerged ?? false;
   }
 
-  /** Top speed right now (submerged boats are slower). */
+  /** Effects of the component damage active now. */
+  critEffects(): ICriticalEffects {
+    return criticalEffects(this.criticals, this.scene?.time.now ?? 0);
+  }
+
+  /** Top speed right now (submerged boats and damaged engines are slower). */
   get currentSpeed(): number {
-    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1);
+    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul;
   }
 
   /** Turns toward the requested heading at `turnRateDeg` and moves along the bow at the throttle. */
   steer(s: ISteer, dtSec: number, turnRateDeg: number): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const spd = this.currentSpeed * s.throttle;
-    this.angle = rotateTowardsDegrees(this.angle, s.headingDeg, turnRateDeg * dtSec);
+    this.angle = rotateTowardsDegrees(this.angle, s.headingDeg, turnRateDeg * this.critEffects().turnMul * dtSec);
     const heading = Phaser.Math.DegToRad(this.angle - 90);
     body.setVelocity(Math.cos(heading) * spd, Math.sin(heading) * spd);
   }

@@ -56,7 +56,8 @@ export class AirOpsSystem {
     private readonly weapons: WeaponSystem,
     private readonly bomb: IWeaponData,
     private readonly aerialTorpedo: IWeaponData,
-    private readonly onBombHit: (x: number, y: number) => void,
+    /** Called for every bomb that hits, after its damage is applied */
+    private readonly onBombHit: (target: BaseShip, weapon: IWeaponData, damage: number) => void,
   ) {}
 
   register(carrier: BaseShip, wing: IAirWingState | null): void {
@@ -237,9 +238,10 @@ export class AirOpsSystem {
   private dropBombs(sq: Squadron, target: BaseShip): void {
     const hits = bombHits(sq.planes, BOMB_HIT_CHANCE);
     for (let i = 0; i < hits && target.isAlive; i++) {
-      CombatSystem.applyDamage(target, CombatSystem.calculateDamage(this.bomb, target.stats.shipClass, target.stats.armor));
+      const dmg = CombatSystem.calculateDamage(this.bomb, target.stats.shipClass, target.stats.armor);
+      CombatSystem.applyDamage(target, dmg);
+      this.onBombHit(target, this.bomb, dmg);
     }
-    this.onBombHit(target.x, target.y);
     sq.state = SquadronState.Return;
   }
 
