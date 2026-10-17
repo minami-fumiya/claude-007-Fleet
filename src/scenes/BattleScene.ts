@@ -17,6 +17,9 @@ import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
+import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
+import { ReconSystem } from '@/systems/ReconSystem';
+import { FogOfWar } from '@/ui/FogOfWar';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
 import { Explosion } from '@/entities/effects/Explosion';
@@ -95,6 +98,9 @@ export class BattleScene extends Phaser.Scene {
   private enemyWeapons!: WeaponSystem;
   private playerAir!: AirOpsSystem;
   private enemyAir!: AirOpsSystem;
+  private playerRecon!: ReconSystem;
+  private enemyRecon!: ReconSystem;
+  private fog!: FogOfWar;
   private airText: Phaser.GameObjects.Text | null = null;
   private strikeBtn: UIButton | null = null;
   private enemyNation: Nation = Nation.USN;
@@ -184,6 +190,8 @@ export class BattleScene extends Phaser.Scene {
     const onBomb = (x: number, y: number): void => this.explosion.play(x, y);
     this.playerAir = new AirOpsSystem(this, false, this.playerWeapons, bomb, aerialTorpedo, onBomb);
     this.enemyAir = new AirOpsSystem(this, true, this.enemyWeapons, bomb, aerialTorpedo, onBomb);
+    this.playerRecon = new ReconSystem(this, false);
+    this.enemyRecon = new ReconSystem(this, true);
 
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
@@ -197,6 +205,7 @@ export class BattleScene extends Phaser.Scene {
     const torpedoMain = weaponKind(this.playerWeapon) === WeaponKind.Torpedo;
     this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲');
 
+    this.fog = new FogOfWar(this);
     this.setupInput();
     this.buildOverlayUi();
     this.setupClickFire();
@@ -215,8 +224,10 @@ export class BattleScene extends Phaser.Scene {
 
     const dtSec = delta / 1000;
     this.updateSubmarines(dtSec);
+    this.playerRecon.update(time, delta, aaGuns(this.enemies));
+    this.enemyRecon.update(time, delta, aaGuns(this.friendlies()));
     this.updateDetection();
-    const playerView = this.friendlies().map((s) => shipView(s, !s.submerged || this.seenByEnemy.has(s)));
+    const playerView = this.friendlies().map((s) => shipView(s, this.seenByEnemy.has(s)));
     const enemyView = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
 
     if (!this.isTouch) {
@@ -304,6 +315,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y);
     this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData));
+    this.playerRecon.register(this.flagship);
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
     const offsets = FormationSystem.getOffsets(formation);
@@ -313,6 +325,7 @@ export class BattleScene extends Phaser.Scene {
       const spawnPos = FormationSystem.getWorldPositionFromValues(FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, 0, offset);
       const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y);
       this.playerAir.register(escort, AirOpsSystem.wingFor(escortData));
+      this.playerRecon.register(escort);
       this.escorts.push(escort);
       this.escortAISystems.push(new EscortAISystem(this.playerWeapons, offset, profile));
     });
@@ -327,6 +340,7 @@ export class BattleScene extends Phaser.Scene {
       enemy.setAngle(180);
       this.enemies.push(enemy);
       this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
+      this.enemyRecon.register(enemy);
       this.aiSystems.push(new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS));
     });
   }
@@ -350,7 +364,7 @@ export class BattleScene extends Phaser.Scene {
   /** Advances every boat's dive state: the player's wish for the flagship, AI decisions for the rest. */
   private updateSubmarines(dtSec: number): void {
     const playerFoes = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
-    const enemyFoes = this.friendlies().map((s) => shipView(s, !s.submerged || this.seenByEnemy.has(s)));
+    const enemyFoes = this.friendlies().map((s) => shipView(s, this.seenByEnemy.has(s)));
     const all: Array<[BaseShip, boolean]> = [
       [this.flagship, this.wantDive],
       ...this.escorts.map((s): [BaseShip, boolean] => [s, this.aiSystemsWantDive(s, playerFoes)]),
@@ -376,25 +390,45 @@ export class BattleScene extends Phaser.Scene {
       .map((s) => ({ x: s.x, y: s.y, sonarRange: sonarRange(s.stats.shipClass) }));
   }
 
-  /** Who can see whom: surface ships are always visible, submerged boats only on the other side's sonar. */
+  /** Everything one side sees with: ship vision circles, recon cones and its aircraft. */
+  private visionSources(ships: BaseShip[], recon: ReconSystem, air: AirOpsSystem): VisionSource[] {
+    const sources: VisionSource[] = [];
+    for (const s of ships) {
+      if (s.isAlive) sources.push({ kind: 'circle', x: s.x, y: s.y, radius: shipVision(s.stats.shipClass, s.submerged) });
+    }
+    sources.push(...recon.cones());
+    for (const sq of air.squadrons) {
+      if (sq.alive) sources.push({ kind: 'circle', x: sq.x, y: sq.y, radius: AIRCRAFT_VISION });
+    }
+    return sources;
+  }
+
+  /**
+   * Who can see whom (fog of war): a surfaced ship is seen inside the other side's vision, a
+   * submerged boat only on its sonar. Hidden enemies are not drawn and can't be targeted.
+   */
   private updateDetection(): void {
     const playerHunters = this.hunters(this.friendlies());
     const enemyHunters = this.hunters(this.enemies);
+    const playerSight = this.visionSources(this.friendlies(), this.playerRecon, this.playerAir);
+    const enemySight = this.visionSources(this.enemies, this.enemyRecon, this.enemyAir);
     this.seenByPlayer.clear();
     this.seenByEnemy.clear();
 
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
-      const seen = !enemy.submerged || isDetected(enemy, playerHunters);
+      const seen = enemy.submerged ? isDetected(enemy, playerHunters) : isVisible(enemy.x, enemy.y, playerSight);
       if (seen) this.seenByPlayer.add(enemy);
       enemy.setVisible(seen).setAlpha(enemy.submerged ? SUBMERGED_ALPHA : 1);
     }
     for (const ship of this.friendlies()) {
       if (!ship.isAlive) continue;
-      if (ship.submerged && isDetected(ship, enemyHunters)) this.seenByEnemy.add(ship);
+      const seen = ship.submerged ? isDetected(ship, enemyHunters) : isVisible(ship.x, ship.y, enemySight);
+      if (seen) this.seenByEnemy.add(ship);
       ship.setAlpha(ship.submerged ? SUBMERGED_ALPHA : 1);
     }
     if (this.lockedTarget && !this.seenByPlayer.has(this.lockedTarget)) this.lockedTarget = null;
+    this.fog.update(playerSight);
   }
 
   /** Expanding sonar rings around player hunters while an enemy boat is submerged. */
@@ -657,6 +691,16 @@ export class BattleScene extends Phaser.Scene {
       const range = this.playerAir.hasCarrier(this.flagship) ? AUTO_CARRIER_STANDOFF : this.playerWeapon.range * AUTO_RANGE_FRACTION;
       this.flagship.steer(engageSteer(this.flagship, target, range, WORLD_BOUNDS, AUTO_EDGE_MARGIN), dtSec, SHIP_ROTATE_SPEED);
       return;
+    }
+
+    if (this.autoMode) {
+      // Nothing in sight: search towards the middle of the sea.
+      const centre = { x: WORLD.w / 2, y: WORLD.h / 2 };
+      const s = waypointSteer(this.flagship, centre, 200);
+      if (s) {
+        this.flagship.steer({ ...s, throttle: Math.min(s.throttle, 0.7) }, dtSec, SHIP_ROTATE_SPEED);
+        return;
+      }
     }
 
     if (this.waypoint) {

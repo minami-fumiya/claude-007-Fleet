@@ -29,10 +29,10 @@
 - [x] `docs/specs/systems/aircraft.md`
 
 ### C. 偵察機と FogOfWar
-- [ ] `src/systems/VisionSystem.ts` — 艦の視界・偵察機の扇形索敵範囲・可視判定 (純粋)
-- [ ] 偵察機 (戦艦・巡洋艦の水上機) が前方を索敵
-- [ ] FogOfWar: 視界外の敵艦は非表示・攻撃目標にできない、画面は視界外を暗く (RenderTexture マスク)
-- [ ] `tests/unit/VisionSystem.test.ts`
+- [x] `src/systems/VisionSystem.ts` — 艦の視界・偵察機の扇形索敵範囲・可視判定 (純粋)
+- [x] 偵察機 (戦艦・巡洋艦の水上機) が前方を索敵
+- [x] FogOfWar: 視界外の敵艦は非表示・攻撃目標にできない、画面は視界外を暗く (RenderTexture マスク)
+- [x] `tests/unit/VisionSystem.test.ts`
 
 ### D. 艦長
 - [ ] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill`

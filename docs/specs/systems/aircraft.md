@@ -42,3 +42,14 @@ Submerged submarines and ships hidden by fog / off sonar can't be targeted.
 
 ## Battle mode
 Fleet Builder → 機動部隊: the enemy fleet is a carrier, a cruiser and a destroyer of the chosen nation.
+
+## Recon floatplanes and fog of war (`VisionSystem`, `ReconSystem`, `ui/FogOfWar`)
+- Each side only sees enemy surface ships inside its vision; hidden ships are not drawn, have no
+  label / edge marker and can't be targeted (shells still hit them if fired blind).
+- Vision: Battleship / Cruiser 650 px, Carrier / Destroyer 600, surfaced submarine 450, submerged
+  (periscope) 300, any aircraft 260 px around it. Submerged boats still need sonar to be seen.
+- Every battleship and cruiser keeps one floatplane up: it circles an orbit 420 px ahead of its ship
+  (r = 260) and sees a 650 px cone (±40°) along its flight path. AA can shoot it down; a spare
+  launches 20 s later.
+- The player's screen is darkened outside the player's vision (RenderTexture with the vision cut out).
+- AUTO with nothing in sight sails towards the middle of the sea; AI ships patrol there too.

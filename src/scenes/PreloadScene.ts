@@ -70,6 +70,12 @@ export class PreloadScene extends Phaser.Scene {
       g.fillStyle(0x9fb4c8, 1);
       g.fillRect(5, 6, 6, 1.5);
     });
+    // Floatplane: two floats under the wings.
+    plane('plane-recon', 10, 10, () => {
+      g.fillStyle(0xcfe3f2, 1);
+      g.fillRect(3, 1.5, 6, 1.2);
+      g.fillRect(3, 7.3, 6, 1.2);
+    });
     g.destroy();
   }
 
