@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
+import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { IShipData } from '@/types/Ship';
@@ -12,8 +12,14 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
 const MAX_SLOTS = 3;
-const PANEL_HEADER_H = 58;
 const PANEL_PAD = 14;
+/** Space for a panel's eyebrow + title; taller in portrait where text is enlarged. */
+const PANEL_HEADER_H = IS_PORTRAIT ? 84 : 58;
+/** Portrait only: fixed bars above and below the scrolling content. */
+const HEADER_BAR_H = 124;
+const FOOTER_BAR_H = 160;
+/** A drag longer than this scrolls the page instead of counting as a tap. */
+const DRAG_THRESHOLD = 12;
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -29,17 +35,20 @@ interface IBuilderLayout {
   footer: IRect;
 }
 
-/** Landscape: ships | fleet | formations in three columns. Portrait: fleet, ships, formations stacked. */
+/**
+ * Landscape: ships | fleet | formations in three columns, everything on one screen.
+ * Portrait: fleet, ships, formations stacked on a page that scrolls between a fixed header and footer.
+ */
 const LAYOUT: IBuilderLayout = IS_PORTRAIT
   ? {
-      fleet: { x: 16, y: 96, w: CANVAS_W - 32, h: 346 },
-      slotH: 88,
-      ships: { x: 16, y: 454, w: CANVAS_W - 32, h: 454 },
-      shipItemH: 70,
-      formations: { x: 16, y: 920, w: CANVAS_W - 32, h: 202 },
+      fleet: { x: 16, y: HEADER_BAR_H + 12, w: CANVAS_W - 32, h: 84 + 3 * 116 + 2 * 10 + 14 },
+      slotH: 116,
+      ships: { x: 16, y: 618, w: CANVAS_W - 32, h: 84 + 5 * 120 + 4 * 8 + 14 },
+      shipItemH: 120,
+      formations: { x: 16, y: 1360, w: CANVAS_W - 32, h: 84 + 180 + 14 },
       formationFlow: 'row',
-      formationCardH: 128,
-      footer: { x: 16, y: 1134, w: CANVAS_W - 32, h: 132 },
+      formationCardH: 180,
+      footer: { x: 16, y: CANVAS_H - FOOTER_BAR_H + 6, w: CANVAS_W - 32, h: FOOTER_BAR_H - 18 },
     }
   : {
       ships: { x: 24, y: 92, w: 404, h: 500 },
@@ -88,6 +97,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private countText!: Phaser.GameObjects.Text;
   private startBtn!: UIButton;
   private maxStats = { hp: 1, armor: 1, speed: 1 };
+  /** Portrait scrolling: true while the current pointer gesture is a drag, so taps are ignored */
+  private dragging = false;
 
   constructor() {
     super({ key: SceneKeys.FLEET_BUILDER });
@@ -100,13 +111,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.slotViews = [];
     this.formationFrames = [];
     this.shipCards = [];
+    this.dragging = false;
     this.maxStats = {
       hp: Math.max(1, ...this.ships.map((s) => s.hp)),
       armor: Math.max(1, ...this.ships.map((s) => s.armor)),
       speed: Math.max(1, ...this.ships.map((s) => s.speed)),
     };
 
-    addBackdrop(this, 'menu');
+    addBackdrop(this, 'menu').setScrollFactor(0);
     this.buildHeader();
     this.buildPanelFrame(LAYOUT.ships, 'AVAILABLE SHIPS', '利用可能な艦');
     this.buildPanelFrame(LAYOUT.fleet, 'YOUR FLEET', '艦隊編成');
@@ -116,6 +128,45 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.buildFormationPanel();
     this.buildFooter();
     this.refresh();
+    if (IS_PORTRAIT) this.setupScrolling();
+  }
+
+  /** Wraps a tap handler so it does nothing at the end of a scroll drag. */
+  private onTap(fn: () => void): () => void {
+    return () => {
+      if (!this.dragging) fn();
+    };
+  }
+
+  private setupScrolling(): void {
+    const contentBottom = LAYOUT.formations.y + LAYOUT.formations.h + 24;
+    // Let the last panel scroll clear of the fixed footer.
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, CANVAS_W, contentBottom + FOOTER_BAR_H);
+
+    let startY = 0;
+    let startScroll = 0;
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.dragging = false;
+      startY = p.y;
+      startScroll = cam.scrollY;
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!p.isDown) return;
+      const dy = p.y - startY;
+      if (!this.dragging && Math.abs(dy) < DRAG_THRESHOLD) return;
+      this.dragging = true;
+      cam.setScroll(0, startScroll - dy);
+    });
+    // Game-object pointerup handlers run before this scene-level one, so they still see `dragging`.
+    this.input.on('pointerup', () => {
+      this.time.delayedCall(0, () => {
+        this.dragging = false;
+      });
+    });
+    this.input.on('wheel', (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+      cam.setScroll(0, cam.scrollY + dy);
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -123,21 +174,44 @@ export class FleetBuilderScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private buildHeader(): void {
-    new UIButton(this, 92, 44, '‹  タイトル', () => this.scene.start(SceneKeys.MAIN_MENU), {
-      variant: 'secondary',
-      width: 136,
-      height: 44,
-      fontSize: 15,
-    });
-    this.add.text(CANVAS_W / 2, 26, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5);
-    this.add.text(CANVAS_W / 2, 56, '帝国海軍 — 艦隊を編成せよ', displayStyle(24)).setOrigin(0.5);
-    addChip(this, CANVAS_W - 128, 44, 'NATION · IJN', Colors.gold, Css.gold);
+    const fixed: Phaser.GameObjects.GameObject[] = [];
+    if (IS_PORTRAIT) {
+      // Interactive so taps on the bar don't reach cards scrolled underneath it.
+      fixed.push(this.add.rectangle(0, 0, CANVAS_W, HEADER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive());
+    }
+    const back = IS_PORTRAIT
+      ? new UIButton(this, 100, 46, '‹  タイトル', () => this.scene.start(SceneKeys.MAIN_MENU), {
+          variant: 'secondary', width: 172, height: 60, fontSize: 15,
+        })
+      : new UIButton(this, 92, 44, '‹  タイトル', () => this.scene.start(SceneKeys.MAIN_MENU), {
+          variant: 'secondary', width: 136, height: 44, fontSize: 15,
+        });
+    fixed.push(back);
+    if (IS_PORTRAIT) {
+      fixed.push(this.add.text(CANVAS_W / 2 + 40, 28, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5));
+      fixed.push(this.add.text(CANVAS_W / 2, 100, '帝国海軍 — 艦隊を編成せよ', displayStyle(24)).setOrigin(0.5));
+    } else {
+      fixed.push(this.add.text(CANVAS_W / 2, 26, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5));
+      fixed.push(this.add.text(CANVAS_W / 2, 56, '帝国海軍 — 艦隊を編成せよ', displayStyle(24)).setOrigin(0.5));
+    }
+    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, 'NATION · IJN', Colors.gold, Css.gold);
+    chip.setX(CANVAS_W - 20 - chip.getBounds().width);
+    fixed.push(chip);
+    this.pin(fixed, 60);
+  }
+
+  /** Keeps objects in place while the portrait page scrolls underneath them. */
+  private pin(objects: Phaser.GameObjects.GameObject[], depth: number): void {
+    for (const o of objects) {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(depth);
+    }
   }
 
   private buildPanelFrame(p: { x: number; y: number; w: number; h: number }, eyebrow: string, title: string): void {
     addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.55, glow: 0.6 });
     this.add.text(p.x + 22, p.y + 18, eyebrow, eyebrowStyle(11));
-    this.add.text(p.x + 22, p.y + 34, title, textStyle(15, Css.text, { fontStyle: 'bold' }));
+    this.add.text(p.x + 22, p.y + (IS_PORTRAIT ? 46 : 34), title, textStyle(15, Css.text, { fontStyle: 'bold' }));
   }
 
   /** Rotates a bow-up ship sprite to lie bow-right and scales it to fit `maxLen`. */
@@ -152,8 +226,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     const startY = p.y + PANEL_HEADER_H + 4;
     const x = p.x + PANEL_PAD;
     const w = p.w - PANEL_PAD * 2;
-    const statX = 74;
-    const statSpacing = (w - statX - 60) / 3;
+    const statX = IS_PORTRAIT ? 100 : 74;
+    const plusR = IS_PORTRAIT ? 26 : 17;
+    const statSpacing = (w - statX - plusR * 2 - 30) / 3;
 
     this.ships.forEach((ship, i) => {
       const y = startY + i * (itemH + ITEM_GAP);
@@ -162,10 +237,10 @@ export class FleetBuilderScene extends Phaser.Scene {
       drawPanel(hover, 0, 0, w, itemH, { radius: 16, fill: Colors.cyan, fillAlpha: 0.08, rimAlpha: 0.7 });
       hover.setVisible(false);
 
-      const icon = this.addShipIcon(38, itemH / 2, ship.spriteKey, 56, 1);
-      const name = this.add.text(statX, itemH * 0.15, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
+      const icon = this.addShipIcon(statX / 2, itemH / 2, ship.spriteKey, statX - 20, 1.2);
+      const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
       const badgeInfo = CLASS_BADGE[ship.shipClass] ?? CLASS_BADGE[ShipClass.Cruiser];
-      const badge = addChip(this, statX + name.width + 10, itemH * 0.15 + 10, badgeInfo.label, badgeInfo.color, badgeInfo.css);
+      const badge = addChip(this, statX + name.width + 10, name.y + name.height / 2, badgeInfo.label, badgeInfo.color, badgeInfo.css);
 
       const meters = this.add.graphics();
       const stats: Array<[string, number, number, number]> = [
@@ -176,22 +251,23 @@ export class FleetBuilderScene extends Phaser.Scene {
       const statLabels: Phaser.GameObjects.Text[] = [];
       stats.forEach(([label, value, max, color], si) => {
         const mx = statX + si * statSpacing;
-        statLabels.push(this.add.text(mx, itemH * 0.55, `${label} ${value}`, textStyle(11, Css.muted)));
-        drawMeter(meters, mx, itemH * 0.78, statSpacing - 12, 5, value / max, color);
+        statLabels.push(this.add.text(mx, itemH * 0.5, `${label} ${value}`, textStyle(11, Css.muted)));
+        drawMeter(meters, mx, itemH * 0.8, statSpacing - 12, IS_PORTRAIT ? 8 : 5, value / max, color);
       });
 
       const plus = this.add.graphics();
       plus.fillStyle(Colors.cyan, 0.15);
-      plus.fillCircle(w - 30, itemH / 2, 17);
+      const plusX = w - plusR - 13;
+      plus.fillCircle(plusX, itemH / 2, plusR);
       plus.lineStyle(1.5, Colors.cyan, 0.7);
-      plus.strokeCircle(w - 30, itemH / 2, 17);
-      const plusLabel = this.add.text(w - 30, itemH / 2 - 1, '+', textStyle(22, Css.cyan, { fontStyle: 'bold' })).setOrigin(0.5);
+      plus.strokeCircle(plusX, itemH / 2, plusR);
+      const plusLabel = this.add.text(plusX, itemH / 2 - 1, '+', textStyle(22, Css.cyan, { fontStyle: 'bold' })).setOrigin(0.5);
 
       const card = this.add.container(x, y, [bg, hover, icon, name, badge, meters, ...statLabels, plus, plusLabel]);
       makeClickable(card, w, itemH);
       card.on('pointerover', () => hover.setVisible(true));
       card.on('pointerout', () => hover.setVisible(false));
-      card.on('pointerup', () => this.addShipToFleet(ship));
+      card.on('pointerup', this.onTap(() => this.addShipToFleet(ship)));
       this.shipCards.push(card);
     });
   }
@@ -210,7 +286,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .text(x + w / 2, y + slotH / 2 + 10, IS_PORTRAIT ? '↓ 下の一覧から艦を追加' : '← 左の一覧から艦を追加', textStyle(14, Css.dim))
         .setOrigin(0.5);
       const role = i === 0 ? 'FLAGSHIP · 旗艦' : `ESCORT ${i} · 護衛`;
-      this.add.text(x + 18, y + (slotH < 120 ? 12 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
+      this.add.text(x + 18, y + (IS_PORTRAIT ? 12 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
       this.slotViews.push({ frame, content: null, emptyLabel });
     }
   }
@@ -238,14 +314,14 @@ export class FleetBuilderScene extends Phaser.Scene {
       const parts: Phaser.GameObjects.GameObject[] = [
         frame,
         this.add.text(18, 18, info.ja, displayStyle(24)),
-        this.add.text(18, 56, info.en, eyebrowStyle(10, Css.muted)),
+        this.add.text(18, IS_PORTRAIT ? 66 : 56, info.en, eyebrowStyle(10, Css.muted)),
       ];
       if (!compact) {
-        parts.push(this.add.text(18, 84, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150 } })));
+        parts.push(this.add.text(18, 84, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } })));
       }
       const diagram = this.add.graphics();
       if (compact) {
-        this.drawFormationDiagram(diagram, formation, r.w - 50, r.h - 46, 0.75);
+        this.drawFormationDiagram(diagram, formation, r.w / 2, r.h - 50, 0.75);
       } else {
         this.drawFormationDiagram(diagram, formation, r.w - 66, r.h / 2, 1);
       }
@@ -253,7 +329,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
       const card = this.add.container(r.x, r.y, parts);
       makeClickable(card, r.w, r.h);
-      card.on('pointerup', () => this.selectFormation(formation));
+      card.on('pointerup', this.onTap(() => this.selectFormation(formation)));
     });
   }
 
@@ -284,20 +360,30 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private buildFooter(): void {
     const f = LAYOUT.footer;
-    addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
-    // Portrait stacks the summary above a full-width button, so it starts higher.
-    const top = IS_PORTRAIT ? 14 : 22;
-    this.add.text(f.x + 28, f.y + top, 'FLEET SUMMARY', eyebrowStyle(10, Css.muted));
-    this.countText = this.add.text(f.x + 28, f.y + top + 20, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(f.x + 176, f.y + top + 27, '', textStyle(14, Css.muted));
-
-    const onStart = (): void => {
+    const onStart = this.onTap(() => {
       if (this.canStart()) this.startBattle();
-    };
+    });
     const btn = { variant: 'gold' as const, fontSize: 22, caption: 'START BATTLE' };
-    this.startBtn = IS_PORTRAIT
-      ? new UIButton(this, CANVAS_W / 2, f.y + f.h - 36, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 56 })
-      : new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
+
+    if (IS_PORTRAIT) {
+      // Fixed bar: count + summary on one line, full-width deploy button below.
+      const bar = this.add
+        .rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94)
+        .setOrigin(0, 0)
+        .setInteractive();
+      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+      this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted)).setOrigin(1, 0);
+      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 46, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 76 });
+      this.pin([bar, panel, this.countText, this.summaryText, this.startBtn], 60);
+      return;
+    }
+
+    addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+    this.add.text(f.x + 28, f.y + 22, 'FLEET SUMMARY', eyebrowStyle(10, Css.muted));
+    this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
+    this.summaryText = this.add.text(f.x + 176, f.y + 49, '', textStyle(14, Css.muted));
+    this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
   }
 
   // -------------------------------------------------------------------------
@@ -331,7 +417,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   private refreshSlots(): void {
     const w = LAYOUT.fleet.w - PANEL_PAD * 2;
     const h = LAYOUT.slotH;
-    const compact = h < 120;
+    const compact = IS_PORTRAIT;
 
     this.slots.forEach((ship, i) => {
       const view = this.slotViews[i];
@@ -358,9 +444,9 @@ export class FleetBuilderScene extends Phaser.Scene {
 
       const parts: Phaser.GameObjects.GameObject[] = compact
         ? [
-            this.addShipIcon(60, 56, ship.spriteKey, 80, 1.3),
-            this.add.text(118, 30, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' })),
-            this.add.text(118, 58, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
+            this.addShipIcon(62, h * 0.6, ship.spriteKey, 88, 1.3),
+            this.add.text(124, h * 0.3, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' })),
+            this.add.text(124, h * 0.64, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
           ]
         : [
             this.addShipIcon(54, 78, ship.spriteKey, 76, 1.3),
@@ -369,10 +455,10 @@ export class FleetBuilderScene extends Phaser.Scene {
             this.add.text(100, 98, ship.weapons.join(' · '), textStyle(11, Css.dim)),
           ];
 
-      const remove = new UIButton(this, w - 34, compact ? h / 2 : 30, '✕', () => this.removeShipFromSlot(i), {
+      const remove = new UIButton(this, compact ? w - 44 : w - 34, compact ? h / 2 : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
         variant: 'secondary',
-        width: 40,
-        height: 36,
+        width: compact ? 60 : 40,
+        height: compact ? 56 : 36,
         fontSize: 15,
       });
 
@@ -406,11 +492,16 @@ export class FleetBuilderScene extends Phaser.Scene {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
     this.countText.setText(`${ships.length} / ${MAX_SLOTS} 隻`);
     if (ships.length === 0) {
-      this.summaryText.setText('艦を 1 隻以上選ぶと出撃できます');
+      this.summaryText.setText(IS_PORTRAIT ? '艦を選ぶと出撃できます' : '艦を 1 隻以上選ぶと出撃できます');
     } else {
       const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const minSpeed = Math.min(...ships.map((s) => s.speed));
-      this.summaryText.setText(`総耐久 ${totalHp}   艦隊速力 ${minSpeed}   陣形 ${FORMATION_INFO[this.formation].ja}`);
+      const formation = FORMATION_INFO[this.formation].ja;
+      this.summaryText.setText(
+        IS_PORTRAIT
+          ? `耐久 ${totalHp} · 速力 ${minSpeed} · ${formation}`
+          : `総耐久 ${totalHp}   艦隊速力 ${minSpeed}   陣形 ${formation}`,
+      );
     }
     this.startBtn.setEnabled(this.canStart());
   }

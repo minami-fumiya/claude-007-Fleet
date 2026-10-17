@@ -290,6 +290,9 @@ export interface IButtonOptions {
 export class UIButton extends Phaser.GameObjects.Container {
   private readonly bg: Phaser.GameObjects.Image;
   private readonly label: Phaser.GameObjects.Text;
+  private readonly caption: Phaser.GameObjects.Text | null = null;
+  private readonly btnW: number;
+  private readonly btnH: number;
   private enabledState = true;
   private pressed = false;
 
@@ -298,19 +301,25 @@ export class UIButton extends Phaser.GameObjects.Container {
     const variant = opts.variant ?? 'primary';
     const w = opts.width ?? 240;
     const h = opts.height ?? 60;
+    this.btnW = w;
+    this.btnH = h;
 
     this.bg = scene.add.image(0, 0, buttonTexture(scene, variant, w, h));
     this.label = scene.add
-      .text(0, opts.caption ? -7 : 0, text, textStyle(opts.fontSize ?? 20, BUTTON_TEXT[variant], { fontStyle: 'bold' }))
+      .text(0, 0, text, textStyle(opts.fontSize ?? 20, BUTTON_TEXT[variant], { fontStyle: 'bold' }))
       .setOrigin(0.5);
     this.add([this.bg, this.label]);
 
     if (opts.caption) {
-      const cap = scene.add
-        .text(0, 14, opts.caption, eyebrowStyle(10, BUTTON_TEXT[variant]))
+      this.caption = scene.add
+        .text(0, 0, opts.caption, eyebrowStyle(10, BUTTON_TEXT[variant]))
         .setOrigin(0.5)
         .setAlpha(0.75);
-      this.add(cap);
+      this.add(this.caption);
+      // Stack label + caption around the centre using their real (scaled) heights.
+      const total = this.label.height * 0.8 + this.caption.height * 0.8;
+      this.label.setY(-total / 2 + (this.label.height * 0.8) / 2);
+      this.caption.setY(this.label.y + (this.label.height * 0.8) / 2 + (this.caption.height * 0.8) / 2);
     }
 
     this.setSize(w, h);
@@ -348,6 +357,14 @@ export class UIButton extends Phaser.GameObjects.Container {
     this.label.setText(text);
     return this;
   }
+
+  /** Swaps the fill style, e.g. to show a toggle's on/off state. */
+  setVariant(variant: ButtonVariant): this {
+    this.bg.setTexture(buttonTexture(this.scene, variant, this.btnW, this.btnH));
+    this.label.setColor(BUTTON_TEXT[variant]);
+    this.caption?.setColor(BUTTON_TEXT[variant]);
+    return this;
+  }
 }
 
 /**
@@ -375,7 +392,7 @@ export function addChip(
 ): Phaser.GameObjects.Container {
   const label = scene.add.text(0, 0, text, eyebrowStyle(10, cssColor)).setOrigin(0, 0.5);
   const w = label.width + 18;
-  const h = 20;
+  const h = Math.round(label.height + 6);
   const g = scene.add.graphics();
   g.fillStyle(color, 0.14);
   g.fillRoundedRect(0, -h / 2, w, h, h / 2);

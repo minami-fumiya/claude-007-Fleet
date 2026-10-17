@@ -1,12 +1,15 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
+import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { IBattleResultData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, UIButton } from '@/ui/components/UIKit';
 
-const CARD_W = 620;
-const CARD_H = 560;
+// Portrait text is enlarged (see uiFontSize), so the card and its stat tiles grow with it.
+const CARD_W = IS_PORTRAIT ? 664 : 620;
+const CARD_H = IS_PORTRAIT ? 680 : 560;
+const STAT = IS_PORTRAIT ? { w: 202, h: 104, gap: 12 } : { w: 168, h: 72, gap: 14 };
+const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
 
 export class ResultsScene extends Phaser.Scene {
   constructor() {
@@ -46,24 +49,24 @@ export class ResultsScene extends Phaser.Scene {
     const seconds = Math.max(0, Math.round(data?.durationSec ?? 0));
     const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
-    const cardW = 168;
-    const gap = 14;
+    const cardW = STAT.w;
+    const gap = STAT.gap;
     const startX = CANVAS_W / 2 - (cardW * 3 + gap * 2) / 2;
-    addStatCard(this, startX, y + 300, cardW, 72, '撃沈 SUNK', `${sunk} / ${total}`, Css.gold);
-    addStatCard(this, startX + cardW + gap, y + 300, cardW, 72, '残存 AFLOAT', `${survivors} / ${fleetSize}`, Css.success);
-    addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, 72, '戦闘時間 TIME', time, Css.cyan);
+    addStatCard(this, startX, y + 300, cardW, STAT.h, '撃沈 SUNK', `${sunk} / ${total}`, Css.gold);
+    addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存 AFLOAT', `${survivors} / ${fleetSize}`, Css.success);
+    addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間 TIME', time, Css.cyan);
 
-    new UIButton(this, CANVAS_W / 2, y + 430, '再出撃', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, CANVAS_W / 2, y + BUTTONS.y1, '再出撃', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
       variant: victory ? 'gold' : 'primary',
       width: CARD_W - 96,
-      height: 60,
+      height: BUTTONS.h1,
       fontSize: 22,
       caption: 'RETRY',
     });
-    new UIButton(this, CANVAS_W / 2, y + 504, 'タイトルへ戻る', () => this.scene.start(SceneKeys.MAIN_MENU), {
+    new UIButton(this, CANVAS_W / 2, y + BUTTONS.y2, 'タイトルへ戻る', () => this.scene.start(SceneKeys.MAIN_MENU), {
       variant: 'secondary',
       width: CARD_W - 96,
-      height: 52,
+      height: BUTTONS.h2,
       fontSize: 17,
     });
   }

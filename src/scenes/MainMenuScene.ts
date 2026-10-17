@@ -15,16 +15,27 @@ const FLEET_GLOW = { offsetX: 0, offsetY: 0, color: 'rgba(255,201,74,0.55)', blu
 const TAGLINE = '艦隊を編成し、太平洋の制海権を握れ。';
 const NATIONS = 'IJN · USN · KRIEGSMARINE · ROYAL NAVY';
 
+// Portrait means a phone (see Layout.ts), so the copy describes that device's controls.
 const INFO_TILES: Array<{ title: string; body: string }> = [
-  { title: '◎ 砲撃', body: '狙った地点へ主砲を放つ' },
+  IS_PORTRAIT
+    ? { title: '◎ 自動砲撃', body: '射程内の敵へ自動で撃つ' }
+    : { title: '◎ 砲撃', body: '狙った地点へ主砲を放つ' },
   { title: '⚓ 陣形', body: '縦陣・複縦陣・輪形陣' },
   { title: '★ 勝利条件', body: '敵艦隊をすべて撃沈' },
 ];
 
-const CONTROLS: Array<{ device: string; move: string; fire: string }> = [
-  { device: 'PC', move: 'W / S で前進・後退、A / D で旋回', fire: 'マウスで照準、クリックで砲撃' },
-  { device: 'スマホ', move: '左下のスティックで進みたい方向へ', fire: '画面をタップした地点へ砲撃' },
-];
+const CONTROLS: Array<{ label: string; text: string }> = IS_PORTRAIT
+  ? [
+      { label: '移動', text: '海をタップした地点へ航行。左下のスティックでも操作できます' },
+      { label: '目標', text: '敵艦をタップすると攻撃目標に指定' },
+      { label: '砲撃', text: '射程内の目標へ自動で砲撃' },
+      { label: 'AUTO', text: 'ON にすると自動で敵を追尾し、戦闘します' },
+    ]
+  : [
+      { label: '移動', text: 'W / S で前進・後退、A / D で旋回' },
+      { label: '砲撃', text: 'マウスで照準、クリックで砲撃' },
+      { label: 'AUTO', text: 'ボタンで自動航行・自動砲撃に切り替え' },
+    ];
 
 export class MainMenuScene extends Phaser.Scene {
   private howToLayer: Phaser.GameObjects.Container | null = null;
@@ -79,37 +90,43 @@ export class MainMenuScene extends Phaser.Scene {
     const cx = CANVAS_W / 2;
     const btnW = CARD.w - 96;
 
-    addHeroShip(this, cx, CARD.y + 300, 0.62);
+    addHeroShip(this, cx, CARD.y + 270, 0.62);
 
-    this.add.text(cx, CARD.y + 430, 'PACIFIC WAR  ×  NAVAL TACTICS', eyebrowStyle(13)).setOrigin(0.5);
-    this.add.text(cx, CARD.y + 504, 'WW2 NAVAL', displayStyle(72, Css.text, { shadow: TITLE_SHADOW })).setOrigin(0.5);
+    this.add.text(cx, CARD.y + 400, 'PACIFIC WAR  ×  NAVAL TACTICS', eyebrowStyle(13)).setOrigin(0.5);
+    this.add.text(cx, CARD.y + 474, 'WW2 NAVAL', displayStyle(72, Css.text, { shadow: TITLE_SHADOW })).setOrigin(0.5);
     this.add
-      .text(cx + 9, CARD.y + 610, 'FLEET', displayStyle(104, Css.gold, { letterSpacing: 18, shadow: FLEET_GLOW }))
+      .text(cx + 9, CARD.y + 580, 'FLEET', displayStyle(104, Css.gold, { letterSpacing: 18, shadow: FLEET_GLOW }))
       .setOrigin(0.5);
-    this.add.text(cx, CARD.y + 712, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
+    this.add.text(cx, CARD.y + 682, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
 
-    new UIButton(this, cx, CARD.y + 810, '出撃準備  →', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, cx, CARD.y + 780, '出撃準備  →', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
       variant: 'primary',
       width: btnW,
       height: 80,
       fontSize: 26,
     });
-    new UIButton(this, cx, CARD.y + 910, '操作方法', () => this.toggleHowTo(true), {
+    new UIButton(this, cx, CARD.y + 876, '操作方法', () => this.toggleHowTo(true), {
       variant: 'secondary',
       width: btnW,
       height: 68,
       fontSize: 22,
     });
 
-    const tileW = (btnW - 24) / 3;
-    this.buildInfoTiles(cx - btnW / 2, CARD.y + 980, tileW, 96);
+    // Tiles stack as full-width rows so the enlarged phone text fits on one line.
+    INFO_TILES.forEach((tile, i) => {
+      const x = cx - btnW / 2;
+      const y = CARD.y + 940 + i * 70;
+      addPanel(this, x, y, btnW, 60, { radius: 14, fillAlpha: 0.55 });
+      this.add.text(x + 20, y + 30, tile.title, textStyle(15, Css.gold, { fontStyle: 'bold' })).setOrigin(0, 0.5);
+      this.add.text(x + btnW - 20, y + 30, tile.body, textStyle(12, Css.muted)).setOrigin(1, 0.5);
+    });
 
-    this.add.text(cx, CARD.y + CARD.h - 36, NATIONS, eyebrowStyle(10, Css.dim)).setOrigin(0.5);
+    this.add.text(cx, CARD.y + CARD.h - 26, NATIONS, eyebrowStyle(10, Css.dim)).setOrigin(0.5);
   }
 
   private buildInfoTiles(left: number, y: number, w: number, h: number): void {
     INFO_TILES.forEach((tile, i) => {
-      const x = left + i * (w + (IS_PORTRAIT ? 12 : 14));
+      const x = left + i * (w + 14);
       addPanel(this, x, y, w, h, { radius: 14, fillAlpha: 0.55 });
       this.add.text(x + 16, y + 14, tile.title, textStyle(15, Css.gold, { fontStyle: 'bold' }));
       this.add.text(x + 16, y + 44, tile.body, textStyle(12, Css.muted));
@@ -124,8 +141,9 @@ export class MainMenuScene extends Phaser.Scene {
     }
     if (this.howToLayer) return;
 
-    const w = 640;
-    const h = 420;
+    const rowH = IS_PORTRAIT ? 104 : 64;
+    const w = IS_PORTRAIT ? 660 : 640;
+    const h = 210 + CONTROLS.length * (rowH + 12);
     const x = (CANVAS_W - w) / 2;
     const y = (CANVAS_H - h) / 2;
 
@@ -137,21 +155,26 @@ export class MainMenuScene extends Phaser.Scene {
 
     const panel = addPanel(this, x, y, w, h, { radius: 28, fill: Colors.panelHi, fillAlpha: 0.96, glow: 1 });
     const eyebrow = this.add.text(CANVAS_W / 2, y + 40, 'HOW TO PLAY', eyebrowStyle(13)).setOrigin(0.5);
-    const title = this.add.text(CANVAS_W / 2, y + 78, '操作方法', displayStyle(30)).setOrigin(0.5);
+    const title = this.add.text(CANVAS_W / 2, y + 80, '操作方法', displayStyle(30)).setOrigin(0.5);
 
+    // Landscape puts label and text side by side; portrait stacks them so long lines can wrap.
     const rows: Phaser.GameObjects.GameObject[] = [];
     CONTROLS.forEach((c, i) => {
-      const ry = y + 120 + i * 92;
-      rows.push(addPanel(this, x + 36, ry, w - 72, 78, { radius: 16, fillAlpha: 0.6 }));
-      rows.push(this.add.text(x + 60, ry + 39, c.device, eyebrowStyle(14)).setOrigin(0, 0.5));
-      rows.push(this.add.text(x + 170, ry + 22, `移動  ${c.move}`, textStyle(14, Css.text)));
-      rows.push(this.add.text(x + 170, ry + 46, `砲撃  ${c.fire}`, textStyle(14, Css.muted)));
+      const ry = y + 120 + i * (rowH + 12);
+      rows.push(addPanel(this, x + 30, ry, w - 60, rowH, { radius: 16, fillAlpha: 0.6 }));
+      if (IS_PORTRAIT) {
+        rows.push(this.add.text(x + 54, ry + 14, c.label, eyebrowStyle(13, Css.gold)));
+        rows.push(this.add.text(x + 54, ry + 44, c.text, textStyle(14, Css.text, { wordWrap: { width: w - 108, useAdvancedWrap: true } })));
+      } else {
+        rows.push(this.add.text(x + 54, ry + rowH / 2, c.label, eyebrowStyle(13, Css.gold)).setOrigin(0, 0.5));
+        rows.push(this.add.text(x + 150, ry + rowH / 2, c.text, textStyle(15, Css.text)).setOrigin(0, 0.5));
+      }
     });
 
     const close = new UIButton(this, CANVAS_W / 2, y + h - 52, 'OK', () => this.toggleHowTo(false), {
       variant: 'primary',
-      width: w - 72,
-      height: 56,
+      width: w - 60,
+      height: IS_PORTRAIT ? 68 : 56,
     });
 
     this.howToLayer = this.add.container(0, 0, [shade, panel, eyebrow, title, ...rows, close]).setDepth(50);

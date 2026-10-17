@@ -90,3 +90,12 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 ### Ship sprites
 - `ShipTextures.ts` draws top-down, bow-up sprites per ship class from the ship data. Arcade
   bodies don't rotate, so BaseShip uses a circular body sized between beam and length.
+
+### Phone readability & controls
+- Text sizes go through `uiFontSize()` (theme.ts): ×1.5 with a 17px floor in portrait, 12px floor on PC.
+  Lay out with measured text (`text.width/height`, `getBounds()`) rather than fixed offsets.
+- Phaser `wordWrap` only breaks at spaces; Japanese needs `useAdvancedWrap: true`.
+- Portrait FleetBuilder scrolls the camera between fixed (scrollFactor 0) header/footer bars; the bars
+  are interactive so taps don't fall through, and tap handlers go through `onTap()` to ignore drags.
+- Touch battle controls live in `systems/AutoPilot.ts` (pure, tested): tap enemy = lock target,
+  tap sea = waypoint, auto-fire in range, AUTO = engage band (close in / back off / circle).

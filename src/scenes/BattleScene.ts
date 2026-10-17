@@ -12,6 +12,7 @@ import { Explosion } from '@/entities/effects/Explosion';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { addBackdrop, addChip, UIButton } from '@/ui/components/UIKit';
+import { engageSteer, hitTestTarget, inRange, ISteer, pickTarget, waypointSteer } from '@/systems/AutoPilot';
 import { Colors, Css } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, rotateTowardsDegrees } from '@/utils/MathUtils';
@@ -26,11 +27,21 @@ import { Shell } from '@/entities/weapons/Shell';
 type BattleInitData = IBattleInitData & { formation?: Formation };
 
 const SHIP_ROTATE_SPEED = 120;
-const JOYSTICK_POS = { x: 150, y: CANVAS_H - 150 };
+const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
+const JOYSTICK_RADIUS = IS_PORTRAIT ? 86 : 70;
+
+// Touch / AUTO controls
+/** A tap this close to an enemy's centre locks it as the target instead of setting a waypoint. */
+const TAP_TARGET_RADIUS = 70;
+const WAYPOINT_ARRIVE_RADIUS = 24;
+/** AUTO mode holds the target at this fraction of the main gun's range. */
+const AUTO_RANGE_FRACTION = 0.75;
+const AUTO_EDGE_MARGIN = 70;
+const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
 // Leave room behind the flagship for escorts in line-ahead.
 const FLAGSHIP_SPAWN = { x: CANVAS_W / 2, y: CANVAS_H - (IS_PORTRAIT ? 330 : 150) };
 // Enemies start just below the HUD strip, which sits lower in portrait.
-const ENEMY_TOP = IS_PORTRAIT ? 230 : 120;
+const ENEMY_TOP = IS_PORTRAIT ? 320 : 120;
 const ENEMY_SPAWN_POSITIONS = [
   { x: IS_PORTRAIT ? 130 : 160, y: ENEMY_TOP },
   { x: CANVAS_W - (IS_PORTRAIT ? 130 : 160), y: ENEMY_TOP },
@@ -87,6 +98,14 @@ export class BattleScene extends Phaser.Scene {
   private joystick: VirtualJoystick | null = null;
   private aimTarget = { x: CANVAS_W / 2, y: 0 };
 
+  /** Touch devices get tap-to-move, tap-to-target and auto-fire. */
+  private isTouch = false;
+  /** AUTO: the flagship chooses a target, manoeuvres and fires on its own. */
+  private autoMode = false;
+  private autoBtn!: UIButton;
+  private lockedTarget: BaseShip | null = null;
+  private waypoint: { x: number; y: number } | null = null;
+
   private reticle!: Phaser.GameObjects.Graphics;
   private battleStartedAt = 0;
 
@@ -113,6 +132,10 @@ export class BattleScene extends Phaser.Scene {
     addBackdrop(this, 'ocean');
     this.battleStartedAt = this.time.now;
     this.aimTarget = { x: CANVAS_W / 2, y: CANVAS_H / 2 };
+    this.isTouch = this.sys.game.device.input.touch;
+    this.autoMode = false;
+    this.lockedTarget = null;
+    this.waypoint = null;
 
     const ijnShips = DataLoader.getShips(this, 'ijn');
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(ijnShips);
@@ -142,8 +165,10 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    this.handleMovement(delta);
+    const target = this.currentTarget();
+    this.handleMovement(delta, target);
     this.updateAim();
+    if (target && (this.isTouch || this.autoMode)) this.autoFire(target, time);
 
     this.playerWeaponSystem.update(time, delta);
     this.enemyWeaponSystem.update(time, delta);
@@ -263,9 +288,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setupInput(): void {
-    this.joystick = this.sys.game.device.input.touch
-      ? new VirtualJoystick(this, JOYSTICK_POS.x, JOYSTICK_POS.y)
-      : null;
+    this.joystick = this.isTouch ? new VirtualJoystick(this, JOYSTICK_POS.x, JOYSTICK_POS.y, JOYSTICK_RADIUS) : null;
 
     const kb = this.input.keyboard!;
     this.wasd = {
@@ -281,14 +304,53 @@ export class BattleScene extends Phaser.Scene {
       if (!pointer.wasTouch) this.aimTarget = { x: pointer.x, y: pointer.y };
     });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      // Taps on HUD buttons or the stick are not shots.
+      // Taps on HUD buttons or the stick are not commands.
       if (over.length > 0 || this.joystick?.owns(pointer)) return;
-      if (!pointer.wasTouch && !pointer.leftButtonDown()) return;
-      // Touch: tap location is the aim point. Mouse: aim tracks the cursor.
+      if (pointer.wasTouch) {
+        this.onSeaTap(pointer.x, pointer.y);
+        return;
+      }
+      if (!pointer.leftButtonDown()) return;
+      // Mouse: aim tracks the cursor, click fires.
       this.aimTarget = { x: pointer.x, y: pointer.y };
       this.updateAim();
       this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
     });
+  }
+
+  /** Touch: tapping an enemy locks it as the target; tapping open sea sails there (and leaves AUTO). */
+  private onSeaTap(x: number, y: number): void {
+    const hit = hitTestTarget({ x, y }, this.targetCandidates(), TAP_TARGET_RADIUS);
+    if (hit) {
+      this.lockedTarget = hit.ship;
+      return;
+    }
+    this.waypoint = { x, y };
+    if (this.autoMode) this.setAutoMode(false);
+  }
+
+  private targetCandidates(): Array<{ x: number; y: number; alive: boolean; ship: BaseShip }> {
+    return this.enemies.map((ship) => ({ x: ship.x, y: ship.y, alive: ship.isAlive, ship }));
+  }
+
+  /** The locked enemy while it lives, otherwise the nearest one. */
+  private currentTarget(): BaseShip | null {
+    if (this.lockedTarget && !this.lockedTarget.isAlive) this.lockedTarget = null;
+    const candidates = this.targetCandidates();
+    const locked = candidates.find((c) => c.ship === this.lockedTarget) ?? null;
+    return pickTarget(this.flagship, candidates, locked)?.ship ?? null;
+  }
+
+  private autoFire(target: BaseShip, time: number): void {
+    if (!inRange(this.flagship, target, this.playerWeapon.range)) return;
+    const angle = angleBetween(this.flagship.x, this.flagship.y, target.x, target.y);
+    this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, angle, time);
+  }
+
+  private setAutoMode(on: boolean): void {
+    this.autoMode = on;
+    if (on) this.waypoint = null;
+    this.autoBtn.setLabel(on ? 'AUTO  ON' : 'AUTO  OFF').setVariant(on ? 'primary' : 'secondary');
   }
 
   private setupOverlaps(): void {
@@ -331,7 +393,11 @@ export class BattleScene extends Phaser.Scene {
     this.explosion.play(shell.x, shell.y);
   }
 
-  private handleMovement(delta: number): void {
+  /**
+   * Priority: joystick > keyboard > AUTO > tap waypoint > coast. Manual input cancels a waypoint but
+   * leaves AUTO on, so a quick dodge with the stick hands control back afterwards.
+   */
+  private handleMovement(delta: number, target: BaseShip | null): void {
     const body = this.flagship.body as Phaser.Physics.Arcade.Body;
     const dtSec = delta / 1000;
     const spd = this.flagship.stats.speed;
@@ -339,58 +405,126 @@ export class BattleScene extends Phaser.Scene {
     const stick = this.joystick?.value;
     if (stick && stick.magnitude > 0) {
       // Touch: steer toward the stick direction, throttle by how far it is pushed.
+      this.waypoint = null;
       const targetDeg = Phaser.Math.RadToDeg(Math.atan2(stick.y, stick.x)) + 90;
-      this.flagship.angle = rotateTowardsDegrees(this.flagship.angle, targetDeg, SHIP_ROTATE_SPEED * dtSec);
-      const heading = Phaser.Math.DegToRad(this.flagship.angle - 90);
-      body.setVelocity(Math.cos(heading) * spd * stick.magnitude, Math.sin(heading) * spd * stick.magnitude);
+      this.steer({ headingDeg: targetDeg, throttle: stick.magnitude }, dtSec);
       return;
     }
 
-    if (this.wasd.A.isDown) {
-      this.flagship.angle -= SHIP_ROTATE_SPEED * dtSec;
-    } else if (this.wasd.D.isDown) {
-      this.flagship.angle += SHIP_ROTATE_SPEED * dtSec;
+    const keys = this.wasd;
+    if (keys.W.isDown || keys.A.isDown || keys.S.isDown || keys.D.isDown) {
+      this.waypoint = null;
+      if (keys.A.isDown) {
+        this.flagship.angle -= SHIP_ROTATE_SPEED * dtSec;
+      } else if (keys.D.isDown) {
+        this.flagship.angle += SHIP_ROTATE_SPEED * dtSec;
+      }
+      const rad = Phaser.Math.DegToRad(this.flagship.angle - 90);
+      if (keys.W.isDown) {
+        body.setVelocity(Math.cos(rad) * spd, Math.sin(rad) * spd);
+      } else if (keys.S.isDown) {
+        body.setVelocity(-Math.cos(rad) * spd * 0.5, -Math.sin(rad) * spd * 0.5);
+      }
+      return;
     }
 
-    const rad = Phaser.Math.DegToRad(this.flagship.angle - 90);
-    if (this.wasd.W.isDown) {
-      body.setVelocity(Math.cos(rad) * spd, Math.sin(rad) * spd);
-    } else if (this.wasd.S.isDown) {
-      body.setVelocity(-Math.cos(rad) * spd * 0.5, -Math.sin(rad) * spd * 0.5);
-    } else {
-      body.setVelocity(body.velocity.x * (1 - 5 * dtSec), body.velocity.y * (1 - 5 * dtSec));
+    if (this.autoMode && target) {
+      const range = this.playerWeapon.range * AUTO_RANGE_FRACTION;
+      this.steer(engageSteer(this.flagship, target, range, { width: CANVAS_W, height: CANVAS_H }, AUTO_EDGE_MARGIN), dtSec);
+      return;
     }
+
+    if (this.waypoint) {
+      const s = waypointSteer(this.flagship, this.waypoint, WAYPOINT_ARRIVE_RADIUS);
+      if (s) {
+        this.steer(s, dtSec);
+        return;
+      }
+      this.waypoint = null;
+    }
+
+    body.setVelocity(body.velocity.x * (1 - 5 * dtSec), body.velocity.y * (1 - 5 * dtSec));
+  }
+
+  /** Turns toward the requested heading at the ship's turn rate and moves along its current bow. */
+  private steer(s: ISteer, dtSec: number): void {
+    const body = this.flagship.body as Phaser.Physics.Arcade.Body;
+    const spd = this.flagship.stats.speed * s.throttle;
+    this.flagship.angle = rotateTowardsDegrees(this.flagship.angle, s.headingDeg, SHIP_ROTATE_SPEED * dtSec);
+    const heading = Phaser.Math.DegToRad(this.flagship.angle - 90);
+    body.setVelocity(Math.cos(heading) * spd, Math.sin(heading) * spd);
   }
 
   private buildOverlayUi(): void {
-    new UIButton(this, 74, IS_PORTRAIT ? 38 : 42, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    const b = TOP_BUTTON;
+    new UIButton(this, 20 + b.w / 2, b.y, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
       variant: 'secondary',
-      width: 116,
-      height: 44,
+      width: b.w,
+      height: b.h,
       fontSize: 15,
     }).setDepth(DEPTH_HUD + 2);
 
-    if (this.joystick) {
-      addChip(this, CANVAS_W - 196, CANVAS_H - 32, 'TAP · 画面タップで砲撃', Colors.cyan, Css.cyan).setDepth(DEPTH_HUD);
+    this.autoBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2, b.y, 'AUTO  OFF', () => this.setAutoMode(!this.autoMode), {
+      variant: 'secondary',
+      width: b.w,
+      height: b.h,
+      fontSize: 15,
+    }).setDepth(DEPTH_HUD + 2);
+
+    if (this.isTouch) {
+      const hint = addChip(this, 0, CANVAS_H - 36, '敵をタップ: 目標  /  海をタップ: 移動', Colors.cyan, Css.cyan);
+      hint.setX(CANVAS_W - 20 - hint.getBounds().width).setDepth(DEPTH_HUD);
     }
 
     this.reticle = this.add.graphics().setDepth(DEPTH_HUD - 1);
   }
 
+  /** Mouse: crosshair at the cursor. Touch / AUTO: brackets on the target and the waypoint marker. */
   private drawReticle(): void {
-    const { x, y } = this.aimTarget;
-    const ready = this.playerWeaponSystem.reloadProgress(this.flagship, this.playerWeapon, this.time.now) >= 1;
-    const color = ready ? Colors.cyan : Colors.muted;
     const g = this.reticle;
     g.clear();
-    g.lineStyle(1.5, color, ready ? 0.9 : 0.5);
-    g.strokeCircle(x, y, 14);
-    g.lineBetween(x - 22, y, x - 8, y);
-    g.lineBetween(x + 8, y, x + 22, y);
-    g.lineBetween(x, y - 22, x, y - 8);
-    g.lineBetween(x, y + 8, x, y + 22);
-    g.fillStyle(color, 0.9);
-    g.fillCircle(x, y, 2);
+    const ready = this.playerWeaponSystem.reloadProgress(this.flagship, this.playerWeapon, this.time.now) >= 1;
+
+    if (!this.isTouch) {
+      const { x, y } = this.aimTarget;
+      const color = ready ? Colors.cyan : Colors.muted;
+      g.lineStyle(1.5, color, ready ? 0.9 : 0.5);
+      g.strokeCircle(x, y, 14);
+      g.lineBetween(x - 22, y, x - 8, y);
+      g.lineBetween(x + 8, y, x + 22, y);
+      g.lineBetween(x, y - 22, x, y - 8);
+      g.lineBetween(x, y + 8, x, y + 22);
+      g.fillStyle(color, 0.9);
+      g.fillCircle(x, y, 2);
+    }
+
+    if (this.isTouch || this.autoMode) {
+      const target = this.currentTarget();
+      if (target) {
+        const locked = target === this.lockedTarget;
+        const inGunRange = inRange(this.flagship, target, this.playerWeapon.range);
+        const color = locked ? Colors.gold : Colors.danger;
+        const r = Math.max(target.displayWidth, target.displayHeight) / 2 + 10;
+        const arm = 10;
+        g.lineStyle(locked ? 3 : 2, color, inGunRange ? 1 : 0.5);
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          const cx = target.x + sx * r;
+          const cy = target.y + sy * r;
+          g.lineBetween(cx, cy, cx - sx * arm, cy);
+          g.lineBetween(cx, cy, cx, cy - sy * arm);
+        }
+      }
+    }
+
+    if (this.waypoint) {
+      const { x, y } = this.waypoint;
+      g.lineStyle(1.5, Colors.cyan, 0.25);
+      g.lineBetween(this.flagship.x, this.flagship.y, x, y);
+      g.lineStyle(2, Colors.cyan, 0.9);
+      g.strokeCircle(x, y, 16);
+      g.fillStyle(Colors.cyan, 0.9);
+      g.fillCircle(x, y, 3);
+    }
   }
 
   private updateAim(): void {

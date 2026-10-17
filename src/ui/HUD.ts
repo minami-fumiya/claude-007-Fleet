@@ -22,14 +22,43 @@ const LABEL_STYLE_PLAYER = textStyle(12, Css.success, { fontStyle: 'bold', strok
 const LABEL_STYLE_ENEMY = textStyle(10, Css.danger, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 const LABEL_STYLE_ESCORT = textStyle(10, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 
-// Top status strip
-// In portrait the strip sits below the retreat button; in landscape they share the top row.
-const BAR = { w: 660, h: 60, y: IS_PORTRAIT ? 72 : 12 };
-const BAR_X = (CANVAS_W - BAR.w) / 2;
-const SEG_HP = { x: 20, meterW: 200 };
-const SEG_SUNK_X = 280;
-const SEG_GUN = { x: 400, meterW: 96 };
-const SEG_TIME_X = 580;
+// Top status strip. Positions inside the strip are relative to its top-left corner.
+interface IPos { x: number; y: number }
+interface IMeterPos extends IPos { w: number; h: number }
+interface IStripLayout {
+  bar: IMeterPos;
+  hpLabel: IPos; hpMeter: IMeterPos; hpText: IPos; hpTextOriginX: number;
+  sunkLabel: IPos; killText: IPos;
+  gunLabel: IPos; gunMeter: IMeterPos; gunText: IPos;
+  timeLabel: IPos; timeText: IPos;
+  dividers: Array<[number, number, number, number]>;
+}
+
+/**
+ * Landscape: one row next to the retreat button. Portrait: below the retreat / AUTO buttons, in two
+ * rows (flagship HP across the top; sunk, main gun and time underneath) so the enlarged text fits.
+ */
+const STRIP: IStripLayout = IS_PORTRAIT
+  ? {
+      bar: { x: 12, y: 88, w: CANVAS_W - 24, h: 132 },
+      hpLabel: { x: 20, y: 14 }, hpMeter: { x: 20, y: 46, w: CANVAS_W - 64, h: 12 },
+      hpText: { x: CANVAS_W - 44, y: 14 }, hpTextOriginX: 1,
+      sunkLabel: { x: 20, y: 70 }, killText: { x: 20, y: 106 },
+      gunLabel: { x: 252, y: 70 }, gunMeter: { x: 252, y: 101, w: 116, h: 10 }, gunText: { x: 378, y: 106 },
+      timeLabel: { x: 484, y: 70 }, timeText: { x: 484, y: 106 },
+      dividers: [[16, 64, CANVAS_W - 40, 64], [232, 72, 232, 122], [464, 72, 464, 122]],
+    }
+  : {
+      bar: { x: (CANVAS_W - 660) / 2, y: 12, w: 660, h: 60 },
+      hpLabel: { x: 20, y: 10 }, hpMeter: { x: 20, y: 32, w: 200, h: 8 },
+      hpText: { x: 228, y: 36 }, hpTextOriginX: 0,
+      sunkLabel: { x: 280, y: 10 }, killText: { x: 280, y: 38 },
+      gunLabel: { x: 400, y: 10 }, gunMeter: { x: 400, y: 32, w: 96, h: 8 }, gunText: { x: 504, y: 36 },
+      timeLabel: { x: 580, y: 10 }, timeText: { x: 580, y: 38 },
+      dividers: [[264, 12, 264, 48], [384, 12, 384, 48], [564, 12, 564, 48]],
+    };
+const BX = STRIP.bar.x;
+const BY = STRIP.bar.y;
 
 export interface IHudStatus {
   /** Main gun reload progress, 0..1 */
@@ -64,33 +93,31 @@ export class HUD {
     this.totalEnemies = enemies.length;
 
     // Status strip — flagship HP, kills, main gun reload, elapsed time
-    this.barBg = drawPanel(scene.add.graphics(), BAR_X, BAR.y, BAR.w, BAR.h, { radius: 18, fillAlpha: 0.78, glow: 0.6 })
+    const L = STRIP;
+    this.barBg = drawPanel(scene.add.graphics(), BX, BY, L.bar.w, L.bar.h, { radius: 18, fillAlpha: 0.78, glow: 0.6 })
       .setDepth(DEPTH_HUD);
     this.meters = scene.add.graphics().setDepth(DEPTH_HUD + 1);
 
-    const label = (x: number, text: string): void => {
-      this.staticTexts.push(scene.add.text(BAR_X + x, BAR.y + 10, text, eyebrowStyle(9, Css.muted)).setDepth(DEPTH_HUD + 1));
+    const label = (pos: IPos, text: string): void => {
+      this.staticTexts.push(scene.add.text(BX + pos.x, BY + pos.y, text, eyebrowStyle(9, Css.muted)).setDepth(DEPTH_HUD + 1));
     };
-    label(SEG_HP.x, `FLAGSHIP · ${player.stats.name}`);
-    label(SEG_SUNK_X, '撃沈 SUNK');
-    label(SEG_GUN.x, '主砲 MAIN GUN');
-    label(SEG_TIME_X, 'TIME');
+    label(L.hpLabel, IS_PORTRAIT ? `旗艦 · ${player.stats.name}` : `FLAGSHIP · ${player.stats.name}`);
+    label(L.sunkLabel, IS_PORTRAIT ? '撃沈' : '撃沈 SUNK');
+    label(L.gunLabel, IS_PORTRAIT ? '主砲' : '主砲 MAIN GUN');
+    label(L.timeLabel, 'TIME');
 
-    const valueStyle = textStyle(16, Css.text, { fontStyle: 'bold' });
-    this.hpText = scene.add.text(BAR_X + SEG_HP.x + SEG_HP.meterW + 8, BAR.y + 36, '', textStyle(12, Css.muted))
-      .setOrigin(0, 0.5).setDepth(DEPTH_HUD + 1);
-    this.killText = scene.add.text(BAR_X + SEG_SUNK_X, BAR.y + 38, '', textStyle(18, Css.gold, { fontStyle: 'bold' }))
-      .setOrigin(0, 0.5).setDepth(DEPTH_HUD + 1);
-    this.gunText = scene.add.text(BAR_X + SEG_GUN.x + SEG_GUN.meterW + 8, BAR.y + 36, '', textStyle(11, Css.cyan, { fontStyle: 'bold' }))
-      .setOrigin(0, 0.5).setDepth(DEPTH_HUD + 1);
-    this.timeText = scene.add.text(BAR_X + SEG_TIME_X, BAR.y + 38, '0:00', valueStyle)
-      .setOrigin(0, 0.5).setDepth(DEPTH_HUD + 1);
+    const value = (pos: IPos, size: number, color: string, originX = 0): Phaser.GameObjects.Text =>
+      scene.add.text(BX + pos.x, BY + pos.y, '', textStyle(size, color, { fontStyle: 'bold' }))
+        .setOrigin(originX, IS_PORTRAIT && pos === L.hpText ? 0 : 0.5)
+        .setDepth(DEPTH_HUD + 1);
+    this.hpText = value(L.hpText, 12, Css.muted, L.hpTextOriginX);
+    this.killText = value(L.killText, 18, Css.gold);
+    this.gunText = value(L.gunText, 11, Css.cyan);
+    this.timeText = value(L.timeText, 16, Css.text).setText('0:00');
 
     // Segment dividers
     this.barBg.lineStyle(1, Colors.rim, 0.15);
-    for (const dx of [SEG_SUNK_X - 16, SEG_GUN.x - 16, SEG_TIME_X - 16]) {
-      this.barBg.lineBetween(BAR_X + dx, BAR.y + 12, BAR_X + dx, BAR.y + BAR.h - 12);
-    }
+    for (const [x1, y1, x2, y2] of L.dividers) this.barBg.lineBetween(BX + x1, BY + y1, BX + x2, BY + y2);
 
     // Player ship name (follows ship, above HP bar)
     this.playerNameLabel = scene.add
@@ -175,8 +202,9 @@ export class HUD {
     const hpColor = hpFrac > 0.5 ? Colors.success : hpFrac > 0.25 ? Colors.gold : Colors.danger;
     const reload = this.status.reload;
     this.meters.clear();
-    drawMeter(this.meters, BAR_X + SEG_HP.x, BAR.y + 32, SEG_HP.meterW, 8, hpFrac, hpColor);
-    drawMeter(this.meters, BAR_X + SEG_GUN.x, BAR.y + 32, SEG_GUN.meterW, 8, reload, reload >= 1 ? Colors.cyan : Colors.blue);
+    const { hpMeter: hm, gunMeter: gm } = STRIP;
+    drawMeter(this.meters, BX + hm.x, BY + hm.y, hm.w, hm.h, hpFrac, hpColor);
+    drawMeter(this.meters, BX + gm.x, BY + gm.y, gm.w, gm.h, reload, reload >= 1 ? Colors.cyan : Colors.blue);
     this.hpText.setText(`${Math.max(0, Math.ceil(player.stats.currentHp))}`);
     this.gunText.setText(reload >= 1 ? 'READY' : 'RELOAD').setColor(reload >= 1 ? Css.cyan : Css.muted);
 

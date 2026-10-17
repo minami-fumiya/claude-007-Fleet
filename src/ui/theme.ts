@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { IS_PORTRAIT } from '@/config/GameConstants';
 
 /**
  * Shared visual tokens for every scene.
@@ -47,6 +48,15 @@ const DISPLAY_FONT_MIN_SIZE = 48;
 /** Render text at 2x so it stays crisp when Scale.FIT enlarges the canvas. */
 const TEXT_RESOLUTION = 2;
 
+/**
+ * Phones show the 720px-wide portrait canvas at roughly half size, so small text is enlarged
+ * there (×1.5, never below 17px). On PC nothing goes below 12px. Large display text is unchanged.
+ */
+export function uiFontSize(size: number): number {
+  if (size >= 40) return size;
+  return IS_PORTRAIT ? Math.round(Math.max(17, size * 1.5)) : Math.max(12, size);
+}
+
 export function textStyle(
   size: number,
   color: string = Css.text,
@@ -54,7 +64,7 @@ export function textStyle(
 ): Phaser.Types.GameObjects.Text.TextStyle {
   return {
     fontFamily: Fonts.body,
-    fontSize: `${size}px`,
+    fontSize: `${uiFontSize(size)}px`,
     color,
     resolution: TEXT_RESOLUTION,
     ...extra,
@@ -68,7 +78,7 @@ export function displayStyle(
 ): Phaser.Types.GameObjects.Text.TextStyle {
   // Dela Gothic One only reads well large; smaller headings use the body family's Black weight.
   // Dela ships a single weight, so it gets 'normal' — asking for bold would make the browser fake it.
-  const font = size >= DISPLAY_FONT_MIN_SIZE
+  const font = uiFontSize(size) >= DISPLAY_FONT_MIN_SIZE
     ? { fontFamily: Fonts.display, fontStyle: 'normal' }
     : { fontFamily: Fonts.body, fontStyle: '900' };
   return textStyle(size, color, { ...font, ...extra });
@@ -79,5 +89,5 @@ export function eyebrowStyle(
   size = 13,
   color: string = Css.cyan,
 ): Phaser.Types.GameObjects.Text.TextStyle {
-  return textStyle(size, color, { fontStyle: 'bold', letterSpacing: Math.round(size * 0.28) });
+  return textStyle(size, color, { fontStyle: 'bold', letterSpacing: Math.round(uiFontSize(size) * 0.22) });
 }
