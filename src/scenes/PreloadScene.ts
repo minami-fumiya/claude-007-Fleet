@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
+import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
+import { drawMeter } from '@/ui/components/UIKit';
 import ijnData from '@/data/ships/ijn.json';
 import weaponsData from '@/data/weapons/weapons.json';
 
@@ -102,25 +104,21 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private createProgressBar(): void {
-    const barW = 400;
-    const barH = 20;
+    const barW = 360;
+    const barH = 8;
     const x = (CANVAS_W - barW) / 2;
-    const y = CANVAS_H / 2;
+    const y = CANVAS_H / 2 + 20;
 
-    const border = this.add.graphics();
-    border.lineStyle(2, 0xffffff);
-    border.strokeRect(x, y, barW, barH);
+    this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep).setOrigin(0, 0);
+    this.add.text(CANVAS_W / 2, y - 64, 'WW2 NAVAL FLEET', eyebrowStyle(13)).setOrigin(0.5);
+    this.add.text(CANVAS_W / 2, y - 32, '出撃準備中…', textStyle(18, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
 
     const fill = this.add.graphics();
-
-    this.load.on('progress', (value: number) => {
+    const draw = (value: number): void => {
       fill.clear();
-      fill.fillStyle(0x4488ff);
-      fill.fillRect(x + 2, y + 2, (barW - 4) * value, barH - 4);
-    });
-
-    this.add
-      .text(CANVAS_W / 2, y - 30, 'Loading…', { fontSize: '18px', color: '#ffffff' })
-      .setOrigin(0.5);
+      drawMeter(fill, x, y, barW, barH, value, Colors.cyan);
+    };
+    draw(0);
+    this.load.on('progress', draw);
   }
 }

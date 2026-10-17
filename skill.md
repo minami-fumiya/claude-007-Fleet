@@ -68,3 +68,12 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   inside a Scene — addPointer accumulates every time the scene restarts.
 - Don't aim from `input.activePointer` on touch: it may be the joystick finger. Keep an
   explicit aim target updated by mouse move (`!pointer.wasTouch`) or by the firing tap.
+
+### UI Kit (src/ui/theme.ts, src/ui/components/UIKit.ts)
+- Gradients and glows are drawn once into canvas textures (`textures.createCanvas`), because
+  `Graphics.fillGradientStyle` is WebGL-only and not rendered by the Canvas renderer.
+- A Container's input hit area is centred on its position (Phaser adds `displayOriginX/Y`).
+  For cards laid out from their top-left, use `makeClickable()` which offsets the rectangle
+  by half its size; a centre-positioned button can use `Rectangle(0, 0, w, h)` directly.
+- In BattleScene, the global `pointerdown` fire handler skips events whose `currentlyOver`
+  list is non-empty, so tapping HUD buttons does not fire the main gun.

@@ -18,16 +18,24 @@ export class HealthBar {
     const fraction = max > 0 ? Math.max(0, current / max) : 0;
     const barColor =
       overrideColor ??
-      (fraction > 0.5 ? 0x44ff44 : fraction > 0.25 ? 0xffff00 : 0xff4444);
+      (fraction > 0.5 ? 0x5df2b0 : fraction > 0.25 ? 0xffc94a : 0xff5f7a);
 
     this.bg.clear();
-    this.bg.fillStyle(0x000000, 0.55);
-    this.bg.fillRect(cx - this.width / 2, cy, this.width, this.height);
+    const r = this.height / 2;
+    this.bg.fillStyle(0x020814, 0.7);
+    this.bg.fillRoundedRect(cx - this.width / 2, cy, this.width, this.height, r);
 
     this.bar.clear();
     if (fraction > 0) {
       this.bar.fillStyle(barColor);
-      this.bar.fillRect(cx - this.width / 2 + 1, cy + 1, (this.width - 2) * fraction, this.height - 2);
+      const innerH = this.height - 2;
+      this.bar.fillRoundedRect(
+        cx - this.width / 2 + 1,
+        cy + 1,
+        Math.max(innerH, (this.width - 2) * fraction),
+        innerH,
+        innerH / 2,
+      );
     }
   }
 

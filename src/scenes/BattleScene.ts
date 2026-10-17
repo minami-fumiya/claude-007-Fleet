@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, CANVAS_H, DEPTH_SHIPS } from '@/config/GameConstants';
+import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
@@ -11,6 +11,8 @@ import { FormationSystem } from '@/systems/FormationSystem';
 import { Explosion } from '@/entities/effects/Explosion';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
+import { addBackdrop, addChip, UIButton } from '@/ui/components/UIKit';
+import { Colors, Css } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, rotateTowardsDegrees } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
@@ -82,6 +84,9 @@ export class BattleScene extends Phaser.Scene {
   private joystick: VirtualJoystick | null = null;
   private aimTarget = { x: CANVAS_W / 2, y: 0 };
 
+  private reticle!: Phaser.GameObjects.Graphics;
+  private battleStartedAt = 0;
+
   private aimAngle = 0;
   private gameOver = false;
 
@@ -102,7 +107,9 @@ export class BattleScene extends Phaser.Scene {
     this.escortWeapons = [];
     this.escortWeaponSystems = [];
 
-    this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x0a2a4a);
+    addBackdrop(this, 'ocean');
+    this.battleStartedAt = this.time.now;
+    this.aimTarget = { x: CANVAS_W / 2, y: CANVAS_H / 2 };
 
     const ijnShips = DataLoader.getShips(this, 'ijn');
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(ijnShips);
@@ -117,6 +124,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud = new HUD(this, this.flagship, this.enemies, this.escorts);
 
     this.setupInput();
+    this.buildOverlayUi();
     this.setupClickFire();
     this.setupOverlaps();
   }
@@ -150,7 +158,11 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    this.hud.update(this.flagship, this.enemies, this.escorts);
+    this.hud.update(this.flagship, this.enemies, this.escorts, {
+      reload: this.playerWeaponSystem.reloadProgress(this.flagship, this.playerWeapon, time),
+      elapsedSec: (time - this.battleStartedAt) / 1000,
+    });
+    this.drawReticle();
     this.checkWinLoss();
   }
 
@@ -265,8 +277,9 @@ export class BattleScene extends Phaser.Scene {
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       if (!pointer.wasTouch) this.aimTarget = { x: pointer.x, y: pointer.y };
     });
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.joystick?.owns(pointer)) return;
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      // Taps on HUD buttons or the stick are not shots.
+      if (over.length > 0 || this.joystick?.owns(pointer)) return;
       if (!pointer.wasTouch && !pointer.leftButtonDown()) return;
       // Touch: tap location is the aim point. Mouse: aim tracks the cursor.
       this.aimTarget = { x: pointer.x, y: pointer.y };
@@ -346,6 +359,37 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private buildOverlayUi(): void {
+    new UIButton(this, 74, 42, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+      variant: 'secondary',
+      width: 116,
+      height: 44,
+      fontSize: 15,
+    }).setDepth(DEPTH_HUD + 2);
+
+    if (this.joystick) {
+      addChip(this, CANVAS_W - 196, CANVAS_H - 32, 'TAP · 画面タップで砲撃', Colors.cyan, Css.cyan).setDepth(DEPTH_HUD);
+    }
+
+    this.reticle = this.add.graphics().setDepth(DEPTH_HUD - 1);
+  }
+
+  private drawReticle(): void {
+    const { x, y } = this.aimTarget;
+    const ready = this.playerWeaponSystem.reloadProgress(this.flagship, this.playerWeapon, this.time.now) >= 1;
+    const color = ready ? Colors.cyan : Colors.muted;
+    const g = this.reticle;
+    g.clear();
+    g.lineStyle(1.5, color, ready ? 0.9 : 0.5);
+    g.strokeCircle(x, y, 14);
+    g.lineBetween(x - 22, y, x - 8, y);
+    g.lineBetween(x + 8, y, x + 22, y);
+    g.lineBetween(x, y - 22, x, y - 8);
+    g.lineBetween(x, y + 8, x, y + 22);
+    g.fillStyle(color, 0.9);
+    g.fillCircle(x, y, 2);
+  }
+
   private updateAim(): void {
     this.aimAngle = angleBetween(this.flagship.x, this.flagship.y, this.aimTarget.x, this.aimTarget.y);
   }
@@ -363,8 +407,17 @@ export class BattleScene extends Phaser.Scene {
   private triggerGameOver(victory: boolean): void {
     if (this.gameOver) return;
     this.gameOver = true;
-    this.time.delayedCall(1200, () => {
-      this.scene.start(SceneKeys.RESULTS, { victory, score: 0, turnsElapsed: 0 } as IBattleResultData);
-    });
+    const fleet = [this.flagship, ...this.escorts];
+    const result: IBattleResultData = {
+      victory,
+      score: 0,
+      turnsElapsed: 0,
+      enemiesSunk: this.enemies.filter((e) => !e.isAlive).length,
+      enemiesTotal: this.enemies.length,
+      survivors: fleet.filter((s) => s.isAlive).length,
+      fleetSize: fleet.length,
+      durationSec: (this.time.now - this.battleStartedAt) / 1000,
+    };
+    this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }
 }
