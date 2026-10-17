@@ -155,7 +155,7 @@
       "name": "ミッドウェイ (Midway)",
       "nation": "USN",
       "shipClass": "Carrier",
-      "hp": 380,
+      "hp": 360,
       "armor": 36,
       "speed": 155,
       "weapons": [

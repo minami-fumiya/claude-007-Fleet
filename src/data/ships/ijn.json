@@ -9,7 +9,8 @@
       "armor": 65,
       "speed": 120,
       "weapons": [
-        "46cm_main_gun"
+        "46cm_main_gun",
+        "15_5cm_triple"
       ],
       "spriteKey": "yamato"
     },
@@ -22,7 +23,8 @@
       "armor": 63,
       "speed": 118,
       "weapons": [
-        "46cm_main_gun"
+        "46cm_main_gun",
+        "15_5cm_triple"
       ],
       "spriteKey": "musashi"
     },
@@ -59,7 +61,7 @@
       "name": "金剛 (Kongo)",
       "nation": "IJN",
       "shipClass": "Battleship",
-      "hp": 360,
+      "hp": 380,
       "armor": 45,
       "speed": 170,
       "weapons": [
@@ -77,7 +79,8 @@
       "armor": 40,
       "speed": 180,
       "weapons": [
-        "20cm_twin_gun"
+        "20cm_twin_gun",
+        "torpedo_type93"
       ],
       "spriteKey": "takao"
     },

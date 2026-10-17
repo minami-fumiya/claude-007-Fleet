@@ -28,8 +28,8 @@
 - [x] `src/systems/AudioSystem.ts` — 合成効果音 (砲撃・爆発・着水・魚雷・爆雷・航空機) と BGM (フェード)、ミュート
 
 ### D. バランス
-- [ ] 戦闘シミュレーション (headless の純粋モデル) で国籍・艦種の勝率を確認し、HP / 火力 / AI を調整
-- [ ] 調整結果を `docs/specs/systems/balance.md` に記録
+- [x] 解析モデル (`BalanceModel`) と不変条件テスト、ブラウザでの AUTO 対戦で国籍・艦種のバランスを確認し、HP / 火力 / AI を調整
+- [x] 調整結果を `docs/specs/systems/balance.md` に記録
 
 ### 完了処理
 - [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint7]` タグ

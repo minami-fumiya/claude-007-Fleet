@@ -15,6 +15,8 @@ export interface IShipView extends IAITarget {
 const EDGE_MARGIN = 90;
 /** AI gunnery is not perfect: each shot is off by up to this much (radians). */
 const AI_AIM_ERROR = 0.05;
+/** Torpedoes are slow, so a perfectly led spread almost never misses; AI torpedo aim is rougher. */
+const AI_TORPEDO_AIM_ERROR = 0.12;
 const PATROL_THROTTLE = 0.5;
 
 export function shipView(ship: BaseShip, detected: boolean): IShipView {
@@ -63,7 +65,8 @@ export function fireAt(
   const vel = (target.ship.body as Phaser.Physics.Arcade.Body | null)?.velocity;
   for (const w of usable) {
     const lead = interceptAngle(ship.x, ship.y, target.x, target.y, vel?.x ?? 0, vel?.y ?? 0, w.projectileSpeed);
-    const angle = lead + (Math.random() * 2 - 1) * aimError;
+    const error = aimError > 0 && weaponKind(w) === WeaponKind.Torpedo ? Math.max(aimError, AI_TORPEDO_AIM_ERROR) : aimError;
+    const angle = lead + (Math.random() * 2 - 1) * error;
     weapons.fireWeapon(ship, w, angle, time);
   }
 }

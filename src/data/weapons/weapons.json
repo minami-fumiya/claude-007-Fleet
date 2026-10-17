@@ -287,6 +287,15 @@
       "range": 300,
       "reloadTime": 0,
       "projectileSpeed": 260
+    },
+    {
+      "id": "15_5cm_triple",
+      "name": "15.5cm 3 連装副砲",
+      "type": "ShellHE",
+      "firePower": 46,
+      "range": 460,
+      "reloadTime": 950,
+      "projectileSpeed": 550
     }
   ]
 }
