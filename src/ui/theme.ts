@@ -36,9 +36,13 @@ export const Css = {
 } as const;
 
 export const Fonts = {
-  display: '"Arial Black", "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Impact, sans-serif',
-  body: '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Segoe UI", system-ui, sans-serif',
+  // Japanese web fonts loaded in index.html; system fonts are only a fallback.
+  display: '"Dela Gothic One", "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif',
+  body: '"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif',
 } as const;
+
+/** Below this size display text falls back to the body family, where Dela Gothic One turns blotchy. */
+const DISPLAY_FONT_MIN_SIZE = 48;
 
 /** Render text at 2x so it stays crisp when Scale.FIT enlarges the canvas. */
 const TEXT_RESOLUTION = 2;
@@ -62,7 +66,12 @@ export function displayStyle(
   color: string = Css.text,
   extra: Phaser.Types.GameObjects.Text.TextStyle = {},
 ): Phaser.Types.GameObjects.Text.TextStyle {
-  return textStyle(size, color, { fontFamily: Fonts.display, fontStyle: '900', ...extra });
+  // Dela Gothic One only reads well large; smaller headings use the body family's Black weight.
+  // Dela ships a single weight, so it gets 'normal' — asking for bold would make the browser fake it.
+  const font = size >= DISPLAY_FONT_MIN_SIZE
+    ? { fontFamily: Fonts.display, fontStyle: 'normal' }
+    : { fontFamily: Fonts.body, fontStyle: '900' };
+  return textStyle(size, color, { ...font, ...extra });
 }
 
 /** Small, letter-spaced, all-caps label used above titles and on stat cards. */
