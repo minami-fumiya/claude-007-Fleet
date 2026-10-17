@@ -8,7 +8,7 @@ import { resources } from './ResourceSystem';
 
 export const DOCK_COUNT = 2;
 /** Real milliseconds per point of HP repaired. */
-export const MS_PER_HP = 60;
+export const MS_PER_HP = 40;
 /** A ship sunk in battle comes home heavily damaged (大破) rather than being lost. */
 export const SUNK_HP_FRACTION = 0.1;
 export const FAST_REPAIR_COST: IResources = { fuel: 40, ammo: 0, steel: 80, bauxite: 0 };
@@ -33,7 +33,7 @@ export function missingHp(maxHp: number, fraction: number): number {
 
 export function repairCost(maxHp: number, fraction: number): IResources {
   const missing = missingHp(maxHp, fraction);
-  return resources({ fuel: Math.ceil(missing * 0.3), steel: Math.ceil(missing * 0.6) });
+  return resources({ fuel: Math.ceil(missing * 0.2), steel: Math.ceil(missing * 0.4) });
 }
 
 export function repairTimeMs(maxHp: number, fraction: number): number {

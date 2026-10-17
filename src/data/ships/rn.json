@@ -5,7 +5,7 @@
       "name": "フッド (Hood)",
       "nation": "RN",
       "shipClass": "Battleship",
-      "hp": 450,
+      "hp": 720,
       "armor": 50,
       "speed": 160,
       "weapons": [
@@ -19,7 +19,7 @@
       "name": "キング・ジョージ5世 (King George V)",
       "nation": "RN",
       "shipClass": "Battleship",
-      "hp": 460,
+      "hp": 735,
       "armor": 60,
       "speed": 140,
       "weapons": [
@@ -33,7 +33,7 @@
       "name": "ウォースパイト (Warspite)",
       "nation": "RN",
       "shipClass": "Battleship",
-      "hp": 430,
+      "hp": 690,
       "armor": 56,
       "speed": 128,
       "weapons": [
@@ -47,7 +47,7 @@
       "name": "ロドニー (Rodney)",
       "nation": "RN",
       "shipClass": "Battleship",
-      "hp": 470,
+      "hp": 750,
       "armor": 60,
       "speed": 115,
       "weapons": [
@@ -61,7 +61,7 @@
       "name": "ベルファスト (Belfast)",
       "nation": "RN",
       "shipClass": "Cruiser",
-      "hp": 255,
+      "hp": 410,
       "armor": 38,
       "speed": 180,
       "weapons": [
@@ -75,7 +75,7 @@
       "name": "サウサンプトン (Southampton)",
       "nation": "RN",
       "shipClass": "Cruiser",
-      "hp": 240,
+      "hp": 385,
       "armor": 36,
       "speed": 178,
       "weapons": [
@@ -89,7 +89,7 @@
       "name": "コサック (Cossack)",
       "nation": "RN",
       "shipClass": "Destroyer",
-      "hp": 140,
+      "hp": 225,
       "armor": 14,
       "speed": 245,
       "weapons": [
@@ -104,7 +104,7 @@
       "name": "ジャベリン (Javelin)",
       "nation": "RN",
       "shipClass": "Destroyer",
-      "hp": 135,
+      "hp": 215,
       "armor": 14,
       "speed": 245,
       "weapons": [
@@ -119,7 +119,7 @@
       "name": "イラストリアス (Illustrious)",
       "nation": "RN",
       "shipClass": "Carrier",
-      "hp": 320,
+      "hp": 510,
       "armor": 40,
       "speed": 150,
       "weapons": [
@@ -137,7 +137,7 @@
       "name": "アーク・ロイヤル (Ark Royal)",
       "nation": "RN",
       "shipClass": "Carrier",
-      "hp": 310,
+      "hp": 495,
       "armor": 30,
       "speed": 160,
       "weapons": [
@@ -155,7 +155,7 @@
       "name": "トルーアント (Truant)",
       "nation": "RN",
       "shipClass": "Submarine",
-      "hp": 95,
+      "hp": 150,
       "armor": 6,
       "speed": 150,
       "weapons": [
@@ -168,7 +168,7 @@
       "name": "アップホルダー (Upholder)",
       "nation": "RN",
       "shipClass": "Submarine",
-      "hp": 85,
+      "hp": 135,
       "armor": 5,
       "speed": 140,
       "weapons": [

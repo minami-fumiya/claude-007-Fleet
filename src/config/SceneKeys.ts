@@ -8,6 +8,8 @@ export const SceneKeys = {
   CUSTOMIZATION: 'CustomizationScene',
   ARSENAL: 'ArsenalScene',
   CAMPAIGN: 'CampaignMapScene',
+  SCENARIO: 'ScenarioScene',
+  ENCYCLOPEDIA: 'EncyclopediaScene',
   HOME: 'HomeScene',
 } as const;
 

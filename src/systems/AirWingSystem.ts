@@ -8,7 +8,7 @@ import { CARRIER_AIRCRAFT, CarrierAircraft, IAirWing, AircraftType } from '@/typ
 /** Planes sent per launch. */
 export const SQUADRON_SIZE = 3;
 /** Time to refuel and re-arm a squadron after it lands. */
-export const REARM_MS = 12000;
+export const REARM_MS = 18000;
 
 type Counts = Record<CarrierAircraft, number>;
 

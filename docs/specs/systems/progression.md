@@ -29,7 +29,7 @@ Each carrier aircraft shot down costs 6 bauxite to replace. Shown on the results
 ## Damage and docks
 - Ships keep the HP fraction they finished with; a ship sunk in battle returns 大破 at 10% (never lost).
 - Fleet Builder shows `HP x / max` with 小破 (>50%) / 中破 (≤50%) / 大破 (≤25%) / 入渠中.
-- 2 docks repair in real time: 60 ms per HP; cost fuel 0.3 + steel 0.6 per missing HP.
+- 2 docks repair in real time: 40 ms per HP; cost fuel 0.2 + steel 0.4 per missing HP.
 - 高速修理 finishes a docked ship immediately for fuel 40 + steel 80.
 
 ## Research (工廠)

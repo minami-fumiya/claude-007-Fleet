@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { WeaponSystem } from './WeaponSystem';
 import { AIMode, decide, IAISelf, IAITarget, ITacticsProfile, submarineWantsDive, TURN_RATE_DEG } from './AIBrain';
-import { engageSteer, IBounds } from './AutoPilot';
+import { engageSteer, headingTo, IBounds } from './AutoPilot';
 import { maxSurfaceRange, selectWeapons, weaponKind, WeaponKind } from './WeaponSelector';
 import { interceptAngle } from '@/utils/MathUtils';
 import { ShipClass } from '@/types/ShipClass';
@@ -15,7 +15,9 @@ export interface IShipView extends IAITarget {
 
 const EDGE_MARGIN = 90;
 /** AI gunnery is not perfect: each shot is off by up to this much (radians). */
-const AI_AIM_ERROR = 0.05;
+export const AI_AIM_ERROR = 0.085;
+/** The player's automatic fire (touch / AUTO) is a little better than the AI's. */
+export const AUTO_AIM_ERROR = 0.07;
 /** Torpedoes are slow, so a perfectly led spread almost never misses; AI torpedo aim is rougher. */
 const AI_TORPEDO_AIM_ERROR = 0.12;
 const PATROL_THROTTLE = 0.5;
@@ -89,6 +91,8 @@ export function nearestDistance(ship: BaseShip, foes: IShipView[]): number {
  */
 export class AISystem {
   private current: IShipView | null = null;
+  /** When set the ship makes for this point (escape / breakthrough) and only fires on the way */
+  goal: { x: number; y: number } | null = null;
 
   constructor(
     private readonly weapons: WeaponSystem,
@@ -112,6 +116,10 @@ export class AISystem {
     this.current = decision.target;
 
     const target = decision.target;
+    if (!target && this.goal) {
+      ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: 1 }, dtSec, turnRate);
+      return;
+    }
     if (!target) {
       // Nothing visible: patrol towards the middle of the sea.
       const centre = { x: this.bounds.width / 2, y: this.bounds.height / 2 };
@@ -121,6 +129,11 @@ export class AISystem {
       return;
     }
 
+    if (this.goal) {
+      ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: 1 }, dtSec, turnRate);
+      fireAt(this.weapons, ship, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
+      return;
+    }
     const steer = engageSteer(ship, target, decision.preferredRange, this.bounds, EDGE_MARGIN);
     // Hunting a submerged boat: always drive straight over it.
     if (decision.mode === AIMode.Hunt) steer.throttle = 1;

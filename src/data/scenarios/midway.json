@@ -1,0 +1,17 @@
+{
+  "id": "midway",
+  "name": "ミッドウェー海戦",
+  "date": "1942年6月",
+  "description": "ミッドウェー島攻略を目指した日本の機動部隊と、暗号解読で待ち伏せた米空母部隊の決戦。米急降下爆撃機の奇襲で日本は主力空母4隻を失い、太平洋の戦局は転換した。本シナリオは空母同士の航空決戦を再現する (ヨークタウン級はエセックスが代役)。",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Day",
+  "forces": {
+    "A": { "nation": "IJN", "ships": ["akagi", "kaga", "tone"], "positions": [{ "x": 0.5, "y": 0.14, "angle": 180 }, { "x": 0.38, "y": 0.1, "angle": 180 }, { "x": 0.6, "y": 0.2, "angle": 180 }] },
+    "B": { "nation": "USN", "ships": ["enterprise", "essex", "fletcher"], "positions": [{ "x": 0.5, "y": 0.86, "angle": 0 }, { "x": 0.62, "y": 0.9, "angle": 0 }, { "x": 0.42, "y": 0.8, "angle": 0 }] }
+  },
+  "sides": [
+    { "force": "B", "label": "米海軍で戦う", "objective": "SinkTargets", "targets": ["akagi", "kaga"], "timeLimitSec": 360, "brief": "制限時間内に空母 赤城・加賀を撃沈せよ。" },
+    { "force": "A", "label": "帝国海軍で戦う", "objective": "SinkTargets", "targets": ["enterprise", "essex"], "timeLimitSec": 360, "brief": "史実を覆し、米空母2隻を先に撃沈せよ。" }
+  ]
+}

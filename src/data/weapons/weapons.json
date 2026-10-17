@@ -274,7 +274,7 @@
       "id": "aerial_bomb",
       "name": "航空爆弾",
       "type": "Bomb",
-      "firePower": 75,
+      "firePower": 65,
       "range": 0,
       "reloadTime": 0,
       "projectileSpeed": 0
@@ -283,7 +283,7 @@
       "id": "aerial_torpedo",
       "name": "航空魚雷",
       "type": "Torpedo",
-      "firePower": 110,
+      "firePower": 75,
       "range": 300,
       "reloadTime": 0,
       "projectileSpeed": 260

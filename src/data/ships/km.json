@@ -5,7 +5,7 @@
       "name": "ビスマルク (Bismarck)",
       "nation": "KM",
       "shipClass": "Battleship",
-      "hp": 480,
+      "hp": 770,
       "armor": 62,
       "speed": 145,
       "weapons": [
@@ -19,7 +19,7 @@
       "name": "ティルピッツ (Tirpitz)",
       "nation": "KM",
       "shipClass": "Battleship",
-      "hp": 485,
+      "hp": 775,
       "armor": 63,
       "speed": 143,
       "weapons": [
@@ -33,7 +33,7 @@
       "name": "シャルンホルスト (Scharnhorst)",
       "nation": "KM",
       "shipClass": "Battleship",
-      "hp": 400,
+      "hp": 640,
       "armor": 55,
       "speed": 175,
       "weapons": [
@@ -47,7 +47,7 @@
       "name": "グナイゼナウ (Gneisenau)",
       "nation": "KM",
       "shipClass": "Battleship",
-      "hp": 400,
+      "hp": 640,
       "armor": 55,
       "speed": 173,
       "weapons": [
@@ -61,7 +61,7 @@
       "name": "プリンツ・オイゲン (Prinz Eugen)",
       "nation": "KM",
       "shipClass": "Cruiser",
-      "hp": 255,
+      "hp": 410,
       "armor": 41,
       "speed": 178,
       "weapons": [
@@ -75,7 +75,7 @@
       "name": "アドミラル・ヒッパー (Admiral Hipper)",
       "nation": "KM",
       "shipClass": "Cruiser",
-      "hp": 250,
+      "hp": 400,
       "armor": 40,
       "speed": 176,
       "weapons": [
@@ -89,7 +89,7 @@
       "name": "Z1 レーベレヒト・マース (Z1)",
       "nation": "KM",
       "shipClass": "Destroyer",
-      "hp": 135,
+      "hp": 215,
       "armor": 15,
       "speed": 235,
       "weapons": [
@@ -104,7 +104,7 @@
       "name": "グラーフ・ツェッペリン (Graf Zeppelin)",
       "nation": "KM",
       "shipClass": "Carrier",
-      "hp": 300,
+      "hp": 480,
       "armor": 32,
       "speed": 150,
       "weapons": [
@@ -122,7 +122,7 @@
       "name": "U ボート VIIC 型 (Type VIIC)",
       "nation": "KM",
       "shipClass": "Submarine",
-      "hp": 85,
+      "hp": 135,
       "armor": 5,
       "speed": 145,
       "weapons": [
@@ -135,7 +135,7 @@
       "name": "U ボート IXC 型 (Type IXC)",
       "nation": "KM",
       "shipClass": "Submarine",
-      "hp": 95,
+      "hp": 150,
       "armor": 6,
       "speed": 150,
       "weapons": [
@@ -148,7 +148,7 @@
       "name": "U ボート XXI 型 (Type XXI)",
       "nation": "KM",
       "shipClass": "Submarine",
-      "hp": 100,
+      "hp": 160,
       "armor": 6,
       "speed": 165,
       "weapons": [

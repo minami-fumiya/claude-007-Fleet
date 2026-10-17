@@ -25,6 +25,7 @@ const BOMB_HIT_CHANCE = 0.55;
 const LANDING_DIST = 30;
 /** Drop torpedoes spread across this angle (radians) between the planes. */
 const AERIAL_TORPEDO_SPREAD = 0.06;
+const AERIAL_TORPEDO_ERROR = 0.16;
 
 export interface IAirContext {
   /** Enemy ships as this side sees them */
@@ -215,7 +216,8 @@ export class AirOpsSystem {
     const vel = (target.ship.body as Phaser.Physics.Arcade.Body | null)?.velocity;
     const aim = interceptAngle(sq.x, sq.y, target.x, target.y, vel?.x ?? 0, vel?.y ?? 0, this.aerialTorpedo.projectileSpeed);
     for (let i = 0; i < sq.planes; i++) {
-      const offset = (i - (sq.planes - 1) / 2) * AERIAL_TORPEDO_SPREAD;
+      // Each pilot's drop is a little off as well as spread across the formation.
+      const offset = (i - (sq.planes - 1) / 2) * AERIAL_TORPEDO_SPREAD + (Math.random() * 2 - 1) * AERIAL_TORPEDO_ERROR;
       this.weapons.launchProjectile(sq.x, sq.y, aim + offset, this.aerialTorpedo);
     }
     sq.state = SquadronState.Return;

@@ -36,6 +36,7 @@ const L = IS_PORTRAIT
 const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary' }> = [
   { label: '作戦', caption: 'CAMPAIGN', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
   { label: '演習', caption: 'FREE BATTLE', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
+  { label: '史実', caption: 'SCENARIO', scene: SceneKeys.SCENARIO, variant: 'primary' },
   { label: '工廠', caption: 'ARSENAL · 研究', scene: SceneKeys.ARSENAL, variant: 'secondary' },
   { label: '改装', caption: 'REFIT', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
 ];
@@ -117,7 +118,7 @@ export class HomeScene extends Phaser.Scene {
         variant: item.variant,
         width: r.w,
         height: r.h,
-        fontSize: IS_PORTRAIT ? 24 : 30,
+        fontSize: IS_PORTRAIT ? 20 : 26,
         caption: item.caption,
       });
     });

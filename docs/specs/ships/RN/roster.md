@@ -1,21 +1,21 @@
 # Royal Navy (英国海軍) — Ship Roster
 
-Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP 500 / armor 65 / speed 120), not historical units.
+Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP 800 / armor 65 / speed 120), not historical units.
 
 | id | 艦名 | 艦種 | HP | 装甲 | 速力 | 武装 |
 |---|---|---|---|---|---|---|
-| `hood` | フッド (Hood) | Battleship | 450 | 50 | 160 | 15in Mk.I 主砲, 4.5in Mk.I 両用砲 |
-| `king_george_v` | キング・ジョージ5世 (King George V) | Battleship | 460 | 60 | 140 | 14in Mk.VII 4 連装砲, 4.5in Mk.I 両用砲 |
-| `warspite` | ウォースパイト (Warspite) | Battleship | 430 | 56 | 128 | 15in Mk.I 主砲, 6in Mk.XXIII 砲 |
-| `rodney` | ロドニー (Rodney) | Battleship | 470 | 60 | 115 | 16in Mk.I 主砲, 6in Mk.XXIII 砲 |
-| `belfast` | ベルファスト (Belfast) | Cruiser | 255 | 38 | 180 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
-| `southampton` | サウサンプトン (Southampton) | Cruiser | 240 | 36 | 178 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
-| `cossack` | コサック (Cossack) | Destroyer | 140 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
-| `javelin` | ジャベリン (Javelin) | Destroyer | 135 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
-| `illustrious` | イラストリアス (Illustrious) | Carrier | 320 | 40 | 150 | 4.5in Mk.I 両用砲 |
-| `ark_royal` | アーク・ロイヤル (Ark Royal) | Carrier | 310 | 30 | 160 | 4.5in Mk.I 両用砲 |
-| `truant` | トルーアント (Truant) | Submarine | 95 | 6 | 150 | Mk.VIII 魚雷 (潜水艦) |
-| `upholder` | アップホルダー (Upholder) | Submarine | 85 | 5 | 140 | Mk.VIII 魚雷 (潜水艦) |
+| `hood` | フッド (Hood) | Battleship | 720 | 50 | 160 | 15in Mk.I 主砲, 4.5in Mk.I 両用砲 |
+| `king_george_v` | キング・ジョージ5世 (King George V) | Battleship | 735 | 60 | 140 | 14in Mk.VII 4 連装砲, 4.5in Mk.I 両用砲 |
+| `warspite` | ウォースパイト (Warspite) | Battleship | 690 | 56 | 128 | 15in Mk.I 主砲, 6in Mk.XXIII 砲 |
+| `rodney` | ロドニー (Rodney) | Battleship | 750 | 60 | 115 | 16in Mk.I 主砲, 6in Mk.XXIII 砲 |
+| `belfast` | ベルファスト (Belfast) | Cruiser | 410 | 38 | 180 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
+| `southampton` | サウサンプトン (Southampton) | Cruiser | 385 | 36 | 178 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
+| `cossack` | コサック (Cossack) | Destroyer | 225 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
+| `javelin` | ジャベリン (Javelin) | Destroyer | 215 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
+| `illustrious` | イラストリアス (Illustrious) | Carrier | 510 | 40 | 150 | 4.5in Mk.I 両用砲 |
+| `ark_royal` | アーク・ロイヤル (Ark Royal) | Carrier | 495 | 30 | 160 | 4.5in Mk.I 両用砲 |
+| `truant` | トルーアント (Truant) | Submarine | 150 | 6 | 150 | Mk.VIII 魚雷 (潜水艦) |
+| `upholder` | アップホルダー (Upholder) | Submarine | 135 | 5 | 140 | Mk.VIII 魚雷 (潜水艦) |
 
 ## Weapons
 

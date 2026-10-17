@@ -6,7 +6,7 @@ import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
 import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
-import { AISystem, aiSelf, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
+import { AISystem, aiSelf, AUTO_AIM_ERROR, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, TACTICS } from '@/systems/AIBrain';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
@@ -37,7 +37,7 @@ import { WaterSplash } from '@/entities/effects/WaterSplash';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { addChip, addOceanWorld, UIButton } from '@/ui/components/UIKit';
-import { engageSteer, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
+import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
 import { Colors, Css, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
@@ -66,9 +66,12 @@ import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
 import refitsData from '@/data/refits.json';
+import { IScenario } from '@/types/Scenario';
+import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { refitModifiers, refitName, RefitTable } from '@/systems/RefitSystem';
 
 const REFITS = refitsData.classes as RefitTable;
+
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -163,6 +166,9 @@ export class BattleScene extends Phaser.Scene {
   /** Enemy ships the player currently sees */
   private seenByPlayer = new Set<BaseShip>();
   private objective: Objective = Objective.Annihilate;
+  private scenario: IScenario | null = null;
+  private scenarioSetup: IScenarioSetup | null = null;
+  private scenarioTargets: BaseShip[] = [];
   private convoy: BaseShip[] = [];
   private convoyEscaped = 0;
   private landTargets: BaseShip[] = [];
@@ -226,6 +232,7 @@ export class BattleScene extends Phaser.Scene {
     this.convoyEscaped = 0;
     this.landTargets = [];
     this.objectiveText = null;
+    this.scenarioTargets = [];
     this.captains = new Map();
     this.diveBtn = null;
     this.diveText = null;
@@ -267,11 +274,18 @@ export class BattleScene extends Phaser.Scene {
     this.playerRecon = new ReconSystem(this, false);
     this.enemyRecon = new ReconSystem(this, true);
 
-    this.objective = this.battleData?.objective ?? Objective.Annihilate;
+    const sc = this.battleData?.scenario;
+    const scenario = sc ? DataLoader.getScenarios(this).find((s) => s.id === sc.id) : undefined;
+    this.scenario = scenario ?? null;
+    this.scenarioSetup = scenario && sc ? setupFor(scenario, sc.side) : null;
+    this.objective = this.scenarioSetup?.side.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
     if (this.objective === Objective.Convoy) this.spawnConvoy();
     if (this.objective === Objective.Bombard) this.spawnLandTargets();
+    const startAngle = this.scenarioSetup?.player.positions[0]?.angle;
+    if (startAngle !== undefined) for (const s of this.friendlies()) s.setAngle(startAngle);
+    this.drawObjectiveZone();
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, WORLD.w, WORLD.h);
@@ -382,6 +396,24 @@ export class BattleScene extends Phaser.Scene {
   /** Everything on the player's side the enemy can shoot at: warships plus the convoy still at sea. */
   private playerSide(): BaseShip[] {
     return [this.flagship, ...this.escorts, ...this.convoy.filter((c) => c.active)];
+  }
+
+  /** Breakthrough / escape zone of a scenario: a dashed gold ring with its name. */
+  private drawObjectiveZone(): void {
+    const zone = this.scenarioSetup?.side.zone;
+    if (!zone) return;
+    const c = placeAt(zone, WORLD.w, WORLD.h);
+    const r = zoneRadius(zone.r, WORLD.w, WORLD.h);
+    const g = this.add.graphics().setDepth(DEPTH_WATER_FX);
+    g.fillStyle(Colors.gold, 0.06);
+    g.fillCircle(c.x, c.y, r);
+    g.lineStyle(2, Colors.gold, 0.6);
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 18) {
+      g.beginPath();
+      g.arc(c.x, c.y, r, a, a + Math.PI / 36);
+      g.strokePath();
+    }
+    this.add.text(c.x, c.y, zone.label, textStyle(14, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX);
   }
 
   /** Convoy: three merchant ships start on the west edge with the escort fleet beside them. */
@@ -507,6 +539,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** Convoy escorts start beside the convoy on the west edge; everything else from the south. */
   private flagshipSpawn(): { x: number; y: number } {
+    const placed = this.scenarioSetup?.player.positions[0];
+    if (placed) return placeAt(placed, WORLD.w, WORLD.h);
     return this.objective === Objective.Convoy ? { x: CONVOY_START_X + 160, y: WORLD.h / 2 + 260 } : FLAGSHIP_SPAWN;
   }
 
@@ -529,7 +563,8 @@ export class BattleScene extends Phaser.Scene {
     escortSlots.forEach((slot, i) => {
       const escortData = slot.shipData as IShipData;
       const offset = offsets[Math.min(i, offsets.length - 1)];
-      const spawnPos = FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
+      const placed = this.scenarioSetup?.player.positions[i + 1];
+      const spawnPos = placed ? placeAt(placed, WORLD.w, WORLD.h) : FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
       const captain = this.captainFor(slot.slotIndex);
       const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain));
       if (captain) this.captains.set(escort, captain);
@@ -544,14 +579,19 @@ export class BattleScene extends Phaser.Scene {
   private spawnEnemyFleet(fleet: IFleet): void {
     const profile = TACTICS[fleet.nation];
     FleetSystem.getShips(fleet).forEach((shipData, i) => {
-      const pos = ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w / 2, y: ENEMY_TOP };
+        const placed = this.scenarioSetup?.enemy.positions[i];
+      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w / 2, y: ENEMY_TOP };
       const enemy = this.spawnShip(shipData, pos.x, pos.y);
       enemy.setTint(0xdd4444);
-      enemy.setAngle(180);
+      enemy.setAngle(placed ? placed.angle : 180);
       this.enemies.push(enemy);
       this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
       this.enemyRecon.register(enemy);
-      this.aiSystems.push(new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS));
+      const ai = new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS);
+      const side = this.scenarioSetup?.side;
+      if (side?.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
+      if ((side?.targets ?? []).includes(shipData.id)) this.scenarioTargets.push(enemy);
+      this.aiSystems.push(ai);
     });
   }
 
@@ -888,7 +928,7 @@ export class BattleScene extends Phaser.Scene {
   /** Touch / AUTO: every weapon that can engage the target fires on its own. */
   private autoFire(target: BaseShip, enemyView: IShipView[], time: number): void {
     const view = enemyView.find((v) => v.ship === target);
-    if (view) fireAt(this.playerWeapons, this.flagship, view, TACTICS[this.playerNation].torpedoEagerness, time);
+    if (view) fireAt(this.playerWeapons, this.flagship, view, TACTICS[this.playerNation].torpedoEagerness, time, AUTO_AIM_ERROR);
   }
 
   /** Mouse play: the click fires the main gun, secondary guns engage the nearest target on their own. */
@@ -966,8 +1006,17 @@ export class BattleScene extends Phaser.Scene {
     audio.play(kind, Phaser.Math.Distance.Between(x, y, v.centerX, v.centerY));
   }
 
+  /** Damage dealt per weapon id this battle, by side (balance tuning, read by dev smoke tests). */
+  readonly damageLog: Record<'player' | 'enemy', Record<string, number>> = { player: {}, enemy: {} };
+
+  private logDamage(target: BaseShip, weapon: IWeaponData, dmg: number): void {
+    const side = this.enemies.includes(target) ? 'player' : 'enemy';
+    this.damageLog[side][weapon.id] = (this.damageLog[side][weapon.id] ?? 0) + Math.round(dmg);
+  }
+
   /** A hit may knock out a component; show it over the ship. */
   private rollCritical(target: BaseShip, weapon: IWeaponData, dmg: number): void {
+    this.logDamage(target, weapon, dmg);
     if (!target.isAlive) return;
     const crit = rollCriticalHit(weapon.type, dmg, target.stats.maxHp);
     if (!crit) return;
@@ -1015,6 +1064,14 @@ export class BattleScene extends Phaser.Scene {
       } else if (keys.S.isDown) {
         body.setVelocity(-Math.cos(rad) * spd * 0.5, -Math.sin(rad) * spd * 0.5);
       }
+      return;
+    }
+
+    const zone = this.scenarioSetup?.side.zone;
+    if (this.autoMode && zone && this.objective === Objective.Breakthrough) {
+      // Breakthrough: AUTO makes for the zone and fights on the way.
+      const goal = placeAt(zone, WORLD.w, WORLD.h);
+      this.flagship.steer({ headingDeg: headingTo(this.flagship, goal), throttle: 1 }, dtSec, SHIP_ROTATE_SPEED);
       return;
     }
 
@@ -1191,6 +1248,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private objectiveState(): IObjectiveState {
+    const zone = this.scenarioSetup?.side.zone;
     const warships = this.enemies.filter((e) => !e.isLand);
     return {
       flagshipAlive: this.flagship.isAlive,
@@ -1200,6 +1258,11 @@ export class BattleScene extends Phaser.Scene {
       convoyEscaped: this.convoyEscaped,
       convoyLost: this.convoy.filter((c) => c.stats.currentHp <= 0).length,
       landTargetsAlive: this.landTargets.filter((t) => t.isAlive).length,
+      targetsAlive: this.scenarioTargets.filter((t) => t.isAlive).length,
+      flagshipInZone: zone ? inZone(this.flagship.x, this.flagship.y, zone, WORLD.w, WORLD.h) : false,
+      enemyInZone: zone ? this.scenarioTargets.some((t) => t.isAlive && inZone(t.x, t.y, zone, WORLD.w, WORLD.h)) : false,
+      elapsedSec: (this.time.now - this.battleStartedAt) / 1000,
+      timeLimitSec: this.scenarioSetup?.side.timeLimitSec ?? 0,
     };
   }
 
@@ -1249,6 +1312,16 @@ export class BattleScene extends Phaser.Scene {
       planesLost: this.playerAir.totalLost(),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
     });
+    if (this.scenario) {
+      // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over.
+      result.reward = undefined;
+      result.cost = undefined;
+      result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}`;
+      result.returnScene = SceneKeys.SCENARIO;
+      result.retry = this.battleData ?? undefined;
+      this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
+      return;
+    }
     let progress = settlement.progress;
     const proficiency = { ...progress.proficiency };
     for (const s of fleet) {
@@ -1263,8 +1336,10 @@ export class BattleScene extends Phaser.Scene {
       progress = { ...progress, campaign: rec.cleared };
       if (rec.firstClear) progress = { ...progress, resources: addResources(progress.resources, area.reward) };
       result.campaign = `海域攻略: ${area.name}${rec.firstClear ? `  初回報酬 ${formatResources(area.reward)}` : ''}`;
+      result.returnScene = SceneKeys.CAMPAIGN;
     } else if (area) {
       result.campaign = `作戦失敗: ${area.name}`;
+      result.returnScene = SceneKeys.CAMPAIGN;
     }
     saveProgress(progress);
     result.reward = formatResources(settlement.reward);

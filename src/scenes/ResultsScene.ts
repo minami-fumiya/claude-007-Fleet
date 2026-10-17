@@ -9,6 +9,11 @@ import { addBackdrop, addPanel, addStatCard, UIButton } from '@/ui/components/UI
 const CARD_W = IS_PORTRAIT ? 664 : 620;
 const CARD_H = IS_PORTRAIT ? 680 : 560;
 const STAT = IS_PORTRAIT ? { w: 202, h: 104, gap: 12 } : { w: 168, h: 72, gap: 14 };
+const BACK_LABEL: Record<string, string> = {
+  [SceneKeys.HOME]: '鎮守府へ戻る',
+  [SceneKeys.CAMPAIGN]: '作戦地図へ戻る',
+  [SceneKeys.SCENARIO]: 'シナリオ選択へ戻る',
+};
 const REPORT_LINE_H = IS_PORTRAIT ? 34 : 24;
 const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
 
@@ -77,14 +82,14 @@ export class ResultsScene extends Phaser.Scene {
         .setOrigin(0.5, 0);
     });
 
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, '再出撃', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, '再出撃', () => (data?.retry ? this.scene.start(SceneKeys.BATTLE, data.retry) : this.scene.start(SceneKeys.FLEET_BUILDER)), {
       variant: victory ? 'gold' : 'primary',
       width: CARD_W - 96,
       height: BUTTONS.h1,
       fontSize: 22,
       caption: 'RETRY',
     });
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, data?.campaign ? '作戦地図へ戻る' : '鎮守府へ戻る', () => this.scene.start(data?.campaign ? SceneKeys.CAMPAIGN : SceneKeys.HOME), {
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => this.scene.start(data?.returnScene ?? SceneKeys.HOME), {
       variant: 'secondary',
       width: CARD_W - 96,
       height: BUTTONS.h2,

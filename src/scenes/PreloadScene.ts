@@ -18,6 +18,10 @@ import strait from '@/data/maps/strait.json';
 import atoll from '@/data/maps/atoll.json';
 import convoyRoute from '@/data/maps/convoy-route.json';
 
+import midway from '@/data/scenarios/midway.json';
+import leyte from '@/data/scenarios/leyte-gulf.json';
+import bismarck from '@/data/scenarios/bismarck-chase.json';
+
 const MAPS = [openSea, archipelago, strait, atoll, convoyRoute];
 
 export class PreloadScene extends Phaser.Scene {
@@ -35,6 +39,7 @@ export class PreloadScene extends Phaser.Scene {
     this.cache.json.add('captains', captainsData);
     this.cache.json.add('upgrades', upgradesData);
     for (const m of MAPS) this.cache.json.add(`map:${m.id}`, m);
+    this.cache.json.add('scenarios', { scenarios: [midway, leyte, bismarck] });
   }
 
   create(): void {

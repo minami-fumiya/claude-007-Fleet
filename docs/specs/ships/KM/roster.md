@@ -1,20 +1,20 @@
 # Kriegsmarine (ドイツ海軍) — Ship Roster
 
-Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP 500 / armor 65 / speed 120), not historical units.
+Source of truth: `src/data/ships/km.json`. Stats use the game scale (Yamato = HP 800 / armor 65 / speed 120), not historical units.
 
 | id | 艦名 | 艦種 | HP | 装甲 | 速力 | 武装 |
 |---|---|---|---|---|---|---|
-| `bismarck` | ビスマルク (Bismarck) | Battleship | 480 | 62 | 145 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
-| `tirpitz` | ティルピッツ (Tirpitz) | Battleship | 485 | 63 | 143 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
-| `scharnhorst` | シャルンホルスト (Scharnhorst) | Battleship | 400 | 55 | 175 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
-| `gneisenau` | グナイゼナウ (Gneisenau) | Battleship | 400 | 55 | 173 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
-| `prinz_eugen` | プリンツ・オイゲン (Prinz Eugen) | Cruiser | 255 | 41 | 178 | 20.3cm SK C/34 主砲, G7a 魚雷 |
-| `admiral_hipper` | アドミラル・ヒッパー (Admiral Hipper) | Cruiser | 250 | 40 | 176 | 20.3cm SK C/34 主砲, G7a 魚雷 |
-| `z1` | Z1 レーベレヒト・マース (Z1) | Destroyer | 135 | 15 | 235 | 12.7cm SK C/34 砲, G7a 魚雷, 爆雷投射機 |
-| `graf_zeppelin` | グラーフ・ツェッペリン (Graf Zeppelin) | Carrier | 300 | 32 | 150 | 15cm SK C/28 副砲 |
-| `u_boat_viic` | U ボート VIIC 型 (Type VIIC) | Submarine | 85 | 5 | 145 | G7e 魚雷 (潜水艦) |
-| `u_boat_ixc` | U ボート IXC 型 (Type IXC) | Submarine | 95 | 6 | 150 | G7e 魚雷 (潜水艦) |
-| `u_boat_xxi` | U ボート XXI 型 (Type XXI) | Submarine | 100 | 6 | 165 | G7e 魚雷 (潜水艦) |
+| `bismarck` | ビスマルク (Bismarck) | Battleship | 770 | 62 | 145 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `tirpitz` | ティルピッツ (Tirpitz) | Battleship | 775 | 63 | 143 | 38cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `scharnhorst` | シャルンホルスト (Scharnhorst) | Battleship | 640 | 55 | 175 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `gneisenau` | グナイゼナウ (Gneisenau) | Battleship | 640 | 55 | 173 | 28cm SK C/34 主砲, 15cm SK C/28 副砲 |
+| `prinz_eugen` | プリンツ・オイゲン (Prinz Eugen) | Cruiser | 410 | 41 | 178 | 20.3cm SK C/34 主砲, G7a 魚雷 |
+| `admiral_hipper` | アドミラル・ヒッパー (Admiral Hipper) | Cruiser | 400 | 40 | 176 | 20.3cm SK C/34 主砲, G7a 魚雷 |
+| `z1` | Z1 レーベレヒト・マース (Z1) | Destroyer | 215 | 15 | 235 | 12.7cm SK C/34 砲, G7a 魚雷, 爆雷投射機 |
+| `graf_zeppelin` | グラーフ・ツェッペリン (Graf Zeppelin) | Carrier | 480 | 32 | 150 | 15cm SK C/28 副砲 |
+| `u_boat_viic` | U ボート VIIC 型 (Type VIIC) | Submarine | 135 | 5 | 145 | G7e 魚雷 (潜水艦) |
+| `u_boat_ixc` | U ボート IXC 型 (Type IXC) | Submarine | 150 | 6 | 150 | G7e 魚雷 (潜水艦) |
+| `u_boat_xxi` | U ボート XXI 型 (Type XXI) | Submarine | 160 | 6 | 165 | G7e 魚雷 (潜水艦) |
 
 ## Weapons
 

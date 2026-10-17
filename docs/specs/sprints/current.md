@@ -20,10 +20,10 @@
 - [x] テスト
 
 ### C. 史実シナリオ
-- [ ] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
-- [ ] シナリオ読み込み (固定配置・陣営選択・特殊勝利条件: 指定艦の撃沈 / 突入 / 逃走阻止・制限時間)
-- [ ] `src/scenes/ScenarioScene.ts` — シナリオ選択・史実解説
-- [ ] テスト
+- [x] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
+- [x] シナリオ読み込み (固定配置・陣営選択・特殊勝利条件: 指定艦の撃沈 / 突入 / 逃走阻止・制限時間)
+- [x] `src/scenes/ScenarioScene.ts` — シナリオ選択・史実解説
+- [x] テスト
 
 ### D. 図鑑
 - [ ] 全艦に短い史実解説 (`description`)

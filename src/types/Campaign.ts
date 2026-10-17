@@ -10,6 +10,14 @@ export enum Objective {
   Convoy = 'Convoy',
   /** Destroy every shore target */
   Bombard = 'Bombard',
+  /** Sink the listed enemy ships before time runs out */
+  SinkTargets = 'SinkTargets',
+  /** Get the flagship into the objective zone before time runs out */
+  Breakthrough = 'Breakthrough',
+  /** Sink the listed enemy ship before it reaches the zone */
+  PreventEscape = 'PreventEscape',
+  /** Keep the enemy out of the zone until time runs out */
+  Delay = 'Delay',
 }
 
 export interface ICampaignArea {

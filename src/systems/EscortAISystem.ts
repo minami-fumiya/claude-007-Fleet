@@ -3,7 +3,7 @@ import { BaseShip } from '@/entities/ships/BaseShip';
 import { WeaponSystem } from './WeaponSystem';
 import { FormationSystem } from './FormationSystem';
 import { IFormationSlotOffset } from '@/types/Formation';
-import { aiSelf, fireAt, IShipView } from './AISystem';
+import { AI_AIM_ERROR, aiSelf, fireAt, IShipView } from './AISystem';
 import { chooseTarget, isEngageable, ITacticsProfile, TURN_RATE_DEG } from './AIBrain';
 import { headingTo, waypointSteer } from './AutoPilot';
 
@@ -31,7 +31,7 @@ export class EscortAISystem {
     const sub = self.hasDepthCharges ? this.nearbySubmarine(escort, foes) : null;
     if (sub) {
       escort.steer({ headingDeg: headingTo(escort, sub), throttle: 1 }, dtSec, turnRate);
-      fireAt(this.weapons, escort, sub, this.profile.torpedoEagerness, time, 0.05);
+      fireAt(this.weapons, escort, sub, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
       return;
     }
 
@@ -45,7 +45,7 @@ export class EscortAISystem {
     }
 
     const target = chooseTarget(self, foes, this.profile);
-    if (target) fireAt(this.weapons, escort, target, this.profile.torpedoEagerness, time, 0.05);
+    if (target) fireAt(this.weapons, escort, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
   }
 
   private nearbySubmarine(escort: BaseShip, foes: IShipView[]): IShipView | null {

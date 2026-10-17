@@ -40,3 +40,35 @@ describe('ObjectiveSystem', () => {
     expect(objectiveStatus(Objective.Annihilate, base)).toBe('');
   });
 });
+
+describe('scenario objectives', () => {
+  const s = { flagshipAlive: true, enemiesAlive: 3, enemiesTotal: 3, timeLimitSec: 300 };
+
+  it('sink targets before the clock runs out', () => {
+    expect(evaluateObjective(Objective.SinkTargets, { ...s, targetsAlive: 1, elapsedSec: 10 })).toBeNull();
+    expect(evaluateObjective(Objective.SinkTargets, { ...s, targetsAlive: 0, elapsedSec: 10 })).toBe('victory');
+    expect(evaluateObjective(Objective.SinkTargets, { ...s, targetsAlive: 1, elapsedSec: 300 })).toBe('defeat');
+  });
+
+  it('break through to the zone', () => {
+    expect(evaluateObjective(Objective.Breakthrough, { ...s, flagshipInZone: true, elapsedSec: 10 })).toBe('victory');
+    expect(evaluateObjective(Objective.Breakthrough, { ...s, flagshipInZone: false, elapsedSec: 301 })).toBe('defeat');
+  });
+
+  it('prevent the escape of a target', () => {
+    expect(evaluateObjective(Objective.PreventEscape, { ...s, targetsAlive: 1, enemyInZone: true })).toBe('defeat');
+    expect(evaluateObjective(Objective.PreventEscape, { ...s, targetsAlive: 0, elapsedSec: 10 })).toBe('victory');
+    expect(evaluateObjective(Objective.PreventEscape, { ...s, targetsAlive: 1, elapsedSec: 300 })).toBe('defeat');
+  });
+
+  it('delay: hold until time is up or the attacker is sunk', () => {
+    expect(evaluateObjective(Objective.Delay, { ...s, targetsAlive: 1, elapsedSec: 300 })).toBe('victory');
+    expect(evaluateObjective(Objective.Delay, { ...s, targetsAlive: 0, elapsedSec: 10 })).toBe('victory');
+    expect(evaluateObjective(Objective.Delay, { ...s, targetsAlive: 1, enemyInZone: true })).toBe('defeat');
+    expect(evaluateObjective(Objective.Delay, { ...s, targetsAlive: 1, elapsedSec: 10 })).toBeNull();
+  });
+
+  it('shows the time left', () => {
+    expect(objectiveStatus(Objective.SinkTargets, { ...s, targetsAlive: 2, elapsedSec: 100 })).toContain('残り 3:20');
+  });
+});

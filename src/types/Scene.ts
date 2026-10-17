@@ -12,6 +12,8 @@ export interface IBattleInitData {
   mode?: BattleMode;
   weather?: Weather;
   time?: TimeOfDay;
+  /** Historical scenario and the side (index into its `sides`) the player commands */
+  scenario?: { id: string; side: number };
   /** Campaign area this battle is for (absent for free battles) */
   areaId?: string;
   objective?: Objective;
@@ -40,6 +42,10 @@ export interface IBattleResultData {
   /** Resources gained / spent replacing aircraft, already formatted */
   reward?: string;
   cost?: string;
-  /** Campaign line, e.g. "海域攻略: 南洋前哨  初回報酬 …" */
+  /** Campaign / scenario line, e.g. "海域攻略: 南洋前哨  初回報酬 …" */
   campaign?: string;
+  /** Scene the "back" button returns to (default: the home port) */
+  returnScene?: string;
+  /** Battle setup RETRY replays directly (scenarios); absent = back to the Fleet Builder */
+  retry?: IBattleInitData;
 }

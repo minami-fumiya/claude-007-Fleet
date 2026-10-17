@@ -4,7 +4,7 @@ import { ShipClass } from '@/types/ShipClass';
 /** Anti-aircraft guns reach this far from a ship. */
 export const AA_RANGE = 220;
 /** Planes shot down per second by one ship of AA strength 1. */
-export const AA_KILLS_PER_SEC = 0.12;
+export const AA_KILLS_PER_SEC = 0.18;
 
 const AA_STRENGTH: Record<ShipClass, number> = {
   [ShipClass.Battleship]: 1.0,

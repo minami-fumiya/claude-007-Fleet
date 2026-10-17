@@ -5,6 +5,7 @@ import { ShipRegistry } from '@/systems/ShipRegistry';
 import { ICaptainData } from '@/types/Captain';
 import { IUpgradeData } from '@/types/Modifiers';
 import { IMapData } from '@/types/Map';
+import { IScenario } from '@/types/Scenario';
 
 export interface IShipJsonFile {
   ships: IShipData[];
@@ -35,6 +36,10 @@ export class DataLoader {
 
   static getUpgrades(scene: Phaser.Scene): IUpgradeData[] {
     return DataLoader.fromCache<{ upgrades: IUpgradeData[] }>(scene, 'upgrades')?.upgrades ?? [];
+  }
+
+  static getScenarios(scene: Phaser.Scene): IScenario[] {
+    return DataLoader.fromCache<{ scenarios: IScenario[] }>(scene, 'scenarios')?.scenarios ?? [];
   }
 
   static getMap(scene: Phaser.Scene, id: string): IMapData {

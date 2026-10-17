@@ -22,6 +22,10 @@ export const OBJECTIVE_LABEL: Record<Objective, string> = {
   [Objective.Annihilate]: '敵艦隊の殲滅',
   [Objective.Convoy]: '輸送船団の護衛',
   [Objective.Bombard]: '陸上目標の破壊',
+  [Objective.SinkTargets]: '目標艦の撃沈',
+  [Objective.Breakthrough]: '突入',
+  [Objective.PreventEscape]: '脱出の阻止',
+  [Objective.Delay]: '遅滞戦闘',
 };
 
 interface IRect { x: number; y: number; w: number; h: number }

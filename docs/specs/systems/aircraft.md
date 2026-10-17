@@ -11,7 +11,7 @@ Carriers list their planes in the ship JSON:
 | Rule | Value |
 |---|---|
 | Squadron size | up to 3 planes per launch |
-| Re-arm after landing | 12 s |
+| Re-arm after landing | 18 s |
 | Shot-down planes | gone for the battle |
 | Carrier sunk | planes in the air are lost |
 
@@ -19,14 +19,14 @@ Carriers list their planes in the ship JSON:
 | Type | Speed | Role |
 |---|---|---|
 | 戦闘機 Fighter | 320 | CAP: orbits its carrier (r = 130), intercepts raids within 420 px of the carrier, returns after 45 s |
-| 急降下爆撃機 DiveBomber | 250 | Flies over the target; each plane's bomb (`aerial_bomb`, Bomb 75) hits with 55% |
-| 雷撃機 TorpedoBomber | 230 | Releases one `aerial_torpedo` (Torpedo 110) per plane 180 px short, leading the target |
+| 急降下爆撃機 DiveBomber | 250 | Flies over the target; each plane's bomb (`aerial_bomb`, Bomb 65) hits with 55% |
+| 雷撃機 TorpedoBomber | 230 | Releases one `aerial_torpedo` (Torpedo 75) per plane 180 px short, leading the target |
 
 Bombers retarget the nearest visible surface ship if theirs sinks or disappears, else fly home.
 Submerged submarines and ships hidden by fog / off sonar can't be targeted.
 
 ## Air combat (`AirCombat`)
-- **AA**: every surfaced enemy ship within 220 px fires; kills/s = Σ strength × 0.12.
+- **AA**: every surfaced enemy ship within 220 px fires; kills/s = Σ strength × 0.18.
   Strength: Battleship 1.0, Cruiser 0.85, Carrier 0.7, Destroyer 0.6, Submarine 0.1.
 - **Dogfights**: fighters fight planes within 70 px. Kills/s per plane:
   fighter → fighter 0.35, fighter → bomber 0.6, bomber → fighter 0.08 (rear gunners).
