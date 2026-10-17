@@ -195,3 +195,6 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   `page.on('dialog')`. Prefix + base64 save codes survive copy / paste (whitespace is stripped on import).
 - Destructive buttons use a two-press arm that any other action disarms, instead of a blocking `confirm`.
 - Run the check script BEFORE `git add`: it regenerates `fontGlyphs.ts`, and staging first left that change out of a commit.
+- Per-battle state declared with an initialiser (`readonly log = {}`) survives `scene.start` because Phaser reuses
+  the scene instance — clear it in `create()` (this inflated the service record's damage until review caught it).
+- "Exhibition" modes must isolate both ways: skip saving results AND skip loading progress-based modifiers.

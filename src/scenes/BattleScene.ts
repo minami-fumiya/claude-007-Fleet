@@ -223,6 +223,9 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     audio.music('battle');
     this.gameOver = false;
+    // Phaser reuses the scene instance: per-battle logs must be cleared here, not at declaration.
+    this.damageLog.player = {};
+    this.damageLog.enemy = {};
     this.escorts = [];
     this.enemies = [];
     this.aiSystems = [];
@@ -518,6 +521,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** Unlocked upgrades fitted to the ship, finished research and its captain's bonus. */
   private playerModifiers(shipData: IShipData, captain: ICaptain | null): IShipModifiers {
+    // Scenarios are exhibitions: the save's upgrades, research and refits don't apply.
+    if (this.scenario) return captainModifiers(captain);
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
     const fitted = progress.upgrades[shipData.id] ?? [];
@@ -531,6 +536,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** Damage carried over from earlier battles, and the crew's proficiency. */
   private applyStartingDamage(ship: BaseShip): void {
+    // Scenarios start every ship fresh: full HP, green crew, original build.
+    if (this.scenario) return;
     const progress = loadProgress();
     ship.stats.proficiency = progress.proficiency[ship.dataId] ?? 0;
     ship.stats.name = refitName(REFITS, ship.stats.name, ship.stats.shipClass, progress.refits[ship.dataId] ?? 0);

@@ -5,7 +5,8 @@ Implementation: `src/data/scenarios/*.json` (loaded in PreloadScene, cached as `
 
 ## Flow
 鎮守府 → 史実 → pick a scenario and a side → 作戦開始 → battle → results (再戦 / 史実シナリオへ戻る).
-Scenarios are exhibitions: no resources, carried-over damage, captain XP or proficiency change.
+Scenarios are exhibitions, in both directions: ships start fresh (full HP, proficiency 0, no upgrades / research /
+refits; captains still apply), and nothing — resources, damage, captain XP, proficiency, service record — is saved.
 
 ## Data (`IScenario`)
 | Field | Meaning |

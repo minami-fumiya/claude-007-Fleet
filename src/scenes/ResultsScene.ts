@@ -14,7 +14,8 @@ const BACK_LABEL: Record<string, string> = {
   [SceneKeys.CAMPAIGN]: '作戦地図へ戻る',
   [SceneKeys.SCENARIO]: 'シナリオ選択へ戻る',
 };
-const REPORT_LINE_H = IS_PORTRAIT ? 34 : 24;
+/** Landscape: 7 lines (campaign, reward, cost, medals, 3 captains) must still fit in 720 px. */
+const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
 const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
 
 export class ResultsScene extends Phaser.Scene {
