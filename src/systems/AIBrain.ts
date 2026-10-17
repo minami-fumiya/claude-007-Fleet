@@ -63,6 +63,8 @@ export interface IAITarget {
   submerged: boolean;
   /** Visible to this side (always true unless submerged and off sonar) */
   detected: boolean;
+  /** Extra score, e.g. convoy ships the enemy is ordered to sink */
+  priority?: number;
 }
 
 export enum AIMode {
@@ -92,7 +94,7 @@ export function scoreTarget(self: IAISelf, target: IAITarget, profile: ITacticsP
   const weak = 1 - Math.min(1, Math.max(0, target.hpFraction));
   let score = profile.distanceWeight * near + profile.focusWeakWeight * weak + profile.capitalWeight * CLASS_VALUE[target.shipClass];
   if (target.submerged) score += ASW_PRIORITY;
-  return score;
+  return score + (target.priority ?? 0);
 }
 
 /** Best target by score; keeps `current` unless another beats it by SWITCH_MARGIN. */

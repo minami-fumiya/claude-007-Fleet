@@ -165,3 +165,53 @@ export function generateShipTextures(scene: Phaser.Scene, ships: IShipData[]): v
     g.destroy();
   }
 }
+
+/** Merchant ship and shore installations used by the convoy / bombardment operations. */
+export function generateSpecialTextures(scene: Phaser.Scene): void {
+  const make = (key: string, w: number, h: number, draw: (g: Phaser.GameObjects.Graphics) => void): void => {
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+    const g = scene.make.graphics({ x: 0, y: 0 }, false);
+    draw(g);
+    g.generateTexture(key, w, h);
+    g.destroy();
+  };
+  // Freighter: blunt hull, cargo hatches, bridge aft.
+  make('convoy-ship', 18, 54, (g) => {
+    hull(g, 18, 54, 0xc8b89a, 1);
+    g.fillStyle(0x8a7a5e, 1);
+    for (const y of [0.18, 0.32, 0.46]) g.fillRect(4, 54 * y, 10, 5);
+    g.fillStyle(0xe8e2d4, 1);
+    g.fillRoundedRect(4, 54 * 0.62, 10, 8, 2);
+    g.fillStyle(FUNNEL, 1);
+    g.fillRect(7, 54 * 0.78, 4, 4);
+  });
+  // Gun battery: a concrete emplacement with a barrel pointing up (rotates to aim).
+  make('land-battery', 26, 30, (g) => {
+    g.fillStyle(0x8c8c84, 1);
+    g.fillRoundedRect(1, 6, 24, 23, 5);
+    g.lineStyle(1, 0x5a5a54, 1);
+    g.strokeRoundedRect(1, 6, 24, 23, 5);
+    g.fillStyle(0x55554f, 1);
+    g.fillCircle(13, 17, 6);
+    g.lineStyle(3, 0x44443f, 1);
+    g.lineBetween(13, 17, 13, 1);
+  });
+  // Harbour: piers and warehouses.
+  make('land-harbor', 44, 36, (g) => {
+    g.fillStyle(0x9a8f7a, 1);
+    g.fillRect(0, 0, 44, 18);
+    g.fillStyle(0x6e6656, 1);
+    for (const x of [4, 18, 32]) g.fillRect(x, 3, 9, 11);
+    g.fillStyle(0xb8ad96, 1);
+    for (const x of [6, 20, 34]) g.fillRect(x, 18, 4, 18);
+  });
+  // Airfield: a runway with centre-line marks.
+  make('land-airfield', 20, 60, (g) => {
+    g.fillStyle(0x5d5d58, 1);
+    g.fillRect(3, 0, 14, 60);
+    g.lineStyle(1, 0xf0f0e8, 0.9);
+    for (let y = 4; y < 56; y += 8) g.lineBetween(10, y, 10, y + 4);
+    g.fillStyle(0x7a7a72, 1);
+    g.fillRect(0, 24, 3, 12);
+  });
+}

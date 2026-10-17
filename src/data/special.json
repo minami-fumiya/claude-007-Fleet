@@ -1,0 +1,57 @@
+{
+  "convoy": {
+    "id": "convoy_ship",
+    "name": "輸送船",
+    "nation": "IJN",
+    "shipClass": "Cruiser",
+    "hp": 170,
+    "armor": 8,
+    "speed": 75,
+    "weapons": [],
+    "spriteKey": "convoy-ship"
+  },
+  "landTargets": [
+    {
+      "id": "land_battery",
+      "name": "沿岸砲台",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 170,
+      "armor": 45,
+      "speed": 0,
+      "weapons": [
+        "shore_battery"
+      ],
+      "spriteKey": "land-battery"
+    },
+    {
+      "id": "land_harbor",
+      "name": "港湾施設",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 260,
+      "armor": 20,
+      "speed": 0,
+      "weapons": [],
+      "spriteKey": "land-harbor"
+    },
+    {
+      "id": "land_airfield",
+      "name": "飛行場",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 230,
+      "armor": 15,
+      "speed": 0,
+      "weapons": [],
+      "spriteKey": "land-airfield"
+    }
+  ],
+  "bombardLayout": [
+    "land_battery",
+    "land_harbor",
+    "land_battery",
+    "land_airfield",
+    "land_battery"
+  ]
+}

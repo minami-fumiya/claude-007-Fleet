@@ -58,8 +58,12 @@ import { addResources, formatResources } from '@/systems/ResourceSystem';
 import { ITechNode } from '@/types/Progression';
 import techTree from '@/data/tech-tree.json';
 import campaignData from '@/data/campaign.json';
-import { ICampaignData } from '@/types/Campaign';
+import type { ICampaignData } from '@/types/Campaign';
 import { recordClear } from '@/systems/CampaignSystem';
+import { evaluateObjective, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
+import { Objective } from '@/types/Campaign';
+import { Torpedo } from '@/entities/weapons/Torpedo';
+import specialData from '@/data/special.json';
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -95,6 +99,18 @@ const VIEW_INSET = { left: 26, right: CANVAS_W - 26, top: IS_PORTRAIT ? 244 : 96
 const SUBMERGED_ALPHA = 0.45;
 /** One sonar sweep (an expanding ring around each hunter) takes this long. */
 const SONAR_PING_MS = 2200;
+
+/** Convoy route: merchant ships enter on the west edge and escape off the east edge. */
+const CONVOY_START_X = 140;
+const CONVOY_EXIT_MARGIN = 90;
+/** Enemy AI prefers convoy ships over warships by this much. */
+const CONVOY_PRIORITY = 0.6;
+
+interface ISpecialData {
+  convoy: IShipData;
+  landTargets: IShipData[];
+  bombardLayout: string[];
+}
 
 const FALLBACK_WEAPON: IWeaponData = {
   id: 'fallback',
@@ -141,6 +157,11 @@ export class BattleScene extends Phaser.Scene {
   private seenByEnemy = new Set<BaseShip>();
   /** Enemy ships the player currently sees */
   private seenByPlayer = new Set<BaseShip>();
+  private objective: Objective = Objective.Annihilate;
+  private convoy: BaseShip[] = [];
+  private convoyEscaped = 0;
+  private landTargets: BaseShip[] = [];
+  private objectiveText: Phaser.GameObjects.Text | null = null;
   /** Captains in command of player ships this battle */
   private captains = new Map<BaseShip, ICaptain>();
 
@@ -196,6 +217,10 @@ export class BattleScene extends Phaser.Scene {
     this.escortAISystems = [];
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
+    this.convoy = [];
+    this.convoyEscaped = 0;
+    this.landTargets = [];
+    this.objectiveText = null;
     this.captains = new Map();
     this.diveBtn = null;
     this.diveText = null;
@@ -220,7 +245,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemyNation = enemyFleet.nation;
 
     this.playerWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.enemies));
-    this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.friendlies()));
+    this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.playerSide()));
     this.playerWeapons.aimError = this.conditions.aimError;
     this.enemyWeapons.aimError = this.conditions.aimError;
     const bomb = DataLoader.getWeaponById(this, 'aerial_bomb') ?? FALLBACK_WEAPON;
@@ -237,8 +262,11 @@ export class BattleScene extends Phaser.Scene {
     this.playerRecon = new ReconSystem(this, false);
     this.enemyRecon = new ReconSystem(this, true);
 
+    this.objective = this.battleData?.objective ?? Objective.Annihilate;
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
+    if (this.objective === Objective.Convoy) this.spawnConvoy();
+    if (this.objective === Objective.Bombard) this.spawnLandTargets();
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, WORLD.w, WORLD.h);
@@ -251,13 +279,13 @@ export class BattleScene extends Phaser.Scene {
 
     this.fog = new FogOfWar(this, this.conditions.fogColor, this.conditions.fogAlpha);
     this.trails = new ShipTrails(this);
-    for (const s of [...this.friendlies(), ...this.enemies]) this.trails.add(s);
+    for (const s of [...this.playerSide(), ...this.enemies]) this.trails.add(s);
     const mm = IS_PORTRAIT ? { w: 150, x: CANVAS_W - 20 - 150, y: 252 } : { w: 200, x: CANVAS_W - 20 - 200, y: 80 };
     this.minimap = new Minimap(this, mm.x, mm.y, mm.w, WORLD.w, WORLD.h);
     this.minimap.drawIslands(this.map);
     const splashAt = (x: number, y: number): void => {
       // Only splashes the player could see.
-      if (isVisible(x, y, this.visionSources(this.friendlies(), this.playerRecon, this.playerAir))) this.splash.play(x, y, 0.8);
+      if (isVisible(x, y, this.visionSources(this.playerSide(), this.playerRecon, this.playerAir))) this.splash.play(x, y, 0.8);
     };
     this.playerWeapons.onSplash = (x, y) => {
       splashAt(x, y);
@@ -294,9 +322,9 @@ export class BattleScene extends Phaser.Scene {
     const dtSec = delta / 1000;
     this.updateSubmarines(dtSec);
     this.playerRecon.update(time, delta, aaGuns(this.enemies));
-    this.enemyRecon.update(time, delta, aaGuns(this.friendlies()));
+    this.enemyRecon.update(time, delta, aaGuns(this.playerSide()));
     this.updateDetection();
-    const playerView = this.friendlies().map((s) => shipView(s, this.seenByEnemy.has(s)));
+    const playerView = this.playerSide().map((s) => ({ ...shipView(s, this.seenByEnemy.has(s)), priority: s.isConvoy ? CONVOY_PRIORITY : 0 }));
     const enemyView = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
 
     if (!this.isTouch) {
@@ -312,6 +340,7 @@ export class BattleScene extends Phaser.Scene {
     this.autoDepthCharge(enemyView, time);
 
     this.applySea(dtSec);
+    this.updateConvoy(dtSec);
     this.playerWeapons.update(time, delta);
     this.enemyWeapons.update(time, delta);
     this.updateAir(time, delta, playerView, enemyView);
@@ -337,12 +366,66 @@ export class BattleScene extends Phaser.Scene {
     this.drawSonar(time);
     this.drawEdgeMarkers();
     this.trails.update();
-    this.minimap.update(this.friendlies(), this.enemies, this.seenByPlayer);
+    this.minimap.update(this.playerSide(), this.enemies, this.seenByPlayer);
     this.checkWinLoss();
   }
 
   private friendlies(): BaseShip[] {
     return [this.flagship, ...this.escorts];
+  }
+
+  /** Everything on the player's side the enemy can shoot at: warships plus the convoy still at sea. */
+  private playerSide(): BaseShip[] {
+    return [this.flagship, ...this.escorts, ...this.convoy.filter((c) => c.active)];
+  }
+
+  /** Convoy: three merchant ships start on the west edge with the escort fleet beside them. */
+  private spawnConvoy(): void {
+    const data = (specialData as unknown as ISpecialData).convoy as IShipData;
+    for (const dy of [-90, 0, 90]) {
+      const ship = this.spawnShip(data, CONVOY_START_X, WORLD.h / 2 + dy);
+      ship.isConvoy = true;
+      ship.setAngle(90);
+      this.convoy.push(ship);
+    }
+  }
+
+  /** Merchant ships sail east at their own pace; reaching the far edge counts as escaped. */
+  private updateConvoy(dtSec: number): void {
+    for (const ship of this.convoy) {
+      if (!ship.isAlive) continue;
+      if (ship.x >= WORLD.w - CONVOY_EXIT_MARGIN) {
+        this.convoyEscaped++;
+        ship.setActive(false).setVisible(false);
+        (ship.body as Phaser.Physics.Arcade.Body).enable = false;
+        continue;
+      }
+      const s = waypointSteer(ship, { x: WORLD.w, y: ship.y }, 10);
+      if (s) ship.steer({ headingDeg: 90 + (s.headingDeg - 90) * 0.2, throttle: 1 }, dtSec, 40);
+    }
+  }
+
+  /** Bombardment: batteries, a harbour and an airfield spread over the biggest island. */
+  private spawnLandTargets(): void {
+    const island = [...this.map.islands].sort((a, b) => b.reduce((n, c) => n + c.r, 0) - a.reduce((n, c) => n + c.r, 0))[0];
+    if (!island) return;
+    const special = specialData as unknown as ISpecialData;
+    const core = island[0];
+    const spots = special.bombardLayout.map((_, i, all) => {
+      const a = (i / all.length) * Math.PI * 2;
+      return { x: core.x + Math.cos(a) * core.r * 0.55, y: core.y + Math.sin(a) * core.r * 0.55 };
+    });
+    special.bombardLayout.forEach((id, i) => {
+      const data = special.landTargets.find((t) => t.id === id) as IShipData | undefined;
+      if (!data) return;
+      const target = this.spawnShip(data, spots[i].x, spots[i].y, NO_MODIFIERS, false);
+      target.isLand = true;
+      target.setTint(0xffb0a0);
+      (target.body as Phaser.Physics.Arcade.Body).setImmovable(true);
+      this.enemies.push(target);
+      this.landTargets.push(target);
+      this.aiSystems.push(new AISystem(this.enemyWeapons, TACTICS[this.enemyNation], WORLD_BOUNDS));
+    });
   }
 
   /** Uses the Fleet Builder's fleets, or Yamato against a USN surface group when started directly. */
@@ -372,8 +455,8 @@ export class BattleScene extends Phaser.Scene {
     return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
   }
 
-  private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS): BaseShip {
-    const { x, y } = clearSpawn(this.map, wantX, wantY);
+  private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {
+    const { x, y } = avoidLand ? clearSpawn(this.map, wantX, wantY) : { x: wantX, y: wantY };
     const loadout = applyToWeapons(this.loadoutOf(shipData), mods);
     const stats = applyToStats(this.shipDataToStats(shipData, primaryWeapon(loadout)), mods);
     const ship = new BaseShip(this, x, y, shipData.spriteKey, stats);
@@ -413,12 +496,18 @@ export class BattleScene extends Phaser.Scene {
     ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }
 
+  /** Convoy escorts start beside the convoy on the west edge; everything else from the south. */
+  private flagshipSpawn(): { x: number; y: number } {
+    return this.objective === Objective.Convoy ? { x: CONVOY_START_X + 160, y: WORLD.h / 2 + 260 } : FLAGSHIP_SPAWN;
+  }
+
   private spawnPlayerFleet(fleet: IFleet, formation: Formation): void {
     const flagshipData = FleetSystem.getFlagship(fleet);
     if (!flagshipData) return;
 
     const flagCaptain = this.captainFor(fleet.flagshipIndex);
-    this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, this.playerModifiers(flagshipData, flagCaptain));
+    const spawn = this.flagshipSpawn();
+    this.flagship = this.spawnShip(flagshipData, spawn.x, spawn.y, this.playerModifiers(flagshipData, flagCaptain));
     if (flagCaptain) this.captains.set(this.flagship, flagCaptain);
     this.applyStartingDamage(this.flagship);
     this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData));
@@ -431,7 +520,7 @@ export class BattleScene extends Phaser.Scene {
     escortSlots.forEach((slot, i) => {
       const escortData = slot.shipData as IShipData;
       const offset = offsets[Math.min(i, offsets.length - 1)];
-      const spawnPos = FormationSystem.getWorldPositionFromValues(FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, 0, offset);
+      const spawnPos = FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
       const captain = this.captainFor(slot.slotIndex);
       const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain));
       if (captain) this.captains.set(escort, captain);
@@ -476,7 +565,7 @@ export class BattleScene extends Phaser.Scene {
   /** Advances every boat's dive state: the player's wish for the flagship, AI decisions for the rest. */
   private updateSubmarines(dtSec: number): void {
     const playerFoes = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
-    const enemyFoes = this.friendlies().map((s) => shipView(s, this.seenByEnemy.has(s)));
+    const enemyFoes = this.playerSide().map((s) => shipView(s, this.seenByEnemy.has(s)));
     const all: Array<[BaseShip, boolean]> = [
       [this.flagship, this.wantDive],
       ...this.escorts.map((s): [BaseShip, boolean] => [s, this.aiSystemsWantDive(s, playerFoes)]),
@@ -498,13 +587,13 @@ export class BattleScene extends Phaser.Scene {
 
   private hunters(ships: BaseShip[]): ISonarHunter[] {
     return ships
-      .filter((s) => s.isAlive && !s.submerged)
+      .filter((s) => s.isAlive && !s.submerged && !s.isConvoy && !s.isLand)
       .map((s) => ({ x: s.x, y: s.y, sonarRange: sonarRange(s.stats.shipClass) }));
   }
 
   /** Currents push every ship; shoal water slows it. */
   private applySea(dtSec: number): void {
-    for (const ship of [...this.friendlies(), ...this.enemies]) {
+    for (const ship of [...this.playerSide(), ...this.enemies]) {
       if (!ship.isAlive) continue;
       ship.envSpeedMul = this.conditions.speedMul * (inShoal(this.map, ship.x, ship.y) ? SHOAL_SPEED : 1);
       const c = currentAt(this.map, ship.x, ship.y);
@@ -543,9 +632,9 @@ export class BattleScene extends Phaser.Scene {
    * submerged boat only on its sonar. Hidden enemies are not drawn and can't be targeted.
    */
   private updateDetection(): void {
-    const playerHunters = this.hunters(this.friendlies());
+    const playerHunters = this.hunters(this.playerSide());
     const enemyHunters = this.hunters(this.enemies);
-    const playerSight = this.visionSources(this.friendlies(), this.playerRecon, this.playerAir);
+    const playerSight = this.visionSources(this.playerSide(), this.playerRecon, this.playerAir);
     const enemySight = this.visionSources(this.enemies, this.enemyRecon, this.enemyAir);
     this.seenByPlayer.clear();
     this.seenByEnemy.clear();
@@ -554,11 +643,11 @@ export class BattleScene extends Phaser.Scene {
       if (!enemy.isAlive) continue;
       const seen = enemy.submerged
         ? isDetected(enemy, playerHunters)
-        : isVisible(enemy.x, enemy.y, playerSight) || this.flashed(enemy, this.enemyWeapons, this.friendlies());
+        : isVisible(enemy.x, enemy.y, playerSight) || this.flashed(enemy, this.enemyWeapons, this.playerSide());
       if (seen) this.seenByPlayer.add(enemy);
       enemy.setVisible(seen).setAlpha(enemy.submerged ? SUBMERGED_ALPHA : 1);
     }
-    for (const ship of this.friendlies()) {
+    for (const ship of this.playerSide()) {
       if (!ship.isAlive) continue;
       const seen = ship.submerged
         ? isDetected(ship, enemyHunters)
@@ -629,6 +718,13 @@ export class BattleScene extends Phaser.Scene {
     });
     this.muteBtn.setScrollFactor(0).setDepth(DEPTH_HUD + 2);
     this.refreshMute();
+    if (this.objective !== Objective.Annihilate) {
+      this.objectiveText = this.add
+        .text(IS_PORTRAIT ? 20 : 140, IS_PORTRAIT ? 316 : 84, '', textStyle(12, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+        .setOrigin(0, 0.5)
+        .setScrollFactor(0)
+        .setDepth(DEPTH_HUD + 2);
+    }
     const label = `${WEATHER_LABEL[c.weather]}  ·  ${TIME_LABEL[c.time]}`;
     addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
       .setScrollFactor(0)
@@ -669,7 +765,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemyAir.update(
       time,
       delta,
-      { foes: playerView, foeSquadrons: this.playerAir.squadrons, foeGuns: aaGuns(this.friendlies()) },
+      { foes: playerView, foeSquadrons: this.playerAir.squadrons, foeGuns: aaGuns(this.playerSide()) },
       () => true,
       pick(this.enemyNation),
     );
@@ -815,18 +911,19 @@ export class BattleScene extends Phaser.Scene {
 
   private setupOverlaps(): void {
     const enemyObjs = this.enemies as unknown as Phaser.GameObjects.GameObject[];
-    const friendlyObjs = this.friendlies() as unknown as Phaser.GameObjects.GameObject[];
+    const friendlyObjs = this.playerSide() as unknown as Phaser.GameObjects.GameObject[];
     const hit: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p, s) => {
       this.onProjectileHit(p as unknown as BaseProjectile, s as unknown as BaseShip);
     };
     // The projectile arrays grow in place as new projectiles are created, so the colliders keep up.
     this.physics.add.overlap(this.playerWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], enemyObjs, hit);
     this.physics.add.overlap(this.enemyWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], friendlyObjs, hit);
-    // Land stops ships and everything fired at them.
-    this.physics.add.collider([...friendlyObjs, ...enemyObjs], this.islands);
+    // Land stops ships and torpedoes; shells fly over it (so shore targets can be shelled).
+    const ships = [...this.playerSide(), ...this.enemies.filter((e) => !e.isLand)] as unknown as Phaser.GameObjects.GameObject[];
+    this.physics.add.collider(ships, this.islands);
     const intoLand: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p) => {
       const projectile = p as unknown as BaseProjectile;
-      if (!projectile.active) return;
+      if (!projectile.active || !(projectile instanceof Torpedo)) return;
       this.explosion.play(projectile.x, projectile.y);
       projectile.deactivate();
     };
@@ -836,8 +933,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onProjectileHit(projectile: BaseProjectile, target: BaseShip): void {
-    // Shells and torpedoes pass over a submerged boat.
+    // Shells and torpedoes pass over a submerged boat; torpedoes can't reach shore targets.
     if (!projectile.active || !target.isAlive || target.submerged) return;
+    if (target.isLand && projectile instanceof Torpedo) return;
     const weapon = projectile.weapon ?? FALLBACK_WEAPON;
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
     CombatSystem.applyDamage(target, dmg);
@@ -860,7 +958,7 @@ export class BattleScene extends Phaser.Scene {
     if (!crit) return;
     target.criticals = applyCritical(target.criticals, crit, this.time.now);
     if (!target.visible) return;
-    const friendly = this.friendlies().includes(target);
+    const friendly = this.playerSide().includes(target);
     const t = this.add
       .text(target.x, target.y - 30, CRITICAL_LABEL[crit], textStyle(13, friendly ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(0.5)
@@ -1077,14 +1175,25 @@ export class BattleScene extends Phaser.Scene {
     this.aimAngle = angleBetween(this.flagship.x, this.flagship.y, this.aimTarget.x, this.aimTarget.y);
   }
 
+  private objectiveState(): IObjectiveState {
+    const warships = this.enemies.filter((e) => !e.isLand);
+    return {
+      flagshipAlive: this.flagship.isAlive,
+      enemiesAlive: warships.filter((e) => e.isAlive).length,
+      enemiesTotal: warships.length,
+      convoyTotal: this.convoy.length,
+      convoyEscaped: this.convoyEscaped,
+      convoyLost: this.convoy.filter((c) => c.stats.currentHp <= 0).length,
+      landTargetsAlive: this.landTargets.filter((t) => t.isAlive).length,
+    };
+  }
+
   private checkWinLoss(): void {
-    if (!this.flagship.isAlive) {
-      this.triggerGameOver(false);
-      return;
-    }
-    if (this.enemies.length > 0 && this.enemies.every((e) => !e.isAlive)) {
-      this.triggerGameOver(true);
-    }
+    const state = this.objectiveState();
+    const status = objectiveStatus(this.objective, state);
+    if (status && this.objectiveText && this.objectiveText.text !== status) this.objectiveText.setText(status);
+    const outcome = evaluateObjective(this.objective, state);
+    if (outcome) this.triggerGameOver(outcome === 'victory');
   }
 
   /** Gives every captain in the fleet their battle XP and saves it. */

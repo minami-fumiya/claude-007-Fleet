@@ -157,3 +157,14 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   real AUTO battles started through the dev-only `window.game`. Run browser sims one at a time — parallel
   headless browsers starve the CPU and the game runs in slow motion.
 - Always run the full check script before committing (a type error once reached the remote).
+
+### Sprint 8 — Maps, campaign, objectives
+- Map geometry in normalised units (x, y of world size; r of the shorter side) keeps one map file valid for both
+  the landscape and portrait worlds. Tests check that spawn areas stay at sea in both.
+- Islands are Zones with static circle bodies in a StaticGroup; colliders with ship arrays and an overlap that only
+  stops torpedoes (shells "fly over" land so shore targets can be shelled).
+- Currents are applied as a direct position shift (`x += vx·dt`); adding to velocity accumulates because steering
+  and drag rewrite velocity every frame.
+- Win / loss for every objective lives in one pure `evaluateObjective`, which keeps BattleScene's check trivial.
+- Merchant ships / shore targets are `BaseShip`s with flags (`isConvoy`, `isLand`) and data in `special.json`;
+  enemy AI priority comes from a `priority` bonus on the target view.

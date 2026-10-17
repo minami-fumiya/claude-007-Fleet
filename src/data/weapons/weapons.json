@@ -296,6 +296,15 @@
       "range": 460,
       "reloadTime": 950,
       "projectileSpeed": 550
+    },
+    {
+      "id": "shore_battery",
+      "name": "沿岸砲台",
+      "type": "ShellAP",
+      "firePower": 60,
+      "range": 540,
+      "reloadTime": 1700,
+      "projectileSpeed": 560
     }
   ]
 }

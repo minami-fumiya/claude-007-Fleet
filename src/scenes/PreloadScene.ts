@@ -8,7 +8,7 @@ import usnData from '@/data/ships/usn.json';
 import kmData from '@/data/ships/km.json';
 import rnData from '@/data/ships/rn.json';
 import { DataLoader } from '@/utils/DataLoader';
-import { generateShipTextures } from '@/entities/ships/ShipTextures';
+import { generateShipTextures, generateSpecialTextures } from '@/entities/ships/ShipTextures';
 import weaponsData from '@/data/weapons/weapons.json';
 import captainsData from '@/data/captains.json';
 import upgradesData from '@/data/upgrades.json';
@@ -39,6 +39,7 @@ export class PreloadScene extends Phaser.Scene {
 
   create(): void {
     generateShipTextures(this, DataLoader.getRegistry(this).all());
+    generateSpecialTextures(this);
     this.generateShellTexture();
     this.generateSoftTexture();
     this.scene.start(SceneKeys.MAIN_MENU);

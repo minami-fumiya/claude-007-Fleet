@@ -307,17 +307,19 @@
 
 ## Phase 4: 高度機能・拡張
 
-### Sprint 8: 作戦マップ・キャンペーン・特殊モード
+### Sprint 8: 作戦マップ・キャンペーン・特殊モード ✅
 
-- [ ] `src/scenes/CampaignMapScene.ts` — 太平洋 / 大西洋 戦略マップ
-- [ ] `src/data/campaign.json` — 海域定義 (解放条件・敵艦隊構成)
-- [ ] `src/systems/CampaignSystem.ts` — 進行管理・海域ロック / アンロック
-- [ ] 護衛作戦モード: `src/entities/ConvoyShip.ts` + 護衛シナリオ
-- [ ] 砲撃支援モード: `src/entities/LandTarget.ts` (砲台 / 港湾 / 飛行場)
-- [ ] FogOfWar 完全実装 (視界外は不可視)
-- [ ] Tiled マップ対応 (`assets/maps/stage-01.json`) + 島・浅瀬の衝突判定
-- [ ] 潮流ベクトルフィールド (一定方向に艦を押し流す)
-- [ ] develop PR → CI → Vercel Preview → main マージ
+> 詳細: `docs/specs/systems/campaign.md`
+
+- [x] `src/scenes/CampaignMapScene.ts` — 太平洋 / 大西洋 戦略マップ
+- [x] `src/data/campaign.json` — 海域定義 (解放条件・敵艦隊構成・目標・初回報酬)
+- [x] `src/systems/CampaignSystem.ts` — 進行管理・海域ロック / アンロック
+- [x] 護衛作戦モード: 輸送船 (`special.json`) + 護衛シナリオ (`ObjectiveSystem`)
+- [x] 砲撃支援モード: 陸上目標 (砲台 / 港湾 / 飛行場)
+- [x] FogOfWar 完全実装 (Sprint 5 で実装済み)
+- [x] ~~Tiled マップ~~ → 独自 JSON マップ (`src/data/maps/`) + 島・浅瀬の衝突判定
+- [x] 潮流ベクトルフィールド (矩形ゾーン)
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 

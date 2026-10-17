@@ -19,6 +19,10 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   aaMul = 1;
   /** Ship data id (for saving damage after the battle) */
   dataId = '';
+  /** Shore installation: never moves, can't be hit by torpedoes */
+  isLand = false;
+  /** Unarmed merchant ship of an escorted convoy */
+  isConvoy = false;
   /** Sea state (storms slow every ship) */
   envSpeedMul = 1;
   /** Turns a wanted heading away from land (set by the battle when the map has islands) */
