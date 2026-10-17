@@ -90,6 +90,8 @@ export class HUD {
     player: BaseShip,
     enemies: BaseShip[],
     escorts: BaseShip[] = [],
+    /** Name of the weapon whose reload the strip shows */
+    mainWeaponLabel = '主砲',
   ) {
     this.totalEnemies = enemies.length;
 
@@ -104,7 +106,8 @@ export class HUD {
     };
     label(L.hpLabel, IS_PORTRAIT ? `旗艦 · ${player.stats.name}` : `FLAGSHIP · ${player.stats.name}`);
     label(L.sunkLabel, IS_PORTRAIT ? '撃沈' : '撃沈 SUNK');
-    label(L.gunLabel, IS_PORTRAIT ? '主砲' : '主砲 MAIN GUN');
+    const en = mainWeaponLabel === '主砲' ? 'MAIN GUN' : 'TORPEDO';
+    label(L.gunLabel, IS_PORTRAIT ? mainWeaponLabel : `${mainWeaponLabel} ${en}`);
     label(L.timeLabel, 'TIME');
 
     const value = (pos: IPos, size: number, color: string, originX = 0): Phaser.GameObjects.Text =>
@@ -178,7 +181,8 @@ export class HUD {
 
     for (const [ship, bar] of this.enemyBars) {
       const label = this.enemyLabels.get(ship)!;
-      if (ship.active) {
+      // Hidden enemies (submerged boats off sonar) don't give themselves away with a label.
+      if (ship.active && ship.visible) {
         const top = ship.y - hullRadius(ship) - LABEL_GAP;
         bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, top - 7);
         label.setPosition(ship.x, top - 9).setVisible(true);

@@ -5,7 +5,7 @@
  */
 
 /** Seconds a full air supply lasts under water. */
-export const SUBMERGED_ENDURANCE_SEC = 30;
+export const SUBMERGED_ENDURANCE_SEC = 20;
 /** Air refills this many times faster on the surface than it drains under water. */
 export const RECHARGE_RATE = 2;
 /** After running out of air the boat must refill to this level before it can dive again. */

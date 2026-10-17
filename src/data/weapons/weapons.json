@@ -40,9 +40,9 @@
       "id": "type95_torpedo",
       "name": "95式酸素魚雷 (潜水艦)",
       "type": "Torpedo",
-      "firePower": 210,
+      "firePower": 150,
       "range": 380,
-      "reloadTime": 5000,
+      "reloadTime": 8000,
       "projectileSpeed": 270
     },
     {
@@ -50,8 +50,8 @@
       "name": "爆雷投射機",
       "type": "DepthCharge",
       "firePower": 140,
-      "range": 60,
-      "reloadTime": 3000,
+      "range": 80,
+      "reloadTime": 2200,
       "projectileSpeed": 0
     },
     {
@@ -103,9 +103,9 @@
       "id": "mk14_torpedo",
       "name": "Mk.14 魚雷 (潜水艦)",
       "type": "Torpedo",
-      "firePower": 180,
+      "firePower": 130,
       "range": 380,
-      "reloadTime": 5000,
+      "reloadTime": 8000,
       "projectileSpeed": 260
     },
     {
@@ -157,9 +157,9 @@
       "id": "g7e_torpedo",
       "name": "G7e 魚雷 (潜水艦)",
       "type": "Torpedo",
-      "firePower": 170,
+      "firePower": 125,
       "range": 360,
-      "reloadTime": 4800,
+      "reloadTime": 8000,
       "projectileSpeed": 250
     }
   ]

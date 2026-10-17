@@ -132,3 +132,12 @@ export function submarineWantsDive(nearestEnemyDistance: number, air: number, su
   if (nearestEnemyDistance > DIVE_DISTANCE) return false;
   return submerged ? air > SURFACE_AIR : air >= REDIVE_AIR;
 }
+
+/** AI turn rates (deg/s) by class: big ships answer the helm slowly. */
+export const TURN_RATE_DEG: Record<ShipClass, number> = {
+  [ShipClass.Battleship]: 55,
+  [ShipClass.Carrier]: 50,
+  [ShipClass.Cruiser]: 75,
+  [ShipClass.Destroyer]: 110,
+  [ShipClass.Submarine]: 80,
+};

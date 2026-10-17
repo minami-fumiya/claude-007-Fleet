@@ -12,7 +12,7 @@ export interface ISonarHunter extends ISonarContact {
 
 /** Destroyers carry the best sonar, cruisers a short-range set; capital ships and carriers none. */
 const SONAR_RANGE: Record<ShipClass, number> = {
-  [ShipClass.Destroyer]: 300,
+  [ShipClass.Destroyer]: 320,
   [ShipClass.Cruiser]: 180,
   [ShipClass.Battleship]: 0,
   [ShipClass.Carrier]: 0,

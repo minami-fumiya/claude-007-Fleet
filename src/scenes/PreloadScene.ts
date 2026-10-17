@@ -34,6 +34,22 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0xffee88);
     g.fillCircle(3, 3, 3);
     g.generateTexture('shell', 6, 6);
+
+    // Torpedo: points along +x (projectiles rotate to their heading), pale wake trailing behind.
+    g.clear();
+    g.fillStyle(0xd8f4ff, 0.35);
+    g.fillTriangle(0, 3, 12, 1, 12, 5);
+    g.fillStyle(0xf2f6fa, 1);
+    g.fillRoundedRect(10, 1.5, 10, 3, 1.5);
+    g.generateTexture('torpedo', 20, 6);
+
+    // Depth charge: a dark drum with a light rim, seen from above.
+    g.clear();
+    g.fillStyle(0x1c2633, 1);
+    g.fillCircle(5, 5, 4.5);
+    g.lineStyle(1.5, 0xcfe3f2, 0.9);
+    g.strokeCircle(5, 5, 4);
+    g.generateTexture('depth-charge', 10, 10);
     g.destroy();
   }
 

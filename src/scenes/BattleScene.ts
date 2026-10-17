@@ -1,31 +1,37 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, IS_PORTRAIT } from '@/config/GameConstants';
+import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
+import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
+import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
-import { AISystem } from '@/systems/AISystem';
+import { AISystem, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
+import { TACTICS } from '@/systems/AIBrain';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
+import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
+import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
 import { Explosion } from '@/entities/effects/Explosion';
+import { WaterSplash } from '@/entities/effects/WaterSplash';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { addChip, addOceanWorld, UIButton } from '@/ui/components/UIKit';
-import { engageSteer, hitTestTarget, inRange, ISteer, pickTarget, waypointSteer } from '@/systems/AutoPilot';
-import { Colors, Css } from '@/ui/theme';
+import { engageSteer, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
+import { Colors, Css, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
-import { angleBetween, edgePoint, rotateTowardsDegrees } from '@/utils/MathUtils';
+import { angleBetween, edgePoint } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { IFleet } from '@/types/Fleet';
 import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData, IBattleResultData } from '@/types/Scene';
-import { Shell } from '@/entities/weapons/Shell';
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -39,8 +45,11 @@ const WAYPOINT_ARRIVE_RADIUS = 24;
 const AUTO_RANGE_FRACTION = 0.75;
 const AUTO_EDGE_MARGIN = 70;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
+/** Torpedo / dive buttons sit above the bottom-right corner. */
+const ACTION_BUTTON = IS_PORTRAIT ? { w: 172, h: 64, gap: 14, bottom: 120 } : { w: 150, h: 46, gap: 10, bottom: 90 };
 /** The sea is about twice the screen in each direction; the camera follows the flagship. */
 const WORLD = IS_PORTRAIT ? { w: 1440, h: 2240 } : { w: 2400, h: 1440 };
+const WORLD_BOUNDS = { width: WORLD.w, height: WORLD.h };
 const CAMERA_LERP = 0.12;
 // Player fleet starts near the bottom (room behind for escorts in line-ahead), enemies near the top.
 const FLAGSHIP_SPAWN = { x: WORLD.w / 2, y: WORLD.h - 260 };
@@ -53,15 +62,10 @@ const ENEMY_SPAWN_POSITIONS = [
 /** Screen area where enemies count as visible; outside it they get an edge marker. Excludes the HUD strip. */
 const VIEW_INSET = { left: 26, right: CANVAS_W - 26, top: IS_PORTRAIT ? 244 : 96, bottom: CANVAS_H - 26 };
 
-const GENERIC_ENEMY_WEAPON: IWeaponData = {
-  id: 'generic-enemy',
-  name: 'Enemy Gun',
-  type: WeaponType.ShellAP,
-  firePower: 70,
-  range: 450,
-  reloadTime: 2000,
-  projectileSpeed: 500,
-};
+/** Alpha of a submerged boat: own boats stay faintly visible, enemy boats only while on sonar. */
+const SUBMERGED_ALPHA = 0.45;
+/** One sonar sweep (an expanding ring around each hunter) takes this long. */
+const SONAR_PING_MS = 2200;
 
 const FALLBACK_WEAPON: IWeaponData = {
   id: 'fallback',
@@ -79,18 +83,24 @@ export class BattleScene extends Phaser.Scene {
   private flagship!: BaseShip;
   private escorts: BaseShip[] = [];
   private enemies: BaseShip[] = [];
+  private playerNation: Nation = Nation.IJN;
 
+  /** Weapon the player fires by clicking / that the HUD reload meter shows */
   private playerWeapon: IWeaponData = FALLBACK_WEAPON;
-  private escortWeapons: IWeaponData[] = [];
 
-  private playerWeaponSystem!: WeaponSystem;
-  private escortWeaponSystems: WeaponSystem[] = [];
-  private enemyWeaponSystem!: WeaponSystem;
+  private playerWeapons!: WeaponSystem;
+  private enemyWeapons!: WeaponSystem;
 
   private aiSystems: AISystem[] = [];
   private escortAISystems: EscortAISystem[] = [];
 
+  /** Player ships the enemy currently has on sonar (submerged boats only matter) */
+  private seenByEnemy = new Set<BaseShip>();
+  /** Enemy ships the player currently sees */
+  private seenByPlayer = new Set<BaseShip>();
+
   private explosion!: Explosion;
+  private splash!: WaterSplash;
   private hud!: HUD;
 
   private wasd!: {
@@ -108,10 +118,15 @@ export class BattleScene extends Phaser.Scene {
   /** AUTO: the flagship chooses a target, manoeuvres and fires on its own. */
   private autoMode = false;
   private autoBtn!: UIButton;
+  private diveBtn: UIButton | null = null;
+  private diveText: Phaser.GameObjects.Text | null = null;
+  /** The player's wish for a submarine flagship to be submerged */
+  private wantDive = false;
   private lockedTarget: BaseShip | null = null;
   private waypoint: { x: number; y: number } | null = null;
 
   private reticle!: Phaser.GameObjects.Graphics;
+  private sonarRings!: Phaser.GameObjects.Graphics;
   /** Screen-space arrows pointing at enemies outside the camera view */
   private edgeMarkers!: Phaser.GameObjects.Graphics;
   private battleStartedAt = 0;
@@ -133,8 +148,11 @@ export class BattleScene extends Phaser.Scene {
     this.enemies = [];
     this.aiSystems = [];
     this.escortAISystems = [];
-    this.escortWeapons = [];
-    this.escortWeaponSystems = [];
+    this.seenByEnemy = new Set();
+    this.seenByPlayer = new Set();
+    this.diveBtn = null;
+    this.diveText = null;
+    this.wantDive = false;
 
     addOceanWorld(this, WORLD.w, WORLD.h);
     this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
@@ -146,9 +164,10 @@ export class BattleScene extends Phaser.Scene {
     this.waypoint = null;
 
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(DataLoader.getRegistry(this));
+    this.playerNation = playerFleet.nation;
 
-    this.playerWeaponSystem = new WeaponSystem(this);
-    this.enemyWeaponSystem = new WeaponSystem(this);
+    this.playerWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.enemies));
+    this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.friendlies()));
 
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
@@ -158,7 +177,9 @@ export class BattleScene extends Phaser.Scene {
     cam.startFollow(this.flagship, true, CAMERA_LERP, CAMERA_LERP);
 
     this.explosion = new Explosion(this);
-    this.hud = new HUD(this, this.flagship, this.enemies, this.escorts);
+    this.splash = new WaterSplash(this);
+    const torpedoMain = weaponKind(this.playerWeapon) === WeaponKind.Torpedo;
+    this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲');
 
     this.setupInput();
     this.buildOverlayUi();
@@ -176,6 +197,12 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    const dtSec = delta / 1000;
+    this.updateSubmarines(dtSec);
+    this.updateDetection();
+    const playerView = this.friendlies().map((s) => shipView(s, !s.submerged || this.seenByEnemy.has(s)));
+    const enemyView = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
+
     if (!this.isTouch) {
       // Re-project the cursor every frame: the camera moves even when the mouse doesn't.
       const p = this.input.activePointer;
@@ -184,31 +211,37 @@ export class BattleScene extends Phaser.Scene {
     const target = this.currentTarget();
     this.handleMovement(delta, target);
     this.updateAim();
-    if (target && (this.isTouch || this.autoMode)) this.autoFire(target, time);
+    if (target && (this.isTouch || this.autoMode)) this.autoFire(target, enemyView, time);
+    else if (target) this.autoSecondaries(target, enemyView, time);
+    this.autoDepthCharge(enemyView, time);
 
-    this.playerWeaponSystem.update(time, delta);
-    this.enemyWeaponSystem.update(time, delta);
-    for (const ws of this.escortWeaponSystems) ws.update(time, delta);
+    this.playerWeapons.update(time, delta);
+    this.enemyWeapons.update(time, delta);
 
     for (let i = 0; i < this.enemies.length; i++) {
-      if (this.enemies[i].isAlive) {
-        this.aiSystems[i].update(this.enemies[i], this.flagship, time, delta);
-      }
+      const enemy = this.enemies[i];
+      if (enemy.isAlive) this.aiSystems[i].update(enemy, playerView, time, delta);
     }
 
     for (let i = 0; i < this.escorts.length; i++) {
       if (this.escorts[i].isAlive) {
-        this.escortAISystems[i].update(this.escorts[i], this.flagship, this.enemies, time, delta);
+        this.escortAISystems[i].update(this.escorts[i], this.flagship, enemyView, time, delta);
       }
     }
 
     this.hud.update(this.flagship, this.enemies, this.escorts, {
-      reload: this.playerWeaponSystem.reloadProgress(this.flagship, this.playerWeapon, time),
+      reload: this.playerWeapons.reloadProgress(this.flagship, this.playerWeapon, time),
       elapsedSec: (time - this.battleStartedAt) / 1000,
     });
+    this.refreshDiveUi();
     this.drawReticle();
+    this.drawSonar(time);
     this.drawEdgeMarkers();
     this.checkWinLoss();
+  }
+
+  private friendlies(): BaseShip[] {
+    return [this.flagship, ...this.escorts];
   }
 
   /** Uses the Fleet Builder's fleets, or Yamato against a USN surface group when started directly. */
@@ -223,7 +256,7 @@ export class BattleScene extends Phaser.Scene {
       };
     }
     const yamato = registry.byId('yamato') ?? registry.byNation(Nation.IJN)[0];
-    const enemies = generateEnemyFleet(registry, Nation.USN, BattleMode.Surface);
+    const enemies = generateEnemyFleet(registry, Nation.USN, this.battleData?.mode ?? BattleMode.Surface);
     return {
       playerFleet: FleetSystem.createFleet('default', '大和隊', Nation.IJN, [yamato], 0),
       enemyFleet: FleetSystem.createFleet('enemy', 'Enemy', Nation.USN, enemies, 0),
@@ -231,64 +264,48 @@ export class BattleScene extends Phaser.Scene {
     };
   }
 
+  private loadoutOf(shipData: IShipData): IWeaponData[] {
+    const loadout = shipData.weapons
+      .map((id) => DataLoader.getWeaponById(this, id))
+      .filter((w): w is IWeaponData => w !== undefined);
+    return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
+  }
+
+  private spawnShip(shipData: IShipData, x: number, y: number): BaseShip {
+    const loadout = this.loadoutOf(shipData);
+    const ship = new BaseShip(this, x, y, shipData.spriteKey, this.shipDataToStats(shipData, primaryWeapon(loadout)));
+    ship.loadout = loadout;
+    ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
+    (ship.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
+    return ship;
+  }
+
   private spawnPlayerFleet(fleet: IFleet, formation: Formation): void {
     const flagshipData = FleetSystem.getFlagship(fleet);
     if (!flagshipData) return;
 
-    const weapon = DataLoader.getWeaponById(this, flagshipData.weapons[0]) ?? FALLBACK_WEAPON;
-    this.playerWeapon = weapon;
-    this.flagship = new BaseShip(
-      this,
-      FLAGSHIP_SPAWN.x,
-      FLAGSHIP_SPAWN.y,
-      flagshipData.spriteKey,
-      this.shipDataToStats(flagshipData, weapon),
-    );
-    this.flagship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
-    (this.flagship.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
+    this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y);
+    this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
-    const escortDataList = FleetSystem.getEscorts(fleet);
     const offsets = FormationSystem.getOffsets(formation);
-
-    escortDataList.forEach((escortData, i) => {
+    const profile = TACTICS[fleet.nation];
+    FleetSystem.getEscorts(fleet).forEach((escortData, i) => {
       const offset = offsets[Math.min(i, offsets.length - 1)];
       const spawnPos = FormationSystem.getWorldPositionFromValues(FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, 0, offset);
-      const escortWeapon = DataLoader.getWeaponById(this, escortData.weapons[0]) ?? FALLBACK_WEAPON;
-
-      const escort = new BaseShip(
-        this,
-        spawnPos.x,
-        spawnPos.y,
-        escortData.spriteKey,
-        this.shipDataToStats(escortData, escortWeapon),
-      );
-      escort.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
-      (escort.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
-
-      const ws = new WeaponSystem(this);
-      this.escorts.push(escort);
-      this.escortWeapons.push(escortWeapon);
-      this.escortWeaponSystems.push(ws);
-      this.escortAISystems.push(new EscortAISystem(ws, escortWeapon, offset));
+      this.escorts.push(this.spawnShip(escortData, spawnPos.x, spawnPos.y));
+      this.escortAISystems.push(new EscortAISystem(this.playerWeapons, offset, profile));
     });
   }
 
   private spawnEnemyFleet(fleet: IFleet): void {
-    const enemyShips = FleetSystem.getShips(fleet);
-
-    enemyShips.forEach((shipData, i) => {
+    const profile = TACTICS[fleet.nation];
+    FleetSystem.getShips(fleet).forEach((shipData, i) => {
       const pos = ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w / 2, y: ENEMY_TOP };
-      const weapon = DataLoader.getWeaponById(this, shipData.weapons[0]) ?? GENERIC_ENEMY_WEAPON;
-      const stats = this.shipDataToStats(shipData, weapon);
-
-      const enemy = new BaseShip(this, pos.x, pos.y, shipData.spriteKey, stats);
-      enemy.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
+      const enemy = this.spawnShip(shipData, pos.x, pos.y);
       enemy.setTint(0xdd4444);
       enemy.setAngle(180);
-      (enemy.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
-
       this.enemies.push(enemy);
-      this.aiSystems.push(new AISystem(this.enemyWeaponSystem, weapon));
+      this.aiSystems.push(new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS));
     });
   }
 
@@ -304,6 +321,110 @@ export class BattleScene extends Phaser.Scene {
     };
   }
 
+  // -------------------------------------------------------------------------
+  // Submarines and sonar
+  // -------------------------------------------------------------------------
+
+  /** Advances every boat's dive state: the player's wish for the flagship, AI decisions for the rest. */
+  private updateSubmarines(dtSec: number): void {
+    const playerFoes = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
+    const enemyFoes = this.friendlies().map((s) => shipView(s, !s.submerged || this.seenByEnemy.has(s)));
+    const all: Array<[BaseShip, boolean]> = [
+      [this.flagship, this.wantDive],
+      ...this.escorts.map((s): [BaseShip, boolean] => [s, this.aiSystemsWantDive(s, playerFoes)]),
+      ...this.enemies.map((s, i): [BaseShip, boolean] => [s, this.aiSystems[i].wantsDive(s, enemyFoes)]),
+    ];
+    for (const [ship, want] of all) {
+      if (!ship.sub || !ship.isAlive) continue;
+      ship.sub = updateSubmarine(ship.sub, dtSec, want);
+    }
+    if (this.flagship.sub?.forcedSurface) this.wantDive = false;
+  }
+
+  /** Escort boats dive when enemies are near, like enemy boats do. */
+  private aiSystemsWantDive(ship: BaseShip, foes: IShipView[]): boolean {
+    if (!ship.sub) return false;
+    const d = nearestDistance(ship, foes);
+    return d < 750 && (ship.sub.submerged ? ship.sub.air > 0.12 : ship.sub.air >= 0.5);
+  }
+
+  private hunters(ships: BaseShip[]): ISonarHunter[] {
+    return ships
+      .filter((s) => s.isAlive && !s.submerged)
+      .map((s) => ({ x: s.x, y: s.y, sonarRange: sonarRange(s.stats.shipClass) }));
+  }
+
+  /** Who can see whom: surface ships are always visible, submerged boats only on the other side's sonar. */
+  private updateDetection(): void {
+    const playerHunters = this.hunters(this.friendlies());
+    const enemyHunters = this.hunters(this.enemies);
+    this.seenByPlayer.clear();
+    this.seenByEnemy.clear();
+
+    for (const enemy of this.enemies) {
+      if (!enemy.isAlive) continue;
+      const seen = !enemy.submerged || isDetected(enemy, playerHunters);
+      if (seen) this.seenByPlayer.add(enemy);
+      enemy.setVisible(seen).setAlpha(enemy.submerged ? SUBMERGED_ALPHA : 1);
+    }
+    for (const ship of this.friendlies()) {
+      if (!ship.isAlive) continue;
+      if (ship.submerged && isDetected(ship, enemyHunters)) this.seenByEnemy.add(ship);
+      ship.setAlpha(ship.submerged ? SUBMERGED_ALPHA : 1);
+    }
+    if (this.lockedTarget && !this.seenByPlayer.has(this.lockedTarget)) this.lockedTarget = null;
+  }
+
+  /** Expanding sonar rings around player hunters while an enemy boat is submerged. */
+  private drawSonar(time: number): void {
+    const g = this.sonarRings;
+    g.clear();
+    if (!this.enemies.some((e) => e.isAlive && e.submerged)) return;
+    const phase = (time % SONAR_PING_MS) / SONAR_PING_MS;
+    for (const ship of this.friendlies()) {
+      const range = sonarRange(ship.stats.shipClass);
+      if (!ship.isAlive || ship.submerged || range <= 0) continue;
+      g.lineStyle(1.5, Colors.cyan, 0.35 * (1 - phase));
+      g.strokeCircle(ship.x, ship.y, range * phase);
+      g.lineStyle(1, Colors.cyan, 0.12);
+      g.strokeCircle(ship.x, ship.y, range);
+    }
+  }
+
+  private toggleDive(): void {
+    const sub = this.flagship.sub;
+    if (!sub) return;
+    if (!this.wantDive && !canDive(sub)) return;
+    this.wantDive = !this.wantDive;
+  }
+
+  private refreshDiveUi(): void {
+    const sub = this.flagship.sub;
+    if (!sub || !this.diveBtn || !this.diveText) return;
+    this.diveBtn.setLabel(sub.submerged ? '浮上' : '潜航').setVariant(sub.submerged ? 'primary' : 'secondary');
+    this.diveBtn.setEnabled(sub.submerged || canDive(sub));
+    const air = Math.round(sub.air * 100);
+    const state = sub.submerged ? '潜航中' : sub.forcedSurface ? '緊急浮上 · 換気中' : '浮上';
+    this.diveText.setText(`${state}  ·  酸素 ${air}%`).setColor(sub.air < 0.25 ? Css.danger : Css.cyan);
+  }
+
+  /** A depth charge went off: area damage to every ship of the target side in the blast. */
+  private onDepthCharge(x: number, y: number, weapon: IWeaponData, targets: BaseShip[]): void {
+    this.splash.play(x, y);
+    for (const ship of targets) {
+      if (!ship.isAlive) continue;
+      const f = depthChargeFalloff(Phaser.Math.Distance.Between(x, y, ship.x, ship.y), DEPTH_CHARGE_RADIUS);
+      if (f <= 0) continue;
+      const dmg = CombatSystem.calculateDamage(weapon, ship.stats.shipClass, ship.stats.armor) * f;
+      CombatSystem.applyDamage(ship, dmg);
+      this.explosion.play(ship.x, ship.y);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Player input
+  // -------------------------------------------------------------------------
+
   private setupInput(): void {
     this.joystick = this.isTouch ? new VirtualJoystick(this, JOYSTICK_POS.x, JOYSTICK_POS.y, JOYSTICK_RADIUS) : null;
 
@@ -314,6 +435,8 @@ export class BattleScene extends Phaser.Scene {
       S: kb.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+    kb.on('keydown-Q', () => this.toggleDive());
+    kb.on('keydown-E', () => this.fireTorpedoes());
   }
 
   private setupClickFire(): void {
@@ -328,8 +451,18 @@ export class BattleScene extends Phaser.Scene {
       // Mouse: aim tracks the cursor, click fires.
       this.aimTarget = { x: pointer.worldX, y: pointer.worldY };
       this.updateAim();
-      this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
+      if (this.flagship.submerged && weaponKind(this.playerWeapon) !== WeaponKind.Torpedo) return;
+      this.playerWeapons.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
     });
+  }
+
+  /** E / torpedo button: launch every torpedo mount toward the aim point (or the target on touch). */
+  private fireTorpedoes(): void {
+    const torpedoes = this.flagship.loadout.filter((w) => weaponKind(w) === WeaponKind.Torpedo);
+    if (torpedoes.length === 0 || this.gameOver) return;
+    const target = this.isTouch || this.autoMode ? this.currentTarget() : null;
+    const angle = target ? angleBetween(this.flagship.x, this.flagship.y, target.x, target.y) : this.aimAngle;
+    for (const w of torpedoes) this.playerWeapons.fireWeapon(this.flagship, w, angle, this.time.now);
   }
 
   /** Touch: tapping an enemy locks it as the target; tapping open sea sails there (and leaves AUTO). */
@@ -343,8 +476,9 @@ export class BattleScene extends Phaser.Scene {
     if (this.autoMode) this.setAutoMode(false);
   }
 
+  /** Enemies the player can currently see (submerged boats off sonar are not candidates). */
   private targetCandidates(): Array<{ x: number; y: number; alive: boolean; ship: BaseShip }> {
-    return this.enemies.map((ship) => ({ x: ship.x, y: ship.y, alive: ship.isAlive, ship }));
+    return this.enemies.map((ship) => ({ x: ship.x, y: ship.y, alive: ship.isAlive && this.seenByPlayer.has(ship), ship }));
   }
 
   /** The locked enemy while it lives, otherwise the nearest one. */
@@ -355,10 +489,31 @@ export class BattleScene extends Phaser.Scene {
     return pickTarget(this.flagship, candidates, locked)?.ship ?? null;
   }
 
-  private autoFire(target: BaseShip, time: number): void {
-    if (!inRange(this.flagship, target, this.playerWeapon.range)) return;
-    const angle = angleBetween(this.flagship.x, this.flagship.y, target.x, target.y);
-    this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, angle, time);
+  /** Touch / AUTO: every weapon that can engage the target fires on its own. */
+  private autoFire(target: BaseShip, enemyView: IShipView[], time: number): void {
+    const view = enemyView.find((v) => v.ship === target);
+    if (view) fireAt(this.playerWeapons, this.flagship, view, TACTICS[this.playerNation].torpedoEagerness, time);
+  }
+
+  /** Mouse play: the click fires the main gun, secondary guns engage the nearest target on their own. */
+  private autoSecondaries(target: BaseShip, enemyView: IShipView[], time: number): void {
+    const view = enemyView.find((v) => v.ship === target);
+    if (!view || this.flagship.submerged) return;
+    const distance = Phaser.Math.Distance.Between(this.flagship.x, this.flagship.y, target.x, target.y);
+    for (const w of this.flagship.loadout) {
+      if (w === this.playerWeapon || weaponKind(w) !== WeaponKind.Gun || distance > w.range) continue;
+      this.playerWeapons.fireWeapon(this.flagship, w, angleBetween(this.flagship.x, this.flagship.y, target.x, target.y), time);
+    }
+  }
+
+  /** Depth charges always roll automatically when the flagship passes over a detected boat. */
+  private autoDepthCharge(enemyView: IShipView[], time: number): void {
+    for (const v of enemyView) {
+      if (!v.alive || !v.detected || !v.submerged) continue;
+      const distance = Phaser.Math.Distance.Between(this.flagship.x, this.flagship.y, v.x, v.y);
+      const charges = selectWeapons(this.flagship.loadout, { distance, targetSubmerged: true, shooterSubmerged: this.flagship.submerged });
+      for (const w of charges) this.playerWeapons.fireWeapon(this.flagship, w, 0, time);
+    }
   }
 
   private setAutoMode(on: boolean): void {
@@ -369,42 +524,23 @@ export class BattleScene extends Phaser.Scene {
 
   private setupOverlaps(): void {
     const enemyObjs = this.enemies as unknown as Phaser.GameObjects.GameObject[];
-    const friendlyObjs = [this.flagship, ...this.escorts] as unknown as Phaser.GameObjects.GameObject[];
-
-    this.physics.add.overlap(
-      this.playerWeaponSystem.shells as unknown as Phaser.GameObjects.GameObject[],
-      enemyObjs,
-      (shellObj, enemyObj) => {
-        this.onShellHit(shellObj as Shell, enemyObj as BaseShip, this.playerWeapon);
-      },
-    );
-
-    this.escortWeaponSystems.forEach((ws, i) => {
-      const weapon = this.escortWeapons[i];
-      this.physics.add.overlap(
-        ws.shells as unknown as Phaser.GameObjects.GameObject[],
-        enemyObjs,
-        (shellObj, enemyObj) => {
-          this.onShellHit(shellObj as Shell, enemyObj as BaseShip, weapon);
-        },
-      );
-    });
-
-    this.physics.add.overlap(
-      this.enemyWeaponSystem.shells as unknown as Phaser.GameObjects.GameObject[],
-      friendlyObjs,
-      (shellObj, friendlyObj) => {
-        this.onShellHit(shellObj as Shell, friendlyObj as BaseShip, GENERIC_ENEMY_WEAPON);
-      },
-    );
+    const friendlyObjs = this.friendlies() as unknown as Phaser.GameObjects.GameObject[];
+    const hit: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p, s) => {
+      this.onProjectileHit(p as unknown as BaseProjectile, s as unknown as BaseShip);
+    };
+    // The projectile arrays grow in place as new projectiles are created, so the colliders keep up.
+    this.physics.add.overlap(this.playerWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], enemyObjs, hit);
+    this.physics.add.overlap(this.enemyWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], friendlyObjs, hit);
   }
 
-  private onShellHit(shell: Shell, target: BaseShip, weapon: IWeaponData): void {
-    if (!shell.active || !target.isAlive) return;
+  private onProjectileHit(projectile: BaseProjectile, target: BaseShip): void {
+    // Shells and torpedoes pass over a submerged boat.
+    if (!projectile.active || !target.isAlive || target.submerged) return;
+    const weapon = projectile.weapon ?? FALLBACK_WEAPON;
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
     CombatSystem.applyDamage(target, dmg);
-    shell.deactivate();
-    this.explosion.play(shell.x, shell.y);
+    projectile.deactivate();
+    this.explosion.play(projectile.x, projectile.y);
   }
 
   /**
@@ -414,14 +550,14 @@ export class BattleScene extends Phaser.Scene {
   private handleMovement(delta: number, target: BaseShip | null): void {
     const body = this.flagship.body as Phaser.Physics.Arcade.Body;
     const dtSec = delta / 1000;
-    const spd = this.flagship.stats.speed;
+    const spd = this.flagship.currentSpeed;
 
     const stick = this.joystick?.value;
     if (stick && stick.magnitude > 0) {
       // Touch: steer toward the stick direction, throttle by how far it is pushed.
       this.waypoint = null;
       const targetDeg = Phaser.Math.RadToDeg(Math.atan2(stick.y, stick.x)) + 90;
-      this.steer({ headingDeg: targetDeg, throttle: stick.magnitude }, dtSec);
+      this.flagship.steer({ headingDeg: targetDeg, throttle: stick.magnitude }, dtSec, SHIP_ROTATE_SPEED);
       return;
     }
 
@@ -444,14 +580,14 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.autoMode && target) {
       const range = this.playerWeapon.range * AUTO_RANGE_FRACTION;
-      this.steer(engageSteer(this.flagship, target, range, { width: WORLD.w, height: WORLD.h }, AUTO_EDGE_MARGIN), dtSec);
+      this.flagship.steer(engageSteer(this.flagship, target, range, WORLD_BOUNDS, AUTO_EDGE_MARGIN), dtSec, SHIP_ROTATE_SPEED);
       return;
     }
 
     if (this.waypoint) {
       const s = waypointSteer(this.flagship, this.waypoint, WAYPOINT_ARRIVE_RADIUS);
       if (s) {
-        this.steer(s, dtSec);
+        this.flagship.steer(s, dtSec, SHIP_ROTATE_SPEED);
         return;
       }
       this.waypoint = null;
@@ -460,14 +596,9 @@ export class BattleScene extends Phaser.Scene {
     body.setVelocity(body.velocity.x * (1 - 5 * dtSec), body.velocity.y * (1 - 5 * dtSec));
   }
 
-  /** Turns toward the requested heading at the ship's turn rate and moves along its current bow. */
-  private steer(s: ISteer, dtSec: number): void {
-    const body = this.flagship.body as Phaser.Physics.Arcade.Body;
-    const spd = this.flagship.stats.speed * s.throttle;
-    this.flagship.angle = rotateTowardsDegrees(this.flagship.angle, s.headingDeg, SHIP_ROTATE_SPEED * dtSec);
-    const heading = Phaser.Math.DegToRad(this.flagship.angle - 90);
-    body.setVelocity(Math.cos(heading) * spd, Math.sin(heading) * spd);
-  }
+  // -------------------------------------------------------------------------
+  // Overlay UI
+  // -------------------------------------------------------------------------
 
   private buildOverlayUi(): void {
     const b = TOP_BUTTON;
@@ -486,13 +617,42 @@ export class BattleScene extends Phaser.Scene {
     });
     this.autoBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
 
+    this.buildActionButtons();
+
     if (this.isTouch) {
       const hint = addChip(this, 0, CANVAS_H - 36, '敵をタップ: 目標  /  海をタップ: 移動', Colors.cyan, Css.cyan);
       hint.setX(CANVAS_W - 20 - hint.getBounds().width).setDepth(DEPTH_HUD).setScrollFactor(0);
     }
 
+    this.sonarRings = this.add.graphics().setDepth(DEPTH_WATER_FX);
     this.reticle = this.add.graphics().setDepth(DEPTH_HUD - 1);
     this.edgeMarkers = this.add.graphics().setDepth(DEPTH_HUD - 1).setScrollFactor(0);
+  }
+
+  /** Torpedo button when the flagship carries torpedoes, dive button and air readout for a submarine. */
+  private buildActionButtons(): void {
+    const a = ACTION_BUTTON;
+    const x = CANVAS_W - 20 - a.w / 2;
+    let y = CANVAS_H - a.bottom - a.h / 2;
+    const keyHint = !this.isTouch;
+    const opts = { variant: 'secondary' as const, width: a.w, height: a.h, fontSize: 15 };
+
+    if (this.flagship.loadout.some((w) => weaponKind(w) === WeaponKind.Torpedo)) {
+      new UIButton(this, x, y, keyHint ? '魚雷  [E]' : '魚雷', () => this.fireTorpedoes(), opts)
+        .setDepth(DEPTH_HUD + 2)
+        .setScrollFactor(0);
+      y -= a.h + a.gap;
+    }
+    if (this.flagship.sub) {
+      this.diveBtn = new UIButton(this, x, y, '潜航', () => this.toggleDive(), opts);
+      this.diveBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
+      this.diveText = this.add
+        .text(x + a.w / 2, y - a.h / 2 - 8, '', textStyle(12, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+        .setOrigin(1, 1)
+        .setDepth(DEPTH_HUD + 2)
+        .setScrollFactor(0);
+      if (keyHint) this.diveBtn.setLabel('潜航  [Q]');
+    }
   }
 
   /** Red arrows on the screen border pointing at enemies the camera can't see. */
@@ -502,7 +662,7 @@ export class BattleScene extends Phaser.Scene {
     const view = this.cameras.main.worldView;
     const size = IS_PORTRAIT ? 18 : 13;
     for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
+      if (!enemy.isAlive || !this.seenByPlayer.has(enemy)) continue;
       const edge = edgePoint(enemy.x - view.x, enemy.y - view.y, VIEW_INSET);
       if (!edge) continue;
       const { x, y, angle } = edge;
@@ -521,7 +681,7 @@ export class BattleScene extends Phaser.Scene {
   private drawReticle(): void {
     const g = this.reticle;
     g.clear();
-    const ready = this.playerWeaponSystem.reloadProgress(this.flagship, this.playerWeapon, this.time.now) >= 1;
+    const ready = this.playerWeapons.reloadProgress(this.flagship, this.playerWeapon, this.time.now) >= 1;
 
     if (!this.isTouch) {
       const { x, y } = this.aimTarget;
@@ -582,7 +742,7 @@ export class BattleScene extends Phaser.Scene {
   private triggerGameOver(victory: boolean): void {
     if (this.gameOver) return;
     this.gameOver = true;
-    const fleet = [this.flagship, ...this.escorts];
+    const fleet = this.friendlies();
     const result: IBattleResultData = {
       victory,
       score: 0,
