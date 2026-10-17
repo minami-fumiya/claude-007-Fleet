@@ -10,8 +10,9 @@ import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { Explosion } from '@/entities/effects/Explosion';
 import { HUD } from '@/ui/HUD';
+import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { DataLoader } from '@/utils/DataLoader';
-import { angleBetween } from '@/utils/MathUtils';
+import { angleBetween, rotateTowardsDegrees } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { IFleet } from '@/types/Fleet';
@@ -23,6 +24,7 @@ import { Shell } from '@/entities/weapons/Shell';
 type BattleInitData = IBattleInitData & { formation?: Formation };
 
 const SHIP_ROTATE_SPEED = 120;
+const JOYSTICK_POS = { x: 150, y: CANVAS_H - 150 };
 const FLAGSHIP_SPAWN = { x: CANVAS_W / 2, y: CANVAS_H - 150 };
 const ENEMY_SPAWN_POSITIONS = [
   { x: 160, y: 120 },
@@ -76,6 +78,9 @@ export class BattleScene extends Phaser.Scene {
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
   };
+
+  private joystick: VirtualJoystick | null = null;
+  private aimTarget = { x: CANVAS_W / 2, y: 0 };
 
   private aimAngle = 0;
   private gameOver = false;
@@ -243,6 +248,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setupInput(): void {
+    this.joystick = this.sys.game.device.input.touch
+      ? new VirtualJoystick(this, JOYSTICK_POS.x, JOYSTICK_POS.y)
+      : null;
+
     const kb = this.input.keyboard!;
     this.wasd = {
       W: kb.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -253,10 +262,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setupClickFire(): void {
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.wasTouch) this.aimTarget = { x: pointer.x, y: pointer.y };
+    });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown()) {
-        this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
-      }
+      if (this.joystick?.owns(pointer)) return;
+      if (!pointer.wasTouch && !pointer.leftButtonDown()) return;
+      // Touch: tap location is the aim point. Mouse: aim tracks the cursor.
+      this.aimTarget = { x: pointer.x, y: pointer.y };
+      this.updateAim();
+      this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
     });
   }
 
@@ -305,6 +320,16 @@ export class BattleScene extends Phaser.Scene {
     const dtSec = delta / 1000;
     const spd = this.flagship.stats.speed;
 
+    const stick = this.joystick?.value;
+    if (stick && stick.magnitude > 0) {
+      // Touch: steer toward the stick direction, throttle by how far it is pushed.
+      const targetDeg = Phaser.Math.RadToDeg(Math.atan2(stick.y, stick.x)) + 90;
+      this.flagship.angle = rotateTowardsDegrees(this.flagship.angle, targetDeg, SHIP_ROTATE_SPEED * dtSec);
+      const heading = Phaser.Math.DegToRad(this.flagship.angle - 90);
+      body.setVelocity(Math.cos(heading) * spd * stick.magnitude, Math.sin(heading) * spd * stick.magnitude);
+      return;
+    }
+
     if (this.wasd.A.isDown) {
       this.flagship.angle -= SHIP_ROTATE_SPEED * dtSec;
     } else if (this.wasd.D.isDown) {
@@ -322,8 +347,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private updateAim(): void {
-    const pointer = this.input.activePointer;
-    this.aimAngle = angleBetween(this.flagship.x, this.flagship.y, pointer.x, pointer.y);
+    this.aimAngle = angleBetween(this.flagship.x, this.flagship.y, this.aimTarget.x, this.aimTarget.y);
   }
 
   private checkWinLoss(): void {
