@@ -5,6 +5,7 @@ export const SceneKeys = {
   FLEET_BUILDER: 'FleetBuilderScene',
   BATTLE: 'BattleScene',
   RESULTS: 'ResultsScene',
+  CUSTOMIZATION: 'CustomizationScene',
   HOME: 'HomeScene',
 } as const;
 

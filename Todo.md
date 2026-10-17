@@ -232,42 +232,41 @@
 
 ---
 
-### Sprint 5: Royal Navy・カスタマイズ・艦長・艦載機
+### Sprint 5: Royal Navy・カスタマイズ・艦長・艦載機 ✅
 
-#### Royal Navy データ (`src/data/ships/royal-navy.json`)
-- [ ] 戦艦: Hood / King George V / Warspite / Rodney 等
-- [ ] 巡洋艦: Belfast / Southampton 等
-- [ ] 駆逐艦: Tribal 級 / J 級 等
-- [ ] 空母: Illustrious / Ark Royal 等
-- [ ] 潜水艦: T 級 / U 級 等
-- [ ] `docs/specs/ships/RoyalNavy/` 仕様書
+> 詳細: `docs/specs/sprints/current.md`
+
+#### Royal Navy データ (`src/data/ships/rn.json`)
+- [x] 戦艦: Hood / King George V / Warspite / Rodney
+- [x] 巡洋艦: Belfast / Southampton
+- [x] 駆逐艦: Tribal 級 (Cossack) / J 級 (Javelin)
+- [x] 空母: Illustrious / Ark Royal
+- [x] 潜水艦: T 級 (Truant) / U 級 (Upholder)
+- [x] `docs/specs/ships/RN/` 仕様書
 
 #### カスタマイズシステム
-- [ ] `src/systems/CustomizationSystem.ts` — スロット管理・ステータス再計算
-- [ ] `src/scenes/CustomizationScene.ts`
-- [ ] `src/ui/CustomizationPanel.ts` — スロット UI・装備選択
-- [ ] `docs/specs/systems/customization.md`
+- [x] `src/systems/CustomizationSystem.ts` — スロット管理・ステータス再計算
+- [x] `src/scenes/CustomizationScene.ts` (パネル UI はシーン内に実装)
+- [x] `docs/specs/systems/customization.md`
 
 #### 艦長システム
-- [ ] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill` enum
-- [ ] `src/systems/CaptainSystem.ts` — 任命 / スキル3種 / 経験値・レベルアップ
-- [ ] `docs/specs/systems/captain.md`
+- [x] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill` enum
+- [x] `src/systems/CaptainSystem.ts` — 任命 / スキル3種 / 経験値・レベルアップ
+- [x] `docs/specs/systems/captain.md`
 
 #### 艦載機システム
-- [ ] `src/types/Aircraft.ts` — `AircraftType` enum (Fighter / DiveBomber / TorpedoBomber)
-- [ ] `src/entities/aircraft/BaseAircraft.ts`
-- [ ] `src/entities/aircraft/Fighter.ts` — 制空権確保・敵機迎撃
-- [ ] `src/entities/aircraft/DiveBomber.ts` — 急降下爆撃
-- [ ] `src/entities/aircraft/TorpedoBomber.ts` — 低空雷撃
-- [ ] `Carrier.ts` に発艦 / 着艦メソッド追加
-- [ ] `docs/specs/systems/aircraft.md`
+- [x] `src/types/Aircraft.ts` — `AircraftType` enum (Fighter / DiveBomber / TorpedoBomber / Recon)
+- [x] `src/entities/aircraft/Squadron.ts` — 編隊 (機種ごとのクラスではなく編隊 1 クラスで実装)
+- [x] 戦闘機 (直掩・迎撃) / 急降下爆撃 / 雷撃 — `AirOpsSystem.ts`
+- [x] 空母の発艦 / 着艦・再装備 — `AirWingSystem.ts`
+- [x] `docs/specs/systems/aircraft.md`
 
 #### 航空偵察機
-- [ ] `src/entities/aircraft/Recon.ts` — 水上機・扇形索敵範囲
-- [ ] FogOfWar 実装 (RenderTexture マスク)
+- [x] 水上偵察機 (`ReconSystem.ts`)・扇形索敵範囲 (`VisionSystem.ts`)
+- [x] FogOfWar 実装 (RenderTexture マスク、`ui/FogOfWar.ts`)
 
 #### Sprint 5 完了処理
-- [ ] develop PR → CI → Vercel Preview → main マージ
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 

@@ -124,3 +124,16 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Playwright smoke tests: map game coordinates to the canvas bounding box; `?layout=portrait` plus
   `hasTouch` for the phone UI. Mouse-wheel scrolling in the portrait Fleet Builder is not pixel-predictable.
 - Long ship names: `fitName()` in FleetBuilderScene drops the "(English)" part, then scales the text down.
+
+### Sprint 5 — Aircraft, fog of war, captains, refits
+- Aircraft are squadrons (one Container of plane icons), not physics bodies; AA and dogfights are fractional
+  "damage" accumulators (`applyAttrition`) so losses are smooth and testable without randomness.
+- Two `AirOpsSystem`s (one per side) read each other's `squadrons` arrays for interception; each side's
+  cleanup writes off its own shot-down planes, so no cross-system bookkeeping is needed.
+- Fog of war: a screen-sized RenderTexture filled dark each frame, with a soft radial brush `erase`d per vision
+  circle and a Graphics polygon erased for recon cones. Hidden enemies use `setVisible(false)`, and HUD labels
+  check `ship.visible`.
+- AUTO and AI need something to do when nothing is visible: both patrol towards the middle of the sea.
+- Stat changes from upgrades and captains go through one `IShipModifiers` object applied at spawn
+  (`applyToStats` / `applyToWeapons`), keeping BattleScene ignorant of where bonuses come from.
+- localStorage access is wrapped in try/catch with an in-memory fallback (`ProgressStore`).

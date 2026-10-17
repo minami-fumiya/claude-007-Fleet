@@ -7,6 +7,9 @@ import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
+import { ICaptain, ICaptainData } from '@/types/Captain';
+import { SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
+import { loadProgress } from '@/utils/ProgressStore';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
@@ -48,7 +51,9 @@ interface IBuilderLayout {
 const PAGE_SIZE = 6;
 const P_SHIP_ITEM_H = 120;
 const P_TAB_H = 64;
-const P_SHIPS_Y = 618;
+const P_SLOT_H = 150;
+const P_FLEET_H = 84 + 3 * P_SLOT_H + 2 * 10 + 14;
+const P_SHIPS_Y = HEADER_BAR_H + 12 + P_FLEET_H + 16;
 const P_SHIPS_H = 84 + P_TAB_H + 12 + PAGE_SIZE * P_SHIP_ITEM_H + (PAGE_SIZE - 1) * 8 + 14;
 const P_FORMATIONS_Y = P_SHIPS_Y + P_SHIPS_H + 18;
 const P_FORMATIONS_H = 84 + 180 + 14;
@@ -60,8 +65,8 @@ const P_ENEMY_Y = P_FORMATIONS_Y + P_FORMATIONS_H + 18;
  */
 const LAYOUT: IBuilderLayout = IS_PORTRAIT
   ? {
-      fleet: { x: 16, y: HEADER_BAR_H + 12, w: CANVAS_W - 32, h: 84 + 3 * 116 + 2 * 10 + 14 },
-      slotH: 116,
+      fleet: { x: 16, y: HEADER_BAR_H + 12, w: CANVAS_W - 32, h: P_FLEET_H },
+      slotH: P_SLOT_H,
       ships: { x: 16, y: P_SHIPS_Y, w: CANVAS_W - 32, h: P_SHIPS_H },
       shipItemH: P_SHIP_ITEM_H,
       tabH: P_TAB_H,
@@ -124,13 +129,14 @@ const MODE_LABEL: Record<BattleMode, string> = {
 };
 
 /** Last Fleet Builder setup, kept in the game registry so RETRY / 撤退 come back to the same fleet. */
-const SELECTION_KEY = 'fleetBuilder.selection';
-interface ISelection {
+export const SELECTION_KEY = 'fleetBuilder.selection';
+export interface ISelection {
   nation: Nation;
   enemyNation: Nation;
   mode: BattleMode;
   formation: Formation;
   slotIds: (string | null)[];
+  captainIds?: (string | null)[];
 }
 
 interface ISlotView {
@@ -145,6 +151,9 @@ export class FleetBuilderScene extends Phaser.Scene {
   private slots: (IShipData | null)[] = [null, null, null];
   private formation: Formation = Formation.LineAhead;
   private nation: Nation = Nation.IJN;
+  /** Captain id assigned to each slot */
+  private captainIds: (string | null)[] = [null, null, null];
+  private captainData: ICaptainData[] = [];
   private enemyNation: Nation = Nation.USN;
   private mode: BattleMode = BattleMode.Surface;
 
@@ -183,6 +192,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       return id ? this.shipRegistry.byId(id) ?? null : null;
     });
     this.formation = saved?.formation ?? Formation.LineAhead;
+    this.captainData = DataLoader.getCaptains(this);
+    this.captainIds = [0, 1, 2].map((i) => saved?.captainIds?.[i] ?? null);
     this.slotViews = [];
     this.formationFrames = [];
     this.shipCards = [];
@@ -205,6 +216,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.buildHeader();
     this.buildPanelFrame(LAYOUT.ships, 'AVAILABLE SHIPS', '利用可能な艦');
     this.buildPanelFrame(LAYOUT.fleet, 'YOUR FLEET', '艦隊編成');
+    this.buildRefitButton();
     this.buildPanelFrame(LAYOUT.formations, 'FORMATION', '陣形');
     this.buildPanelFrame(LAYOUT.enemy, 'OPPONENT', '交戦相手');
     this.buildNationTabs();
@@ -366,6 +378,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.nation = nation;
     this.ships = this.shipRegistry.byNation(nation);
     this.slots = [null, null, null];
+    this.captainIds = [null, null, null];
     this.page = 0;
     FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(nation));
     this.rebuildShipList();
@@ -615,6 +628,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private removeShipFromSlot(index: number): void {
     this.slots[index] = null;
+    this.captainIds[index] = null;
     this.refresh();
   }
 
@@ -659,21 +673,34 @@ export class FleetBuilderScene extends Phaser.Scene {
       view.emptyLabel.setVisible(false);
 
       const nameX = compact ? 124 : 100;
-      const nameText = this.add.text(nameX, compact ? h * 0.3 : 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' }));
+      const nameText = this.add.text(nameX, compact ? h * 0.24 : 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' }));
       // Leave room for the remove button on the right.
       fitName(nameText, ship.name, w - nameX - (compact ? 84 : 64));
       const parts: Phaser.GameObjects.GameObject[] = compact
         ? [
             this.addShipIcon(62, h * 0.6, ship.spriteKey, 88, 1.3),
             nameText,
-            this.add.text(124, h * 0.64, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
+            this.add.text(124, h * 0.5, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
           ]
         : [
             this.addShipIcon(54, 78, ship.spriteKey, 76, 1.3),
             nameText,
             this.add.text(100, 74, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
-            this.add.text(100, 98, ship.weapons.join(' · '), textStyle(11, Css.dim)),
           ];
+
+      const captain = this.captainOf(i);
+      const captainLabel = captain
+        ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}`
+        : '艦長を任命  ›';
+      const captainBtn = new UIButton(
+        this,
+        compact ? 124 + 160 : 100 + 125,
+        compact ? h * 0.82 : 120,
+        captainLabel,
+        this.onTap(() => this.cycleCaptain(i)),
+        { variant: captain ? 'primary' : 'secondary', width: compact ? 320 : 250, height: compact ? 40 : 24, fontSize: 11 },
+      );
+      parts.push(captainBtn);
 
       const remove = new UIButton(this, compact ? w - 44 : w - 34, compact ? h / 2 : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
         variant: 'secondary',
@@ -730,15 +757,55 @@ export class FleetBuilderScene extends Phaser.Scene {
     return this.slots.some((s) => s !== null);
   }
 
-  private startBattle(): void {
+  private captainOf(slot: number): ICaptain | null {
+    const data = this.captainData.find((c) => c.id === this.captainIds[slot]);
+    return data ? withProgress(data, loadProgress().captainXp[data.id] ?? 0) : null;
+  }
+
+  /** Tap: next captain of this nation not commanding another slot, then none. */
+  private cycleCaptain(slot: number): void {
+    const taken = new Set(this.captainIds.filter((id, i) => id && i !== slot));
+    const options: (string | null)[] = [
+      null,
+      ...this.captainData.filter((c) => c.nation === this.nation && !taken.has(c.id)).map((c) => c.id),
+    ];
+    const at = options.indexOf(this.captainIds[slot]);
+    this.captainIds[slot] = options[(at + 1) % options.length];
+    this.refreshSlots();
+  }
+
+  /** 改装: refit the ships of this fleet (upgrade slots). */
+  private buildRefitButton(): void {
+    const p = LAYOUT.fleet;
+    const bw = IS_PORTRAIT ? 150 : 110;
+    const bh = IS_PORTRAIT ? 52 : 32;
+    new UIButton(
+      this,
+      p.x + p.w - PANEL_PAD - bw / 2,
+      p.y + (IS_PORTRAIT ? 42 : 32),
+      '改装  ›',
+      this.onTap(() => {
+        this.saveSelection();
+        this.scene.start(SceneKeys.CUSTOMIZATION);
+      }),
+      { variant: 'secondary', width: bw, height: bh, fontSize: 14 },
+    );
+  }
+
+  private saveSelection(): void {
     const selection: ISelection = {
       nation: this.nation,
       enemyNation: this.enemyNation,
       mode: this.mode,
       formation: this.formation,
       slotIds: this.slots.map((s) => s?.id ?? null),
+      captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
     };
     this.registry.set(SELECTION_KEY, selection);
+  }
+
+  private startBattle(): void {
+    this.saveSelection();
     const flagshipIndex = this.slots.findIndex((s) => s !== null);
 
     const playerFleet = FleetSystem.createFleet(
@@ -763,6 +830,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       mapKey: '',
       formation: this.formation,
       mode: this.mode,
+      captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
     };
 
     this.scene.start(SceneKeys.BATTLE, initData);

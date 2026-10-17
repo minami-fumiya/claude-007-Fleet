@@ -1,6 +1,6 @@
 # Sprint 5 — Royal Navy・艦載機・偵察と索敵・艦長・カスタマイズ
 
-**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に Sprint 4 と同梱)
+**Status**: Implemented [IMPLEMENTED: sprint5] | **Branch**: `ccr-192e7779-941xlk` (PR #14 に Sprint 4 と同梱)
 **Goal**: 4 国籍が揃い、空母が艦載機で戦える。視界外の敵は見えず (FogOfWar)、偵察機で索敵する。艦長とカスタマイズで艦を育てられる。
 
 ## スコープ判断
@@ -35,18 +35,24 @@
 - [x] `tests/unit/VisionSystem.test.ts`
 
 ### D. 艦長
-- [ ] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill`
-- [ ] `src/systems/CaptainSystem.ts` — 任命・スキル 3 種・経験値とレベルアップ (純粋)
-- [ ] Fleet Builder で艦長を任命、戦闘結果で経験値付与
-- [ ] `tests/unit/CaptainSystem.test.ts`
-- [ ] `docs/specs/systems/captain.md`
+- [x] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill`
+- [x] `src/systems/CaptainSystem.ts` — 任命・スキル 3 種・経験値とレベルアップ (純粋)
+- [x] Fleet Builder で艦長を任命、戦闘結果で経験値付与
+- [x] `tests/unit/CaptainSystem.test.ts`
+- [x] `docs/specs/systems/captain.md`
 
 ### E. カスタマイズ
-- [ ] `src/systems/CustomizationSystem.ts` — 装備スロット・ステータス再計算 (純粋)
-- [ ] `src/scenes/CustomizationScene.ts` + `src/ui/CustomizationPanel.ts`
-- [ ] `tests/unit/CustomizationSystem.test.ts`
-- [ ] `docs/specs/systems/customization.md`
+- [x] `src/systems/CustomizationSystem.ts` — 装備スロット・ステータス再計算 (純粋)
+- [x] `src/scenes/CustomizationScene.ts` (パネルはシーン内に実装し、`CustomizationPanel.ts` は作らなかった)
+- [x] `tests/unit/CustomizationSystem.test.ts`
+- [x] `docs/specs/systems/customization.md`
 
 ### 完了処理
-- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint5]` タグ
-- [ ] PR → CI → Vercel Preview 確認
+- [x] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint5]` タグ
+- [ ] PR → CI → Vercel Preview 確認 (PR #14)
+
+## 実装メモ
+- 艦載機は `AirOpsSystem` (陣営ごと) が編隊を管理。AI 空母は 1000px 相当の距離を保ち自動で攻撃隊を出す。
+- FogOfWar は両陣営に適用 (AI も視界内の艦しか狙わない)。偵察機は戦艦・巡洋艦が自動で運用。
+- 艦長とカスタマイズは `IShipModifiers` に統合して戦闘開始時に適用。進捗は localStorage (`ww2fleet.progress.v1`)。
+- 交戦モードに「機動部隊」を追加 (Sprint 5 の空母戦を試すため)。
