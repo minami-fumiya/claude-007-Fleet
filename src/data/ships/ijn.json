@@ -8,7 +8,9 @@
       "hp": 500,
       "armor": 65,
       "speed": 120,
-      "weapons": ["46cm_main_gun"],
+      "weapons": [
+        "46cm_main_gun"
+      ],
       "spriteKey": "yamato"
     },
     {
@@ -19,7 +21,9 @@
       "hp": 490,
       "armor": 63,
       "speed": 118,
-      "weapons": ["46cm_main_gun"],
+      "weapons": [
+        "46cm_main_gun"
+      ],
       "spriteKey": "musashi"
     },
     {
@@ -30,7 +34,9 @@
       "hp": 250,
       "armor": 40,
       "speed": 180,
-      "weapons": ["20cm_twin_gun"],
+      "weapons": [
+        "20cm_twin_gun"
+      ],
       "spriteKey": "takao"
     },
     {
@@ -41,7 +47,11 @@
       "hp": 130,
       "armor": 15,
       "speed": 240,
-      "weapons": ["12cm_gun", "torpedo_type93"],
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
       "spriteKey": "fubuki"
     },
     {
@@ -52,8 +62,23 @@
       "hp": 310,
       "armor": 30,
       "speed": 150,
-      "weapons": ["12cm_gun"],
+      "weapons": [
+        "12cm_gun"
+      ],
       "spriteKey": "shokaku"
+    },
+    {
+      "id": "i19",
+      "name": "伊19 (I-19)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 95,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19"
     }
   ]
 }

@@ -125,12 +125,30 @@ const drawCarrier: Draw = (g, w, h, shade) => {
   g.fillRect(w - 6, h * 0.5, 3, 4);
 };
 
+const drawSubmarine: Draw = (g, w, h, shade) => {
+  // Cigar-shaped pressure hull with a rounded stern
+  g.fillStyle(hullColor(shade), 1);
+  g.fillEllipse(w / 2, h / 2, w - 1, h - 2);
+  g.lineStyle(1, OUTLINE, 1);
+  g.strokeEllipse(w / 2, h / 2, w - 1, h - 2);
+  // Deck casing and conning tower (sail)
+  g.fillStyle(DECK, 1);
+  g.fillRect(w / 2 - 1.5, h * 0.12, 3, h * 0.76);
+  g.fillStyle(STRUCTURE, 1);
+  g.fillRoundedRect(w / 2 - 3, h * 0.36, 6, h * 0.18, 2.5);
+  g.fillStyle(FUNNEL, 1);
+  g.fillCircle(w / 2, h * 0.4, 1.4);
+  // Deck gun forward of the sail
+  g.fillStyle(TURRET, 1);
+  g.fillCircle(w / 2, h * 0.27, 1.8);
+};
+
 const CLASS_SPRITES: Record<ShipClass, { w: number; h: number; draw: Draw }> = {
   [ShipClass.Battleship]: { w: 26, h: 76, draw: drawBattleship },
   [ShipClass.Cruiser]: { w: 18, h: 58, draw: drawCruiser },
   [ShipClass.Destroyer]: { w: 12, h: 42, draw: drawDestroyer },
   [ShipClass.Carrier]: { w: 28, h: 74, draw: drawCarrier },
-  [ShipClass.Submarine]: { w: 10, h: 40, draw: drawDestroyer },
+  [ShipClass.Submarine]: { w: 10, h: 40, draw: drawSubmarine },
 };
 
 export function generateShipTextures(scene: Phaser.Scene, ships: IShipData[]): void {

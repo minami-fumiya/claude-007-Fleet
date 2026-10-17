@@ -35,6 +35,132 @@
       "range": 350,
       "reloadTime": 4000,
       "projectileSpeed": 300
+    },
+    {
+      "id": "type95_torpedo",
+      "name": "95式酸素魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 210,
+      "range": 380,
+      "reloadTime": 5000,
+      "projectileSpeed": 270
+    },
+    {
+      "id": "depth_charge",
+      "name": "爆雷投射機",
+      "type": "DepthCharge",
+      "firePower": 140,
+      "range": 60,
+      "reloadTime": 3000,
+      "projectileSpeed": 0
+    },
+    {
+      "id": "16in_mk7",
+      "name": "16in Mk.7 主砲",
+      "type": "ShellAP",
+      "firePower": 115,
+      "range": 650,
+      "reloadTime": 1500,
+      "projectileSpeed": 620
+    },
+    {
+      "id": "16in_mk6",
+      "name": "16in Mk.6 主砲",
+      "type": "ShellAP",
+      "firePower": 105,
+      "range": 620,
+      "reloadTime": 1600,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "8in_mk12",
+      "name": "8in Mk.12 主砲",
+      "type": "ShellAP",
+      "firePower": 62,
+      "range": 520,
+      "reloadTime": 1150,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "5in_38",
+      "name": "5in/38 両用砲",
+      "type": "ShellHE",
+      "firePower": 32,
+      "range": 420,
+      "reloadTime": 700,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "mk15_torpedo",
+      "name": "Mk.15 魚雷",
+      "type": "Torpedo",
+      "firePower": 170,
+      "range": 320,
+      "reloadTime": 4500,
+      "projectileSpeed": 280
+    },
+    {
+      "id": "mk14_torpedo",
+      "name": "Mk.14 魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 180,
+      "range": 380,
+      "reloadTime": 5000,
+      "projectileSpeed": 260
+    },
+    {
+      "id": "38cm_skc34",
+      "name": "38cm SK C/34 主砲",
+      "type": "ShellAP",
+      "firePower": 108,
+      "range": 600,
+      "reloadTime": 1400,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "20cm_skc34",
+      "name": "20.3cm SK C/34 主砲",
+      "type": "ShellAP",
+      "firePower": 64,
+      "range": 520,
+      "reloadTime": 1150,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "15cm_skc28",
+      "name": "15cm SK C/28 副砲",
+      "type": "ShellHE",
+      "firePower": 45,
+      "range": 450,
+      "reloadTime": 1000,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "12cm_skc34",
+      "name": "12.7cm SK C/34 砲",
+      "type": "ShellHE",
+      "firePower": 34,
+      "range": 400,
+      "reloadTime": 800,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "g7a_torpedo",
+      "name": "G7a 魚雷",
+      "type": "Torpedo",
+      "firePower": 175,
+      "range": 330,
+      "reloadTime": 4500,
+      "projectileSpeed": 290
+    },
+    {
+      "id": "g7e_torpedo",
+      "name": "G7e 魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 170,
+      "range": 360,
+      "reloadTime": 4800,
+      "projectileSpeed": 250
     }
   ]
 }

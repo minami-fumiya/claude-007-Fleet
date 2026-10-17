@@ -4,6 +4,8 @@ import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawMeter } from '@/ui/components/UIKit';
 import ijnData from '@/data/ships/ijn.json';
+import usnData from '@/data/ships/usn.json';
+import kmData from '@/data/ships/km.json';
 import { DataLoader } from '@/utils/DataLoader';
 import { generateShipTextures } from '@/entities/ships/ShipTextures';
 import weaponsData from '@/data/weapons/weapons.json';
@@ -16,11 +18,13 @@ export class PreloadScene extends Phaser.Scene {
   preload(): void {
     this.createProgressBar();
     this.cache.json.add('ijn', ijnData);
+    this.cache.json.add('usn', usnData);
+    this.cache.json.add('km', kmData);
     this.cache.json.add('weapons', weaponsData);
   }
 
   create(): void {
-    generateShipTextures(this, DataLoader.getShips(this, 'ijn'));
+    generateShipTextures(this, DataLoader.getRegistry(this).all());
     this.generateShellTexture();
     this.scene.start(SceneKeys.MAIN_MENU);
   }

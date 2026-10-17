@@ -1,9 +1,13 @@
 import { IFleet } from './Fleet';
+import { Formation } from './Formation';
+import { BattleMode } from './Battle';
 
 export interface IBattleInitData {
   playerFleet: IFleet;
   enemyFleet: IFleet;
   mapKey: string;
+  formation?: Formation;
+  mode?: BattleMode;
 }
 
 export interface IBattleResultData {

@@ -1,0 +1,87 @@
+{
+  "ships": [
+    {
+      "id": "bismarck",
+      "name": "ビスマルク (Bismarck)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 480,
+      "armor": 62,
+      "speed": 145,
+      "weapons": [
+        "38cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "bismarck"
+    },
+    {
+      "id": "tirpitz",
+      "name": "ティルピッツ (Tirpitz)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 485,
+      "armor": 63,
+      "speed": 143,
+      "weapons": [
+        "38cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "tirpitz"
+    },
+    {
+      "id": "prinz_eugen",
+      "name": "プリンツ・オイゲン (Prinz Eugen)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "hp": 255,
+      "armor": 41,
+      "speed": 178,
+      "weapons": [
+        "20cm_skc34",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "prinz_eugen"
+    },
+    {
+      "id": "z1",
+      "name": "Z1 レーベレヒト・マース (Z1)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 135,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z1"
+    },
+    {
+      "id": "graf_zeppelin",
+      "name": "グラーフ・ツェッペリン (Graf Zeppelin)",
+      "nation": "KM",
+      "shipClass": "Carrier",
+      "hp": 300,
+      "armor": 32,
+      "speed": 150,
+      "weapons": [
+        "15cm_skc28"
+      ],
+      "spriteKey": "graf_zeppelin"
+    },
+    {
+      "id": "u_boat_viic",
+      "name": "U ボート VIIC 型 (Type VIIC)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 85,
+      "armor": 5,
+      "speed": 145,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_viic"
+    }
+  ]
+}

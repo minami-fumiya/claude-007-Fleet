@@ -3,6 +3,10 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
+import { ShipRegistry } from '@/systems/ShipRegistry';
+import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
+import { BattleMode } from '@/types/Battle';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
@@ -26,14 +30,29 @@ interface IRect { x: number; y: number; w: number; h: number }
 interface IBuilderLayout {
   ships: IRect;
   shipItemH: number;
+  /** Height of the nation tab row at the top of the ship list */
+  tabH: number;
   fleet: IRect;
   slotH: number;
   formations: IRect;
   /** 'column' stacks formation cards vertically, 'row' lays them side by side */
   formationFlow: 'column' | 'row';
   formationCardH: number;
+  /** Opponent nation + battle mode toggles */
+  enemy: IRect;
+  enemyButtonH: number;
   footer: IRect;
 }
+
+/** Largest roster of any nation; the ship panel is sized for it. */
+const MAX_ROSTER = 6;
+const P_SHIP_ITEM_H = 120;
+const P_TAB_H = 64;
+const P_SHIPS_Y = 618;
+const P_SHIPS_H = 84 + P_TAB_H + 12 + MAX_ROSTER * P_SHIP_ITEM_H + (MAX_ROSTER - 1) * 8 + 14;
+const P_FORMATIONS_Y = P_SHIPS_Y + P_SHIPS_H + 18;
+const P_FORMATIONS_H = 84 + 180 + 14;
+const P_ENEMY_Y = P_FORMATIONS_Y + P_FORMATIONS_H + 18;
 
 /**
  * Landscape: ships | fleet | formations in three columns, everything on one screen.
@@ -43,25 +62,31 @@ const LAYOUT: IBuilderLayout = IS_PORTRAIT
   ? {
       fleet: { x: 16, y: HEADER_BAR_H + 12, w: CANVAS_W - 32, h: 84 + 3 * 116 + 2 * 10 + 14 },
       slotH: 116,
-      ships: { x: 16, y: 618, w: CANVAS_W - 32, h: 84 + 5 * 120 + 4 * 8 + 14 },
-      shipItemH: 120,
-      formations: { x: 16, y: 1360, w: CANVAS_W - 32, h: 84 + 180 + 14 },
+      ships: { x: 16, y: P_SHIPS_Y, w: CANVAS_W - 32, h: P_SHIPS_H },
+      shipItemH: P_SHIP_ITEM_H,
+      tabH: P_TAB_H,
+      formations: { x: 16, y: P_FORMATIONS_Y, w: CANVAS_W - 32, h: P_FORMATIONS_H },
       formationFlow: 'row',
       formationCardH: 180,
+      enemy: { x: 16, y: P_ENEMY_Y, w: CANVAS_W - 32, h: 84 + 2 * 64 + 12 + 14 },
+      enemyButtonH: 60,
       footer: { x: 16, y: CANVAS_H - FOOTER_BAR_H + 6, w: CANVAS_W - 32, h: FOOTER_BAR_H - 18 },
     }
   : {
-      ships: { x: 24, y: 92, w: 404, h: 500 },
-      shipItemH: 80,
-      fleet: { x: 444, y: 92, w: 412, h: 500 },
+      ships: { x: 24, y: 92, w: 404, h: 512 },
+      shipItemH: 62,
+      tabH: 36,
+      fleet: { x: 444, y: 92, w: 412, h: 512 },
       slotH: 136,
-      formations: { x: 872, y: 92, w: 384, h: 500 },
+      formations: { x: 872, y: 92, w: 384, h: 362 },
       formationFlow: 'column',
-      formationCardH: 136,
-      footer: { x: 24, y: 610, w: CANVAS_W - 48, h: 92 },
+      formationCardH: 88,
+      enemy: { x: 872, y: 466, w: 384, h: 138 },
+      enemyButtonH: 32,
+      footer: { x: 24, y: 616, w: CANVAS_W - 48, h: 92 },
     };
 
-const ITEM_GAP = 8;
+const ITEM_GAP = IS_PORTRAIT ? 8 : 6;
 const CARD_GAP = 10;
 
 const FORMATION_LIST: Formation[] = [Formation.LineAhead, Formation.DoubleLine, Formation.Circle];
@@ -79,6 +104,18 @@ const CLASS_BADGE: Record<string, { label: string; color: number; css: string }>
   [ShipClass.Submarine]: { label: 'SUBMARINE', color: Colors.blue, css: Css.blue },
 };
 
+/** "大和 (Yamato)" → "大和": the Japanese part of a display name. */
+function shortName(name: string): string {
+  return name.replace(/\s*\(.*\)\s*$/, '');
+}
+
+/** Fits a ship name into `room` px: first drop the English part, then shrink the text. */
+function fitName(text: Phaser.GameObjects.Text, name: string, room: number): void {
+  if (text.width <= room) return;
+  text.setText(shortName(name));
+  if (text.width > room) text.setScale(room / text.width);
+}
+
 interface ISlotView {
   frame: Phaser.GameObjects.Graphics;
   content: Phaser.GameObjects.Container | null;
@@ -86,9 +123,19 @@ interface ISlotView {
 }
 
 export class FleetBuilderScene extends Phaser.Scene {
+  private shipRegistry!: ShipRegistry;
   private ships: IShipData[] = [];
   private slots: (IShipData | null)[] = [null, null, null];
   private formation: Formation = Formation.LineAhead;
+  private nation: Nation = Nation.IJN;
+  private enemyNation: Nation = Nation.USN;
+  private mode: BattleMode = BattleMode.Surface;
+
+  private nationTabs: UIButton[] = [];
+  private enemyNationButtons: UIButton[] = [];
+  private modeButtons: UIButton[] = [];
+  private titleText!: Phaser.GameObjects.Text;
+  private nationChip: Phaser.GameObjects.Container | null = null;
 
   private slotViews: ISlotView[] = [];
   private formationFrames: Phaser.GameObjects.Graphics[] = [];
@@ -105,17 +152,27 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.ships = DataLoader.getShips(this, 'ijn');
+    this.shipRegistry = DataLoader.getRegistry(this);
+    this.nation = Nation.IJN;
+    this.enemyNation = Nation.USN;
+    this.mode = BattleMode.Surface;
+    this.ships = this.shipRegistry.byNation(this.nation);
     this.slots = [null, null, null];
     this.formation = Formation.LineAhead;
     this.slotViews = [];
     this.formationFrames = [];
     this.shipCards = [];
+    this.nationTabs = [];
+    this.enemyNationButtons = [];
+    this.modeButtons = [];
+    this.nationChip = null;
     this.dragging = false;
+    // Meters share one scale across nations so ships compare fairly between tabs.
+    const all = this.shipRegistry.all();
     this.maxStats = {
-      hp: Math.max(1, ...this.ships.map((s) => s.hp)),
-      armor: Math.max(1, ...this.ships.map((s) => s.armor)),
-      speed: Math.max(1, ...this.ships.map((s) => s.speed)),
+      hp: Math.max(1, ...all.map((s) => s.hp)),
+      armor: Math.max(1, ...all.map((s) => s.armor)),
+      speed: Math.max(1, ...all.map((s) => s.speed)),
     };
 
     addBackdrop(this, 'menu').setScrollFactor(0);
@@ -123,9 +180,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.buildPanelFrame(LAYOUT.ships, 'AVAILABLE SHIPS', '利用可能な艦');
     this.buildPanelFrame(LAYOUT.fleet, 'YOUR FLEET', '艦隊編成');
     this.buildPanelFrame(LAYOUT.formations, 'FORMATION', '陣形');
+    this.buildPanelFrame(LAYOUT.enemy, 'OPPONENT', '交戦相手');
+    this.buildNationTabs();
     this.buildShipList();
     this.buildSlotPanel();
     this.buildFormationPanel();
+    this.buildEnemyPanel();
     this.buildFooter();
     this.refresh();
     if (IS_PORTRAIT) this.setupScrolling();
@@ -139,7 +199,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private setupScrolling(): void {
-    const contentBottom = LAYOUT.formations.y + LAYOUT.formations.h + 24;
+    const contentBottom = LAYOUT.enemy.y + LAYOUT.enemy.h + 24;
     // Let the last panel scroll clear of the fixed footer.
     const cam = this.cameras.main;
     cam.setBounds(0, 0, CANVAS_W, contentBottom + FOOTER_BAR_H);
@@ -187,17 +247,104 @@ export class FleetBuilderScene extends Phaser.Scene {
           variant: 'secondary', width: 136, height: 44, fontSize: 15,
         });
     fixed.push(back);
-    if (IS_PORTRAIT) {
-      fixed.push(this.add.text(CANVAS_W / 2 + 40, 28, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5));
-      fixed.push(this.add.text(CANVAS_W / 2, 100, '帝国海軍 — 艦隊を編成せよ', displayStyle(24)).setOrigin(0.5));
-    } else {
-      fixed.push(this.add.text(CANVAS_W / 2, 26, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5));
-      fixed.push(this.add.text(CANVAS_W / 2, 56, '帝国海軍 — 艦隊を編成せよ', displayStyle(24)).setOrigin(0.5));
-    }
-    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, 'NATION · IJN', Colors.gold, Css.gold);
-    chip.setX(CANVAS_W - 20 - chip.getBounds().width);
-    fixed.push(chip);
+    fixed.push(this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5));
+    this.titleText = this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 56, '', displayStyle(24)).setOrigin(0.5);
+    fixed.push(this.titleText);
     this.pin(fixed, 60);
+    this.refreshHeader();
+  }
+
+  private refreshHeader(): void {
+    this.titleText.setText(`${NATION_INFO[this.nation].ja} — 艦隊を編成せよ`);
+    this.nationChip?.destroy();
+    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, `NATION · ${NATION_INFO[this.nation].short}`, Colors.gold, Css.gold);
+    chip.setX(CANVAS_W - 20 - chip.getBounds().width);
+    this.pin([chip], 60);
+    this.nationChip = chip;
+  }
+
+  /** A row of equal-width toggle buttons filling `w`, centred vertically on `cy`. */
+  private addToggleRow(
+    x: number,
+    cy: number,
+    w: number,
+    h: number,
+    labels: string[],
+    onSelect: (index: number) => void,
+  ): UIButton[] {
+    const gap = 8;
+    const bw = Math.floor((w - gap * (labels.length - 1)) / labels.length);
+    return labels.map(
+      (label, i) =>
+        new UIButton(this, x + i * (bw + gap) + bw / 2, cy, label, this.onTap(() => onSelect(i)), {
+          variant: 'secondary',
+          width: bw,
+          height: h,
+          fontSize: IS_PORTRAIT ? 15 : 13,
+        }),
+    );
+  }
+
+  private static setToggle(buttons: UIButton[], selected: number): void {
+    buttons.forEach((b, i) => b.setVariant(i === selected ? 'primary' : 'secondary'));
+  }
+
+  private buildNationTabs(): void {
+    const p = LAYOUT.ships;
+    const labels = PLAYABLE_NATIONS.map((n) => NATION_INFO[n].short);
+    this.nationTabs = this.addToggleRow(
+      p.x + PANEL_PAD,
+      p.y + PANEL_HEADER_H + LAYOUT.tabH / 2,
+      p.w - PANEL_PAD * 2,
+      LAYOUT.tabH - 4,
+      labels,
+      (i) => this.selectNation(PLAYABLE_NATIONS[i]),
+    );
+    FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(this.nation));
+  }
+
+  private buildEnemyPanel(): void {
+    const p = LAYOUT.enemy;
+    const h = LAYOUT.enemyButtonH;
+    const x = p.x + PANEL_PAD;
+    const w = p.w - PANEL_PAD * 2;
+    const rowGap = IS_PORTRAIT ? 12 : 6;
+    const top = p.y + PANEL_HEADER_H + (IS_PORTRAIT ? 4 : 0);
+    this.enemyNationButtons = this.addToggleRow(
+      x,
+      top + h / 2,
+      w,
+      h,
+      PLAYABLE_NATIONS.map((n) => `敵 ${NATION_INFO[n].short}`),
+      (i) => {
+        this.enemyNation = PLAYABLE_NATIONS[i];
+        this.refreshEnemyPanel();
+      },
+    );
+    this.modeButtons = this.addToggleRow(x, top + h + rowGap + h / 2, w, h, ['水上戦', '対潜戦 (潜水艦隊)'], (i) => {
+      this.mode = i === 0 ? BattleMode.Surface : BattleMode.ASW;
+      this.refreshEnemyPanel();
+    });
+    this.refreshEnemyPanel();
+  }
+
+  private refreshEnemyPanel(): void {
+    FleetBuilderScene.setToggle(this.enemyNationButtons, PLAYABLE_NATIONS.indexOf(this.enemyNation));
+    FleetBuilderScene.setToggle(this.modeButtons, this.mode === BattleMode.Surface ? 0 : 1);
+  }
+
+  /** Switching nation swaps the ship list; a fleet is single-nation, so the slots are cleared. */
+  private selectNation(nation: Nation): void {
+    if (nation === this.nation) return;
+    this.nation = nation;
+    this.ships = this.shipRegistry.byNation(nation);
+    this.slots = [null, null, null];
+    FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(nation));
+    for (const card of this.shipCards) card.destroy();
+    this.shipCards = [];
+    this.buildShipList();
+    this.refreshHeader();
+    this.refresh();
   }
 
   /** Keeps objects in place while the portrait page scrolls underneath them. */
@@ -223,7 +370,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   private buildShipList(): void {
     const p = LAYOUT.ships;
     const itemH = LAYOUT.shipItemH;
-    const startY = p.y + PANEL_HEADER_H + 4;
+    const startY = p.y + PANEL_HEADER_H + LAYOUT.tabH + (IS_PORTRAIT ? 12 : 6);
     const x = p.x + PANEL_PAD;
     const w = p.w - PANEL_PAD * 2;
     const statX = IS_PORTRAIT ? 100 : 74;
@@ -240,7 +387,11 @@ export class FleetBuilderScene extends Phaser.Scene {
       const icon = this.addShipIcon(statX / 2, itemH / 2, ship.spriteKey, statX - 20, 1.2);
       const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
       const badgeInfo = CLASS_BADGE[ship.shipClass] ?? CLASS_BADGE[ShipClass.Cruiser];
-      const badge = addChip(this, statX + name.width + 10, name.y + name.height / 2, badgeInfo.label, badgeInfo.color, badgeInfo.css);
+      const badge = addChip(this, 0, name.y + name.height / 2, badgeInfo.label, badgeInfo.color, badgeInfo.css);
+      // Long names drop their English part so the class badge clears the + button.
+      const nameRoom = w - statX - plusR * 2 - 30 - badge.getBounds().width - 10;
+      fitName(name, ship.name, nameRoom);
+      badge.setX(statX + name.displayWidth + 10);
 
       const meters = this.add.graphics();
       const stats: Array<[string, number, number, number]> = [
@@ -313,17 +464,17 @@ export class FleetBuilderScene extends Phaser.Scene {
 
       const parts: Phaser.GameObjects.GameObject[] = [
         frame,
-        this.add.text(18, 18, info.ja, displayStyle(24)),
-        this.add.text(18, IS_PORTRAIT ? 66 : 56, info.en, eyebrowStyle(10, Css.muted)),
+        this.add.text(18, IS_PORTRAIT ? 18 : 10, info.ja, displayStyle(24)),
+        this.add.text(18, IS_PORTRAIT ? 66 : 46, info.en, eyebrowStyle(10, Css.muted)),
       ];
       if (!compact) {
-        parts.push(this.add.text(18, 84, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } })));
+        parts.push(this.add.text(18, IS_PORTRAIT ? 84 : 62, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } })));
       }
       const diagram = this.add.graphics();
       if (compact) {
         this.drawFormationDiagram(diagram, formation, r.w / 2, r.h - 50, 0.75);
       } else {
-        this.drawFormationDiagram(diagram, formation, r.w - 66, r.h / 2, 1);
+        this.drawFormationDiagram(diagram, formation, r.w - 60, r.h / 2, Math.min(1, (r.h - 12) / 100));
       }
       parts.push(diagram);
 
@@ -442,15 +593,19 @@ export class FleetBuilderScene extends Phaser.Scene {
       });
       view.emptyLabel.setVisible(false);
 
+      const nameX = compact ? 124 : 100;
+      const nameText = this.add.text(nameX, compact ? h * 0.3 : 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' }));
+      // Leave room for the remove button on the right.
+      fitName(nameText, ship.name, w - nameX - (compact ? 84 : 64));
       const parts: Phaser.GameObjects.GameObject[] = compact
         ? [
             this.addShipIcon(62, h * 0.6, ship.spriteKey, 88, 1.3),
-            this.add.text(124, h * 0.3, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' })),
+            nameText,
             this.add.text(124, h * 0.64, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
           ]
         : [
             this.addShipIcon(54, 78, ship.spriteKey, 76, 1.3),
-            this.add.text(100, 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' })),
+            nameText,
             this.add.text(100, 74, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
             this.add.text(100, 98, ship.weapons.join(' · '), textStyle(11, Css.dim)),
           ];
@@ -511,37 +666,30 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private startBattle(): void {
-    const allShips = DataLoader.getShips(this, 'ijn');
     const flagshipIndex = this.slots.findIndex((s) => s !== null);
 
     const playerFleet = FleetSystem.createFleet(
       'player-fleet',
       '第一艦隊',
-      Nation.IJN,
+      this.nation,
       this.slots,
       flagshipIndex,
     );
-    playerFleet.slots.forEach((slot) => {
-      if (slot.shipData) {
-        (slot.shipData as IShipData & { formation?: Formation }).formation = this.formation;
-      }
-    });
 
-    const musashi = allShips.find((s) => s.id === 'musashi') ?? allShips[0];
-    const takao = allShips.find((s) => s.id === 'takao') ?? allShips[0];
     const enemyFleet = FleetSystem.createFleet(
       'enemy-fleet',
       'Enemy Fleet',
-      Nation.IJN,
-      [musashi, takao, takao],
+      this.enemyNation,
+      generateEnemyFleet(this.shipRegistry, this.enemyNation, this.mode),
       0,
     );
 
-    const initData: IBattleInitData & { formation: Formation } = {
+    const initData: IBattleInitData = {
       playerFleet,
       enemyFleet,
       mapKey: '',
       formation: this.formation,
+      mode: this.mode,
     };
 
     this.scene.start(SceneKeys.BATTLE, initData);

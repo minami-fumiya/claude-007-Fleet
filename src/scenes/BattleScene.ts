@@ -8,6 +8,9 @@ import { AISystem } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
+import { ShipRegistry } from '@/systems/ShipRegistry';
+import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { BattleMode } from '@/types/Battle';
 import { Explosion } from '@/entities/effects/Explosion';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
@@ -23,8 +26,6 @@ import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData, IBattleResultData } from '@/types/Scene';
 import { Shell } from '@/entities/weapons/Shell';
-
-type BattleInitData = IBattleInitData & { formation?: Formation };
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -73,7 +74,7 @@ const FALLBACK_WEAPON: IWeaponData = {
 };
 
 export class BattleScene extends Phaser.Scene {
-  private battleData: BattleInitData | null = null;
+  private battleData: IBattleInitData | null = null;
 
   private flagship!: BaseShip;
   private escorts: BaseShip[] = [];
@@ -122,7 +123,7 @@ export class BattleScene extends Phaser.Scene {
     super({ key: SceneKeys.BATTLE });
   }
 
-  init(data: BattleInitData): void {
+  init(data: IBattleInitData): void {
     this.battleData = data ?? null;
   }
 
@@ -144,8 +145,7 @@ export class BattleScene extends Phaser.Scene {
     this.lockedTarget = null;
     this.waypoint = null;
 
-    const ijnShips = DataLoader.getShips(this, 'ijn');
-    const { playerFleet, enemyFleet, formation } = this.resolveFleets(ijnShips);
+    const { playerFleet, enemyFleet, formation } = this.resolveFleets(DataLoader.getRegistry(this));
 
     this.playerWeaponSystem = new WeaponSystem(this);
     this.enemyWeaponSystem = new WeaponSystem(this);
@@ -211,8 +211,9 @@ export class BattleScene extends Phaser.Scene {
     this.checkWinLoss();
   }
 
+  /** Uses the Fleet Builder's fleets, or Yamato against a USN surface group when started directly. */
   private resolveFleets(
-    ijnShips: IShipData[],
+    registry: ShipRegistry,
   ): { playerFleet: IFleet; enemyFleet: IFleet; formation: Formation } {
     if (this.battleData?.playerFleet && FleetSystem.isValid(this.battleData.playerFleet)) {
       return {
@@ -221,12 +222,11 @@ export class BattleScene extends Phaser.Scene {
         formation: this.battleData.formation ?? Formation.LineAhead,
       };
     }
-    const yamato = ijnShips.find((s) => s.id === 'yamato') ?? ijnShips[0];
-    const musashi = ijnShips.find((s) => s.id === 'musashi') ?? ijnShips[0];
-    const takao = ijnShips.find((s) => s.id === 'takao') ?? ijnShips[0];
+    const yamato = registry.byId('yamato') ?? registry.byNation(Nation.IJN)[0];
+    const enemies = generateEnemyFleet(registry, Nation.USN, BattleMode.Surface);
     return {
       playerFleet: FleetSystem.createFleet('default', '大和隊', Nation.IJN, [yamato], 0),
-      enemyFleet: FleetSystem.createFleet('enemy', 'Enemy', Nation.IJN, [musashi, takao, takao], 0),
+      enemyFleet: FleetSystem.createFleet('enemy', 'Enemy', Nation.USN, enemies, 0),
       formation: Formation.LineAhead,
     };
   }

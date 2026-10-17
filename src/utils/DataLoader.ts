@@ -1,5 +1,7 @@
 import { IShipData } from '@/types/Ship';
 import { IWeaponData } from '@/types/Weapon';
+import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
+import { ShipRegistry } from '@/systems/ShipRegistry';
 
 export interface IShipJsonFile {
   ships: IShipData[];
@@ -17,6 +19,11 @@ export class DataLoader {
   static getShips(scene: Phaser.Scene, key: string): IShipData[] {
     const data = DataLoader.fromCache<IShipJsonFile>(scene, key);
     return data?.ships ?? [];
+  }
+
+  /** All playable nations' ships from the JSON cache (loaded in PreloadScene). */
+  static getRegistry(scene: Phaser.Scene): ShipRegistry {
+    return new ShipRegistry(PLAYABLE_NATIONS.flatMap((n) => DataLoader.getShips(scene, NATION_INFO[n].dataKey)));
   }
 
   static getWeapons(scene: Phaser.Scene, key: string): IWeaponData[] {

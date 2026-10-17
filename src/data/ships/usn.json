@@ -1,0 +1,87 @@
+{
+  "ships": [
+    {
+      "id": "iowa",
+      "name": "アイオワ (Iowa)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 470,
+      "armor": 58,
+      "speed": 160,
+      "weapons": [
+        "16in_mk7",
+        "5in_38"
+      ],
+      "spriteKey": "iowa"
+    },
+    {
+      "id": "north_carolina",
+      "name": "ノースカロライナ (North Carolina)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 440,
+      "armor": 56,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "north_carolina"
+    },
+    {
+      "id": "baltimore",
+      "name": "ボルチモア (Baltimore)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "hp": 260,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore"
+    },
+    {
+      "id": "fletcher",
+      "name": "フレッチャー (Fletcher)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 140,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher"
+    },
+    {
+      "id": "essex",
+      "name": "エセックス (Essex)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 330,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex"
+    },
+    {
+      "id": "gato",
+      "name": "ガトー (Gato)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 90,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato"
+    }
+  ]
+}
