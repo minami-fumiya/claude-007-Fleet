@@ -21,6 +21,10 @@ import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/syst
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
+import { Minimap } from '@/ui/Minimap';
+import { ShipTrails } from '@/entities/effects/ShipTrails';
+import { audio } from '@/systems/AudioSystem';
+import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
@@ -114,6 +118,9 @@ export class BattleScene extends Phaser.Scene {
   private playerRecon!: ReconSystem;
   private enemyRecon!: ReconSystem;
   private fog!: FogOfWar;
+  private trails!: ShipTrails;
+  private muteBtn: UIButton | null = null;
+  private minimap!: Minimap;
   private conditions: IBattleConditions = battleConditions(Weather.Clear, TimeOfDay.Day);
   private airText: Phaser.GameObjects.Text | null = null;
   private strikeBtn: UIButton | null = null;
@@ -173,6 +180,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.music('battle');
     this.gameOver = false;
     this.escorts = [];
     this.enemies = [];
@@ -209,10 +217,13 @@ export class BattleScene extends Phaser.Scene {
     const aerialTorpedo = DataLoader.getWeaponById(this, 'aerial_torpedo') ?? FALLBACK_WEAPON;
     const onBomb = (target: BaseShip, weapon: IWeaponData, dmg: number): void => {
       this.explosion.play(target.x, target.y);
+      this.sound3d('explosion', target.x, target.y);
       this.rollCritical(target, weapon, dmg);
     };
     this.playerAir = new AirOpsSystem(this, false, this.playerWeapons, bomb, aerialTorpedo, onBomb);
     this.enemyAir = new AirOpsSystem(this, true, this.enemyWeapons, bomb, aerialTorpedo, onBomb);
+    this.playerAir.onLaunch = (x, y) => this.sound3d('plane', x, y);
+    this.enemyAir.onLaunch = (x, y) => this.sound3d('plane', x, y);
     this.playerRecon = new ReconSystem(this, false);
     this.enemyRecon = new ReconSystem(this, true);
 
@@ -229,6 +240,29 @@ export class BattleScene extends Phaser.Scene {
     this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲');
 
     this.fog = new FogOfWar(this, this.conditions.fogColor, this.conditions.fogAlpha);
+    this.trails = new ShipTrails(this);
+    for (const s of [...this.friendlies(), ...this.enemies]) this.trails.add(s);
+    const mm = IS_PORTRAIT ? { w: 150, x: CANVAS_W - 20 - 150, y: 252 } : { w: 200, x: CANVAS_W - 20 - 200, y: 80 };
+    this.minimap = new Minimap(this, mm.x, mm.y, mm.w, WORLD.w, WORLD.h);
+    const splashAt = (x: number, y: number): void => {
+      // Only splashes the player could see.
+      if (isVisible(x, y, this.visionSources(this.friendlies(), this.playerRecon, this.playerAir))) this.splash.play(x, y, 0.8);
+    };
+    this.playerWeapons.onSplash = (x, y) => {
+      splashAt(x, y);
+      this.sound3d('splash', x, y);
+    };
+    this.enemyWeapons.onSplash = (x, y) => {
+      splashAt(x, y);
+      this.sound3d('splash', x, y);
+    };
+    const onFire = (w: IWeaponData, x: number, y: number): void => {
+      const kind = weaponKind(w);
+      if (kind === WeaponKind.Torpedo) this.sound3d('torpedo', x, y);
+      else if (kind === WeaponKind.Gun) this.sound3d(w.firePower >= 90 ? 'bigGun' : 'gun', x, y);
+    };
+    this.playerWeapons.onFire = onFire;
+    this.enemyWeapons.onFire = onFire;
     this.addWeatherEffects();
     this.setupInput();
     this.buildOverlayUi();
@@ -290,6 +324,8 @@ export class BattleScene extends Phaser.Scene {
     this.drawReticle();
     this.drawSonar(time);
     this.drawEdgeMarkers();
+    this.trails.update();
+    this.minimap.update(this.friendlies(), this.enemies, this.seenByPlayer);
     this.checkWinLoss();
   }
 
@@ -561,10 +597,24 @@ export class BattleScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(DEPTH_HUD - 4);
     }
+    this.muteBtn = new UIButton(this, 20 + 50, IS_PORTRAIT ? 286 : 122, '', () => this.toggleMute(), {
+      variant: 'secondary', width: 100, height: IS_PORTRAIT ? 44 : 30, fontSize: 12,
+    });
+    this.muteBtn.setScrollFactor(0).setDepth(DEPTH_HUD + 2);
+    this.refreshMute();
     const label = `${WEATHER_LABEL[c.weather]}  ·  ${TIME_LABEL[c.time]}`;
     addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
       .setScrollFactor(0)
       .setDepth(DEPTH_HUD + 2);
+  }
+
+  private toggleMute(): void {
+    audio.setMuted(!audio.muted);
+    this.refreshMute();
+  }
+
+  private refreshMute(): void {
+    this.muteBtn?.setLabel(audio.muted ? (this.isTouch ? '音 OFF' : '音 OFF [M]') : this.isTouch ? '音 ON' : '音 ON  [M]');
   }
 
   // -------------------------------------------------------------------------
@@ -620,7 +670,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** A depth charge went off: area damage to every ship of the target side in the blast. */
   private onDepthCharge(x: number, y: number, weapon: IWeaponData, targets: BaseShip[]): void {
-    this.splash.play(x, y);
+    this.splash.play(x, y, 1.6);
+    this.sound3d('depthCharge', x, y);
     for (const ship of targets) {
       if (!ship.isAlive) continue;
       const f = depthChargeFalloff(Phaser.Math.Distance.Between(x, y, ship.x, ship.y), DEPTH_CHARGE_RADIUS);
@@ -649,6 +700,7 @@ export class BattleScene extends Phaser.Scene {
     kb.on('keydown-Q', () => this.toggleDive());
     kb.on('keydown-E', () => this.fireTorpedoes());
     kb.on('keydown-F', () => this.launchPlayerStrike());
+    kb.on('keydown-M', () => this.toggleMute());
   }
 
   private setupClickFire(): void {
@@ -754,6 +806,13 @@ export class BattleScene extends Phaser.Scene {
     this.rollCritical(target, weapon, dmg);
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
+    this.sound3d('explosion', projectile.x, projectile.y);
+  }
+
+  /** Plays a sound attenuated by its distance from the middle of the screen. */
+  private sound3d(kind: SoundKind, x: number, y: number): void {
+    const v = this.cameras.main.worldView;
+    audio.play(kind, Phaser.Math.Distance.Between(x, y, v.centerX, v.centerY));
   }
 
   /** A hit may knock out a component; show it over the ship. */

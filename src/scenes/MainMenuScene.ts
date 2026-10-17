@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -49,6 +50,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.music('menu');
     this.howToLayer = null;
     addBackdrop(this, 'menu');
     addPanel(this, CARD.x, CARD.y, CARD.w, CARD.h, { radius: 32, fillAlpha: 0.45, glow: 1 });

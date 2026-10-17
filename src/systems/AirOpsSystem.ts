@@ -48,6 +48,8 @@ export function aaGuns(ships: BaseShip[]): IAAGun[] {
  */
 export class AirOpsSystem {
   readonly squadrons: Squadron[] = [];
+  /** Called when a squadron takes off (sound) */
+  onLaunch: (x: number, y: number) => void = () => undefined;
   private wings = new Map<BaseShip, IAirWingState>();
 
   constructor(
@@ -148,6 +150,7 @@ export class AirOpsSystem {
     this.wings.set(carrier, state);
     const sq = new Squadron(this.scene, carrier.x, carrier.y, type, carrier, count, this.enemySide);
     this.squadrons.push(sq);
+    this.onLaunch(carrier.x, carrier.y);
     return sq;
   }
 

@@ -32,7 +32,21 @@ export class PreloadScene extends Phaser.Scene {
   create(): void {
     generateShipTextures(this, DataLoader.getRegistry(this).all());
     this.generateShellTexture();
+    this.generateSoftTexture();
     this.scene.start(SceneKeys.MAIN_MENU);
+  }
+
+  /** Soft round puff for wakes and smoke (the 4px square 'particle' reads as dots). */
+  private generateSoftTexture(): void {
+    if (this.textures.exists('soft')) return;
+    const tex = this.textures.createCanvas('soft', 16, 16)!;
+    const ctx = tex.getContext();
+    const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 16);
+    tex.refresh();
   }
 
   private generateShellTexture(): void {

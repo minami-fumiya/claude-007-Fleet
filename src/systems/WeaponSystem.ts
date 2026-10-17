@@ -28,6 +28,10 @@ export class WeaponSystem {
   readonly projectiles: BaseProjectile[] = [];
   private readonly charges: DepthCharge[] = [];
   private reload = new ReloadState();
+  /** Called where a shell falls into the sea at the end of its range */
+  onSplash: (x: number, y: number) => void = () => undefined;
+  /** Called for every weapon fired (sound effects) */
+  onFire: (weapon: IWeaponData, x: number, y: number) => void = () => undefined;
   /** Extra random spread on every shot (weather), radians */
   aimError = 0;
   private lastFired = new WeakMap<BaseShip, number>();
@@ -58,6 +62,7 @@ export class WeaponSystem {
     if (!this.isReady(ship, weapon, now)) return false;
     this.reload.markFired(ship, now, weapon.id);
     this.lastFired.set(ship, now);
+    this.onFire(weapon, ship.x, ship.y);
     if (this.aimError > 0) targetAngle += (Math.random() * 2 - 1) * this.aimError;
 
     switch (weaponKind(weapon)) {
@@ -89,7 +94,10 @@ export class WeaponSystem {
   }
 
   update(time: number, delta: number): void {
-    for (const p of this.projectiles) p.update(time, delta);
+    for (const p of this.projectiles) {
+      const { x, y } = p;
+      if (p.update(time, delta) && p instanceof Shell) this.onSplash(x, y);
+    }
     for (const c of this.charges) {
       if (c.update(time) && c.weapon) this.onDetonate(c.x, c.y, c.weapon);
     }

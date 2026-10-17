@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
@@ -59,6 +60,7 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.music('menu');
     this.registryShips = DataLoader.getRegistry(this);
     this.dynamic = [];
     this.dockMeters = [];

@@ -36,8 +36,9 @@ export class BaseProjectile extends Phaser.Physics.Arcade.Sprite {
     body.setVelocity(Math.cos(angleRad) * this.speed, Math.sin(angleRad) * this.speed);
   }
 
-  update(_time: number, _delta: number): void {
-    if (!this.active) return;
+  /** Returns true on the frame the projectile runs out of range (a miss into the sea). */
+  update(_time: number, _delta: number): boolean {
+    if (!this.active) return false;
     const { x, y } = this;
     // The battle world can be larger than the screen, so test against the physics world.
     const world = this.scene.physics.world.bounds;
@@ -46,9 +47,12 @@ export class BaseProjectile extends Phaser.Physics.Arcade.Sprite {
       x > world.right + OUT_OF_BOUNDS_MARGIN ||
       y < world.top - OUT_OF_BOUNDS_MARGIN ||
       y > world.bottom + OUT_OF_BOUNDS_MARGIN;
-    if (outOfWorld || Math.hypot(x - this.startX, y - this.startY) > this.maxDistance) {
+    const spent = Math.hypot(x - this.startX, y - this.startY) > this.maxDistance;
+    if (outOfWorld || spent) {
       this.deactivate();
+      return spent && !outOfWorld;
     }
+    return false;
   }
 
   deactivate(): void {
