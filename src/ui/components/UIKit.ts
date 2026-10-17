@@ -124,6 +124,60 @@ export function addBackdrop(scene: Phaser.Scene, variant: BackdropVariant = 'men
   return scene.add.image(0, 0, key).setOrigin(0, 0).setDepth(-10);
 }
 
+const OCEAN_TILE = 320;
+
+/**
+ * Battle sea for a world larger than the screen: a repeating chart-grid tile across the whole world,
+ * a rim marking its edge, and a screen-fixed vignette on top.
+ */
+export function addOceanWorld(scene: Phaser.Scene, worldW: number, worldH: number): void {
+  const tileKey = makeCanvasTexture(scene, 'ui-ocean-tile', OCEAN_TILE, OCEAN_TILE, (ctx) => {
+    ctx.fillStyle = '#05203f';
+    ctx.fillRect(0, 0, OCEAN_TILE, OCEAN_TILE);
+    for (let i = 0; i < OCEAN_TILE; i += 80) {
+      ctx.strokeStyle = i === 0 ? 'rgba(160,210,255,0.10)' : 'rgba(160,210,255,0.045)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(i + 0.5, 0);
+      ctx.lineTo(i + 0.5, OCEAN_TILE);
+      ctx.moveTo(0, i + 0.5);
+      ctx.lineTo(OCEAN_TILE, i + 0.5);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(200,235,255,0.05)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 24; i++) {
+      // Keep ripples away from the tile edge so the pattern repeats without seams.
+      const rx = 20 + Math.random() * (OCEAN_TILE - 70);
+      const ry = 10 + Math.random() * (OCEAN_TILE - 20);
+      const len = 10 + Math.random() * 26;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.quadraticCurveTo(rx + len / 2, ry - 4, rx + len, ry);
+      ctx.stroke();
+    }
+  });
+  scene.add.tileSprite(0, 0, worldW, worldH, tileKey).setOrigin(0, 0).setDepth(-10);
+
+  const rim = scene.add.graphics().setDepth(-9);
+  rim.lineStyle(6, Colors.cyan, 0.08);
+  rim.strokeRect(3, 3, worldW - 6, worldH - 6);
+  rim.lineStyle(2, Colors.cyan, 0.35);
+  rim.strokeRect(1, 1, worldW - 2, worldH - 2);
+
+  const vignetteKey = makeCanvasTexture(scene, 'ui-vignette', CANVAS_W, CANVAS_H, (ctx) => {
+    const v = ctx.createRadialGradient(
+      CANVAS_W / 2, CANVAS_H / 2, Math.min(CANVAS_W, CANVAS_H) * 0.45,
+      CANVAS_W / 2, CANVAS_H / 2, Math.hypot(CANVAS_W, CANVAS_H) / 2,
+    );
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  });
+  scene.add.image(0, 0, vignetteKey).setOrigin(0, 0).setScrollFactor(0).setDepth(-8);
+}
+
 // ---------------------------------------------------------------------------
 // Glass panel
 // ---------------------------------------------------------------------------

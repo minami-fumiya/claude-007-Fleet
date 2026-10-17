@@ -11,11 +11,11 @@ import { FormationSystem } from '@/systems/FormationSystem';
 import { Explosion } from '@/entities/effects/Explosion';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
-import { addBackdrop, addChip, UIButton } from '@/ui/components/UIKit';
+import { addChip, addOceanWorld, UIButton } from '@/ui/components/UIKit';
 import { engageSteer, hitTestTarget, inRange, ISteer, pickTarget, waypointSteer } from '@/systems/AutoPilot';
 import { Colors, Css } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
-import { angleBetween, rotateTowardsDegrees } from '@/utils/MathUtils';
+import { angleBetween, edgePoint, rotateTowardsDegrees } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { IFleet } from '@/types/Fleet';
@@ -38,15 +38,19 @@ const WAYPOINT_ARRIVE_RADIUS = 24;
 const AUTO_RANGE_FRACTION = 0.75;
 const AUTO_EDGE_MARGIN = 70;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
-// Leave room behind the flagship for escorts in line-ahead.
-const FLAGSHIP_SPAWN = { x: CANVAS_W / 2, y: CANVAS_H - (IS_PORTRAIT ? 330 : 150) };
-// Enemies start just below the HUD strip, which sits lower in portrait.
-const ENEMY_TOP = IS_PORTRAIT ? 320 : 120;
+/** The sea is about twice the screen in each direction; the camera follows the flagship. */
+const WORLD = IS_PORTRAIT ? { w: 1440, h: 2240 } : { w: 2400, h: 1440 };
+const CAMERA_LERP = 0.12;
+// Player fleet starts near the bottom (room behind for escorts in line-ahead), enemies near the top.
+const FLAGSHIP_SPAWN = { x: WORLD.w / 2, y: WORLD.h - 260 };
+const ENEMY_TOP = 220;
 const ENEMY_SPAWN_POSITIONS = [
-  { x: IS_PORTRAIT ? 130 : 160, y: ENEMY_TOP },
-  { x: CANVAS_W - (IS_PORTRAIT ? 130 : 160), y: ENEMY_TOP },
-  { x: CANVAS_W / 2, y: ENEMY_TOP - 20 },
+  { x: WORLD.w * 0.25, y: ENEMY_TOP + 40 },
+  { x: WORLD.w * 0.75, y: ENEMY_TOP + 40 },
+  { x: WORLD.w / 2, y: ENEMY_TOP },
 ];
+/** Screen area where enemies count as visible; outside it they get an edge marker. Excludes the HUD strip. */
+const VIEW_INSET = { left: 26, right: CANVAS_W - 26, top: IS_PORTRAIT ? 244 : 96, bottom: CANVAS_H - 26 };
 
 const GENERIC_ENEMY_WEAPON: IWeaponData = {
   id: 'generic-enemy',
@@ -107,6 +111,8 @@ export class BattleScene extends Phaser.Scene {
   private waypoint: { x: number; y: number } | null = null;
 
   private reticle!: Phaser.GameObjects.Graphics;
+  /** Screen-space arrows pointing at enemies outside the camera view */
+  private edgeMarkers!: Phaser.GameObjects.Graphics;
   private battleStartedAt = 0;
 
   private aimAngle = 0;
@@ -129,9 +135,10 @@ export class BattleScene extends Phaser.Scene {
     this.escortWeapons = [];
     this.escortWeaponSystems = [];
 
-    addBackdrop(this, 'ocean');
+    addOceanWorld(this, WORLD.w, WORLD.h);
+    this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
     this.battleStartedAt = this.time.now;
-    this.aimTarget = { x: CANVAS_W / 2, y: CANVAS_H / 2 };
+    this.aimTarget = { x: FLAGSHIP_SPAWN.x, y: FLAGSHIP_SPAWN.y - 300 };
     this.isTouch = this.sys.game.device.input.touch;
     this.autoMode = false;
     this.lockedTarget = null;
@@ -145,6 +152,10 @@ export class BattleScene extends Phaser.Scene {
 
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
+
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, WORLD.w, WORLD.h);
+    cam.startFollow(this.flagship, true, CAMERA_LERP, CAMERA_LERP);
 
     this.explosion = new Explosion(this);
     this.hud = new HUD(this, this.flagship, this.enemies, this.escorts);
@@ -165,6 +176,11 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    if (!this.isTouch) {
+      // Re-project the cursor every frame: the camera moves even when the mouse doesn't.
+      const p = this.input.activePointer;
+      this.aimTarget = this.cameras.main.getWorldPoint(p.x, p.y);
+    }
     const target = this.currentTarget();
     this.handleMovement(delta, target);
     this.updateAim();
@@ -191,6 +207,7 @@ export class BattleScene extends Phaser.Scene {
       elapsedSec: (time - this.battleStartedAt) / 1000,
     });
     this.drawReticle();
+    this.drawEdgeMarkers();
     this.checkWinLoss();
   }
 
@@ -260,7 +277,7 @@ export class BattleScene extends Phaser.Scene {
     const enemyShips = FleetSystem.getShips(fleet);
 
     enemyShips.forEach((shipData, i) => {
-      const pos = ENEMY_SPAWN_POSITIONS[i] ?? { x: CANVAS_W / 2, y: ENEMY_TOP };
+      const pos = ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w / 2, y: ENEMY_TOP };
       const weapon = DataLoader.getWeaponById(this, shipData.weapons[0]) ?? GENERIC_ENEMY_WEAPON;
       const stats = this.shipDataToStats(shipData, weapon);
 
@@ -300,19 +317,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private setupClickFire(): void {
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.wasTouch) this.aimTarget = { x: pointer.x, y: pointer.y };
-    });
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
       // Taps on HUD buttons or the stick are not commands.
       if (over.length > 0 || this.joystick?.owns(pointer)) return;
       if (pointer.wasTouch) {
-        this.onSeaTap(pointer.x, pointer.y);
+        this.onSeaTap(pointer.worldX, pointer.worldY);
         return;
       }
       if (!pointer.leftButtonDown()) return;
       // Mouse: aim tracks the cursor, click fires.
-      this.aimTarget = { x: pointer.x, y: pointer.y };
+      this.aimTarget = { x: pointer.worldX, y: pointer.worldY };
       this.updateAim();
       this.playerWeaponSystem.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
     });
@@ -430,7 +444,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.autoMode && target) {
       const range = this.playerWeapon.range * AUTO_RANGE_FRACTION;
-      this.steer(engageSteer(this.flagship, target, range, { width: CANVAS_W, height: CANVAS_H }, AUTO_EDGE_MARGIN), dtSec);
+      this.steer(engageSteer(this.flagship, target, range, { width: WORLD.w, height: WORLD.h }, AUTO_EDGE_MARGIN), dtSec);
       return;
     }
 
@@ -462,21 +476,45 @@ export class BattleScene extends Phaser.Scene {
       width: b.w,
       height: b.h,
       fontSize: 15,
-    }).setDepth(DEPTH_HUD + 2);
+    }).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
 
     this.autoBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2, b.y, 'AUTO  OFF', () => this.setAutoMode(!this.autoMode), {
       variant: 'secondary',
       width: b.w,
       height: b.h,
       fontSize: 15,
-    }).setDepth(DEPTH_HUD + 2);
+    });
+    this.autoBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
 
     if (this.isTouch) {
       const hint = addChip(this, 0, CANVAS_H - 36, '敵をタップ: 目標  /  海をタップ: 移動', Colors.cyan, Css.cyan);
-      hint.setX(CANVAS_W - 20 - hint.getBounds().width).setDepth(DEPTH_HUD);
+      hint.setX(CANVAS_W - 20 - hint.getBounds().width).setDepth(DEPTH_HUD).setScrollFactor(0);
     }
 
     this.reticle = this.add.graphics().setDepth(DEPTH_HUD - 1);
+    this.edgeMarkers = this.add.graphics().setDepth(DEPTH_HUD - 1).setScrollFactor(0);
+  }
+
+  /** Red arrows on the screen border pointing at enemies the camera can't see. */
+  private drawEdgeMarkers(): void {
+    const g = this.edgeMarkers;
+    g.clear();
+    const view = this.cameras.main.worldView;
+    const size = IS_PORTRAIT ? 18 : 13;
+    for (const enemy of this.enemies) {
+      if (!enemy.isAlive) continue;
+      const edge = edgePoint(enemy.x - view.x, enemy.y - view.y, VIEW_INSET);
+      if (!edge) continue;
+      const { x, y, angle } = edge;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      g.fillStyle(enemy === this.lockedTarget ? Colors.gold : Colors.danger, 0.9);
+      g.fillTriangle(
+        x + cos * size, y + sin * size,
+        x - cos * size * 0.6 - sin * size * 0.7, y - sin * size * 0.6 + cos * size * 0.7,
+        x - cos * size * 0.6 + sin * size * 0.7, y - sin * size * 0.6 - cos * size * 0.7,
+      );
+    }
   }
 
   /** Mouse: crosshair at the cursor. Touch / AUTO: brackets on the target and the waypoint marker. */

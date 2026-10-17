@@ -99,3 +99,11 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   are interactive so taps don't fall through, and tap handlers go through `onTap()` to ignore drags.
 - Touch battle controls live in `systems/AutoPilot.ts` (pure, tested): tap enemy = lock target,
   tap sea = waypoint, auto-fire in range, AUTO = engage band (close in / back off / circle).
+
+### Battle world larger than the screen
+- BattleScene's `WORLD` is ~2x the canvas; `physics.world.setBounds` + `camera.setBounds/startFollow(flagship)`.
+- HUD (strip, buttons, chips, joystick, edge markers) uses `setScrollFactor(0)`; ship labels stay in world space,
+  so the strip sits at a higher depth than them.
+- Use `pointer.worldX/worldY` for world taps/clicks, and re-project the mouse every frame
+  (`camera.getWorldPoint`) because the camera moves while the cursor is still.
+- Shell out-of-bounds checks `physics.world.bounds`, not the canvas size.

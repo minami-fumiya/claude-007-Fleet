@@ -1,5 +1,4 @@
 import { BaseProjectile } from './BaseProjectile';
-import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
 
 const OUT_OF_BOUNDS_MARGIN = 100;
 
@@ -13,11 +12,13 @@ export class Shell extends BaseProjectile {
   update(_time: number, _delta: number): void {
     if (!this.active) return;
     const { x, y } = this;
+    // The battle world can be larger than the screen, so test against the physics world.
+    const world = this.scene.physics.world.bounds;
     if (
-      x < -OUT_OF_BOUNDS_MARGIN ||
-      x > CANVAS_W + OUT_OF_BOUNDS_MARGIN ||
-      y < -OUT_OF_BOUNDS_MARGIN ||
-      y > CANVAS_H + OUT_OF_BOUNDS_MARGIN
+      x < world.left - OUT_OF_BOUNDS_MARGIN ||
+      x > world.right + OUT_OF_BOUNDS_MARGIN ||
+      y < world.top - OUT_OF_BOUNDS_MARGIN ||
+      y > world.bottom + OUT_OF_BOUNDS_MARGIN
     ) {
       this.deactivate();
     }

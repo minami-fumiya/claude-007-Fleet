@@ -11,7 +11,8 @@ const PLAYER_BAR_W = 90;
 const ENEMY_BAR_W = 60;
 const ESCORT_BAR_W = 50;
 const LABEL_GAP = 4;
-const LABEL_H = 14;
+/** The strip draws above world-space ship labels that scroll underneath it. */
+const STRIP_DEPTH = DEPTH_HUD + 10;
 
 /** Distance from a ship's centre to the edge of its hull at any heading. */
 function hullRadius(ship: BaseShip): number {
@@ -95,11 +96,11 @@ export class HUD {
     // Status strip — flagship HP, kills, main gun reload, elapsed time
     const L = STRIP;
     this.barBg = drawPanel(scene.add.graphics(), BX, BY, L.bar.w, L.bar.h, { radius: 18, fillAlpha: 0.78, glow: 0.6 })
-      .setDepth(DEPTH_HUD);
-    this.meters = scene.add.graphics().setDepth(DEPTH_HUD + 1);
+      .setDepth(STRIP_DEPTH);
+    this.meters = scene.add.graphics().setDepth(STRIP_DEPTH + 1);
 
     const label = (pos: IPos, text: string): void => {
-      this.staticTexts.push(scene.add.text(BX + pos.x, BY + pos.y, text, eyebrowStyle(9, Css.muted)).setDepth(DEPTH_HUD + 1));
+      this.staticTexts.push(scene.add.text(BX + pos.x, BY + pos.y, text, eyebrowStyle(9, Css.muted)).setDepth(STRIP_DEPTH + 1));
     };
     label(L.hpLabel, IS_PORTRAIT ? `旗艦 · ${player.stats.name}` : `FLAGSHIP · ${player.stats.name}`);
     label(L.sunkLabel, IS_PORTRAIT ? '撃沈' : '撃沈 SUNK');
@@ -109,7 +110,7 @@ export class HUD {
     const value = (pos: IPos, size: number, color: string, originX = 0): Phaser.GameObjects.Text =>
       scene.add.text(BX + pos.x, BY + pos.y, '', textStyle(size, color, { fontStyle: 'bold' }))
         .setOrigin(originX, IS_PORTRAIT && pos === L.hpText ? 0 : 0.5)
-        .setDepth(DEPTH_HUD + 1);
+        .setDepth(STRIP_DEPTH + 1);
     this.hpText = value(L.hpText, 12, Css.muted, L.hpTextOriginX);
     this.killText = value(L.killText, 18, Css.gold);
     this.gunText = value(L.gunText, 11, Css.cyan);
@@ -118,6 +119,11 @@ export class HUD {
     // Segment dividers
     this.barBg.lineStyle(1, Colors.rim, 0.15);
     for (const [x1, y1, x2, y2] of L.dividers) this.barBg.lineBetween(BX + x1, BY + y1, BX + x2, BY + y2);
+
+    // The strip stays on screen while the camera follows the flagship; ship labels stay in the world.
+    for (const o of [this.barBg, this.meters, this.hpText, this.killText, this.gunText, this.timeText, ...this.staticTexts]) {
+      o.setScrollFactor(0);
+    }
 
     // Player ship name (follows ship, above HP bar)
     this.playerNameLabel = scene.add
@@ -163,7 +169,7 @@ export class HUD {
         player.stats.currentHp,
         player.stats.maxHp,
         player.x,
-        player.y + hullRadius(player) + LABEL_GAP + LABEL_H + 2,
+        player.y + hullRadius(player) + LABEL_GAP + this.playerNameLabel.height,
       );
     } else {
       this.playerNameLabel.setVisible(false);
@@ -187,7 +193,7 @@ export class HUD {
       if (ship.active) {
         const bottom = ship.y + hullRadius(ship) + LABEL_GAP;
         label.setPosition(ship.x, bottom).setVisible(true);
-        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + LABEL_H, Colors.cyan);
+        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, Colors.cyan);
       } else {
         bar.update(0, 1, -500, -500);
         label.setVisible(false);

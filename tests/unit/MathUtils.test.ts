@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { angleBetween, distanceBetween, clamp, stickVector, wrapDegrees, rotateTowardsDegrees } from '@/utils/MathUtils';
+import { angleBetween, distanceBetween, clamp, stickVector, wrapDegrees, rotateTowardsDegrees, edgePoint } from '@/utils/MathUtils';
 
 describe('clamp', () => {
   it('clamps below min', () => expect(clamp(-5, 0, 10)).toBe(0));
@@ -59,4 +59,26 @@ describe('rotateTowardsDegrees', () => {
   it('snaps when within step', () => expect(rotateTowardsDegrees(10, 15, 10)).toBe(15));
   it('limits rotation to max step', () => expect(rotateTowardsDegrees(0, 90, 10)).toBe(10));
   it('takes shortest arc across 180', () => expect(rotateTowardsDegrees(170, -170, 5)).toBe(175));
+});
+
+describe('edgePoint', () => {
+  const rect = { left: 0, top: 0, right: 100, bottom: 200 };
+  it('is null for a point inside', () => expect(edgePoint(50, 50, rect)).toBeNull());
+  it('pins a point above to the top edge', () => {
+    const e = edgePoint(50, -300, rect)!;
+    expect(e.x).toBeCloseTo(50);
+    expect(e.y).toBeCloseTo(0);
+    expect(e.angle).toBeCloseTo(-Math.PI / 2);
+  });
+  it('pins a point to the right onto the right edge', () => {
+    const e = edgePoint(400, 100, rect)!;
+    expect(e.x).toBeCloseTo(100);
+    expect(e.y).toBeCloseTo(100);
+  });
+  it('hits the nearer edge for a diagonal point', () => {
+    const e = edgePoint(300, 400, rect)!;
+    // centre (50,100) → direction (250,300): reaches x=100 at t=0.2 before y=200 at t=0.333
+    expect(e.x).toBeCloseTo(100);
+    expect(e.y).toBeCloseTo(160);
+  });
 });
