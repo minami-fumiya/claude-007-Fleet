@@ -8,8 +8,9 @@ import { ShipClass } from '@/types/ShipClass';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
+import rn from '@/data/ships/rn.json';
 
-const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships] as IShipData[]);
+const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[]);
 const first = (): number => 0;
 const last = (): number => 0.999;
 
@@ -18,7 +19,7 @@ function ship(id: string, shipClass: ShipClass): IShipData {
 }
 
 describe('generateEnemyFleet', () => {
-  it.each([Nation.IJN, Nation.USN, Nation.KM])('builds a battleship-led surface group for %s', (nation) => {
+  it.each([Nation.IJN, Nation.USN, Nation.KM, Nation.RN])('builds a battleship-led surface group for %s', (nation) => {
     const fleet = generateEnemyFleet(registry, nation, BattleMode.Surface, first);
     expect(fleet).toHaveLength(ENEMY_FLEET_SIZE);
     expect(fleet.map((s) => s.shipClass)).toEqual([ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer]);
@@ -46,6 +47,6 @@ describe('generateEnemyFleet', () => {
   });
 
   it('returns an empty fleet for a nation without ships', () => {
-    expect(generateEnemyFleet(registry, Nation.RN, BattleMode.Surface)).toEqual([]);
+    expect(generateEnemyFleet(new ShipRegistry([]), Nation.RN, BattleMode.Surface)).toEqual([]);
   });
 });

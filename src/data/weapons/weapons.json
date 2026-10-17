@@ -197,6 +197,78 @@
       "range": 540,
       "reloadTime": 1100,
       "projectileSpeed": 640
+    },
+    {
+      "id": "15in_mk1",
+      "name": "15in Mk.I 主砲",
+      "type": "ShellAP",
+      "firePower": 100,
+      "range": 590,
+      "reloadTime": 1500,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "14in_mk7",
+      "name": "14in Mk.VII 4 連装砲",
+      "type": "ShellAP",
+      "firePower": 98,
+      "range": 580,
+      "reloadTime": 1300,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "16in_mk1",
+      "name": "16in Mk.I 主砲",
+      "type": "ShellAP",
+      "firePower": 110,
+      "range": 600,
+      "reloadTime": 1650,
+      "projectileSpeed": 580
+    },
+    {
+      "id": "6in_mk23",
+      "name": "6in Mk.XXIII 砲",
+      "type": "ShellHE",
+      "firePower": 48,
+      "range": 480,
+      "reloadTime": 850,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "4_7in_mk12",
+      "name": "4.7in Mk.XII 砲",
+      "type": "ShellHE",
+      "firePower": 33,
+      "range": 410,
+      "reloadTime": 750,
+      "projectileSpeed": 530
+    },
+    {
+      "id": "4_5in_mk1",
+      "name": "4.5in Mk.I 両用砲",
+      "type": "ShellHE",
+      "firePower": 30,
+      "range": 420,
+      "reloadTime": 700,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "mk8_torpedo",
+      "name": "Mk.VIII 魚雷",
+      "type": "Torpedo",
+      "firePower": 165,
+      "range": 330,
+      "reloadTime": 4500,
+      "projectileSpeed": 280
+    },
+    {
+      "id": "mk8_sub_torpedo",
+      "name": "Mk.VIII 魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 125,
+      "range": 370,
+      "reloadTime": 8000,
+      "projectileSpeed": 255
     }
   ]
 }

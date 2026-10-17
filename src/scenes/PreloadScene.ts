@@ -6,6 +6,7 @@ import { drawMeter } from '@/ui/components/UIKit';
 import ijnData from '@/data/ships/ijn.json';
 import usnData from '@/data/ships/usn.json';
 import kmData from '@/data/ships/km.json';
+import rnData from '@/data/ships/rn.json';
 import { DataLoader } from '@/utils/DataLoader';
 import { generateShipTextures } from '@/entities/ships/ShipTextures';
 import weaponsData from '@/data/weapons/weapons.json';
@@ -20,6 +21,7 @@ export class PreloadScene extends Phaser.Scene {
     this.cache.json.add('ijn', ijnData);
     this.cache.json.add('usn', usnData);
     this.cache.json.add('km', kmData);
+    this.cache.json.add('rn', rnData);
     this.cache.json.add('weapons', weaponsData);
   }
 

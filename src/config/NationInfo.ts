@@ -9,8 +9,8 @@ export interface INationInfo {
   en: string;
 }
 
-/** Nations playable this sprint, in the order the Fleet Builder tabs show them. Royal Navy arrives in Sprint 5. */
-export const PLAYABLE_NATIONS: Nation[] = [Nation.IJN, Nation.USN, Nation.KM];
+/** Playable nations, in the order the Fleet Builder tabs show them. */
+export const PLAYABLE_NATIONS: Nation[] = [Nation.IJN, Nation.USN, Nation.KM, Nation.RN];
 
 export const NATION_INFO: Record<Nation, INationInfo> = {
   [Nation.IJN]: { dataKey: 'ijn', short: 'IJN', ja: '帝国海軍', en: 'IMPERIAL JAPANESE NAVY' },

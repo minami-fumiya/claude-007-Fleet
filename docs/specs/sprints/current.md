@@ -1,56 +1,51 @@
-# Sprint 4 — USN・Kriegsmarine・AI 強化・潜水艦戦
+# Sprint 5 — Royal Navy・艦載機・偵察と索敵・艦長・カスタマイズ
 
-**Status**: Implemented [IMPLEMENTED: sprint4] | **Branch**: `ccr-192e7779-941xlk` (PR #14)
-**Goal**: 3 国籍 (IJN / USN / KM) から艦隊を編成でき、国籍ごとに戦い方の違う AI と戦える。潜水艦は潜航して魚雷で戦い、駆逐艦はソナーと爆雷で対抗する。
+**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に Sprint 4 と同梱)
+**Goal**: 4 国籍が揃い、空母が艦載機で戦える。視界外の敵は見えず (FogOfWar)、偵察機で索敵する。艦長とカスタマイズで艦を育てられる。
 
 ## スコープ判断
-- 艦船データは Todo.md の主要艦 (IJN 16 / USN 13 / KM 11 隻) を実装。ゲームバランスは既存 IJN の数値スケールに合わせる。Fleet Builder は 6 隻ごとのページ切替。
-- 空母は艦載機が Sprint 5 のため、今スプリントは副砲のみの扱いを継続。
-- ミニマップは Sprint 7 のため、ソナー探知は「探知中の潜水艦を半透明表示 + ソナー波紋」で表現する。
-- 純粋ロジックは `src/systems/` に置き Vitest でテストする (Phaser 非依存)。
+- 艦船データのファイル名は既存に合わせて `src/data/ships/rn.json` (Todo の `royal-navy.json` から変更)。
+- 艦載機は「攻撃隊 (編隊) 単位」で扱う。1 機ずつの物理演算はしない。
+- 艦長・カスタマイズの保存は localStorage (失敗時はメモリのみ)。本格的なセーブ/ロードは backlog のまま。
+- 純粋ロジックは `src/systems/` に置き Vitest でテストする。
 
 ## Tasks
 
-### A. 国籍データ・多国籍編成
-- [x] `src/data/ships/usn.json` — Iowa / Missouri / New Jersey / North Carolina / Baltimore / Des Moines / Fletcher / Gearing / Essex / Enterprise / Midway / Gato / Balao
-- [x] `src/data/ships/km.json` — Bismarck / Tirpitz / Scharnhorst / Gneisenau / Prinz Eugen / Admiral Hipper / Z1 / Graf Zeppelin / U-boat VIIC / IXC / XXI
-- [x] `src/data/ships/ijn.json` — 伊19 / 伊400 (潜水艦) と Sprint 3 持ち越しの長門・陸奥・金剛・愛宕・利根・島風・雪風・赤城・加賀を追加
-- [x] `src/data/weapons/weapons.json` — 各国の主砲・副砲・魚雷・爆雷を追加
-- [x] `src/systems/ShipRegistry.ts` — 国籍別の艦リスト取得 (純粋ロジック)
-- [x] `src/systems/EnemyFleetGenerator.ts` — 敵国籍・戦力に応じた敵艦隊生成
-- [x] `ShipTextures.ts` — 潜水艦スプライト、全国籍の艦を生成
-- [x] `FleetBuilderScene.ts` — 国籍タブ (IJN / USN / KM)・敵国籍の選択
-- [x] `tests/unit/ShipRegistry.test.ts` / `EnemyFleetGenerator.test.ts`
-- [x] `docs/specs/ships/USN/` / `docs/specs/ships/KM/` 仕様書 (`IJN/` も作成)
+### A. Royal Navy
+- [x] `src/data/ships/rn.json` — Hood / King George V / Warspite / Rodney / Belfast / Southampton / Tribal 級 / J 級 / Illustrious / Ark Royal / T 級 / U 級
+- [x] 武器データ (15in / 16in / 14in / 6in / 4.7in / Mk.VIII 魚雷 / Mk.VIII 潜水艦魚雷)
+- [x] `PLAYABLE_NATIONS` に RN を追加 (Fleet Builder タブ・交戦相手)
+- [x] `docs/specs/ships/RN/roster.md`
 
-### B. AI v2
-- [x] `src/systems/AIBrain.ts` — 優先目標選択 (距離・残 HP・脅威・艦種)、撤退判断、国籍別戦術プロファイル
-  - IJN: 接近して魚雷戦 / USN: 遠距離砲戦を維持 / KM: 集中射撃で弱った艦を狙う
-- [x] `AISystem.ts` を v2 化 — 旗艦だけでなく全プレイヤー艦を目標候補に
-- [x] `tests/unit/AIBrain.test.ts`
-- [x] `docs/specs/systems/ai.md`
+### B. 艦載機
+- [ ] `src/types/Aircraft.ts` — `AircraftType` (Fighter / DiveBomber / TorpedoBomber / Recon)、`IAirWing`
+- [ ] `src/systems/AirWingSystem.ts` — 搭載機数・発艦・帰還・再装備・損耗 (純粋)
+- [ ] `src/systems/AirCombat.ts` — 対空砲火による撃墜・戦闘機の迎撃 (純粋)
+- [ ] `src/entities/aircraft/Squadron.ts` — 編隊エンティティ (進出 → 攻撃 → 帰還)
+  - 急降下爆撃: 目標上空で爆弾 (Bomb) / 雷撃: 目標手前で魚雷投下 / 戦闘機: 空母上空で直掩・敵編隊を迎撃
+- [ ] 空母の艦載機データ (`airWing`) と AI の攻撃隊発艦、プレイヤーの「攻撃隊発艦」ボタン
+- [ ] `tests/unit/AirWingSystem.test.ts` / `AirCombat.test.ts`
+- [ ] `docs/specs/systems/aircraft.md`
 
-### C. 武器の拡張
-- [x] `src/entities/weapons/Torpedo.ts` — 低速・長射程・高威力 (Sprint 3 からの持ち越し)
-- [x] 艦ごとに複数武器を扱う (主砲 + 魚雷 / 爆雷)。弾速は武器データの `projectileSpeed` を使用
+### C. 偵察機と FogOfWar
+- [ ] `src/systems/VisionSystem.ts` — 艦の視界・偵察機の扇形索敵範囲・可視判定 (純粋)
+- [ ] 偵察機 (戦艦・巡洋艦の水上機) が前方を索敵
+- [ ] FogOfWar: 視界外の敵艦は非表示・攻撃目標にできない、画面は視界外を暗く (RenderTexture マスク)
+- [ ] `tests/unit/VisionSystem.test.ts`
 
-### D. 潜水艦戦
-- [x] `src/systems/SubmarineSystem.ts` — 潜航 / 浮上の状態管理 (潜航時: 速度低下・魚雷のみ・砲弾無効・潜航時間に上限)
-- [x] `src/systems/SonarSystem.ts` — ソナー探知 (探知範囲内の潜航艦を可視化)
-- [x] `src/entities/weapons/DepthCharge.ts` — 爆雷 (投下後に遅延爆発・範囲ダメージ)
-- [x] 駆逐艦 AI: 探知した潜水艦へ接近して爆雷投下
-- [x] プレイヤーが潜水艦を旗艦にした場合の潜航 / 浮上操作 (キー `Q` / ボタン)
-- [x] 対潜戦モード基本版 (敵が潜水艦群)
-- [x] `tests/unit/SubmarineSystem.test.ts` / `SonarSystem.test.ts`
-- [x] `docs/specs/systems/submarine.md`
+### D. 艦長
+- [ ] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill`
+- [ ] `src/systems/CaptainSystem.ts` — 任命・スキル 3 種・経験値とレベルアップ (純粋)
+- [ ] Fleet Builder で艦長を任命、戦闘結果で経験値付与
+- [ ] `tests/unit/CaptainSystem.test.ts`
+- [ ] `docs/specs/systems/captain.md`
+
+### E. カスタマイズ
+- [ ] `src/systems/CustomizationSystem.ts` — 装備スロット・ステータス再計算 (純粋)
+- [ ] `src/scenes/CustomizationScene.ts` + `src/ui/CustomizationPanel.ts`
+- [ ] `tests/unit/CustomizationSystem.test.ts`
+- [ ] `docs/specs/systems/customization.md`
 
 ### 完了処理
-- [x] `skill.md` に Sprint 4 の知見を追記
-- [x] `Todo.md` / 本ファイルのチェック更新、`[IMPLEMENTED: sprint4]` タグ記入
-- [ ] PR → CI → Vercel Preview 確認 (PR #14)
-
-## 実装メモ
-- AI の意思決定は `AIBrain.ts` (純粋関数)、操舵・射撃は `AISystem.ts` / `EscortAISystem.ts`。
-- 武器選択は `WeaponSelector.ts`、照準の偏差射撃は `MathUtils.interceptAngle`。
-- 潜水艦は独立したエンティティクラスではなく `BaseShip.sub` (潜航状態) で表現した。艦種別エンティティは backlog のまま。
-- バランス調整: 魚雷は 2 本斉射で火力を分割、潜水艦魚雷は装填 8 秒、潜航持続 20 秒、爆雷は信管 0.8 秒 / 半径 110。
+- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint5]` タグ
+- [ ] PR → CI → Vercel Preview 確認

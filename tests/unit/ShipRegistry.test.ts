@@ -7,12 +7,14 @@ import { ShipClass } from '@/types/ShipClass';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
+import rn from '@/data/ships/rn.json';
 import weapons from '@/data/weapons/weapons.json';
 
 const FILES: Array<[Nation, IShipData[]]> = [
   [Nation.IJN, ijn.ships as IShipData[]],
   [Nation.USN, usn.ships as IShipData[]],
   [Nation.KM, km.ships as IShipData[]],
+  [Nation.RN, rn.ships as IShipData[]],
 ];
 const ALL = FILES.flatMap(([, ships]) => ships);
 

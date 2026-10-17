@@ -1,0 +1,170 @@
+{
+  "ships": [
+    {
+      "id": "hood",
+      "name": "フッド (Hood)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 450,
+      "armor": 50,
+      "speed": 160,
+      "weapons": [
+        "15in_mk1",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "hood"
+    },
+    {
+      "id": "king_george_v",
+      "name": "キング・ジョージ5世 (King George V)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 460,
+      "armor": 60,
+      "speed": 140,
+      "weapons": [
+        "14in_mk7",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "king_george_v"
+    },
+    {
+      "id": "warspite",
+      "name": "ウォースパイト (Warspite)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 430,
+      "armor": 56,
+      "speed": 128,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "warspite"
+    },
+    {
+      "id": "rodney",
+      "name": "ロドニー (Rodney)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 470,
+      "armor": 60,
+      "speed": 115,
+      "weapons": [
+        "16in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "rodney"
+    },
+    {
+      "id": "belfast",
+      "name": "ベルファスト (Belfast)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "hp": 255,
+      "armor": 38,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "belfast"
+    },
+    {
+      "id": "southampton",
+      "name": "サウサンプトン (Southampton)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "hp": 240,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton"
+    },
+    {
+      "id": "cossack",
+      "name": "コサック (Cossack)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 140,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack"
+    },
+    {
+      "id": "javelin",
+      "name": "ジャベリン (Javelin)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 135,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "javelin"
+    },
+    {
+      "id": "illustrious",
+      "name": "イラストリアス (Illustrious)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "hp": 320,
+      "armor": 40,
+      "speed": 150,
+      "weapons": [
+        "4_5in_mk1"
+      ],
+      "spriteKey": "illustrious"
+    },
+    {
+      "id": "ark_royal",
+      "name": "アーク・ロイヤル (Ark Royal)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "hp": 310,
+      "armor": 30,
+      "speed": 160,
+      "weapons": [
+        "4_5in_mk1"
+      ],
+      "spriteKey": "ark_royal"
+    },
+    {
+      "id": "truant",
+      "name": "トルーアント (Truant)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 95,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "truant"
+    },
+    {
+      "id": "upholder",
+      "name": "アップホルダー (Upholder)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 85,
+      "armor": 5,
+      "speed": 140,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "upholder"
+    }
+  ]
+}
