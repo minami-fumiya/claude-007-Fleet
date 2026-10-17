@@ -187,3 +187,11 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   pilot played. Placement tests (at sea in both worlds) catch islands, not balance.
 - Career stats are a plain record object updated by a pure `recordBattle`; medals are rules over that record plus a
   small context (cleared theaters), so new medals are one table row.
+
+### Sprint 11 — Settings, help, save codes
+- Keep settings in their own storage key: a progress reset or a save import must not touch volume.
+- When adding a volume scale to an existing mix, raise the base gains so the default setting keeps today's loudness.
+- Text input in Phaser without DOM elements: `window.prompt` works on desktop and mobile; Playwright answers it with
+  `page.on('dialog')`. Prefix + base64 save codes survive copy / paste (whitespace is stripped on import).
+- Destructive buttons use a two-press arm that any other action disarms, instead of a blocking `confirm`.
+- Run the check script BEFORE `git add`: it regenerates `fontGlyphs.ts`, and staging first left that change out of a commit.

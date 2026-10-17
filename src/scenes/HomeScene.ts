@@ -75,7 +75,15 @@ export class HomeScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  タイトル', () => this.scene.start(SceneKeys.MAIN_MENU), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'NAVAL BASE', eyebrowStyle(12)).setOrigin(0.5);
+    // Portrait: the corner buttons take the right side, so the eyebrow sits left of centre.
+    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? -20 : 0), IS_PORTRAIT ? 28 : 26, 'NAVAL BASE', eyebrowStyle(12)).setOrigin(0.5);
+    const corner = IS_PORTRAIT ? { w: 100, h: 60, y: 46 } : { w: 120, h: 44, y: 44 };
+    new UIButton(this, CANVAS_W - 16 - corner.w / 2, corner.y, '設定', () => this.scene.start(SceneKeys.SETTINGS, { returnTo: SceneKeys.HOME }), {
+      variant: 'secondary', width: corner.w, height: corner.h, fontSize: 15,
+    });
+    new UIButton(this, CANVAS_W - 26 - corner.w * 1.5, corner.y, 'ヘルプ', () => this.scene.start(SceneKeys.HELP), {
+      variant: 'secondary', width: corner.w, height: corner.h, fontSize: 15,
+    });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '鎮守府 — 艦隊司令部', displayStyle(24)).setOrigin(0.5);
 
     this.bar = new ResourceBar(this, L.resources.x, L.resources.y, L.resources.w, L.resourceCols);

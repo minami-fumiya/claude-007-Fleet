@@ -13,6 +13,8 @@ import { CampaignMapScene } from '@/scenes/CampaignMapScene';
 import { ScenarioScene } from '@/scenes/ScenarioScene';
 import { EncyclopediaScene } from '@/scenes/EncyclopediaScene';
 import { RecordScene } from '@/scenes/RecordScene';
+import { SettingsScene } from '@/scenes/SettingsScene';
+import { HelpScene } from '@/scenes/HelpScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -36,5 +38,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene, HomeScene, ArsenalScene, CampaignMapScene, ScenarioScene, EncyclopediaScene, RecordScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene, HomeScene, ArsenalScene, CampaignMapScene, ScenarioScene, EncyclopediaScene, RecordScene, SettingsScene, HelpScene],
 };

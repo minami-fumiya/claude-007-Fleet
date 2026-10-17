@@ -18,4 +18,5 @@
 - Sprint 8: Campaign map, convoy ops, shore bombardment, FogOfWar
 - Sprint 9: Historical scenarios, refit system, encyclopedia
 - Sprint 10: Fictional ships, more scenarios and a third theater, service record and medals (implemented)
-- Sprint 11+: Multiplayer (TBD — needs a server)
+- Sprint 11: Polish — settings (volume), help, save export / import / reset (proposed and implemented)
+- Sprint 12+: Multiplayer (TBD — needs a server)

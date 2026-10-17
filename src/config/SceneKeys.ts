@@ -11,6 +11,8 @@ export const SceneKeys = {
   SCENARIO: 'ScenarioScene',
   ENCYCLOPEDIA: 'EncyclopediaScene',
   RECORD: 'RecordScene',
+  SETTINGS: 'SettingsScene',
+  HELP: 'HelpScene',
   HOME: 'HomeScene',
 } as const;
 

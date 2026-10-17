@@ -1,14 +1,18 @@
 import { distanceGain, SoundKind, SoundThrottle } from './SoundRules';
+import { channelGain, ISettings, parseSettings } from './SettingsSystem';
 
 /**
  * Synthesised sound (WebAudio): no audio files, every effect and the background music are built from
  * oscillators and filtered noise. One instance for the whole page; it starts silent until the first
- * user gesture unlocks the AudioContext, and remembers the mute setting in localStorage.
+ * user gesture unlocks the AudioContext, and remembers the volume / mute settings in localStorage.
  */
 
-const MUTE_KEY = 'ww2fleet.audio.muted';
-const SFX_VOLUME = 0.5;
-const BGM_VOLUME = 0.14;
+/** Pre-settings mute flag, read once for older players. */
+const LEGACY_MUTE_KEY = 'ww2fleet.audio.muted';
+const SETTINGS_KEY = 'ww2fleet.settings.v1';
+/** Gains at volume 100; the default 80 matches the levels before volume settings existed. */
+const SFX_VOLUME = 0.625;
+const BGM_VOLUME = 0.175;
 const BGM_FADE_S = 1.5;
 /** Chord roots (Hz) cycled by the music; minor-ish for battle, calmer for the menus. */
 const CHORDS: Record<'menu' | 'battle', number[][]> = {
@@ -28,14 +32,24 @@ class AudioSystem {
   private mood: 'menu' | 'battle' | null = null;
   private chordTimer: ReturnType<typeof setInterval> | null = null;
   private chordIndex = 0;
-  muted = false;
+  settings: ISettings;
 
   constructor() {
+    let stored: string | null = null;
+    let legacyMuted = false;
     try {
-      this.muted = typeof localStorage !== 'undefined' && localStorage.getItem(MUTE_KEY) === '1';
+      if (typeof localStorage !== 'undefined') {
+        stored = localStorage.getItem(SETTINGS_KEY);
+        legacyMuted = localStorage.getItem(LEGACY_MUTE_KEY) === '1';
+      }
     } catch {
-      this.muted = false;
+      // Storage blocked: defaults.
     }
+    this.settings = parseSettings(stored, legacyMuted);
+  }
+
+  get muted(): boolean {
+    return this.settings.muted;
   }
 
   /** Creates / resumes the AudioContext; call from a user gesture. */
@@ -46,7 +60,7 @@ class AudioSystem {
     if (!this.ctx) {
       this.ctx = new Ctor();
       this.sfx = this.ctx.createGain();
-      this.sfx.gain.value = this.muted ? 0 : SFX_VOLUME;
+      this.sfx.gain.value = this.sfxGain();
       this.sfx.connect(this.ctx.destination);
       this.bgm = this.ctx.createGain();
       this.bgm.gain.value = 0;
@@ -58,16 +72,29 @@ class AudioSystem {
   }
 
   setMuted(muted: boolean): void {
-    this.muted = muted;
+    this.update({ muted });
+  }
+
+  /** Changes and saves settings, applying them to the playing sound. */
+  update(patch: Partial<ISettings>): void {
+    this.settings = { ...this.settings, ...patch };
     try {
-      localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.settings));
     } catch {
       // ignore
     }
     if (!this.ctx || !this.sfx || !this.bgm) return;
     const now = this.ctx.currentTime;
-    this.sfx.gain.setTargetAtTime(muted ? 0 : SFX_VOLUME, now, 0.05);
-    this.bgm.gain.setTargetAtTime(muted || !this.mood ? 0 : BGM_VOLUME, now, 0.2);
+    this.sfx.gain.setTargetAtTime(this.sfxGain(), now, 0.05);
+    this.bgm.gain.setTargetAtTime(this.mood ? this.bgmGain() : 0, now, 0.2);
+  }
+
+  private sfxGain(): number {
+    return channelGain(SFX_VOLUME, this.settings.sfx, this.settings.muted);
+  }
+
+  private bgmGain(): number {
+    return channelGain(BGM_VOLUME, this.settings.bgm, this.settings.muted);
   }
 
   /** Plays an effect; `distance` from the listener (camera centre) attenuates it. */
@@ -119,7 +146,7 @@ class AudioSystem {
     const ctx = this.ctx!;
     const bgm = this.bgm!;
     bgm.gain.cancelScheduledValues(ctx.currentTime);
-    bgm.gain.setTargetAtTime(this.muted ? 0 : BGM_VOLUME, ctx.currentTime, BGM_FADE_S / 3);
+    bgm.gain.setTargetAtTime(this.bgmGain(), ctx.currentTime, BGM_FADE_S / 3);
     if (this.chordTimer) clearInterval(this.chordTimer);
     this.chordIndex = 0;
     const playChord = (): void => {
