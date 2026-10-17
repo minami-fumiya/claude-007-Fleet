@@ -7,6 +7,8 @@ import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
+import { TimeOfDay, Weather } from '@/types/Weather';
+import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ICaptain, ICaptainData } from '@/types/Captain';
 import { SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
@@ -76,7 +78,7 @@ const LAYOUT: IBuilderLayout = IS_PORTRAIT
       formations: { x: 16, y: P_FORMATIONS_Y, w: CANVAS_W - 32, h: P_FORMATIONS_H },
       formationFlow: 'row',
       formationCardH: 180,
-      enemy: { x: 16, y: P_ENEMY_Y, w: CANVAS_W - 32, h: 84 + 2 * 64 + 12 + 14 },
+      enemy: { x: 16, y: P_ENEMY_Y, w: CANVAS_W - 32, h: 84 + 4 * 60 + 3 * 12 + 18 },
       enemyButtonH: 60,
       footer: { x: 16, y: CANVAS_H - FOOTER_BAR_H + 6, w: CANVAS_W - 32, h: FOOTER_BAR_H - 18 },
     }
@@ -86,10 +88,10 @@ const LAYOUT: IBuilderLayout = IS_PORTRAIT
       tabH: 36,
       fleet: { x: 444, y: 92, w: 412, h: 512 },
       slotH: 136,
-      formations: { x: 872, y: 92, w: 384, h: 362 },
+      formations: { x: 872, y: 92, w: 384, h: 296 },
       formationFlow: 'column',
-      formationCardH: 88,
-      enemy: { x: 872, y: 466, w: 384, h: 138 },
+      formationCardH: 66,
+      enemy: { x: 872, y: 400, w: 384, h: 204 },
       enemyButtonH: 32,
       footer: { x: 24, y: 616, w: CANVAS_W - 48, h: 92 },
     };
@@ -124,6 +126,10 @@ function fitName(text: Phaser.GameObjects.Text, name: string, room: number): voi
   if (text.width > room) text.setScale(room / text.width);
 }
 
+const RANDOM = 'random' as const;
+const WEATHER_CHOICES: Array<Weather | typeof RANDOM> = [RANDOM, Weather.Clear, Weather.Overcast, Weather.Storm, Weather.Fog];
+const TIME_CHOICES: Array<TimeOfDay | typeof RANDOM> = [RANDOM, TimeOfDay.Day, TimeOfDay.Night];
+
 const BATTLE_MODES: BattleMode[] = [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW];
 const MODE_LABEL: Record<BattleMode, string> = {
   [BattleMode.Surface]: '水上戦',
@@ -140,6 +146,8 @@ export interface ISelection {
   formation: Formation;
   slotIds: (string | null)[];
   captainIds?: (string | null)[];
+  weather?: Weather | typeof RANDOM;
+  time?: TimeOfDay | typeof RANDOM;
 }
 
 interface ISlotView {
@@ -166,6 +174,10 @@ export class FleetBuilderScene extends Phaser.Scene {
   private nationTabs: UIButton[] = [];
   private enemyNationButtons: UIButton[] = [];
   private modeButtons: UIButton[] = [];
+  private weatherButtons: UIButton[] = [];
+  private timeButtons: UIButton[] = [];
+  private weatherChoice: Weather | typeof RANDOM = RANDOM;
+  private timeChoice: TimeOfDay | typeof RANDOM = TimeOfDay.Day;
   private titleText!: Phaser.GameObjects.Text;
   private nationChip: Phaser.GameObjects.Container | null = null;
 
@@ -189,6 +201,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.nation = saved?.nation ?? Nation.IJN;
     this.enemyNation = saved?.enemyNation ?? Nation.USN;
     this.mode = saved?.mode ?? BattleMode.Surface;
+    this.weatherChoice = saved?.weather ?? RANDOM;
+    this.timeChoice = saved?.time ?? TimeOfDay.Day;
     this.ships = this.shipRegistry.byNation(this.nation);
     this.slots = [0, 1, 2].map((i) => {
       const id = saved?.slotIds[i];
@@ -205,6 +219,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.nationTabs = [];
     this.enemyNationButtons = [];
     this.modeButtons = [];
+    this.weatherButtons = [];
+    this.timeButtons = [];
     this.nationChip = null;
     this.dragging = false;
     // Meters share one scale across nations so ships compare fairly between tabs.
@@ -367,12 +383,22 @@ export class FleetBuilderScene extends Phaser.Scene {
       this.mode = BATTLE_MODES[i];
       this.refreshEnemyPanel();
     });
+    this.weatherButtons = this.addToggleRow(x, top + 2 * (h + rowGap) + h / 2, w, h, WEATHER_CHOICES.map((c) => (c === RANDOM ? 'ランダム' : WEATHER_LABEL[c])), (i) => {
+      this.weatherChoice = WEATHER_CHOICES[i];
+      this.refreshEnemyPanel();
+    });
+    this.timeButtons = this.addToggleRow(x, top + 3 * (h + rowGap) + h / 2, w, h, TIME_CHOICES.map((c) => (c === RANDOM ? 'ランダム' : TIME_LABEL[c])), (i) => {
+      this.timeChoice = TIME_CHOICES[i];
+      this.refreshEnemyPanel();
+    });
     this.refreshEnemyPanel();
   }
 
   private refreshEnemyPanel(): void {
     FleetBuilderScene.setToggle(this.enemyNationButtons, PLAYABLE_NATIONS.indexOf(this.enemyNation));
     FleetBuilderScene.setToggle(this.modeButtons, BATTLE_MODES.indexOf(this.mode));
+    FleetBuilderScene.setToggle(this.weatherButtons, WEATHER_CHOICES.indexOf(this.weatherChoice));
+    FleetBuilderScene.setToggle(this.timeButtons, TIME_CHOICES.indexOf(this.timeChoice));
   }
 
   /** Switching nation swaps the ship list; a fleet is single-nation, so the slots are cleared. */
@@ -545,10 +571,10 @@ export class FleetBuilderScene extends Phaser.Scene {
 
       const parts: Phaser.GameObjects.GameObject[] = [
         frame,
-        this.add.text(18, IS_PORTRAIT ? 18 : 10, info.ja, displayStyle(24)),
-        this.add.text(18, IS_PORTRAIT ? 66 : 46, info.en, eyebrowStyle(10, Css.muted)),
+        this.add.text(18, IS_PORTRAIT ? 18 : 6, info.ja, displayStyle(IS_PORTRAIT ? 24 : 20)),
+        this.add.text(18, IS_PORTRAIT ? 66 : 40, info.en, eyebrowStyle(10, Css.muted)),
       ];
-      if (!compact) {
+      if (!compact && r.h >= 80) {
         parts.push(this.add.text(18, IS_PORTRAIT ? 84 : 62, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } })));
       }
       const diagram = this.add.graphics();
@@ -822,6 +848,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       formation: this.formation,
       slotIds: this.slots.map((s) => s?.id ?? null),
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
+      weather: this.weatherChoice,
+      time: this.timeChoice,
     };
     this.registry.set(SELECTION_KEY, selection);
   }
@@ -856,6 +884,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       mapKey: '',
       formation: this.formation,
       mode: this.mode,
+      weather: this.weatherChoice === RANDOM ? randomWeather() : this.weatherChoice,
+      time: this.timeChoice === RANDOM ? randomTime() : this.timeChoice,
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
     };
 

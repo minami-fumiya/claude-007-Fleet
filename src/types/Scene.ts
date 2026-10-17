@@ -1,6 +1,7 @@
 import { IFleet } from './Fleet';
 import { Formation } from './Formation';
 import { BattleMode } from './Battle';
+import { TimeOfDay, Weather } from './Weather';
 
 export interface IBattleInitData {
   playerFleet: IFleet;
@@ -8,6 +9,8 @@ export interface IBattleInitData {
   mapKey: string;
   formation?: Formation;
   mode?: BattleMode;
+  weather?: Weather;
+  time?: TimeOfDay;
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */
   captainIds?: (string | null)[];
 }

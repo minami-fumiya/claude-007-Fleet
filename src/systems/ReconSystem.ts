@@ -38,10 +38,10 @@ export class ReconSystem {
   }
 
   /** Vision cones of the planes currently aloft. */
-  cones(): IVisionCone[] {
+  cones(rangeMul = 1): IVisionCone[] {
     return this.recons
       .filter((r) => r.plane)
-      .map((r) => ({ kind: 'cone', x: r.plane!.x, y: r.plane!.y, heading: r.heading, range: RECON_RANGE, halfAngle: RECON_HALF_ANGLE }));
+      .map((r) => ({ kind: 'cone', x: r.plane!.x, y: r.plane!.y, heading: r.heading, range: RECON_RANGE * rangeMul, halfAngle: RECON_HALF_ANGLE }));
   }
 
   update(time: number, delta: number, foeGuns: IAAGun[]): void {

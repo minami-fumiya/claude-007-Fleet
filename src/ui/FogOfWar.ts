@@ -16,7 +16,11 @@ export class FogOfWar {
   private brush: Phaser.GameObjects.Image;
   private cone: Phaser.GameObjects.Graphics;
 
-  constructor(private readonly scene: Phaser.Scene) {
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly color = FOG_COLOR,
+    private readonly alpha = FOG_ALPHA,
+  ) {
     if (!scene.textures.exists(BRUSH_KEY)) {
       const tex = scene.textures.createCanvas(BRUSH_KEY, BRUSH_SIZE, BRUSH_SIZE)!;
       const ctx = tex.getContext();
@@ -37,7 +41,7 @@ export class FogOfWar {
   update(sources: VisionSource[]): void {
     const view = this.scene.cameras.main.worldView;
     this.rt.clear();
-    this.rt.fill(FOG_COLOR, FOG_ALPHA);
+    this.rt.fill(this.color, this.alpha);
     this.cone.clear();
     this.cone.fillStyle(0xffffff, 1);
     for (const s of sources) {

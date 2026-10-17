@@ -21,6 +21,8 @@ import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/syst
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
+import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
+import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
 import { Explosion } from '@/entities/effects/Explosion';
@@ -112,6 +114,7 @@ export class BattleScene extends Phaser.Scene {
   private playerRecon!: ReconSystem;
   private enemyRecon!: ReconSystem;
   private fog!: FogOfWar;
+  private conditions: IBattleConditions = battleConditions(Weather.Clear, TimeOfDay.Day);
   private airText: Phaser.GameObjects.Text | null = null;
   private strikeBtn: UIButton | null = null;
   private enemyNation: Nation = Nation.USN;
@@ -194,11 +197,14 @@ export class BattleScene extends Phaser.Scene {
     this.waypoint = null;
 
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(DataLoader.getRegistry(this));
+    this.conditions = battleConditions(this.battleData?.weather ?? Weather.Clear, this.battleData?.time ?? TimeOfDay.Day);
     this.playerNation = playerFleet.nation;
     this.enemyNation = enemyFleet.nation;
 
     this.playerWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.enemies));
     this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.friendlies()));
+    this.playerWeapons.aimError = this.conditions.aimError;
+    this.enemyWeapons.aimError = this.conditions.aimError;
     const bomb = DataLoader.getWeaponById(this, 'aerial_bomb') ?? FALLBACK_WEAPON;
     const aerialTorpedo = DataLoader.getWeaponById(this, 'aerial_torpedo') ?? FALLBACK_WEAPON;
     const onBomb = (target: BaseShip, weapon: IWeaponData, dmg: number): void => {
@@ -222,7 +228,8 @@ export class BattleScene extends Phaser.Scene {
     const torpedoMain = weaponKind(this.playerWeapon) === WeaponKind.Torpedo;
     this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲');
 
-    this.fog = new FogOfWar(this);
+    this.fog = new FogOfWar(this, this.conditions.fogColor, this.conditions.fogAlpha);
+    this.addWeatherEffects();
     this.setupInput();
     this.buildOverlayUi();
     this.setupClickFire();
@@ -323,6 +330,7 @@ export class BattleScene extends Phaser.Scene {
     const ship = new BaseShip(this, x, y, shipData.spriteKey, stats);
     ship.loadout = loadout;
     ship.dataId = shipData.id;
+    ship.envSpeedMul = this.conditions.speedMul;
     ship.visionMul = mods.visionMul;
     ship.aaMul = mods.aaMul;
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
@@ -447,14 +455,24 @@ export class BattleScene extends Phaser.Scene {
   /** Everything one side sees with: ship vision circles, recon cones and its aircraft. */
   private visionSources(ships: BaseShip[], recon: ReconSystem, air: AirOpsSystem): VisionSource[] {
     const sources: VisionSource[] = [];
+    const env = this.conditions.visionMul;
     for (const s of ships) {
-      if (s.isAlive) sources.push({ kind: 'circle', x: s.x, y: s.y, radius: shipVision(s.stats.shipClass, s.submerged) * s.visionMul });
+      if (s.isAlive) sources.push({ kind: 'circle', x: s.x, y: s.y, radius: shipVision(s.stats.shipClass, s.submerged) * s.visionMul * env });
     }
-    sources.push(...recon.cones());
+    sources.push(...recon.cones(env));
     for (const sq of air.squadrons) {
-      if (sq.alive) sources.push({ kind: 'circle', x: sq.x, y: sq.y, radius: AIRCRAFT_VISION });
+      if (sq.alive) sources.push({ kind: 'circle', x: sq.x, y: sq.y, radius: AIRCRAFT_VISION * env });
     }
     return sources;
+  }
+
+  /** At night a ship that just fired is seen by any enemy within the flash range. */
+  private flashed(ship: BaseShip, weapons: WeaponSystem, observers: BaseShip[]): boolean {
+    const last = weapons.lastFiredAt(ship);
+    if (last === undefined) return false;
+    let nearest = Infinity;
+    for (const o of observers) if (o.isAlive) nearest = Math.min(nearest, Phaser.Math.Distance.Between(ship.x, ship.y, o.x, o.y));
+    return revealedByFlash(this.conditions.time, last, this.time.now, nearest);
   }
 
   /**
@@ -471,13 +489,17 @@ export class BattleScene extends Phaser.Scene {
 
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
-      const seen = enemy.submerged ? isDetected(enemy, playerHunters) : isVisible(enemy.x, enemy.y, playerSight);
+      const seen = enemy.submerged
+        ? isDetected(enemy, playerHunters)
+        : isVisible(enemy.x, enemy.y, playerSight) || this.flashed(enemy, this.enemyWeapons, this.friendlies());
       if (seen) this.seenByPlayer.add(enemy);
       enemy.setVisible(seen).setAlpha(enemy.submerged ? SUBMERGED_ALPHA : 1);
     }
     for (const ship of this.friendlies()) {
       if (!ship.isAlive) continue;
-      const seen = ship.submerged ? isDetected(ship, enemyHunters) : isVisible(ship.x, ship.y, enemySight);
+      const seen = ship.submerged
+        ? isDetected(ship, enemyHunters)
+        : isVisible(ship.x, ship.y, enemySight) || this.flashed(ship, this.playerWeapons, this.enemies);
       if (seen) this.seenByEnemy.add(ship);
       ship.setAlpha(ship.submerged ? SUBMERGED_ALPHA : 1);
     }
@@ -516,6 +538,33 @@ export class BattleScene extends Phaser.Scene {
     const air = Math.round(sub.air * 100);
     const state = sub.submerged ? '潜航中' : sub.forcedSurface ? '緊急浮上 · 換気中' : '浮上';
     this.diveText.setText(`${state}  ·  酸素 ${air}%`).setColor(sub.air < 0.25 ? Css.danger : Css.cyan);
+  }
+
+  /** Rain in storms, and a chip naming the conditions. */
+  private addWeatherEffects(): void {
+    const c = this.conditions;
+    if (c.weather === Weather.Storm) {
+      this.add
+        .particles(0, 0, 'particle', {
+          x: { min: -100, max: CANVAS_W + 100 },
+          y: -20,
+          angle: 105,
+          speed: { min: 700, max: 900 },
+          lifespan: IS_PORTRAIT ? 1700 : 1000,
+          scaleX: 0.4,
+          scaleY: 3,
+          alpha: { start: 0.35, end: 0.1 },
+          tint: 0xbfd6ee,
+          quantity: 3,
+          frequency: 16,
+        })
+        .setScrollFactor(0)
+        .setDepth(DEPTH_HUD - 4);
+    }
+    const label = `${WEATHER_LABEL[c.weather]}  ·  ${TIME_LABEL[c.time]}`;
+    addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
+      .setScrollFactor(0)
+      .setDepth(DEPTH_HUD + 2);
   }
 
   // -------------------------------------------------------------------------

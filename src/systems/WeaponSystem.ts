@@ -28,6 +28,9 @@ export class WeaponSystem {
   readonly projectiles: BaseProjectile[] = [];
   private readonly charges: DepthCharge[] = [];
   private reload = new ReloadState();
+  /** Extra random spread on every shot (weather), radians */
+  aimError = 0;
+  private lastFired = new WeakMap<BaseShip, number>();
   /** Per-torpedo copies of torpedo weapons (firePower split across the salvo) */
   private perTorpedo = new Map<string, IWeaponData>();
 
@@ -41,6 +44,11 @@ export class WeaponSystem {
     return weaponKind(weapon) === WeaponKind.Gun ? weapon.reloadTime * ship.critEffects().gunReloadMul : weapon.reloadTime;
   }
 
+  /** When `ship` last fired anything (for muzzle flashes at night). */
+  lastFiredAt(ship: BaseShip): number | undefined {
+    return this.lastFired.get(ship);
+  }
+
   isReady(ship: BaseShip, weapon: IWeaponData, now: number): boolean {
     return this.reload.isReady(ship, this.reloadTime(ship, weapon), now, weapon.id);
   }
@@ -49,6 +57,8 @@ export class WeaponSystem {
   fireWeapon(ship: BaseShip, weapon: IWeaponData, targetAngle: number, now: number): boolean {
     if (!this.isReady(ship, weapon, now)) return false;
     this.reload.markFired(ship, now, weapon.id);
+    this.lastFired.set(ship, now);
+    if (this.aimError > 0) targetAngle += (Math.random() * 2 - 1) * this.aimError;
 
     switch (weaponKind(weapon)) {
       case WeaponKind.Torpedo: {

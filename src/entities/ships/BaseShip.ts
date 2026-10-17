@@ -19,6 +19,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   aaMul = 1;
   /** Ship data id (for saving damage after the battle) */
   dataId = '';
+  /** Sea state (storms slow every ship) */
+  envSpeedMul = 1;
   /** Component damage (expiry times) */
   criticals: CriticalState = {};
 
@@ -48,7 +50,7 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
 
   /** Top speed right now (submerged boats and damaged engines are slower). */
   get currentSpeed(): number {
-    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul;
+    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul * this.envSpeedMul;
   }
 
   /** Turns toward the requested heading at `turnRateDeg` and moves along the bow at the throttle. */
