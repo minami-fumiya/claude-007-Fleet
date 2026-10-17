@@ -21,10 +21,14 @@ export interface IProgress {
   research: string[];
   /** Cleared campaign area ids */
   campaign: string[];
+  /** Ship id → crew proficiency 0..100 */
+  proficiency: Record<string, number>;
+  /** Ship id → refit stage (0 = original) */
+  refits: Record<string, number>;
 }
 
 export function emptyProgress(): IProgress {
-  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [], campaign: [] };
+  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [], campaign: [], proficiency: {}, refits: {} };
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -57,7 +61,16 @@ export function parseProgress(raw: string | null): IProgress {
     );
     const research = (Array.isArray(data.research) ? data.research : []).filter((id): id is string => typeof id === 'string');
     const campaign = (Array.isArray(data.campaign) ? data.campaign : []).filter((id): id is string => typeof id === 'string');
-    return { captainXp, upgrades, resources: res, damage, docks, research, campaign };
+    const numbers = (src: unknown): Record<string, number> => {
+      const out: Record<string, number> = {};
+      for (const [id, v] of Object.entries((src ?? {}) as Record<string, unknown>)) if (isNum(v)) out[id] = v;
+      return out;
+    };
+    return {
+      captainXp, upgrades, resources: res, damage, docks, research, campaign,
+      proficiency: numbers(data.proficiency),
+      refits: numbers(data.refits),
+    };
   } catch {
     return emptyProgress();
   }

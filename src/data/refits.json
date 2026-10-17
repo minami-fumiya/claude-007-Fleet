@@ -1,0 +1,24 @@
+{
+  "classes": {
+    "Battleship": [
+      { "suffix": "改", "cost": { "fuel": 400, "ammo": 400, "steel": 800 }, "minProficiency": 30, "effects": { "hpMul": 1.08, "armorAdd": 3, "gunPowerMul": 1.05 } },
+      { "suffix": "改二", "cost": { "fuel": 900, "ammo": 900, "steel": 1800, "bauxite": 200 }, "minProficiency": 70, "effects": { "hpMul": 1.16, "armorAdd": 6, "gunPowerMul": 1.1, "aaMul": 1.3 } }
+    ],
+    "Cruiser": [
+      { "suffix": "改", "cost": { "fuel": 250, "ammo": 300, "steel": 500 }, "minProficiency": 30, "effects": { "hpMul": 1.08, "gunPowerMul": 1.06, "torpedoPowerMul": 1.05 } },
+      { "suffix": "改二", "cost": { "fuel": 600, "ammo": 700, "steel": 1200, "bauxite": 100 }, "minProficiency": 70, "effects": { "hpMul": 1.15, "gunPowerMul": 1.12, "torpedoPowerMul": 1.1, "aaMul": 1.25 } }
+    ],
+    "Destroyer": [
+      { "suffix": "改", "cost": { "fuel": 150, "ammo": 200, "steel": 300 }, "minProficiency": 30, "effects": { "hpMul": 1.1, "torpedoPowerMul": 1.08, "speedMul": 1.03 } },
+      { "suffix": "改二", "cost": { "fuel": 400, "ammo": 500, "steel": 700 }, "minProficiency": 70, "effects": { "hpMul": 1.2, "torpedoPowerMul": 1.16, "speedMul": 1.05, "gunPowerMul": 1.08 } }
+    ],
+    "Carrier": [
+      { "suffix": "改", "cost": { "fuel": 400, "ammo": 200, "steel": 600, "bauxite": 400 }, "minProficiency": 30, "effects": { "hpMul": 1.08, "armorAdd": 3, "aaMul": 1.2 } },
+      { "suffix": "改二", "cost": { "fuel": 900, "ammo": 400, "steel": 1300, "bauxite": 900 }, "minProficiency": 70, "effects": { "hpMul": 1.16, "armorAdd": 6, "aaMul": 1.45, "visionMul": 1.1 } }
+    ],
+    "Submarine": [
+      { "suffix": "改", "cost": { "fuel": 120, "ammo": 200, "steel": 200 }, "minProficiency": 30, "effects": { "hpMul": 1.1, "torpedoPowerMul": 1.1 } },
+      { "suffix": "改二", "cost": { "fuel": 300, "ammo": 500, "steel": 500 }, "minProficiency": 70, "effects": { "hpMul": 1.2, "torpedoPowerMul": 1.2, "speedMul": 1.05 } }
+    ]
+  }
+}

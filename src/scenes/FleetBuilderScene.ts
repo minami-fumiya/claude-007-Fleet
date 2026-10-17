@@ -20,6 +20,7 @@ import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { paySortie, sortieBlockers } from '@/systems/ProgressionSystem';
 import { formatResources, sortieCost } from '@/systems/ResourceSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
+import { proficiencyLabel } from '@/systems/ProficiencySystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
@@ -836,7 +837,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private slotStatus(ship: IShipData): string {
     const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
     const f = hpFraction(progress, ship.id);
-    if (f >= 1) return `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`;
+    const p = progress.proficiency[ship.id] ?? 0;
+    if (f >= 1) return `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}  ·  ${proficiencyLabel(p)} ${p}`;
     const tag = isDocked(progress, ship.id) ? '入渠中' : f <= 0.25 ? '大破' : f <= 0.5 ? '中破' : '小破';
     return `HP ${Math.round(ship.hp * f)} / ${ship.hp}   ${tag}`;
   }

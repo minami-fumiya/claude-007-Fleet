@@ -6,6 +6,7 @@ import { engageSteer, IBounds } from './AutoPilot';
 import { maxSurfaceRange, selectWeapons, weaponKind, WeaponKind } from './WeaponSelector';
 import { interceptAngle } from '@/utils/MathUtils';
 import { ShipClass } from '@/types/ShipClass';
+import { aimErrorMul } from './ProficiencySystem';
 
 /** One ship as seen by the other side this frame. */
 export interface IShipView extends IAITarget {
@@ -66,7 +67,7 @@ export function fireAt(
   for (const w of usable) {
     const lead = interceptAngle(ship.x, ship.y, target.x, target.y, vel?.x ?? 0, vel?.y ?? 0, w.projectileSpeed);
     const error = aimError > 0 && weaponKind(w) === WeaponKind.Torpedo ? Math.max(aimError, AI_TORPEDO_AIM_ERROR) : aimError;
-    const angle = lead + (Math.random() * 2 - 1) * error;
+    const angle = lead + (Math.random() * 2 - 1) * error * aimErrorMul(ship.stats.proficiency ?? 0);
     weapons.fireWeapon(ship, w, angle, time);
   }
 }

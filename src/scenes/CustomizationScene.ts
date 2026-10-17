@@ -4,7 +4,7 @@ import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { ISelection, SELECTION_KEY } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { applyToStats, applyToWeapons, toggleUpgrade, upgradeModifiers, UPGRADE_SLOTS } from '@/systems/CustomizationSystem';
+import { applyToStats, applyToWeapons, combineModifiers, toggleUpgrade, upgradeModifiers, UPGRADE_SLOTS } from '@/systems/CustomizationSystem';
 import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IUpgradeData } from '@/types/Modifiers';
@@ -12,18 +12,24 @@ import { IWeaponData } from '@/types/Weapon';
 import { ITechNode } from '@/types/Progression';
 import { unlockedUpgrades } from '@/systems/ResearchSystem';
 import techTree from '@/data/tech-tree.json';
+import refitsData from '@/data/refits.json';
+import { canRefit, nextStage, refit, refitModifiers, refitName, RefitTable } from '@/systems/RefitSystem';
+import { formatResources } from '@/systems/ResourceSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
 /** Landscape: tabs on top, stats on the left, upgrade cards in a 2-column grid. Portrait: stacked. */
+/** Space at the bottom of the status panel for the remodel line and button. */
+const REFIT_H = IS_PORTRAIT ? 120 : 104;
+
 const L = IS_PORTRAIT
   ? {
       tabsY: 170, tabH: 60,
-      stats: { x: 16, y: 220, w: CANVAS_W - 32, h: 320 } as IRect,
-      grid: { x: 16, y: 560, w: CANVAS_W - 32 } as { x: number; y: number; w: number },
-      cols: 1, cardH: 76, gap: 6,
+      stats: { x: 16, y: 220, w: CANVAS_W - 32, h: 410 } as IRect,
+      grid: { x: 16, y: 646, w: CANVAS_W - 32 } as { x: number; y: number; w: number },
+      cols: 1, cardH: 70, gap: 6,
     }
   : {
       tabsY: 118, tabH: 44,
@@ -38,6 +44,9 @@ const L = IS_PORTRAIT
  */
 export class CustomizationScene extends Phaser.Scene {
   private ships: IShipData[] = [];
+  private refitText!: Phaser.GameObjects.Text;
+  private refitBtn!: UIButton;
+  private readonly refitTable = refitsData.classes as RefitTable;
   private readonly tech = techTree.tech as ITechNode[];
   private selected = 0;
   private catalog: IUpgradeData[] = [];
@@ -119,10 +128,16 @@ export class CustomizationScene extends Phaser.Scene {
     this.slotText = this.add.text(p.x + p.w - 22, p.y + 18, '', eyebrowStyle(11, Css.gold)).setOrigin(1, 0);
     const rows = 6;
     const top = p.y + (IS_PORTRAIT ? 96 : 84);
-    const rowH = (p.h - (top - p.y) - 18) / rows;
+    const rowH = (p.h - (top - p.y) - REFIT_H) / rows;
     for (let i = 0; i < rows; i++) {
       this.statsText.push(this.add.text(p.x + 22, top + i * rowH, '', textStyle(14, Css.muted)));
     }
+    const ry = p.y + p.h - REFIT_H + 8;
+    this.add.text(p.x + 22, ry, 'REMODEL · 改造', eyebrowStyle(10, Css.gold));
+    this.refitText = this.add.text(p.x + 22, ry + (IS_PORTRAIT ? 26 : 20), '', textStyle(12, Css.muted, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
+    this.refitBtn = new UIButton(this, p.x + p.w / 2, p.y + p.h - (IS_PORTRAIT ? 34 : 28), '改造', () => this.remodel(), {
+      variant: 'gold', width: p.w - 44, height: IS_PORTRAIT ? 48 : 36, fontSize: 14,
+    });
   }
 
   private cardRect(i: number): IRect {
@@ -157,6 +172,16 @@ export class CustomizationScene extends Phaser.Scene {
     const progress = loadProgress();
     const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId);
     saveProgress({ ...progress, upgrades: { ...progress.upgrades, [ship.id]: next } });
+    this.refresh();
+  }
+
+  private remodel(): void {
+    const ship = this.ships[this.selected];
+    const progress = loadProgress();
+    const stage = progress.refits[ship.id] ?? 0;
+    const r = refit(this.refitTable, ship.shipClass, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
+    if (!r) return;
+    saveProgress({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } });
     this.refresh();
   }
 
@@ -199,7 +224,9 @@ export class CustomizationScene extends Phaser.Scene {
       firePower: 0,
       shipClass: ship.shipClass,
     };
-    const mods = upgradeModifiers(fitted, this.catalog);
+    const progress = loadProgress();
+    const stage = progress.refits[ship.id] ?? 0;
+    const mods = combineModifiers(upgradeModifiers(fitted, this.catalog), refitModifiers(this.refitTable, ship.shipClass, stage));
     const after = applyToStats(base, mods);
     const weaponsAfter = applyToWeapons(loadout, mods);
     const gunBefore = primaryWeapon(loadout.filter((w) => weaponKind(w) === WeaponKind.Gun));
@@ -228,7 +255,16 @@ export class CustomizationScene extends Phaser.Scene {
     if (mods.aaMul !== 1) extras.push(`対空 ×${mods.aaMul.toFixed(2)}`);
     if (extras.length > 0) lines[5] = `${lines[5]}     ${extras.join('  ')}`;
     this.statsText.forEach((t, i) => t.setText(lines[i] ?? '').setColor(lines[i]?.includes('→') ? Css.text : Css.muted));
-    this.shipName.setText(ship.name);
+    this.shipName.setText(refitName(this.refitTable, ship.name, ship.shipClass, stage));
+    const next = nextStage(this.refitTable, ship.shipClass, stage);
+    const prof = progress.proficiency[ship.id] ?? 0;
+    if (!next) {
+      this.refitText.setText('改造完了 (最終段階)');
+      this.refitBtn.setLabel('改造完了').setEnabled(false);
+    } else {
+      this.refitText.setText(`次: ${next.suffix}  ·  熟練 ${prof} / ${next.minProficiency}  ·  ${formatResources(next.cost)}`);
+      this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(canRefit(this.refitTable, ship.shipClass, stage, prof, progress.resources));
+    }
     this.slotText.setText(`装備 ${fitted.length} / ${UPGRADE_SLOTS}`);
   }
 }

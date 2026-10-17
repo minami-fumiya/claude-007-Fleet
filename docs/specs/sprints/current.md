@@ -1,41 +1,34 @@
-# Sprint 8 — 作戦マップ・キャンペーン・特殊作戦
+# Sprint 9 — 史実シナリオ・育成深化・図鑑 (v2.0 候補)
 
-**Status**: Implemented [IMPLEMENTED: sprint8] | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
-**Goal**: 島・浅瀬・潮流のある海域で戦い、作戦マップの海域を順に攻略していく。護衛作戦と砲撃支援の特殊作戦がある。
+**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
+**Goal**: 史実の海戦を固定配置・特殊勝利条件で再現でき、艦が戦うほど熟練し、改造で強くなる。全艦を図鑑で読める。
 
 ## スコープ判断
-- Tiled エディタは使えないため、マップは独自 JSON (`src/data/maps/*.json`: 島・浅瀬は円の集合、潮流は矩形ゾーン) で定義する。
-- FogOfWar は Sprint 5 で完全実装済み (視界外は不可視) のため本スプリントでは扱わない。
-- キャンペーンの進行 (攻略済み海域) は `ProgressStore` に保存する。
+- 改造データは艦種ごとの段階 (改 / 改二) として `src/data/refits.json` にまとめる (各国別ファイルにはしない)。
+- v2.0 タグは main へのマージ後にユーザーが付ける。
 
 ## Tasks
 
-### A. 海域マップ
-- [x] `src/types/Map.ts` / `src/data/maps/*.json` — 島 (衝突)・浅瀬 (減速)・潮流ゾーン
-- [x] `src/systems/MapSystem.ts` — 潮流ベクトル・浅瀬判定・島回避の操舵 (純粋)
-- [x] 戦闘: 島の描画と衝突、砲弾は島に当たって消える、潮流で艦が流される、浅瀬で減速
+### A. 熟練度
+- [x] `IShipStats.proficiency` (0–100) — 戦闘ごとに上昇。命中 (照準誤差の縮小) と回避 (被弾を一定確率でかわす) に補正
+- [x] `src/systems/ProficiencySystem.ts` (純粋) + テスト
+
+### B. 改造
+- [x] `src/systems/RefitSystem.ts` + `src/data/refits.json` — 段階ごとの費用・熟練度条件・能力補正 (純粋)
+- [x] 改装画面に改造パネル (段階の表示・改造実行)
+- [x] 戦闘で改造補正を適用、艦名に「改」「改二」
 - [x] テスト
 
-### B. キャンペーン
-- [x] `src/data/campaign.json` — 太平洋 / 大西洋の海域 (解放条件・敵艦隊・目標・初回報酬)
-- [x] `src/systems/CampaignSystem.ts` — 解放判定・攻略記録・報酬 (純粋)
-- [x] `src/scenes/CampaignMapScene.ts` — 戦略マップ (海域ノード・航路・詳細パネル)
-- [x] 鎮守府 → 作戦 → Fleet Builder (作戦の敵を使用) → 戦闘 → 結果で攻略記録
-- [x] テスト
+### C. 史実シナリオ
+- [ ] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
+- [ ] シナリオ読み込み (固定配置・陣営選択・特殊勝利条件: 指定艦の撃沈 / 突入 / 逃走阻止・制限時間)
+- [ ] `src/scenes/ScenarioScene.ts` — シナリオ選択・史実解説
+- [ ] テスト
 
-### C. 護衛作戦
-- [x] 輸送船 (`special.json` の `convoy`、BaseShip の `isConvoy`) — 武装なし、東へ航行
-- [x] 勝利: 輸送船 2 隻以上が脱出 / 敗北: 旗艦撃沈か輸送船 2 隻喪失
-
-### D. 砲撃支援
-- [x] 陸上目標 (`special.json` の `landTargets`、BaseShip の `isLand`) — 砲台 (反撃する) / 港湾 / 飛行場、魚雷は当たらない
-- [x] 勝利: 陸上目標をすべて破壊
+### D. 図鑑
+- [ ] 全艦に短い史実解説 (`description`)
+- [ ] `src/scenes/EncyclopediaScene.ts` — 国籍 / 艦種フィルタ、性能・武装・解説
 
 ### 完了処理
-- [x] `docs/specs/systems/campaign.md`
-- [x] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint8]` タグ
-
-## 実装メモ
-- 輸送船・陸上目標は専用エンティティクラスではなく、`BaseShip` + データ (`special.json`) + フラグで表現した。
-- 砲弾は島の上を飛び越え、魚雷だけが島で止まる (陸上目標を砲撃できるように)。
-- 勝敗判定は `ObjectiveSystem.evaluateObjective` に集約した。
+- [ ] `docs/specs/systems/scenario.md` / `refit.md`
+- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint9]` タグ

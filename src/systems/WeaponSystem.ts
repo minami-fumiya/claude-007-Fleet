@@ -7,6 +7,7 @@ import { DepthCharge } from '@/entities/weapons/DepthCharge';
 import { IWeaponData } from '@/types/Weapon';
 import { ReloadState } from './ReloadState';
 import { weaponKind, WeaponKind } from './WeaponSelector';
+import { aimErrorMul } from './ProficiencySystem';
 
 export { ReloadState } from './ReloadState';
 
@@ -63,7 +64,7 @@ export class WeaponSystem {
     this.reload.markFired(ship, now, weapon.id);
     this.lastFired.set(ship, now);
     this.onFire(weapon, ship.x, ship.y);
-    if (this.aimError > 0) targetAngle += (Math.random() * 2 - 1) * this.aimError;
+    if (this.aimError > 0) targetAngle += (Math.random() * 2 - 1) * this.aimError * aimErrorMul(ship.stats.proficiency ?? 0);
 
     switch (weaponKind(weapon)) {
       case WeaponKind.Torpedo: {

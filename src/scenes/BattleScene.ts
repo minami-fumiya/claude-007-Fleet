@@ -61,9 +61,14 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
 import { recordClear } from '@/systems/CampaignSystem';
 import { evaluateObjective, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
+import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
+import refitsData from '@/data/refits.json';
+import { refitModifiers, refitName, RefitTable } from '@/systems/RefitSystem';
+
+const REFITS = refitsData.classes as RefitTable;
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -486,12 +491,16 @@ export class BattleScene extends Phaser.Scene {
     return combineModifiers(
       upgradeModifiers(fitted, catalog),
       researchModifiers(techTree.tech as ITechNode[], progress.research),
+      refitModifiers(REFITS, shipData.shipClass, progress.refits[shipData.id] ?? 0),
       captainModifiers(captain),
     );
   }
 
-  /** Damage carried over from earlier battles. */
+  /** Damage carried over from earlier battles, and the crew's proficiency. */
   private applyStartingDamage(ship: BaseShip): void {
+    const progress = loadProgress();
+    ship.stats.proficiency = progress.proficiency[ship.dataId] ?? 0;
+    ship.stats.name = refitName(REFITS, ship.stats.name, ship.stats.shipClass, progress.refits[ship.dataId] ?? 0);
     const f = startingHp(loadProgress(), ship.dataId);
     ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }
@@ -936,6 +945,12 @@ export class BattleScene extends Phaser.Scene {
     // Shells and torpedoes pass over a submerged boat; torpedoes can't reach shore targets.
     if (!projectile.active || !target.isAlive || target.submerged) return;
     if (target.isLand && projectile instanceof Torpedo) return;
+    // A practised crew dodges some shots: roll once per projectile and ship.
+    if (projectile.missed.has(target)) return;
+    if (Math.random() < evadeChance(target.stats.proficiency ?? 0)) {
+      projectile.missed.add(target);
+      return;
+    }
     const weapon = projectile.weapon ?? FALLBACK_WEAPON;
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
     CombatSystem.applyDamage(target, dmg);
@@ -1235,6 +1250,12 @@ export class BattleScene extends Phaser.Scene {
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
     });
     let progress = settlement.progress;
+    const proficiency = { ...progress.proficiency };
+    for (const s of fleet) {
+      const current = proficiency[s.dataId] ?? 0;
+      proficiency[s.dataId] = addProficiency(current, proficiencyGain({ victory, enemiesSunk, survived: s.isAlive, current }));
+    }
+    progress = { ...progress, proficiency };
     const areaId = this.battleData?.areaId;
     const area = areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === areaId) : undefined;
     if (area && victory) {

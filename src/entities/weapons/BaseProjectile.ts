@@ -12,6 +12,8 @@ const OUT_OF_BOUNDS_MARGIN = 100;
 export class BaseProjectile extends Phaser.Physics.Arcade.Sprite {
   protected speed = 600;
   weapon: IWeaponData | null = null;
+  /** Ships this shot has already narrowly missed (rolled once per ship, not every overlapping frame) */
+  readonly missed = new Set<object>();
   private startX = 0;
   private startY = 0;
   private maxDistance = Infinity;
@@ -25,6 +27,7 @@ export class BaseProjectile extends Phaser.Physics.Arcade.Sprite {
 
   fire(x: number, y: number, angleRad: number, weapon?: IWeaponData): void {
     this.weapon = weapon ?? null;
+    this.missed.clear();
     if (weapon && weapon.projectileSpeed > 0) this.speed = weapon.projectileSpeed;
     this.maxDistance = weapon ? weapon.range * RANGE_OVERSHOOT : Infinity;
     this.startX = x;

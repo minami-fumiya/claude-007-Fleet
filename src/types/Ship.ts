@@ -24,4 +24,6 @@ export interface IShipStats {
   speed: number;
   firePower: number;
   shipClass: ShipClass;
+  /** Crew proficiency 0..100 (aim and evasion) */
+  proficiency?: number;
 }
