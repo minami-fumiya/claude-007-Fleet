@@ -77,3 +77,16 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   by half its size; a centre-positioned button can use `Rectangle(0, 0, w, h)` directly.
 - In BattleScene, the global `pointerdown` fire handler skips events whose `currentlyOver`
   list is non-empty, so tapping HUD buttons does not fire the main gun.
+
+### Portrait layout for phones
+- `src/config/Layout.ts` picks the orientation once at boot: touch-only devices get 720x1280,
+  anything with a mouse/trackpad gets 1280x720. `?layout=portrait` forces it for PC testing.
+- `CANVAS_W/H` and `IS_PORTRAIT` in GameConstants are module-level constants computed from that;
+  scenes branch their layout on `IS_PORTRAIT` (see FleetBuilderScene's `LAYOUT` table).
+- Canvas radial gradients: keep inner radius < outer radius for both orientations
+  (`min(w,h)` / `hypot(w,h)/2`), otherwise the vignette inverts in portrait.
+- New UI characters must be added to `src/ui/fontGlyphs.ts`; `fontGlyphs.test.ts` lists any missing.
+
+### Ship sprites
+- `ShipTextures.ts` draws top-down, bow-up sprites per ship class from the ship data. Arcade
+  bodies don't rotate, so BaseShip uses a circular body sized between beam and length.

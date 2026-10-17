@@ -59,8 +59,11 @@ export function addBackdrop(scene: Phaser.Scene, variant: BackdropVariant = 'men
       ctx.fillRect(0, 0, w, h);
     };
 
+    // Hero glow sits behind the title-screen ship: right column in landscape, top centre in portrait.
+    const heroX = w > h ? w * 0.72 : w * 0.5;
+    const heroY = w > h ? h * 0.42 : h * 0.26;
     if (variant === 'menu') {
-      glow(w * 0.72, h * 0.42, 560, 'rgba(97,231,255,0.16)');
+      glow(heroX, heroY, 560, 'rgba(97,231,255,0.16)');
       glow(w * 0.12, h * 0.95, 480, 'rgba(79,140,255,0.14)');
 
       // Faint concentric "sonar" rings around the hero glow
@@ -68,7 +71,7 @@ export function addBackdrop(scene: Phaser.Scene, variant: BackdropVariant = 'men
       ctx.lineWidth = 2;
       for (const r of [220, 340, 470, 610]) {
         ctx.beginPath();
-        ctx.arc(w * 0.72, h * 0.42, r, 0, Math.PI * 2);
+        ctx.arc(heroX, heroY, r, 0, Math.PI * 2);
         ctx.stroke();
       }
 
@@ -111,7 +114,7 @@ export function addBackdrop(scene: Phaser.Scene, variant: BackdropVariant = 'men
     }
 
     // Vignette
-    const v = ctx.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, w * 0.75);
+    const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.hypot(w, h) / 2);
     v.addColorStop(0, 'rgba(0,0,0,0)');
     v.addColorStop(1, 'rgba(0,0,0,0.55)');
     ctx.fillStyle = v;

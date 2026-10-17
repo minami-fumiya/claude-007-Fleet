@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS } from '@/config/GameConstants';
+import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, IS_PORTRAIT } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
@@ -27,11 +27,14 @@ type BattleInitData = IBattleInitData & { formation?: Formation };
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: 150, y: CANVAS_H - 150 };
-const FLAGSHIP_SPAWN = { x: CANVAS_W / 2, y: CANVAS_H - 150 };
+// Leave room behind the flagship for escorts in line-ahead.
+const FLAGSHIP_SPAWN = { x: CANVAS_W / 2, y: CANVAS_H - (IS_PORTRAIT ? 330 : 150) };
+// Enemies start just below the HUD strip, which sits lower in portrait.
+const ENEMY_TOP = IS_PORTRAIT ? 230 : 120;
 const ENEMY_SPAWN_POSITIONS = [
-  { x: 160, y: 120 },
-  { x: CANVAS_W - 160, y: 120 },
-  { x: CANVAS_W / 2, y: 100 },
+  { x: IS_PORTRAIT ? 130 : 160, y: ENEMY_TOP },
+  { x: CANVAS_W - (IS_PORTRAIT ? 130 : 160), y: ENEMY_TOP },
+  { x: CANVAS_W / 2, y: ENEMY_TOP - 20 },
 ];
 
 const GENERIC_ENEMY_WEAPON: IWeaponData = {
@@ -232,7 +235,7 @@ export class BattleScene extends Phaser.Scene {
     const enemyShips = FleetSystem.getShips(fleet);
 
     enemyShips.forEach((shipData, i) => {
-      const pos = ENEMY_SPAWN_POSITIONS[i] ?? { x: CANVAS_W / 2, y: 80 };
+      const pos = ENEMY_SPAWN_POSITIONS[i] ?? { x: CANVAS_W / 2, y: ENEMY_TOP };
       const weapon = DataLoader.getWeaponById(this, shipData.weapons[0]) ?? GENERIC_ENEMY_WEAPON;
       const stats = this.shipDataToStats(shipData, weapon);
 
@@ -360,7 +363,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private buildOverlayUi(): void {
-    new UIButton(this, 74, 42, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, 74, IS_PORTRAIT ? 38 : 42, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
       variant: 'secondary',
       width: 116,
       height: 44,

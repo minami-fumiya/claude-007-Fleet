@@ -9,6 +9,13 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.stats = { ...stats };
+
+    // Arcade bodies never rotate, so a long hull box would be wrong whenever the ship turns.
+    // A circle sized between beam and length stays a fair fit at every heading.
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const r = (this.width + this.height) / 4;
+    body.setCircle(r, this.width / 2 - r, this.height / 2 - r);
+    body.setCollideWorldBounds(true);
   }
 
   takeDamage(amount: number): void {

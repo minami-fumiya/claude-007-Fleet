@@ -27,14 +27,15 @@
         align-items: center; justify-content: center; text-align: center;
         background: #020814; color: #ffffff; font: 700 18px/1.6 'Zen Kaku Gothic New', sans-serif; padding: 16px;
       }
-      @media (orientation: portrait) and (pointer: coarse) {
-        #rotate-hint { display: flex; }
+      /* The phone layout is portrait-only (see src/config/Layout.ts). */
+      @media (orientation: landscape) {
+        body[data-layout="portrait"] #rotate-hint { display: flex; }
       }
     </style>
   </head>
   <body>
     <div id="game"><div id="boot-loader">WW2 NAVAL FLEET<span>Loading…</span></div></div>
-    <div id="rotate-hint">📱 端末を横向きにしてプレイしてください<br />Rotate your device to landscape</div>
+    <div id="rotate-hint">📱 端末を縦向きにしてプレイしてください<br />Rotate your device to portrait</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

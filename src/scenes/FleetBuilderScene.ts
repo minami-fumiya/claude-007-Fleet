@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W } from '@/config/GameConstants';
+import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { IShipData } from '@/types/Ship';
@@ -11,14 +11,49 @@ import { IBattleInitData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
-const TOP_Y = 92;
-const PANEL_H = 500;
-const PANEL_L = { x: 24, y: TOP_Y, w: 404, h: PANEL_H };
-const PANEL_C = { x: 444, y: TOP_Y, w: 412, h: PANEL_H };
-const PANEL_R = { x: 872, y: TOP_Y, w: 384, h: PANEL_H };
-const PANEL_HEADER_H = 58;
-const FOOTER_Y = 610;
 const MAX_SLOTS = 3;
+const PANEL_HEADER_H = 58;
+const PANEL_PAD = 14;
+
+interface IRect { x: number; y: number; w: number; h: number }
+
+interface IBuilderLayout {
+  ships: IRect;
+  shipItemH: number;
+  fleet: IRect;
+  slotH: number;
+  formations: IRect;
+  /** 'column' stacks formation cards vertically, 'row' lays them side by side */
+  formationFlow: 'column' | 'row';
+  formationCardH: number;
+  footer: IRect;
+}
+
+/** Landscape: ships | fleet | formations in three columns. Portrait: fleet, ships, formations stacked. */
+const LAYOUT: IBuilderLayout = IS_PORTRAIT
+  ? {
+      fleet: { x: 16, y: 96, w: CANVAS_W - 32, h: 346 },
+      slotH: 88,
+      ships: { x: 16, y: 454, w: CANVAS_W - 32, h: 454 },
+      shipItemH: 70,
+      formations: { x: 16, y: 920, w: CANVAS_W - 32, h: 202 },
+      formationFlow: 'row',
+      formationCardH: 128,
+      footer: { x: 16, y: 1134, w: CANVAS_W - 32, h: 132 },
+    }
+  : {
+      ships: { x: 24, y: 92, w: 404, h: 500 },
+      shipItemH: 80,
+      fleet: { x: 444, y: 92, w: 412, h: 500 },
+      slotH: 136,
+      formations: { x: 872, y: 92, w: 384, h: 500 },
+      formationFlow: 'column',
+      formationCardH: 136,
+      footer: { x: 24, y: 610, w: CANVAS_W - 48, h: 92 },
+    };
+
+const ITEM_GAP = 8;
+const CARD_GAP = 10;
 
 const FORMATION_LIST: Formation[] = [Formation.LineAhead, Formation.DoubleLine, Formation.Circle];
 const FORMATION_INFO: Record<Formation, { ja: string; en: string; desc: string }> = {
@@ -73,9 +108,9 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     addBackdrop(this, 'menu');
     this.buildHeader();
-    this.buildPanelFrame(PANEL_L, 'AVAILABLE SHIPS', '利用可能な艦');
-    this.buildPanelFrame(PANEL_C, 'YOUR FLEET', '艦隊編成');
-    this.buildPanelFrame(PANEL_R, 'FORMATION', '陣形');
+    this.buildPanelFrame(LAYOUT.ships, 'AVAILABLE SHIPS', '利用可能な艦');
+    this.buildPanelFrame(LAYOUT.fleet, 'YOUR FLEET', '艦隊編成');
+    this.buildPanelFrame(LAYOUT.formations, 'FORMATION', '陣形');
     this.buildShipList();
     this.buildSlotPanel();
     this.buildFormationPanel();
@@ -105,24 +140,32 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.add.text(p.x + 22, p.y + 34, title, textStyle(15, Css.text, { fontStyle: 'bold' }));
   }
 
+  /** Rotates a bow-up ship sprite to lie bow-right and scales it to fit `maxLen`. */
+  private addShipIcon(x: number, y: number, key: string, maxLen: number, maxScale: number): Phaser.GameObjects.Image {
+    const icon = this.add.image(x, y, key).setAngle(90);
+    return icon.setScale(Math.min(maxScale, maxLen / Math.max(1, icon.height)));
+  }
+
   private buildShipList(): void {
-    const itemH = 80;
-    const gap = 8;
-    const startY = PANEL_L.y + PANEL_HEADER_H + 4;
-    const x = PANEL_L.x + 14;
-    const w = PANEL_L.w - 28;
+    const p = LAYOUT.ships;
+    const itemH = LAYOUT.shipItemH;
+    const startY = p.y + PANEL_HEADER_H + 4;
+    const x = p.x + PANEL_PAD;
+    const w = p.w - PANEL_PAD * 2;
+    const statX = 74;
+    const statSpacing = (w - statX - 60) / 3;
 
     this.ships.forEach((ship, i) => {
-      const y = startY + i * (itemH + gap);
+      const y = startY + i * (itemH + ITEM_GAP);
       const bg = drawPanel(this.add.graphics(), 0, 0, w, itemH, { radius: 16, fill: Colors.panelHi, fillAlpha: 0.55 });
       const hover = this.add.graphics();
       drawPanel(hover, 0, 0, w, itemH, { radius: 16, fill: Colors.cyan, fillAlpha: 0.08, rimAlpha: 0.7 });
       hover.setVisible(false);
 
-      const icon = this.add.image(36, itemH / 2, ship.spriteKey).setScale(1.1);
-      const name = this.add.text(70, 12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
+      const icon = this.addShipIcon(38, itemH / 2, ship.spriteKey, 56, 1);
+      const name = this.add.text(statX, itemH * 0.15, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
       const badgeInfo = CLASS_BADGE[ship.shipClass] ?? CLASS_BADGE[ShipClass.Cruiser];
-      const badge = addChip(this, 70 + name.width + 10, 22, badgeInfo.label, badgeInfo.color, badgeInfo.css);
+      const badge = addChip(this, statX + name.width + 10, itemH * 0.15 + 10, badgeInfo.label, badgeInfo.color, badgeInfo.css);
 
       const meters = this.add.graphics();
       const stats: Array<[string, number, number, number]> = [
@@ -132,9 +175,9 @@ export class FleetBuilderScene extends Phaser.Scene {
       ];
       const statLabels: Phaser.GameObjects.Text[] = [];
       stats.forEach(([label, value, max, color], si) => {
-        const mx = 70 + si * 92;
-        statLabels.push(this.add.text(mx, 44, `${label} ${value}`, textStyle(11, Css.muted)));
-        drawMeter(meters, mx, 62, 80, 5, value / max, color);
+        const mx = statX + si * statSpacing;
+        statLabels.push(this.add.text(mx, itemH * 0.55, `${label} ${value}`, textStyle(11, Css.muted)));
+        drawMeter(meters, mx, itemH * 0.78, statSpacing - 12, 5, value / max, color);
       });
 
       const plus = this.add.graphics();
@@ -154,58 +197,75 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private buildSlotPanel(): void {
-    const slotH = 136;
-    const gap = 10;
-    const startY = PANEL_C.y + PANEL_HEADER_H + 4;
-    const x = PANEL_C.x + 14;
-    const w = PANEL_C.w - 28;
+    const p = LAYOUT.fleet;
+    const slotH = LAYOUT.slotH;
+    const startY = p.y + PANEL_HEADER_H + 4;
+    const x = p.x + PANEL_PAD;
+    const w = p.w - PANEL_PAD * 2;
 
     for (let i = 0; i < MAX_SLOTS; i++) {
-      const y = startY + i * (slotH + gap);
+      const y = startY + i * (slotH + CARD_GAP);
       const frame = this.add.graphics().setPosition(x, y);
       const emptyLabel = this.add
-        .text(x + w / 2, y + slotH / 2 + 12, '← 左の一覧から艦を追加', textStyle(14, Css.dim))
+        .text(x + w / 2, y + slotH / 2 + 10, IS_PORTRAIT ? '↓ 下の一覧から艦を追加' : '← 左の一覧から艦を追加', textStyle(14, Css.dim))
         .setOrigin(0.5);
       const role = i === 0 ? 'FLAGSHIP · 旗艦' : `ESCORT ${i} · 護衛`;
-      this.add.text(x + 18, y + 16, role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
+      this.add.text(x + 18, y + (slotH < 120 ? 12 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
       this.slotViews.push({ frame, content: null, emptyLabel });
     }
   }
 
-  private buildFormationPanel(): void {
-    const btnH = 136;
-    const gap = 10;
-    const startY = PANEL_R.y + PANEL_HEADER_H + 4;
-    const x = PANEL_R.x + 14;
-    const w = PANEL_R.w - 28;
+  private formationCardRect(i: number): IRect {
+    const p = LAYOUT.formations;
+    const top = p.y + PANEL_HEADER_H + 4;
+    const inner = p.w - PANEL_PAD * 2;
+    const h = LAYOUT.formationCardH;
+    if (LAYOUT.formationFlow === 'row') {
+      const w = (inner - CARD_GAP * (FORMATION_LIST.length - 1)) / FORMATION_LIST.length;
+      return { x: p.x + PANEL_PAD + i * (w + CARD_GAP), y: top, w, h };
+    }
+    return { x: p.x + PANEL_PAD, y: top + i * (h + CARD_GAP), w: inner, h };
+  }
 
+  private buildFormationPanel(): void {
     FORMATION_LIST.forEach((formation, i) => {
-      const y = startY + i * (btnH + gap);
+      const r = this.formationCardRect(i);
+      const compact = r.w < 260;
       const info = FORMATION_INFO[formation];
       const frame = this.add.graphics();
       this.formationFrames.push(frame);
 
-      const ja = this.add.text(20, 22, info.ja, displayStyle(24));
-      const en = this.add.text(20, 60, info.en, eyebrowStyle(10, Css.muted));
-      const desc = this.add.text(20, 84, info.desc, textStyle(12, Css.muted, { wordWrap: { width: w - 150 } }));
+      const parts: Phaser.GameObjects.GameObject[] = [
+        frame,
+        this.add.text(18, 18, info.ja, displayStyle(24)),
+        this.add.text(18, 56, info.en, eyebrowStyle(10, Css.muted)),
+      ];
+      if (!compact) {
+        parts.push(this.add.text(18, 84, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150 } })));
+      }
       const diagram = this.add.graphics();
-      this.drawFormationDiagram(diagram, formation, w - 66, btnH / 2);
+      if (compact) {
+        this.drawFormationDiagram(diagram, formation, r.w - 50, r.h - 46, 0.75);
+      } else {
+        this.drawFormationDiagram(diagram, formation, r.w - 66, r.h / 2, 1);
+      }
+      parts.push(diagram);
 
-      const card = this.add.container(x, y, [frame, ja, en, desc, diagram]);
-      makeClickable(card, w, btnH);
+      const card = this.add.container(r.x, r.y, parts);
+      makeClickable(card, r.w, r.h);
       card.on('pointerup', () => this.selectFormation(formation));
     });
   }
 
-  private drawFormationDiagram(g: Phaser.GameObjects.Graphics, formation: Formation, cx: number, cy: number): void {
+  private drawFormationDiagram(g: Phaser.GameObjects.Graphics, formation: Formation, cx: number, cy: number, k: number): void {
     g.fillStyle(Colors.cyan, 0.06);
-    g.fillCircle(cx, cy, 50);
+    g.fillCircle(cx, cy, 50 * k);
     g.lineStyle(1, Colors.cyan, 0.2);
-    g.strokeCircle(cx, cy, 50);
+    g.strokeCircle(cx, cy, 50 * k);
 
     const ship = (dx: number, dy: number, color: number): void => {
       g.fillStyle(color, 1);
-      g.fillRoundedRect(cx + dx - 5, cy + dy - 12, 10, 24, 5);
+      g.fillRoundedRect(cx + (dx - 5) * k, cy + (dy - 12) * k, 10 * k, 24 * k, 5 * k);
     };
     if (formation === Formation.LineAhead) {
       ship(0, -30, Colors.gold);
@@ -223,14 +283,21 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private buildFooter(): void {
-    addPanel(this, 24, FOOTER_Y, CANVAS_W - 48, 92, { radius: 24, fillAlpha: 0.6 });
-    this.add.text(52, FOOTER_Y + 22, 'FLEET SUMMARY', eyebrowStyle(10, Css.muted));
-    this.countText = this.add.text(52, FOOTER_Y + 44, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(200, FOOTER_Y + 50, '', textStyle(14, Css.muted));
+    const f = LAYOUT.footer;
+    addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+    // Portrait stacks the summary above a full-width button, so it starts higher.
+    const top = IS_PORTRAIT ? 14 : 22;
+    this.add.text(f.x + 28, f.y + top, 'FLEET SUMMARY', eyebrowStyle(10, Css.muted));
+    this.countText = this.add.text(f.x + 28, f.y + top + 20, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
+    this.summaryText = this.add.text(f.x + 176, f.y + top + 27, '', textStyle(14, Css.muted));
 
-    this.startBtn = new UIButton(this, CANVAS_W - 196, FOOTER_Y + 46, '出撃  ▶', () => {
+    const onStart = (): void => {
       if (this.canStart()) this.startBattle();
-    }, { variant: 'gold', width: 300, height: 60, fontSize: 22, caption: 'START BATTLE' });
+    };
+    const btn = { variant: 'gold' as const, fontSize: 22, caption: 'START BATTLE' };
+    this.startBtn = IS_PORTRAIT
+      ? new UIButton(this, CANVAS_W / 2, f.y + f.h - 36, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 56 })
+      : new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
   }
 
   // -------------------------------------------------------------------------
@@ -262,8 +329,9 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private refreshSlots(): void {
-    const w = PANEL_C.w - 28;
-    const h = 136;
+    const w = LAYOUT.fleet.w - PANEL_PAD * 2;
+    const h = LAYOUT.slotH;
+    const compact = h < 120;
 
     this.slots.forEach((ship, i) => {
       const view = this.slotViews[i];
@@ -288,12 +356,20 @@ export class FleetBuilderScene extends Phaser.Scene {
       });
       view.emptyLabel.setVisible(false);
 
-      const icon = this.add.image(54, 78, ship.spriteKey).setScale(1.5);
-      const name = this.add.text(100, 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' }));
-      const stats = this.add.text(100, 74, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted));
-      const weapons = this.add.text(100, 98, ship.weapons.join(' · '), textStyle(11, Css.dim));
+      const parts: Phaser.GameObjects.GameObject[] = compact
+        ? [
+            this.addShipIcon(60, 56, ship.spriteKey, 80, 1.3),
+            this.add.text(118, 30, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' })),
+            this.add.text(118, 58, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
+          ]
+        : [
+            this.addShipIcon(54, 78, ship.spriteKey, 76, 1.3),
+            this.add.text(100, 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' })),
+            this.add.text(100, 74, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
+            this.add.text(100, 98, ship.weapons.join(' · '), textStyle(11, Css.dim)),
+          ];
 
-      const remove = new UIButton(this, w - 34, 30, '✕', () => this.removeShipFromSlot(i), {
+      const remove = new UIButton(this, w - 34, compact ? h / 2 : 30, '✕', () => this.removeShipFromSlot(i), {
         variant: 'secondary',
         width: 40,
         height: 36,
@@ -302,14 +378,13 @@ export class FleetBuilderScene extends Phaser.Scene {
 
       const frameX = view.frame.x;
       const frameY = view.frame.y;
-      view.content = this.add.container(frameX, frameY, [icon, name, stats, weapons, remove]);
+      view.content = this.add.container(frameX, frameY, [...parts, remove]);
     });
   }
 
   private refreshFormations(): void {
-    const w = PANEL_R.w - 28;
-    const h = 136;
     FORMATION_LIST.forEach((f, i) => {
+      const { w, h } = this.formationCardRect(i);
       const selected = f === this.formation;
       const g = this.formationFrames[i];
       g.clear();

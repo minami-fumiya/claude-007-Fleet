@@ -1,28 +1,30 @@
 import Phaser from 'phaser';
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { HealthBar } from './components/HealthBar';
-import { CANVAS_W, DEPTH_HUD } from '@/config/GameConstants';
+import { CANVAS_W, DEPTH_HUD, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawMeter, drawPanel } from '@/ui/components/UIKit';
 
+// Friendly ships carry their name + HP just below the hull, enemies just above it, so the
+// labels never cover the sprite. Gaps are measured from the hull's outer radius.
 const PLAYER_BAR_W = 90;
-const PLAYER_BAR_OFFSET_Y = 22;   // bar starts below ship centre
-const PLAYER_NAME_OFFSET_Y = 10;  // name label bottom above bar
-
 const ENEMY_BAR_W = 60;
-const ENEMY_BAR_OFFSET_Y = -28;
-const ENEMY_NAME_OFFSET_Y = -40;
-
 const ESCORT_BAR_W = 50;
-const ESCORT_BAR_OFFSET_Y = -22;
-const ESCORT_NAME_OFFSET_Y = -34;
+const LABEL_GAP = 4;
+const LABEL_H = 14;
+
+/** Distance from a ship's centre to the edge of its hull at any heading. */
+function hullRadius(ship: BaseShip): number {
+  return Math.max(ship.displayWidth, ship.displayHeight) / 2;
+}
 
 const LABEL_STYLE_PLAYER = textStyle(12, Css.success, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 const LABEL_STYLE_ENEMY = textStyle(10, Css.danger, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 const LABEL_STYLE_ESCORT = textStyle(10, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 
 // Top status strip
-const BAR = { w: 660, h: 60, y: 12 };
+// In portrait the strip sits below the retreat button; in landscape they share the top row.
+const BAR = { w: 660, h: 60, y: IS_PORTRAIT ? 72 : 12 };
 const BAR_X = (CANVAS_W - BAR.w) / 2;
 const SEG_HP = { x: 20, meterW: 200 };
 const SEG_SUNK_X = 280;
@@ -94,7 +96,7 @@ export class HUD {
     this.playerNameLabel = scene.add
       .text(0, 0, player.stats.name, LABEL_STYLE_PLAYER)
       .setDepth(DEPTH_HUD)
-      .setOrigin(0.5, 1);
+      .setOrigin(0.5, 0);
 
     this.playerBar = new HealthBar(scene, PLAYER_BAR_W, 8);
 
@@ -116,7 +118,7 @@ export class HUD {
         scene.add
           .text(0, 0, escort.stats.name, LABEL_STYLE_ESCORT)
           .setDepth(DEPTH_HUD)
-          .setOrigin(0.5, 1),
+          .setOrigin(0.5, 0),
       );
     }
 
@@ -128,13 +130,13 @@ export class HUD {
     // Player HP bar and name follow the flagship
     if (player.active) {
       this.playerNameLabel
-        .setPosition(player.x, player.y + PLAYER_NAME_OFFSET_Y)
+        .setPosition(player.x, player.y + hullRadius(player) + LABEL_GAP)
         .setVisible(true);
       this.playerBar.update(
         player.stats.currentHp,
         player.stats.maxHp,
         player.x,
-        player.y + PLAYER_BAR_OFFSET_Y,
+        player.y + hullRadius(player) + LABEL_GAP + LABEL_H + 2,
       );
     } else {
       this.playerNameLabel.setVisible(false);
@@ -144,8 +146,9 @@ export class HUD {
     for (const [ship, bar] of this.enemyBars) {
       const label = this.enemyLabels.get(ship)!;
       if (ship.active) {
-        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, ship.y + ENEMY_BAR_OFFSET_Y);
-        label.setPosition(ship.x, ship.y + ENEMY_NAME_OFFSET_Y).setVisible(true);
+        const top = ship.y - hullRadius(ship) - LABEL_GAP;
+        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, top - 7);
+        label.setPosition(ship.x, top - 9).setVisible(true);
       } else {
         bar.update(0, 1, -500, -500);
         label.setVisible(false);
@@ -155,8 +158,9 @@ export class HUD {
     for (const [ship, bar] of this.escortBars) {
       const label = this.escortLabels.get(ship)!;
       if (ship.active) {
-        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, ship.y + ESCORT_BAR_OFFSET_Y, 0x44aaff);
-        label.setPosition(ship.x, ship.y + ESCORT_NAME_OFFSET_Y).setVisible(true);
+        const bottom = ship.y + hullRadius(ship) + LABEL_GAP;
+        label.setPosition(ship.x, bottom).setVisible(true);
+        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + LABEL_H, Colors.cyan);
       } else {
         bar.update(0, 1, -500, -500);
         label.setVisible(false);
