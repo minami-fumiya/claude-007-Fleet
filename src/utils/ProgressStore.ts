@@ -19,10 +19,12 @@ export interface IProgress {
   docks: IDockJob[];
   /** Finished research ids */
   research: string[];
+  /** Cleared campaign area ids */
+  campaign: string[];
 }
 
 export function emptyProgress(): IProgress {
-  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [] };
+  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [], campaign: [] };
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -54,7 +56,8 @@ export function parseProgress(raw: string | null): IProgress {
       (d): d is IDockJob => typeof d?.shipId === 'string' && isNum(d?.endsAt),
     );
     const research = (Array.isArray(data.research) ? data.research : []).filter((id): id is string => typeof id === 'string');
-    return { captainXp, upgrades, resources: res, damage, docks, research };
+    const campaign = (Array.isArray(data.campaign) ? data.campaign : []).filter((id): id is string => typeof id === 'string');
+    return { captainXp, upgrades, resources: res, damage, docks, research, campaign };
   } catch {
     return emptyProgress();
   }

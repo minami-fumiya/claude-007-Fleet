@@ -54,9 +54,12 @@ import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/Cap
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { researchModifiers, unlockedUpgrades } from '@/systems/ResearchSystem';
-import { formatResources } from '@/systems/ResourceSystem';
+import { addResources, formatResources } from '@/systems/ResourceSystem';
 import { ITechNode } from '@/types/Progression';
 import techTree from '@/data/tech-tree.json';
+import campaignData from '@/data/campaign.json';
+import { ICampaignData } from '@/types/Campaign';
+import { recordClear } from '@/systems/CampaignSystem';
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -1122,7 +1125,18 @@ export class BattleScene extends Phaser.Scene {
       planesLost: this.playerAir.totalLost(),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
     });
-    saveProgress(settlement.progress);
+    let progress = settlement.progress;
+    const areaId = this.battleData?.areaId;
+    const area = areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === areaId) : undefined;
+    if (area && victory) {
+      const rec = recordClear(progress.campaign, area.id);
+      progress = { ...progress, campaign: rec.cleared };
+      if (rec.firstClear) progress = { ...progress, resources: addResources(progress.resources, area.reward) };
+      result.campaign = `海域攻略: ${area.name}${rec.firstClear ? `  初回報酬 ${formatResources(area.reward)}` : ''}`;
+    } else if (area) {
+      result.campaign = `作戦失敗: ${area.name}`;
+    }
+    saveProgress(progress);
     result.reward = formatResources(settlement.reward);
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));

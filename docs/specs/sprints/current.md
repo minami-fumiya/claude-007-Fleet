@@ -17,11 +17,11 @@
 - [x] テスト
 
 ### B. キャンペーン
-- [ ] `src/data/campaign.json` — 太平洋 / 大西洋の海域 (解放条件・敵艦隊・目標・初回報酬)
-- [ ] `src/systems/CampaignSystem.ts` — 解放判定・攻略記録・報酬 (純粋)
-- [ ] `src/scenes/CampaignMapScene.ts` — 戦略マップ (海域ノード・航路・詳細パネル)
-- [ ] 鎮守府 → 作戦 → Fleet Builder (作戦の敵を使用) → 戦闘 → 結果で攻略記録
-- [ ] テスト
+- [x] `src/data/campaign.json` — 太平洋 / 大西洋の海域 (解放条件・敵艦隊・目標・初回報酬)
+- [x] `src/systems/CampaignSystem.ts` — 解放判定・攻略記録・報酬 (純粋)
+- [x] `src/scenes/CampaignMapScene.ts` — 戦略マップ (海域ノード・航路・詳細パネル)
+- [x] 鎮守府 → 作戦 → Fleet Builder (作戦の敵を使用) → 戦闘 → 結果で攻略記録
+- [x] テスト
 
 ### C. 護衛作戦
 - [ ] `ConvoyShip` — 武装のない輸送船、航路に沿って進む

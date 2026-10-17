@@ -11,6 +11,7 @@ import { IShipData } from '@/types/Ship';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
+import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -33,8 +34,9 @@ const L = IS_PORTRAIT
     };
 
 const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary' }> = [
-  { label: '出撃', caption: 'SORTIE', scene: SceneKeys.FLEET_BUILDER, variant: 'gold' },
-  { label: '工廠', caption: 'ARSENAL · 研究', scene: SceneKeys.ARSENAL, variant: 'primary' },
+  { label: '作戦', caption: 'CAMPAIGN', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
+  { label: '演習', caption: 'FREE BATTLE', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
+  { label: '工廠', caption: 'ARSENAL · 研究', scene: SceneKeys.ARSENAL, variant: 'secondary' },
   { label: '改装', caption: 'REFIT', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
 ];
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 6 : 5;
@@ -102,11 +104,16 @@ export class HomeScene extends Phaser.Scene {
     const m = L.menu;
     const gap = 14;
     MENU.forEach((item, i) => {
+      const n = MENU.length;
       const r =
         L.menuFlow === 'row'
-          ? { w: (m.w - gap * 2) / 3, h: m.h, x: m.x + i * ((m.w - gap * 2) / 3 + gap), y: m.y }
-          : { w: m.w, h: (m.h - gap * 2) / 3, x: m.x, y: m.y + i * ((m.h - gap * 2) / 3 + gap) };
-      new UIButton(this, r.x + r.w / 2, r.y + r.h / 2, item.label, () => this.scene.start(item.scene, { returnTo: SceneKeys.HOME }), {
+          ? { w: (m.w - gap * (n - 1)) / n, h: m.h, x: m.x + i * ((m.w - gap * (n - 1)) / n + gap), y: m.y }
+          : { w: m.w, h: (m.h - gap * (n - 1)) / n, x: m.x, y: m.y + i * ((m.h - gap * (n - 1)) / n + gap) };
+      new UIButton(this, r.x + r.w / 2, r.y + r.h / 2, item.label, () => {
+        // Free battles are not campaign sorties.
+        if (item.scene === SceneKeys.FLEET_BUILDER) this.registry.remove(CAMPAIGN_AREA_KEY);
+        this.scene.start(item.scene, { returnTo: SceneKeys.HOME });
+      }, {
         variant: item.variant,
         width: r.w,
         height: r.h,

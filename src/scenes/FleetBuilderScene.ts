@@ -8,6 +8,10 @@ import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
+import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
+import { areaMode, enemyShips } from '@/systems/CampaignSystem';
+import { CAMPAIGN_AREA_KEY, OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
+import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ICaptain, ICaptainData } from '@/types/Captain';
@@ -166,6 +170,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Captain id assigned to each slot */
   private captainIds: (string | null)[] = [null, null, null];
   private captainData: ICaptainData[] = [];
+  /** Campaign operation being prepared (null = free battle) */
+  private area: ICampaignArea | null = null;
   private enemyNation: Nation = Nation.USN;
   private mode: BattleMode = BattleMode.Surface;
 
@@ -212,6 +218,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     });
     this.formation = saved?.formation ?? Formation.LineAhead;
     this.captainData = DataLoader.getCaptains(this);
+    const areaId = this.registry.get(CAMPAIGN_AREA_KEY) as string | undefined;
+    this.area = (campaignData as ICampaignData).areas.find((a) => a.id === areaId) ?? null;
     this.captainIds = [0, 1, 2].map((i) => saved?.captainIds?.[i] ?? null);
     this.slotViews = [];
     this.formationFrames = [];
@@ -300,10 +308,10 @@ export class FleetBuilderScene extends Phaser.Scene {
       fixed.push(this.add.rectangle(0, 0, CANVAS_W, HEADER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive());
     }
     const back = IS_PORTRAIT
-      ? new UIButton(this, 100, 46, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
+      ? new UIButton(this, 100, 46, this.area ? '‹  作戦' : '‹  鎮守府', () => this.scene.start(this.area ? SceneKeys.CAMPAIGN : SceneKeys.HOME), {
           variant: 'secondary', width: 172, height: 60, fontSize: 15,
         })
-      : new UIButton(this, 92, 44, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
+      : new UIButton(this, 92, 44, this.area ? '‹  作戦' : '‹  鎮守府', () => this.scene.start(this.area ? SceneKeys.CAMPAIGN : SceneKeys.HOME), {
           variant: 'secondary', width: 136, height: 44, fontSize: 15,
         });
     fixed.push(back);
@@ -363,7 +371,32 @@ export class FleetBuilderScene extends Phaser.Scene {
     FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(this.nation));
   }
 
+  /** Campaign sortie: the opponent comes from the operation, so the panel shows its briefing instead. */
+  private buildCampaignPanel(area: ICampaignArea): void {
+    const p = LAYOUT.enemy;
+    const x = p.x + PANEL_PAD + 8;
+    let y = p.y + PANEL_HEADER_H + (IS_PORTRAIT ? 4 : 0);
+    const ships = enemyShips(area, this.shipRegistry).map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
+    const lines = [
+      `作戦  ${area.name}`,
+      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[area.enemy.nation].short} ${ships}`,
+      `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
+    ];
+    lines.forEach((line, i) => {
+      const t = this.add.text(x, y, line, textStyle(i === 0 ? 15 : 12, i === 0 ? Css.gold : Css.text, { fontStyle: i === 0 ? 'bold' : 'normal', wordWrap: { width: p.w - PANEL_PAD * 2 - 16, useAdvancedWrap: true } }));
+      y += t.height + (IS_PORTRAIT ? 10 : 6);
+    });
+    new UIButton(this, p.x + p.w / 2, p.y + p.h - (IS_PORTRAIT ? 46 : 26), '作戦を中止して演習にする', this.onTap(() => {
+      this.registry.remove(CAMPAIGN_AREA_KEY);
+      this.scene.restart();
+    }), { variant: 'secondary', width: p.w - PANEL_PAD * 2, height: IS_PORTRAIT ? 56 : 32, fontSize: 12 });
+  }
+
   private buildEnemyPanel(): void {
+    if (this.area) {
+      this.buildCampaignPanel(this.area);
+      return;
+    }
     const p = LAYOUT.enemy;
     const h = LAYOUT.enemyButtonH;
     const x = p.x + PANEL_PAD;
@@ -397,6 +430,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private refreshEnemyPanel(): void {
+    if (this.area) return;
     FleetBuilderScene.setToggle(this.enemyNationButtons, PLAYABLE_NATIONS.indexOf(this.enemyNation));
     FleetBuilderScene.setToggle(this.modeButtons, BATTLE_MODES.indexOf(this.mode));
     FleetBuilderScene.setToggle(this.weatherButtons, WEATHER_CHOICES.indexOf(this.weatherChoice));
@@ -872,23 +906,27 @@ export class FleetBuilderScene extends Phaser.Scene {
       flagshipIndex,
     );
 
+    const area = this.area;
+    const enemyShipsList = area ? enemyShips(area, this.shipRegistry) : generateEnemyFleet(this.shipRegistry, this.enemyNation, this.mode);
     const enemyFleet = FleetSystem.createFleet(
       'enemy-fleet',
       'Enemy Fleet',
-      this.enemyNation,
-      generateEnemyFleet(this.shipRegistry, this.enemyNation, this.mode),
+      area ? area.enemy.nation : this.enemyNation,
+      enemyShipsList,
       0,
     );
 
     const initData: IBattleInitData = {
       playerFleet,
       enemyFleet,
-      mapKey: '',
+      mapKey: area?.map ?? '',
       formation: this.formation,
-      mode: this.mode,
-      weather: this.weatherChoice === RANDOM ? randomWeather() : this.weatherChoice,
-      time: this.timeChoice === RANDOM ? randomTime() : this.timeChoice,
+      mode: area ? areaMode(enemyShipsList) : this.mode,
+      weather: area ? area.weather : this.weatherChoice === RANDOM ? randomWeather() : this.weatherChoice,
+      time: area ? area.time : this.timeChoice === RANDOM ? randomTime() : this.timeChoice,
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
+      areaId: area?.id,
+      objective: area?.objective ?? Objective.Annihilate,
     };
 
     this.scene.start(SceneKeys.BATTLE, initData);

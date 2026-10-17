@@ -28,7 +28,7 @@ export class ResultsScene extends Phaser.Scene {
 
     // Captain XP lines push the buttons down and grow the card.
     const reports = data?.captainReports ?? [];
-    const rewardLines = [data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : ''].filter((l) => l);
+    const rewardLines = [data?.campaign ?? '', data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : ''].filter((l) => l);
     const lineCount = reports.length + rewardLines.length;
     const reportH = lineCount > 0 ? 18 + lineCount * REPORT_LINE_H : 0;
     const cardH = CARD_H + reportH;
@@ -84,7 +84,7 @@ export class ResultsScene extends Phaser.Scene {
       fontSize: 22,
       caption: 'RETRY',
     });
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, '鎮守府へ戻る', () => this.scene.start(SceneKeys.HOME), {
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, data?.campaign ? '作戦地図へ戻る' : '鎮守府へ戻る', () => this.scene.start(data?.campaign ? SceneKeys.CAMPAIGN : SceneKeys.HOME), {
       variant: 'secondary',
       width: CARD_W - 96,
       height: BUTTONS.h2,

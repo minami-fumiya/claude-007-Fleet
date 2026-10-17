@@ -1,0 +1,85 @@
+{
+  "theaters": [
+    { "id": "pacific", "name": "太平洋", "en": "PACIFIC" },
+    { "id": "atlantic", "name": "大西洋", "en": "ATLANTIC" }
+  ],
+  "areas": [
+    {
+      "id": "p1", "theater": "pacific", "name": "南洋前哨", "description": "前哨の駆逐隊を排除し、南洋への航路を開け。",
+      "x": 0.14, "y": 0.68, "requires": [],
+      "enemy": { "nation": "USN", "ships": ["fletcher", "fletcher", "baltimore"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 300, "ammo": 300, "steel": 300, "bauxite": 100 }
+    },
+    {
+      "id": "p2", "theater": "pacific", "name": "諸島沖海戦", "description": "島々の間に潜む巡洋艦戦隊を撃滅せよ。",
+      "x": 0.32, "y": 0.5, "requires": ["p1"],
+      "enemy": { "nation": "USN", "ships": ["baltimore", "des_moines", "gearing"] },
+      "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 400, "ammo": 400, "steel": 500, "bauxite": 150 }
+    },
+    {
+      "id": "p3", "theater": "pacific", "name": "輸送船団護衛", "description": "輸送船団を護衛し、敵潜水艦の待ち伏せを突破せよ。",
+      "x": 0.46, "y": 0.72, "requires": ["p2"],
+      "enemy": { "nation": "USN", "ships": ["gato", "balao", "fletcher"] },
+      "objective": "Convoy", "map": "convoy-route", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 300, "steel": 400, "bauxite": 150 }
+    },
+    {
+      "id": "p4", "theater": "pacific", "name": "海峡夜戦", "description": "夜陰に乗じ、海峡を通過する敵艦隊を迎え撃て。",
+      "x": 0.6, "y": 0.45, "requires": ["p3"],
+      "enemy": { "nation": "USN", "ships": ["north_carolina", "baltimore", "fletcher"] },
+      "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
+      "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }
+    },
+    {
+      "id": "p5", "theater": "pacific", "name": "機動部隊決戦", "description": "敵空母機動部隊を捕捉、撃滅せよ。",
+      "x": 0.74, "y": 0.62, "requires": ["p4"],
+      "enemy": { "nation": "USN", "ships": ["essex", "baltimore", "fletcher"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 500, "steel": 600, "bauxite": 500 }
+    },
+    {
+      "id": "p6", "theater": "pacific", "name": "環礁要塞攻略", "description": "環礁の砲台と港湾、飛行場を艦砲射撃で破壊せよ。",
+      "x": 0.88, "y": 0.36, "requires": ["p5"],
+      "enemy": { "nation": "USN", "ships": ["fletcher"] },
+      "objective": "Bombard", "map": "atoll", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 800, "ammo": 800, "steel": 1000, "bauxite": 400 }
+    },
+    {
+      "id": "a1", "theater": "atlantic", "name": "群狼の海", "description": "船団航路を脅かす U ボート群を掃討せよ。",
+      "x": 0.18, "y": 0.4, "requires": [],
+      "enemy": { "nation": "KM", "ships": ["u_boat_viic", "u_boat_viic", "u_boat_ixc"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 300, "ammo": 300, "steel": 300, "bauxite": 100 }
+    },
+    {
+      "id": "a2", "theater": "atlantic", "name": "北大西洋船団", "description": "駆逐艦と U ボートの襲撃から船団を守り抜け。",
+      "x": 0.36, "y": 0.6, "requires": ["a1"],
+      "enemy": { "nation": "KM", "ships": ["z1", "u_boat_xxi", "u_boat_viic"] },
+      "objective": "Convoy", "map": "convoy-route", "weather": "Storm", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 300, "steel": 400, "bauxite": 150 }
+    },
+    {
+      "id": "a3", "theater": "atlantic", "name": "ビスマルク追撃", "description": "嵐の大西洋で戦艦ビスマルクを捕捉、撃沈せよ。",
+      "x": 0.56, "y": 0.42, "requires": ["a2"],
+      "enemy": { "nation": "KM", "ships": ["bismarck", "prinz_eugen"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Storm", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 700, "steel": 800, "bauxite": 200 }
+    },
+    {
+      "id": "a4", "theater": "atlantic", "name": "沿岸要塞砲撃", "description": "敵沿岸の砲台と港湾施設を破壊せよ。",
+      "x": 0.72, "y": 0.66, "requires": ["a3"],
+      "enemy": { "nation": "KM", "ships": ["z1"] },
+      "objective": "Bombard", "map": "atoll", "weather": "Fog", "time": "Day",
+      "reward": { "fuel": 700, "ammo": 800, "steel": 900, "bauxite": 300 }
+    },
+    {
+      "id": "a5", "theater": "atlantic", "name": "フィヨルドの巨艦", "description": "フィヨルドに潜む戦艦ティルピッツを夜襲せよ。",
+      "x": 0.86, "y": 0.34, "requires": ["a4"],
+      "enemy": { "nation": "KM", "ships": ["tirpitz", "admiral_hipper", "z1"] },
+      "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
+      "reward": { "fuel": 800, "ammo": 900, "steel": 1200, "bauxite": 400 }
+    }
+  ]
+}

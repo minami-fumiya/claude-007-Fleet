@@ -2,6 +2,7 @@ import { IFleet } from './Fleet';
 import { Formation } from './Formation';
 import { BattleMode } from './Battle';
 import { TimeOfDay, Weather } from './Weather';
+import { Objective } from './Campaign';
 
 export interface IBattleInitData {
   playerFleet: IFleet;
@@ -11,6 +12,9 @@ export interface IBattleInitData {
   mode?: BattleMode;
   weather?: Weather;
   time?: TimeOfDay;
+  /** Campaign area this battle is for (absent for free battles) */
+  areaId?: string;
+  objective?: Objective;
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */
   captainIds?: (string | null)[];
 }
@@ -36,4 +40,6 @@ export interface IBattleResultData {
   /** Resources gained / spent replacing aircraft, already formatted */
   reward?: string;
   cost?: string;
+  /** Campaign line, e.g. "海域攻略: 南洋前哨  初回報酬 …" */
+  campaign?: string;
 }
