@@ -116,6 +116,16 @@ function fitName(text: Phaser.GameObjects.Text, name: string, room: number): voi
   if (text.width > room) text.setScale(room / text.width);
 }
 
+/** Last Fleet Builder setup, kept in the game registry so RETRY / 撤退 come back to the same fleet. */
+const SELECTION_KEY = 'fleetBuilder.selection';
+interface ISelection {
+  nation: Nation;
+  enemyNation: Nation;
+  mode: BattleMode;
+  formation: Formation;
+  slotIds: (string | null)[];
+}
+
 interface ISlotView {
   frame: Phaser.GameObjects.Graphics;
   content: Phaser.GameObjects.Container | null;
@@ -156,12 +166,16 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   create(): void {
     this.shipRegistry = DataLoader.getRegistry(this);
-    this.nation = Nation.IJN;
-    this.enemyNation = Nation.USN;
-    this.mode = BattleMode.Surface;
+    const saved = this.registry.get(SELECTION_KEY) as ISelection | undefined;
+    this.nation = saved?.nation ?? Nation.IJN;
+    this.enemyNation = saved?.enemyNation ?? Nation.USN;
+    this.mode = saved?.mode ?? BattleMode.Surface;
     this.ships = this.shipRegistry.byNation(this.nation);
-    this.slots = [null, null, null];
-    this.formation = Formation.LineAhead;
+    this.slots = [0, 1, 2].map((i) => {
+      const id = saved?.slotIds[i];
+      return id ? this.shipRegistry.byId(id) ?? null : null;
+    });
+    this.formation = saved?.formation ?? Formation.LineAhead;
     this.slotViews = [];
     this.formationFrames = [];
     this.shipCards = [];
@@ -710,6 +724,14 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private startBattle(): void {
+    const selection: ISelection = {
+      nation: this.nation,
+      enemyNation: this.enemyNation,
+      mode: this.mode,
+      formation: this.formation,
+      slotIds: this.slots.map((s) => s?.id ?? null),
+    };
+    this.registry.set(SELECTION_KEY, selection);
     const flagshipIndex = this.slots.findIndex((s) => s !== null);
 
     const playerFleet = FleetSystem.createFleet(
