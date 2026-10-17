@@ -323,14 +323,16 @@
 
 ---
 
-### Sprint 9: 史実シナリオ・育成深化・図鑑
+### Sprint 9: 史実シナリオ・育成深化・図鑑 ✅
 
-- [ ] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
-- [ ] シナリオ読み込みシステム (固定配置・特殊勝利条件)
-- [ ] `src/systems/RefitSystem.ts` — 改装/改造 (資源消費で段階解放)
-- [ ] `src/data/refits/` — 各国改装データ JSON
-- [ ] `IShipStats` に `proficiency: number (0-100)` 追加 → 命中 / 回避補正
-- [ ] `src/scenes/EncyclopediaScene.ts` — 艦船図鑑 (国籍 / 艦種フィルタ・史実解説)
+> 詳細: `docs/specs/systems/scenario.md` / `refit.md`
+
+- [x] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
+- [x] シナリオ読み込みシステム (固定配置・特殊勝利条件) + `ScenarioScene`
+- [x] `src/systems/RefitSystem.ts` — 改装/改造 (資源消費で段階解放)
+- [x] ~~`src/data/refits/` — 各国改装データ JSON~~ → 艦種別の段階を `src/data/refits.json` に集約
+- [x] `IShipStats` に `proficiency: number (0-100)` 追加 → 命中 / 回避補正
+- [x] `src/scenes/EncyclopediaScene.ts` — 艦船図鑑 (国籍 / 艦種フィルタ・史実解説)
 - [ ] develop PR → CI → Vercel Preview → main マージ → **v2.0 タグ**
 
 ---
@@ -340,7 +342,7 @@
 - [ ] 架空艦実装 (IJN: 超大和型・A-150 / USN: モンタナ級 / KM: H 級 / RN: ライオン級)
 - [ ] 追加シナリオ / 海域 (地中海 / インド洋 等)
 - [ ] 戦績・勲章システム拡充
-- [ ] (検討) マルチプレイヤー対戦 (WebSocket)
+- [ ] (検討) マルチプレイヤー対戦 (WebSocket) — サーバーが必要なため Sprint 10 では扱わない
 
 ---
 

@@ -1,34 +1,30 @@
-# Sprint 9 — 史実シナリオ・育成深化・図鑑 (v2.0 候補)
+# Sprint 10 — 架空艦・追加コンテンツ・戦績
 
 **Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
-**Goal**: 史実の海戦を固定配置・特殊勝利条件で再現でき、艦が戦うほど熟練し、改造で強くなる。全艦を図鑑で読める。
+**Goal**: 計画のみに終わった艦 (架空艦) を研究で解放して使え、新しい史実シナリオと海域が遊べる。戦いの記録が戦績と勲章として残る。
 
 ## スコープ判断
-- 改造データは艦種ごとの段階 (改 / 改二) として `src/data/refits.json` にまとめる (各国別ファイルにはしない)。
-- v2.0 タグは main へのマージ後にユーザーが付ける。
+- 架空艦は各国 1 隻ずつ (超大和型 / モンタナ級 / H 級 / ライオン級)。通常の艦一覧には出さず、工廠の研究「架空艦計画」で解放する。
+- マルチプレイヤー (WebSocket) はサーバーが必要になるため本スプリントでは扱わない (ROADMAP では TBD のまま)。
 
 ## Tasks
 
-### A. 熟練度
-- [x] `IShipStats.proficiency` (0–100) — 戦闘ごとに上昇。命中 (照準誤差の縮小) と回避 (被弾を一定確率でかわす) に補正
-- [x] `src/systems/ProficiencySystem.ts` (純粋) + テスト
+### A. 架空艦
+- [ ] 4 隻のデータ (`fictional: true`、史実解説に「計画のみ」と明記) + 専用砲 (51cm / 18in 等)
+- [ ] 研究ツリーに「架空艦計画」— 解放されるまで編成画面・敵艦隊生成から除外
+- [ ] 図鑑に「架空」バッジ
+- [ ] テスト (除外・解放・バランス不変条件)
 
-### B. 改造
-- [x] `src/systems/RefitSystem.ts` + `src/data/refits.json` — 段階ごとの費用・熟練度条件・能力補正 (純粋)
-- [x] 改装画面に改造パネル (段階の表示・改造実行)
-- [x] 戦闘で改造補正を適用、艦名に「改」「改二」
-- [x] テスト
+### B. 追加シナリオ / 海域
+- [ ] 史実シナリオ 2 本: 第三次ソロモン海戦 (夜戦) / 北岬沖海戦 (シャルンホルスト)
+- [ ] 作戦マップに第 3 戦域「地中海・インド洋」(vs RN) を追加
+- [ ] テスト
 
-### C. 史実シナリオ
-- [x] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
-- [x] シナリオ読み込み (固定配置・陣営選択・特殊勝利条件: 指定艦の撃沈 / 突入 / 逃走阻止・制限時間)
-- [x] `src/scenes/ScenarioScene.ts` — シナリオ選択・史実解説
-- [x] テスト
-
-### D. 図鑑
-- [x] 全艦に短い史実解説 (`description`)
-- [x] `src/scenes/EncyclopediaScene.ts` — 国籍 / 艦種フィルタ、性能・武装・解説
+### C. 戦績・勲章
+- [ ] `src/systems/RecordSystem.ts` (純粋) — 出撃数・勝利数・撃沈数 (艦種別)・与ダメージ・最大与ダメージの累計
+- [ ] 勲章 (条件達成で授与・保存) と鎮守府の戦績パネル
+- [ ] 戦闘結果に新しく得た勲章を表示
+- [ ] テスト
 
 ### 完了処理
-- [ ] `docs/specs/systems/scenario.md` / `refit.md`
-- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint9]` タグ
+- [ ] `docs/specs/systems/records.md`、ROADMAP / Todo / skill.md 更新、`[IMPLEMENTED: sprint10]` タグ

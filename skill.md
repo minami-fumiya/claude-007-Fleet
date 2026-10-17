@@ -168,3 +168,12 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Win / loss for every objective lives in one pure `evaluateObjective`, which keeps BattleScene's check trivial.
 - Merchant ships / shore targets are `BaseShip`s with flags (`isConvoy`, `isLand`) and data in `special.json`;
   enemy AI priority comes from a `priority` bonus on the target view.
+
+### Sprint 9 — Scenarios, proficiency, remodels, encyclopedia
+- Scenario objectives reuse the campaign's `evaluateObjective`; new objectives only need a case there plus the
+  state fields (`targetsAlive`, `flagshipInZone`, `enemyInZone`, time) that BattleScene fills each tick.
+- A remodel stage's effects replace the previous stage's — keep every stage's numbers absolute, not deltas.
+- Exhibition modes (scenarios) skip settlement entirely; results get `returnScene` / `retry` so one ResultsScene
+  serves every mode.
+- Generated docs (ship rosters) are rebuilt from JSON by a script that keeps the hand-written Notes section.
+- Six menu buttons don't fit one portrait row — lay menus out as a grid (`menuCols`) rather than a row/column flag.
