@@ -9,6 +9,9 @@ import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector'
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IUpgradeData } from '@/types/Modifiers';
 import { IWeaponData } from '@/types/Weapon';
+import { ITechNode } from '@/types/Progression';
+import { unlockedUpgrades } from '@/systems/ResearchSystem';
+import techTree from '@/data/tech-tree.json';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
@@ -35,6 +38,7 @@ const L = IS_PORTRAIT
  */
 export class CustomizationScene extends Phaser.Scene {
   private ships: IShipData[] = [];
+  private readonly tech = techTree.tech as ITechNode[];
   private selected = 0;
   private catalog: IUpgradeData[] = [];
   private tabs: UIButton[] = [];
@@ -44,8 +48,16 @@ export class CustomizationScene extends Phaser.Scene {
   private slotText!: Phaser.GameObjects.Text;
   private shipName!: Phaser.GameObjects.Text;
 
+  /** Scene the back button returns to (the Fleet Builder or the home port) */
+  private returnTo: string = SceneKeys.FLEET_BUILDER;
+  private unlocked = new Set<string>();
+
   constructor() {
     super({ key: SceneKeys.CUSTOMIZATION });
+  }
+
+  init(data: { returnTo?: string }): void {
+    this.returnTo = data?.returnTo ?? SceneKeys.FLEET_BUILDER;
   }
 
   create(): void {
@@ -55,6 +67,7 @@ export class CustomizationScene extends Phaser.Scene {
       .map((id) => (id ? registry.byId(id) : undefined))
       .filter((s): s is IShipData => s !== undefined);
     this.catalog = DataLoader.getUpgrades(this);
+    this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));
     this.selected = 0;
     this.tabs = [];
     this.cardFrames = [];
@@ -77,7 +90,7 @@ export class CustomizationScene extends Phaser.Scene {
 
   private buildHeader(): void {
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
-    new UIButton(this, back.x, back.y, '‹  編成へ', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, back.x, back.y, '‹  戻る', () => this.scene.start(this.returnTo), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'REFIT', eyebrowStyle(12)).setOrigin(0.5);
@@ -139,6 +152,7 @@ export class CustomizationScene extends Phaser.Scene {
   }
 
   private toggle(upgradeId: string): void {
+    if (!this.unlocked.has(upgradeId)) return;
     const ship = this.ships[this.selected];
     const progress = loadProgress();
     const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId);
@@ -161,7 +175,12 @@ export class CustomizationScene extends Phaser.Scene {
         rimAlpha: on ? 0.85 : 0.2,
         glow: on ? 1 : 0,
       });
-      this.cardMarks[i].setText(on ? '装備中' : full ? '—' : '+').setColor(on ? Css.gold : Css.cyan);
+      const locked = !this.unlocked.has(u.id);
+      const required = this.tech.find((t) => t.id === u.requires)?.name ?? '';
+      this.cardMarks[i]
+        .setText(on ? '装備中' : locked ? `要研究: ${required}` : full ? '—' : '+')
+        .setColor(on ? Css.gold : locked ? Css.dim : Css.cyan)
+        .setFontSize(locked ? 12 : 18);
     });
     this.refreshStats(fitted);
   }

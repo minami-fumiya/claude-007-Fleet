@@ -42,6 +42,11 @@ import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers } from '@/systems/CustomizationSystem';
 import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { settleBattle, startingHp } from '@/systems/ProgressionSystem';
+import { researchModifiers, unlockedUpgrades } from '@/systems/ResearchSystem';
+import { formatResources } from '@/systems/ResourceSystem';
+import { ITechNode } from '@/types/Progression';
+import techTree from '@/data/tech-tree.json';
 
 const SHIP_ROTATE_SPEED = 120;
 const JOYSTICK_POS = { x: IS_PORTRAIT ? 140 : 150, y: CANVAS_H - (IS_PORTRAIT ? 170 : 150) };
@@ -313,6 +318,7 @@ export class BattleScene extends Phaser.Scene {
     const stats = applyToStats(this.shipDataToStats(shipData, primaryWeapon(loadout)), mods);
     const ship = new BaseShip(this, x, y, shipData.spriteKey, stats);
     ship.loadout = loadout;
+    ship.dataId = shipData.id;
     ship.visionMul = mods.visionMul;
     ship.aaMul = mods.aaMul;
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
@@ -327,10 +333,22 @@ export class BattleScene extends Phaser.Scene {
     return data ? withProgress(data, loadProgress().captainXp[data.id] ?? 0) : null;
   }
 
-  /** Upgrades fitted to the ship plus its captain's bonus. */
+  /** Unlocked upgrades fitted to the ship, finished research and its captain's bonus. */
   private playerModifiers(shipData: IShipData, captain: ICaptain | null): IShipModifiers {
-    const fitted = loadProgress().upgrades[shipData.id] ?? [];
-    return combineModifiers(upgradeModifiers(fitted, DataLoader.getUpgrades(this)), captainModifiers(captain));
+    const progress = loadProgress();
+    const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
+    const fitted = progress.upgrades[shipData.id] ?? [];
+    return combineModifiers(
+      upgradeModifiers(fitted, catalog),
+      researchModifiers(techTree.tech as ITechNode[], progress.research),
+      captainModifiers(captain),
+    );
+  }
+
+  /** Damage carried over from earlier battles. */
+  private applyStartingDamage(ship: BaseShip): void {
+    const f = startingHp(loadProgress(), ship.dataId);
+    ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }
 
   private spawnPlayerFleet(fleet: IFleet, formation: Formation): void {
@@ -340,6 +358,7 @@ export class BattleScene extends Phaser.Scene {
     const flagCaptain = this.captainFor(fleet.flagshipIndex);
     this.flagship = this.spawnShip(flagshipData, FLAGSHIP_SPAWN.x, FLAGSHIP_SPAWN.y, this.playerModifiers(flagshipData, flagCaptain));
     if (flagCaptain) this.captains.set(this.flagship, flagCaptain);
+    this.applyStartingDamage(this.flagship);
     this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData));
     this.playerRecon.register(this.flagship);
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
@@ -354,6 +373,7 @@ export class BattleScene extends Phaser.Scene {
       const captain = this.captainFor(slot.slotIndex);
       const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain));
       if (captain) this.captains.set(escort, captain);
+      this.applyStartingDamage(escort);
       this.playerAir.register(escort, AirOpsSystem.wingFor(escortData));
       this.playerRecon.register(escort);
       this.escorts.push(escort);
@@ -930,6 +950,15 @@ export class BattleScene extends Phaser.Scene {
       durationSec: (this.time.now - this.battleStartedAt) / 1000,
       captainReports: this.awardCaptains(victory, enemiesSunk),
     };
+    const settlement = settleBattle(loadProgress(), {
+      victory,
+      enemiesSunk,
+      planesLost: this.playerAir.totalLost(),
+      ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
+    });
+    saveProgress(settlement.progress);
+    result.reward = formatResources(settlement.reward);
+    result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }
 }

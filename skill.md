@@ -137,3 +137,11 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Stat changes from upgrades and captains go through one `IShipModifiers` object applied at spawn
   (`applyToStats` / `applyToWeapons`), keeping BattleScene ignorant of where bonuses come from.
 - localStorage access is wrapped in try/catch with an in-memory fallback (`ProgressStore`).
+
+### Sprint 6 — Home port, resources, docks, research
+- Real-time timers (dock repairs) use `Date.now()` stored as absolute `endsAt`, so they keep running while the
+  game is closed; the scene's `update()` just calls `completeRepairs(progress, Date.now())` and saves on change.
+- Progress grows by adding fields to `IProgress`; `parseProgress` fills defaults so older saves keep working
+  (tests cover a pre-Sprint-6 save).
+- Pass the "back" destination into shared scenes (`scene.start(key, { returnTo })`) instead of hard-coding it.
+- Playwright: seed `localStorage` with `page.evaluate` and reload to test states like damaged ships quickly.

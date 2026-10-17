@@ -272,17 +272,19 @@
 
 ## Phase 3: システム拡張・品質
 
-### Sprint 6: 鎮守府・基地システム
+### Sprint 6: 鎮守府・基地システム ✅
 
-- [ ] `src/scenes/HomeScene.ts` — 鎮守府ハブ画面 (編成 / 出撃 / 工廠 / 管理)
-- [ ] `src/systems/DockSystem.ts` — 修理キュー管理 (最大2隻並列・時間コスト)
-- [ ] `src/systems/ResourceSystem.ts` — 燃料 / 弾薬 / 鋼材 / ボーキサイト 管理
-- [ ] `src/scenes/ArsenalScene.ts` — 工廠画面
-- [ ] `src/systems/ResearchSystem.ts` — 技術ツリー・資源消費でアンロック
-- [ ] `src/data/tech-tree.json` — 技術ツリー定義
-- [ ] `src/systems/ProgressionSystem.ts` — 経験値付与・資源獲得統合
-- [ ] `docs/specs/systems/progression.md`
-- [ ] develop PR → CI → Vercel Preview → main マージ
+> 詳細: `docs/specs/systems/progression.md`
+
+- [x] `src/scenes/HomeScene.ts` — 鎮守府ハブ画面 (出撃 / 工廠 / 改装 + 資源 + 入渠パネル)
+- [x] `src/systems/DockSystem.ts` — 修理キュー管理 (最大2隻並列・時間コスト・高速修理)
+- [x] `src/systems/ResourceSystem.ts` — 燃料 / 弾薬 / 鋼材 / ボーキサイト 管理
+- [x] `src/scenes/ArsenalScene.ts` — 工廠画面
+- [x] `src/systems/ResearchSystem.ts` — 技術ツリー・資源消費でアンロック
+- [x] `src/data/tech-tree.json` — 技術ツリー定義
+- [x] `src/systems/ProgressionSystem.ts` — 資源報酬・損傷の反映 (艦長 XP は CaptainSystem)
+- [x] `docs/specs/systems/progression.md`
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 

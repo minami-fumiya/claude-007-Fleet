@@ -15,6 +15,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   /** From upgrades: radar widens vision, extra guns strengthen AA */
   visionMul = 1;
   aaMul = 1;
+  /** Ship data id (for saving damage after the battle) */
+  dataId = '';
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, stats: IShipStats) {
     super(scene, x, y, texture);

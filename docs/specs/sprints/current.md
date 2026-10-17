@@ -1,6 +1,6 @@
 # Sprint 6 — 鎮守府・資源・入渠・工廠 (研究)
 
-**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
+**Status**: Implemented [IMPLEMENTED: sprint6] | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
 **Goal**: 戦闘の外に「母港」ができる。出撃には資源を使い、損傷は入渠で直し、資源で研究を進めて艦隊を強化する。
 
 ## スコープ判断
@@ -19,13 +19,18 @@
 - [x] テスト: `ResourceSystem` / `DockSystem` / `ResearchSystem` / `ProgressionSystem`
 
 ### B. シーン
-- [ ] `src/scenes/HomeScene.ts` — 鎮守府ハブ (資源表示、出撃 / 入渠 / 工廠 / 改装)
-- [ ] 入渠パネル (HomeScene 内) — 損傷艦の一覧、ドック 2 つ、修理開始・高速修理
-- [ ] `src/scenes/ArsenalScene.ts` — 工廠: 研究ツリーの一覧・研究実行
-- [ ] Fleet Builder: 出撃コストの表示、資源不足・入渠中の艦は出撃不可、損傷艦の HP 表示
-- [ ] 戦闘: 損傷艦は減った HP で出撃、研究補正の適用、結果で資源・損傷を反映 (Results に表示)
-- [ ] 画面遷移: タイトル → 鎮守府 → 各画面
+- [x] `src/scenes/HomeScene.ts` — 鎮守府ハブ (資源表示、出撃 / 入渠 / 工廠 / 改装)
+- [x] 入渠パネル (HomeScene 内) — 損傷艦の一覧、ドック 2 つ、修理開始・高速修理
+- [x] `src/scenes/ArsenalScene.ts` — 工廠: 研究ツリーの一覧・研究実行
+- [x] Fleet Builder: 出撃コストの表示、資源不足・入渠中の艦は出撃不可、損傷艦の HP 表示
+- [x] 戦闘: 損傷艦は減った HP で出撃、研究補正の適用、結果で資源・損傷を反映 (Results に表示)
+- [x] 画面遷移: タイトル → 鎮守府 → 各画面
 
 ### 完了処理
-- [ ] `docs/specs/systems/progression.md`
-- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint6]` タグ
+- [x] `docs/specs/systems/progression.md`
+- [x] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint6]` タグ
+
+## 実装メモ
+- 入渠は HomeScene 内のパネルとして実装 (専用シーンは作らない)。`update()` で実時間の完了を監視。
+- 撃沈された艦は失われず「大破 (10%)」で帰還する。資源不足・入渠中は出撃ボタンが無効になり理由を表示。
+- 研究は即時完了 (研究時間は無し)。改装装備のうち 7 種は研究で解放。

@@ -30,4 +30,7 @@ export interface IBattleResultData {
   fleetSize: number;
   durationSec: number;
   captainReports?: ICaptainReport[];
+  /** Resources gained / spent replacing aircraft, already formatted */
+  reward?: string;
+  cost?: string;
 }

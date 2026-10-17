@@ -7,6 +7,8 @@ import { FleetBuilderScene } from '@/scenes/FleetBuilderScene';
 import { BattleScene } from '@/scenes/BattleScene';
 import { ResultsScene } from '@/scenes/ResultsScene';
 import { CustomizationScene } from '@/scenes/CustomizationScene';
+import { HomeScene } from '@/scenes/HomeScene';
+import { ArsenalScene } from '@/scenes/ArsenalScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -30,5 +32,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene, HomeScene, ArsenalScene],
 };

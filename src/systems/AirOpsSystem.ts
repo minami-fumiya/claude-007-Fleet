@@ -71,6 +71,13 @@ export class AirOpsSystem {
     return this.wings.get(carrier);
   }
 
+  /** Aircraft lost by every wing of this side so far. */
+  totalLost(): number {
+    let n = 0;
+    for (const w of this.wings.values()) n += w.lost;
+    return n;
+  }
+
   hasCarrier(carrier: BaseShip): boolean {
     return this.wings.has(carrier);
   }

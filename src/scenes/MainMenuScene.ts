@@ -69,7 +69,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.text(LEFT_X - 2, CARD.y + 180, 'FLEET', displayStyle(96, Css.gold, { letterSpacing: 18, shadow: FLEET_GLOW }));
     this.add.text(LEFT_X, CARD.y + 300, TAGLINE, textStyle(20, '#c9d6ee', { fontStyle: 'bold' }));
 
-    new UIButton(this, LEFT_X + 140, CARD.y + 386, '出撃準備  →', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, LEFT_X + 140, CARD.y + 386, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
       variant: 'primary',
       width: 280,
       height: 64,
@@ -103,7 +103,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.add.text(cx, CARD.y + 682, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
 
-    new UIButton(this, cx, CARD.y + 780, '出撃準備  →', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, cx, CARD.y + 780, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
       variant: 'primary',
       width: btnW,
       height: 80,

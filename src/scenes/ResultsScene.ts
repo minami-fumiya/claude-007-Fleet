@@ -28,7 +28,9 @@ export class ResultsScene extends Phaser.Scene {
 
     // Captain XP lines push the buttons down and grow the card.
     const reports = data?.captainReports ?? [];
-    const reportH = reports.length > 0 ? 18 + reports.length * REPORT_LINE_H : 0;
+    const rewardLines = [data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : ''].filter((l) => l);
+    const lineCount = reports.length + rewardLines.length;
+    const reportH = lineCount > 0 ? 18 + lineCount * REPORT_LINE_H : 0;
     const cardH = CARD_H + reportH;
     const x = (CANVAS_W - CARD_W) / 2;
     const y = (CANVAS_H - cardH) / 2;
@@ -61,7 +63,13 @@ export class ResultsScene extends Phaser.Scene {
     addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存 AFLOAT', `${survivors} / ${fleetSize}`, Css.success);
     addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間 TIME', time, Css.cyan);
 
-    reports.forEach((r, i) => {
+    rewardLines.forEach((line, i) => {
+      this.add
+        .text(CANVAS_W / 2, y + 300 + STAT.h + 22 + i * REPORT_LINE_H, line, textStyle(14, Css.cyan, { fontStyle: 'bold' }))
+        .setOrigin(0.5, 0);
+    });
+    reports.forEach((r, j) => {
+      const i = j + rewardLines.length;
       const ry = y + 300 + STAT.h + 22 + i * REPORT_LINE_H;
       const up = r.leveledUp ? '  ▲ LEVEL UP' : '';
       this.add
@@ -76,7 +84,7 @@ export class ResultsScene extends Phaser.Scene {
       fontSize: 22,
       caption: 'RETRY',
     });
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, 'タイトルへ戻る', () => this.scene.start(SceneKeys.MAIN_MENU), {
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, '鎮守府へ戻る', () => this.scene.start(SceneKeys.HOME), {
       variant: 'secondary',
       width: CARD_W - 96,
       height: BUTTONS.h2,

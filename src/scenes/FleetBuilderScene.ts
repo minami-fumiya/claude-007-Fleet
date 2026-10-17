@@ -9,7 +9,10 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICaptain, ICaptainData } from '@/types/Captain';
 import { SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
-import { loadProgress } from '@/utils/ProgressStore';
+import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { paySortie, sortieBlockers } from '@/systems/ProgressionSystem';
+import { formatResources, sortieCost } from '@/systems/ResourceSystem';
+import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
@@ -279,10 +282,10 @@ export class FleetBuilderScene extends Phaser.Scene {
       fixed.push(this.add.rectangle(0, 0, CANVAS_W, HEADER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive());
     }
     const back = IS_PORTRAIT
-      ? new UIButton(this, 100, 46, '‹  タイトル', () => this.scene.start(SceneKeys.MAIN_MENU), {
+      ? new UIButton(this, 100, 46, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
           variant: 'secondary', width: 172, height: 60, fontSize: 15,
         })
-      : new UIButton(this, 92, 44, '‹  タイトル', () => this.scene.start(SceneKeys.MAIN_MENU), {
+      : new UIButton(this, 92, 44, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
           variant: 'secondary', width: 136, height: 44, fontSize: 15,
         });
     fixed.push(back);
@@ -611,7 +614,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
     this.add.text(f.x + 28, f.y + 22, 'FLEET SUMMARY', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(f.x + 176, f.y + 49, '', textStyle(14, Css.muted));
+    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6 }));
     this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
   }
 
@@ -680,12 +683,12 @@ export class FleetBuilderScene extends Phaser.Scene {
         ? [
             this.addShipIcon(62, h * 0.6, ship.spriteKey, 88, 1.3),
             nameText,
-            this.add.text(124, h * 0.5, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
+            this.add.text(124, h * 0.5, this.slotStatus(ship), textStyle(13, this.isDamaged(ship) ? Css.danger : Css.muted)),
           ]
         : [
             this.addShipIcon(54, 78, ship.spriteKey, 76, 1.3),
             nameText,
-            this.add.text(100, 74, `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`, textStyle(13, Css.muted)),
+            this.add.text(100, 74, this.slotStatus(ship), textStyle(13, this.isDamaged(ship) ? Css.danger : Css.muted)),
           ];
 
       const captain = this.captainOf(i);
@@ -744,17 +747,36 @@ export class FleetBuilderScene extends Phaser.Scene {
       const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const minSpeed = Math.min(...ships.map((s) => s.speed));
       const formation = FORMATION_INFO[this.formation].ja;
-      this.summaryText.setText(
-        IS_PORTRAIT
-          ? `耐久 ${totalHp} · 速力 ${minSpeed} · ${formation}`
-          : `総耐久 ${totalHp}   艦隊速力 ${minSpeed}   陣形 ${formation}`,
-      );
+      const blockers = sortieBlockers(loadProgress(), ships, Date.now());
+      const cost = `出撃コスト  ${formatResources(sortieCost(ships))}`;
+      const second = blockers.length > 0 ? `⚠ ${blockers.join(' / ')}` : cost;
+      this.summaryText
+        .setText(
+          IS_PORTRAIT
+            ? blockers.length > 0 ? second : `${formation} · ${formatResources(sortieCost(ships))}`
+            : `総耐久 ${totalHp}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
+        )
+        .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
     this.startBtn.setEnabled(this.canStart());
   }
 
   private canStart(): boolean {
-    return this.slots.some((s) => s !== null);
+    const ships = this.slots.filter((s): s is IShipData => s !== null);
+    return ships.length > 0 && sortieBlockers(loadProgress(), ships, Date.now()).length === 0;
+  }
+
+  private isDamaged(ship: IShipData): boolean {
+    return hpFraction(loadProgress(), ship.id) < 1;
+  }
+
+  /** "HP 210/500 · 入渠中" for damaged ships, plain stats otherwise. */
+  private slotStatus(ship: IShipData): string {
+    const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
+    const f = hpFraction(progress, ship.id);
+    if (f >= 1) return `HP ${ship.hp}   装甲 ${ship.armor}   速力 ${ship.speed}`;
+    const tag = isDocked(progress, ship.id) ? '入渠中' : f <= 0.25 ? '大破' : f <= 0.5 ? '中破' : '小破';
+    return `HP ${Math.round(ship.hp * f)} / ${ship.hp}   ${tag}`;
   }
 
   private captainOf(slot: number): ICaptain | null {
@@ -786,7 +808,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       '改装  ›',
       this.onTap(() => {
         this.saveSelection();
-        this.scene.start(SceneKeys.CUSTOMIZATION);
+        this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.FLEET_BUILDER });
       }),
       { variant: 'secondary', width: bw, height: bh, fontSize: 14 },
     );
@@ -805,6 +827,10 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private startBattle(): void {
+    const ships = this.slots.filter((s): s is IShipData => s !== null);
+    const paid = paySortie(loadProgress(), ships);
+    if (!paid) return;
+    saveProgress(paid);
     this.saveSelection();
     const flagshipIndex = this.slots.findIndex((s) => s !== null);
 
