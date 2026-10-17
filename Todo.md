@@ -153,46 +153,39 @@
 
 #### Sprint 2 完了処理
 - [x] 仕様書タグ更新 (`[IMPLEMENTED: sprint2]`)
-- [ ] feature/sprint2-* → develop PR → CI → merge
-- [ ] Vercel Preview URL 動作確認
+- [x] feature/sprint2-* → develop PR → CI → merge (PR #3 ✅)
+- [x] Vercel Preview URL 動作確認 ✅
 
 ---
 
 ## Phase 2: コンテンツ拡充
 
-### Sprint 3: IJN 全艦種・FleetBuilder・護衛艦・陣形
+### Sprint 3: IJN 艦隊・FleetBuilder・護衛艦・陣形 ✅
 
-#### IJN 艦種実装 (src/entities/ships/)
-- [ ] `src/entities/ships/Battleship.ts` (主砲 2 連装)
-- [ ] `src/entities/ships/Cruiser.ts` (中速・副砲多め)
-- [ ] `src/entities/ships/Destroyer.ts` (高速・魚雷搭載)
-- [ ] `src/entities/ships/Carrier.ts` (低耐久・艦載機発艦ポイント)
-- [ ] `src/entities/ships/Submarine.ts` (潜航フラグ・表示切替)
+> 詳細: `docs/specs/sprints/sprint3.md`。当初計画のうち未実装分は `docs/specs/sprints/backlog.md`「Deferred from Sprint 3」へ移動。
 
-#### IJN データ (`src/data/ships/ijn.json`)
-- [ ] 戦艦: 大和 / 武蔵 / 長門 / 陸奥 / 金剛 + 架空枠
-- [ ] 巡洋艦: 高雄 / 愛宕 / 利根 / 筑摩 等
-- [ ] 駆逐艦: 島風 / 雪風 / 初春 等
-- [ ] 空母: 赤城 / 加賀 / 翔鶴 / 瑞鶴 / 大鳳 等
-- [ ] 潜水艦: 伊400 / 伊19 等
-- [ ] `docs/specs/ships/IJN/` 仕様書一式
+#### IJN データ / 武器
+- [x] `src/data/ships/ijn.json` — 5 隻 (大和 / 武蔵 / 高雄 / 吹雪 / 翔鶴)
+- [x] `src/data/weapons/weapons.json` — 46cm / 20cm / 12cm / 93式魚雷
 
-#### 武器追加
-- [ ] `src/entities/weapons/Torpedo.ts` — 低速・高威力・AOE
-- [ ] `src/data/weapons/torpedoes.json` / `main-guns.json` / `secondary.json`
-
-#### FleetBuilder
-- [ ] `src/scenes/FleetBuilderScene.ts`
-- [ ] `src/ui/FleetPanel.ts` — 艦船カード一覧・編成
-- [ ] `src/ui/components/ShipCard.ts` — 艦名・HP・攻撃力カード
-- [ ] `src/systems/FleetSystem.ts` — 陣形計算・隊列維持 AI
-- [ ] 陣形種別: 単縦陣 / 輪形陣 / 複縦陣
+#### FleetBuilder・陣形
+- [x] `src/scenes/MainMenuScene.ts` / `src/scenes/FleetBuilderScene.ts` (最大 3 スロット)
+- [x] `src/types/Formation.ts` + `src/systems/FormationSystem.ts` — 単縦陣 / 複縦陣 / 輪形陣
+- [x] `src/systems/FleetSystem.ts` — 艦隊生成・検証・旗艦取得
 
 #### 護衛艦 AI
-- [ ] `AISystem.ts` 拡張: 旗艦 / 空母を追従しつつ脅威排除
+- [x] `src/systems/EscortAISystem.ts` — 陣形位置へ追従・射程内の敵を自動攻撃
+
+#### テスト
+- [x] `tests/unit/FleetSystem.test.ts` / `tests/unit/FormationSystem.test.ts`
 
 #### Sprint 3 完了処理
-- [ ] develop PR → CI → Vercel Preview → main マージ
+- [x] develop PR → CI → Vercel Preview → main マージ (PR #4 ✅)
+
+### Sprint 3 後の追加対応 (計画外)
+- [x] Issue #5〜#9 修正 — クラッシュ / テクスチャ / 艦名 / HP バー位置 (PR #10)
+- [x] モバイル対応 — レスポンシブスケーリング / バーチャルジョイスティック / タップ射撃 (PR #11)
+- [x] UI 刷新 — 日本語フォント / 縦画面レイアウト / AUTO 操縦 / 戦闘海域拡大 (PR #12)
 
 ---
 
