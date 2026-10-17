@@ -12,7 +12,7 @@
 
 ## Phase 3: Systems & Polish (Sprints 6–7)
 - Sprint 6: Home base, docks, resources, research tree
-- Sprint 7: Audio, effects, weather, night battle → v1.0 tag
+- Sprint 7: Audio, effects, weather, night battle → v1.0 tag (implemented; tag after merging to main)
 
 ## Phase 4: Advanced (Sprints 8–10+)
 - Sprint 8: Campaign map, convoy ops, shore bombardment, FogOfWar

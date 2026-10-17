@@ -288,18 +288,20 @@
 
 ---
 
-### Sprint 7: 演出・品質・バランス
+### Sprint 7: 演出・品質・バランス ✅
 
-- [ ] `src/systems/AudioSystem.ts` — BGM フェード・SE 管理
-- [ ] `assets/audio/bgm/` / `assets/audio/sfx/` アセット配置
-- [ ] Explosion / WaterSplash エフェクト強化 (黒煙・波紋アニメーション)
-- [ ] `src/ui/Minimap.ts` — RenderTexture 縮小表示 (味方: 青 / 敵: 赤)
-- [ ] `src/systems/WeatherSystem.ts` — 晴天 / 曇天 / 嵐 / 霧 (命中・視界補正)
-- [ ] 夜戦モード: 暗転オーバーレイ・視界円・レーダー拡大
-- [ ] `src/types/ShipDamage.ts` — 部位別損傷フラグ
-- [ ] `CombatSystem.ts` に `rollCriticalHit` 追加 (主砲破壊 / 機関損傷 / 舵損傷)
-- [ ] 全体バランス調整 (HP / ダメージ / 速度 / AI 強度)
-- [ ] develop PR → CI → Vercel Preview → main マージ → **v1.0 タグ**
+> 詳細: `docs/specs/sprints/current.md` / `docs/specs/systems/balance.md`
+
+- [x] `src/systems/AudioSystem.ts` — BGM フェード・SE 管理 (WebAudio 合成)
+- [x] ~~`assets/audio/` アセット配置~~ → 音はすべて合成するため不要
+- [x] Explosion / WaterSplash エフェクト強化 (黒煙・波紋・航跡・炎上煙)
+- [x] `src/ui/Minimap.ts` — 縮小表示 (味方: 青 / 敵: 赤)。Graphics で毎フレーム描画
+- [x] `src/systems/WeatherSystem.ts` — 晴天 / 曇天 / 嵐 / 霧 (照準・視界・速力補正)
+- [x] 夜戦モード: 暗い視界外・視界縮小・発砲炎で発見
+- [x] `src/types/ShipDamage.ts` — 部位別損傷 (主砲 / 機関 / 舵)
+- [x] `rollCriticalHit` (`DamageSystem.ts`) — 主砲損傷 / 機関損傷 / 舵損傷
+- [x] 全体バランス調整 (`BalanceModel` + 不変条件テスト + AUTO 対戦)
+- [ ] develop PR → CI → Vercel Preview → main マージ → **v1.0 タグ** (PR #14)
 
 ---
 

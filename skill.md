@@ -145,3 +145,15 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   (tests cover a pre-Sprint-6 save).
 - Pass the "back" destination into shared scenes (`scene.start(key, { returnTo })`) instead of hard-coding it.
 - Playwright: seed `localStorage` with `page.evaluate` and reload to test states like damaged ships quickly.
+
+### Sprint 7 — Effects, weather, audio, balance
+- Particle effects that follow ships (wakes, smoke) must be hidden whenever the ship is hidden by fog,
+  otherwise they give away hidden enemies.
+- The 4px square 'particle' texture reads as dots when scaled; soft effects use a 16px radial 'soft' texture.
+- WebAudio needs a user gesture: `main.ts` calls `audio.unlock()` on the first pointerdown / keydown.
+  Throttle each sound kind (a salvo of 6 guns becomes one sound) and attenuate by distance from the camera.
+- `import.meta.env` needs `src/vite-env.d.ts` (`/// <reference types="vite/client" />`) for `tsc`.
+- Balance: an analytic DPS / time-to-kill model plus invariant tests catches data outliers cheaply; confirm with
+  real AUTO battles started through the dev-only `window.game`. Run browser sims one at a time — parallel
+  headless browsers starve the CPU and the game runs in slow motion.
+- Always run the full check script before committing (a type error once reached the remote).

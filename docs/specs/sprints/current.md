@@ -1,6 +1,6 @@
 # Sprint 7 — 演出・品質・バランス (v1.0 候補)
 
-**Status**: In Progress | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
+**Status**: Implemented [IMPLEMENTED: sprint7] | **Branch**: `ccr-192e7779-941xlk` (PR #14 に同梱)
 **Goal**: 戦闘の見た目・音・状況 (天候 / 夜戦) が揃い、損傷とバランスが整った v1.0 候補にする。
 
 ## スコープ判断
@@ -32,4 +32,9 @@
 - [x] 調整結果を `docs/specs/systems/balance.md` に記録
 
 ### 完了処理
-- [ ] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint7]` タグ
+- [x] `skill.md` / `Todo.md` / 本ファイル更新、`[IMPLEMENTED: sprint7]` タグ
+
+## 実装メモ
+- 音声はファイルを使わず WebAudio で合成 (`AudioSystem`)。最初のクリック / キー入力で有効化され、ミュート設定は localStorage に保存。
+- 夜戦では発砲した艦が 1.5 秒間、1000px 以内の敵に発見される。霧は画面を白っぽく、嵐は雨・速力低下・照準誤差。
+- v1.0 タグは main へのマージ後に付ける (このブランチでは作成していない)。
