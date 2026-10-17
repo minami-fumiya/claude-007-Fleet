@@ -1,0 +1,40 @@
+{
+  "weapons": [
+    {
+      "id": "46cm_main_gun",
+      "name": "46cm 三式弾",
+      "type": "ShellAP",
+      "firePower": 120,
+      "range": 600,
+      "reloadTime": 1500,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "20cm_twin_gun",
+      "name": "20cm 連装砲",
+      "type": "ShellAP",
+      "firePower": 65,
+      "range": 500,
+      "reloadTime": 1200,
+      "projectileSpeed": 550
+    },
+    {
+      "id": "12cm_gun",
+      "name": "12cm 単装砲",
+      "type": "ShellHE",
+      "firePower": 35,
+      "range": 400,
+      "reloadTime": 800,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "torpedo_type93",
+      "name": "93式酸素魚雷",
+      "type": "Torpedo",
+      "firePower": 200,
+      "range": 350,
+      "reloadTime": 4000,
+      "projectileSpeed": 300
+    }
+  ]
+}
