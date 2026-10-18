@@ -19,4 +19,5 @@
 - Sprint 9: Historical scenarios, refit system, encyclopedia
 - Sprint 10: Fictional ships, more scenarios and a third theater, service record and medals (implemented)
 - Sprint 11: Polish — settings (volume), help, save export / import / reset (proposed and implemented)
-- Sprint 12+: Multiplayer (TBD — needs a server)
+- Sprint 12: Playtest feedback (#15–#30) — nation bases, growth from one destroyer, 7 navies, research / refit expansion, square map (implemented)
+- Sprint 13+: Multiplayer (TBD — needs a server)

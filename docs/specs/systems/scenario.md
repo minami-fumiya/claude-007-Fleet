@@ -21,7 +21,7 @@ A test checks every placement and zone is at sea in both the landscape and portr
 ## Scenarios
 | Scenario | Map / conditions | Sides |
 |---|---|---|
-| ミッドウェー海戦 | open-sea, clear, day — 赤城・加賀・利根 vs Enterprise・Essex・Fletcher | Both: SinkTargets (the enemy carriers) in 6 min |
+| ミッドウェー海戦 | open-sea, clear, day — 赤城・加賀・龍驤・利根 vs Enterprise・Yorktown・Independence・Atlanta (Sprint 12) | Both: SinkTargets (the two enemy fleet carriers) in 6 min |
 | レイテ沖海戦 | strait, overcast, day — 大和・長門・金剛 vs Enterprise・Fletcher・Gearing | IJN: Breakthrough to レイテ湾 in 5 min · USN: Delay (keep 大和 out of the zone for 4 min, or sink it) |
 | 第三次ソロモン海戦 (Sprint 10) | archipelago, clear, night — 金剛 (霧島の代役)・愛宕・吹雪 vs North Carolina (Washington の代役)・Fletcher ×2 | IJN: Breakthrough to 飛行場沖 (diagonal across the islands, 5 min) · USN: Delay (keep 金剛 out for 4 min, or sink it) |
 | 北岬沖海戦 (Sprint 10) | open-sea, overcast, night — Scharnhorst alone vs KGV (Duke of York の代役)・Belfast・Javelin closing from both flanks | RN: PreventEscape (sink Scharnhorst before it reaches ノルウェー沿岸, 5 min) · KM: Breakthrough |
@@ -40,3 +40,15 @@ Losing the player flagship is always a defeat.
 - `enemyGoesForZone`: the AI steers its ships at the zone (`AISystem.goal`) instead of hunting, firing at whatever
   is in range on the way.
 - The HUD shows the objective text with the remaining time; the zone is drawn on the sea as a dashed gold ring.
+
+## Midway tuning (Sprint 12, #23)
+AUTO sims (headless, 6 min limit) before the fix: the IJN side lost every run. Causes and fixes:
+- IJN carrier AI closed to half range (its tactics profile) and sailed into the US cruisers' guns → carriers now
+  keep at least `CARRIER_STANDOFF` (850 px) from their target, AI and the player's AUTO alike.
+- AUTO strikes waited until a target carrier was in sight, so the enemy struck first → strikes go for the target
+  carriers when visible, otherwise for whatever is in sight; escorts prefer the targets.
+- Carrier count decides the air battle: 3 US vs 2 IJN lost every IJN run, 2 US vs 3 IJN lost every US run → three a
+  side (one light carrier each).
+
+Result after the fixes: IJN side 2 / 2 wins, US side 1 / 3 wins (plus one run per side cut off by the sim timeout).
+Both sides are winnable; the strike button lights up (gold) when a strike can reach an enemy.

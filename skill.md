@@ -198,3 +198,13 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Per-battle state declared with an initialiser (`readonly log = {}`) survives `scene.start` because Phaser reuses
   the scene instance — clear it in `create()` (this inflated the service record's damage until review caught it).
 - "Exhibition" modes must isolate both ways: skip saving results AND skip loading progress-based modifiers.
+
+### Sprint 12 — Parallel workstreams on playtest feedback
+- Parallel agents in git worktrees: create the worktrees from the sprint branch (they defaulted to an old `main`),
+  give each a disjoint file scope, and define shared contracts (field names, research ids) up front in the plan.
+- Merge the biggest cross-cutting stream (save format, fleet builder) last, and have a still-running stream merge
+  the integrated branch itself — it resolves its own conflicts better than the integrator.
+- Two streams invented the same modifier under different names (`aswMul` / `depthChargeMul`): when merging, keep one
+  and rename, don't keep both.
+- Agents hit usage limits mid-task; ask them to commit after every passing check so a stop loses nothing.
+- Scenario balance needs AUTO sims from both sides after every change — a fix for one side easily flips the result.
