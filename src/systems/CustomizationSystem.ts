@@ -4,10 +4,10 @@ import { IWeaponData } from '@/types/Weapon';
 import { IAirWing } from '@/types/Aircraft';
 import { weaponKind, WeaponKind } from './WeaponSelector';
 
-/** Upgrade slots on a ship that has not been remodelled. */
-export const UPGRADE_SLOTS = 2;
-/** Upgrade slots by remodel stage: 2 → 3 (改) → 4 (改二 and later). */
-const SLOTS_BY_STAGE = [2, 3, 4];
+/** Upgrade slots on a ship that has not been remodelled: none, upgrades come with remodelling (#72). */
+export const UPGRADE_SLOTS = 0;
+/** Upgrade slots by remodel stage: 0 → 2 (改) → 3 (改二) → 4 (改三). */
+export const SLOTS_BY_STAGE = [UPGRADE_SLOTS, 2, 3, 4];
 export const MAX_UPGRADE_SLOTS = SLOTS_BY_STAGE[SLOTS_BY_STAGE.length - 1];
 
 export function upgradeSlots(refitStage: number): number {
@@ -29,7 +29,7 @@ export function combineModifiers(...mods: Array<Partial<IShipModifiers>>): IShip
 }
 
 /** Modifiers from the upgrades fitted (unknown ids and slots beyond `slots` are ignored). */
-export function upgradeModifiers(fitted: string[], catalog: IUpgradeData[], slots: number = UPGRADE_SLOTS): IShipModifiers {
+export function upgradeModifiers(fitted: string[], catalog: IUpgradeData[], slots: number): IShipModifiers {
   const effects = fitted
     .slice(0, slots)
     .map((id) => catalog.find((u) => u.id === id)?.effects)
@@ -38,7 +38,7 @@ export function upgradeModifiers(fitted: string[], catalog: IUpgradeData[], slot
 }
 
 /** Fits `upgradeId` (toggles it off if already fitted). Refuses duplicates and a full ship. */
-export function toggleUpgrade(fitted: string[], upgradeId: string, slots: number = UPGRADE_SLOTS): string[] {
+export function toggleUpgrade(fitted: string[], upgradeId: string, slots: number): string[] {
   if (fitted.includes(upgradeId)) return fitted.filter((id) => id !== upgradeId);
   if (fitted.length >= slots) return fitted;
   return [...fitted, upgradeId];

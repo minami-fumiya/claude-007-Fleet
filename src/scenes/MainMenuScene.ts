@@ -12,17 +12,19 @@ const CARD = IS_PORTRAIT
   : { x: 70, y: 56, w: CANVAS_W - 140, h: CANVAS_H - 112 };
 const LEFT_X = CARD.x + 72;
 
-const TITLE_SHADOW = { offsetX: 0, offsetY: 6, color: 'rgba(0,0,0,0.6)', blur: 12, fill: true };
 const FLEET_GLOW = { offsetX: 0, offsetY: 0, color: 'rgba(255,201,74,0.55)', blur: 24, fill: true };
-const TAGLINE = '艦隊を編成し、太平洋の制海権を握れ。';
-const NATIONS = 'IJN · USN · KRIEGSMARINE · ROYAL NAVY';
+/** Title (#70): seven navies on the world's seas, not just the Pacific. */
+const TITLE = '七海艦隊';
+const SUBTITLE = '第二次世界大戦  ×  艦隊戦術';
+const TAGLINE = '艦隊を編成し、七つの海の制海権を握れ。';
+const NATIONS = '日本 · 米国 · ドイツ · 英国 · フランス · イタリア · ソ連';
 
 // Portrait means a phone (see Layout.ts), so the copy describes that device's controls.
 const INFO_TILES: Array<{ title: string; body: string }> = [
   IS_PORTRAIT
     ? { title: '◎ 自動砲撃', body: '射程内の敵へ自動で撃つ' }
     : { title: '◎ 砲撃', body: '狙った地点へ主砲を放つ' },
-  { title: '⚓ 陣形', body: '縦陣・複縦陣・輪形陣' },
+  { title: '⚓ 陣形', body: '単縦陣・輪形陣ほか 6 種' },
   { title: '★ 勝利条件', body: '敵艦隊をすべて撃沈' },
 ];
 
@@ -54,9 +56,8 @@ export class MainMenuScene extends Phaser.Scene {
   private buildLandscape(): void {
     addHeroShip(this, CARD.x + CARD.w - 330, CARD.y + 330, 0.95);
 
-    this.add.text(LEFT_X, CARD.y + 70, 'PACIFIC WAR  ×  NAVAL TACTICS', eyebrowStyle(13));
-    this.add.text(LEFT_X - 4, CARD.y + 92, 'WW2 NAVAL', displayStyle(78, Css.text, { shadow: TITLE_SHADOW }));
-    this.add.text(LEFT_X - 2, CARD.y + 180, 'FLEET', displayStyle(96, Css.gold, { letterSpacing: 18, shadow: FLEET_GLOW }));
+    this.add.text(LEFT_X, CARD.y + 70, SUBTITLE, eyebrowStyle(13));
+    this.add.text(LEFT_X - 6, CARD.y + 110, TITLE, displayStyle(120, Css.gold, { letterSpacing: 12, shadow: FLEET_GLOW }));
     this.add.text(LEFT_X, CARD.y + 300, TAGLINE, textStyle(20, '#c9d6ee', { fontStyle: 'bold' }));
 
     new UIButton(this, LEFT_X + 140, CARD.y + 386, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
@@ -86,11 +87,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     addHeroShip(this, cx, CARD.y + 270, 0.62);
 
-    this.add.text(cx, CARD.y + 400, 'PACIFIC WAR  ×  NAVAL TACTICS', eyebrowStyle(13)).setOrigin(0.5);
-    this.add.text(cx, CARD.y + 474, 'WW2 NAVAL', displayStyle(72, Css.text, { shadow: TITLE_SHADOW })).setOrigin(0.5);
-    this.add
-      .text(cx + 9, CARD.y + 580, 'FLEET', displayStyle(104, Css.gold, { letterSpacing: 18, shadow: FLEET_GLOW }))
-      .setOrigin(0.5);
+    this.add.text(cx, CARD.y + 410, SUBTITLE, eyebrowStyle(14)).setOrigin(0.5);
+    this.add.text(cx + 6, CARD.y + 530, TITLE, displayStyle(132, Css.gold, { letterSpacing: 12, shadow: FLEET_GLOW })).setOrigin(0.5);
     this.add.text(cx, CARD.y + 682, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
 
     new UIButton(this, cx, CARD.y + 780, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
@@ -148,8 +146,7 @@ export class MainMenuScene extends Phaser.Scene {
     shade.on('pointerup', () => this.toggleHowTo(false));
 
     const panel = addPanel(this, x, y, w, h, { radius: 28, fill: Colors.panelHi, fillAlpha: 0.96, glow: 1 });
-    const eyebrow = this.add.text(CANVAS_W / 2, y + 40, 'HOW TO PLAY', eyebrowStyle(13)).setOrigin(0.5);
-    const title = this.add.text(CANVAS_W / 2, y + 80, '操作方法', displayStyle(30)).setOrigin(0.5);
+        const title = this.add.text(CANVAS_W / 2, y + 80, '操作方法', displayStyle(30)).setOrigin(0.5);
 
     // Landscape puts label and text side by side; portrait stacks them so long lines can wrap.
     const rows: Phaser.GameObjects.GameObject[] = [];
@@ -171,6 +168,6 @@ export class MainMenuScene extends Phaser.Scene {
       height: IS_PORTRAIT ? 68 : 56,
     });
 
-    this.howToLayer = this.add.container(0, 0, [shade, panel, eyebrow, title, ...rows, close]).setDepth(50);
+    this.howToLayer = this.add.container(0, 0, [shade, panel, title, ...rows, close]).setDepth(50);
   }
 }

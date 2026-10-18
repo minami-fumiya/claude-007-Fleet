@@ -49,7 +49,6 @@ export class ScenarioScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'HISTORICAL', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '史実シナリオ', displayStyle(24)).setOrigin(0.5);
 
     this.scenarios.forEach((sc, i) => {

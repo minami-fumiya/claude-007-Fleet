@@ -106,7 +106,6 @@ export class CustomizationScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  戻る', () => this.scene.start(this.returnTo), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'REFIT', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '改装 — 装備を換装せよ', displayStyle(24)).setOrigin(0.5);
   }
 
@@ -127,7 +126,7 @@ export class CustomizationScene extends Phaser.Scene {
   private buildStatsPanel(): void {
     const p = L.stats;
     addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.55, glow: 0.6 });
-    this.add.text(p.x + 22, p.y + 18, 'SHIP STATUS', eyebrowStyle(11));
+    this.add.text(p.x + 22, p.y + 18, '艦の状態', eyebrowStyle(11));
     this.shipName = this.add.text(p.x + 22, p.y + (IS_PORTRAIT ? 46 : 36), '', textStyle(17, Css.text, { fontStyle: 'bold' }));
     this.slotText = this.add.text(p.x + p.w - 22, p.y + 18, '', eyebrowStyle(11, Css.gold)).setOrigin(1, 0);
     this.specialText = this.add.text(p.x + 22, this.shipName.y + this.shipName.height + 2, '', textStyle(11, Css.gold));
@@ -144,7 +143,7 @@ export class CustomizationScene extends Phaser.Scene {
     }
     this.extrasText = this.add.text(p.x + 22, top + statRows * rowH, '', textStyle(11, Css.cyan, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
     const ry = p.y + p.h - REFIT_H + 8;
-    this.add.text(p.x + 22, ry, 'REMODEL · 改造', eyebrowStyle(10, Css.gold));
+    this.add.text(p.x + 22, ry, '改造', eyebrowStyle(10, Css.gold));
     this.refitText = this.add.text(p.x + 22, ry + (IS_PORTRAIT ? 26 : 20), '', textStyle(12, Css.muted, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
     this.refitBtn = new UIButton(this, p.x + p.w / 2, p.y + p.h - (IS_PORTRAIT ? 34 : 28), '改造', () => this.remodel(), {
       variant: 'gold', width: p.w - 44, height: IS_PORTRAIT ? 48 : 36, fontSize: 14,
@@ -220,9 +219,9 @@ export class CustomizationScene extends Phaser.Scene {
       const locked = !this.unlocked.has(u.id);
       const required = this.tech.find((t) => t.id === u.requires)?.name ?? '';
       this.cardMarks[i]
-        .setText(on ? '装備中' : locked ? `要研究: ${required}` : full ? '—' : '+')
+        .setText(on ? '装備中' : locked ? `要研究: ${required}` : slots === 0 ? '要改造' : full ? '—' : '+')
         .setColor(on ? Css.gold : locked ? Css.dim : Css.cyan)
-        .setFontSize(locked ? 12 : 18);
+        .setFontSize(locked || slots === 0 ? 12 : 18);
     });
     this.refreshStats(fitted, slots);
   }
@@ -291,6 +290,7 @@ export class CustomizationScene extends Phaser.Scene {
       this.refitText.setText(`${special}次: ${next.suffix}  ·  熟練 ${prof} / ${next.minProficiency}${slotsNext}  ·  ${formatResources(next.cost)}`);
       this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(canRefit(this.refitTable, ship, stage, prof, progress.resources));
     }
-    this.slotText.setText(`装備 ${fitted.length} / ${slots}`);
+    // Unremodelled ships have no upgrade slots (#72): point at the remodel that opens them.
+    this.slotText.setText(slots > 0 ? `装備 ${fitted.length} / ${slots}` : `装備枠なし — 改に改造すると ${upgradeSlots(1)} 枠`);
   }
 }

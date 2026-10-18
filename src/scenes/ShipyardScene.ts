@@ -56,7 +56,6 @@ export class ShipyardScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? -40 : 0), IS_PORTRAIT ? 28 : 26, 'SHIPYARD', eyebrowStyle(12)).setOrigin(0.5);
     addArsenalTabs(this, 'build');
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, `工廠 — ${NATION_INFO[loadProgress().nation].jaShort}の艦を建造`, displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, L.barCols);

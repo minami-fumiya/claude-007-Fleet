@@ -35,19 +35,21 @@ describe('CustomizationSystem', () => {
   });
 
   it('builds modifiers from fitted upgrades, ignoring unknown ids and extra slots', () => {
-    const m = upgradeModifiers(['extra_armor', 'nope', 'boiler'], catalog);
+    const m = upgradeModifiers(['extra_armor', 'nope', 'boiler'], catalog, 2);
     expect(m.armorAdd).toBe(8);
     expect(m.speedMul).toBeCloseTo(0.95);
-    expect(upgradeModifiers(['boiler', 'damage_control', 'radar'], catalog).visionMul).toBe(1);
+    expect(upgradeModifiers(['boiler', 'damage_control', 'radar'], catalog, 2).visionMul).toBe(1);
   });
 
   it('toggles upgrades within the slot limit', () => {
-    let fitted = toggleUpgrade([], 'boiler');
+    let fitted = toggleUpgrade([], 'boiler', 2);
     expect(fitted).toEqual(['boiler']);
-    fitted = toggleUpgrade(fitted, 'radar');
-    expect(fitted).toHaveLength(UPGRADE_SLOTS);
-    expect(toggleUpgrade(fitted, 'aa_guns')).toBe(fitted);
-    expect(toggleUpgrade(fitted, 'boiler')).toEqual(['radar']);
+    fitted = toggleUpgrade(fitted, 'radar', 2);
+    expect(fitted).toHaveLength(2);
+    expect(toggleUpgrade(fitted, 'aa_guns', 2)).toBe(fitted);
+    expect(toggleUpgrade(fitted, 'boiler', 2)).toEqual(['radar']);
+    // An unremodelled ship has no slots (#72).
+    expect(toggleUpgrade([], 'boiler', UPGRADE_SLOTS)).toEqual([]);
   });
 
   it('applies modifiers to stats', () => {
@@ -76,14 +78,15 @@ describe('CustomizationSystem', () => {
     expect(m.airPowerMul).toBe(1);
   });
 
-  it('grows upgrade slots with the remodel stage: 2 → 3 (改) → 4 (改二 / 改三)', () => {
-    expect([0, 1, 2, 3, 9].map(upgradeSlots)).toEqual([2, 3, 4, 4, 4]);
+  it('upgrade slots come with remodelling: 0 → 2 (改) → 3 (改二) → 4 (改三) (#72)', () => {
+    expect([0, 1, 2, 3, 9].map(upgradeSlots)).toEqual([0, 2, 3, 4, 4]);
     expect(upgradeSlots(-1)).toBe(UPGRADE_SLOTS);
     expect(MAX_UPGRADE_SLOTS).toBe(4);
     let fitted: string[] = [];
-    for (const id of ['boiler', 'radar', 'aa_guns', 'damage_control', 'heavy_shells']) fitted = toggleUpgrade(fitted, id, upgradeSlots(2));
+    for (const id of ['boiler', 'radar', 'aa_guns', 'damage_control', 'heavy_shells']) fitted = toggleUpgrade(fitted, id, upgradeSlots(3));
     expect(fitted).toEqual(['boiler', 'radar', 'aa_guns', 'damage_control']);
-    expect(upgradeModifiers(fitted, catalog).aaMul).toBe(1);
+    expect(upgradeModifiers(fitted, catalog, 2).aaMul).toBe(1);
+    expect(upgradeModifiers(fitted, catalog, upgradeSlots(0))).toEqual(upgradeModifiers([], catalog, 4));
     expect(upgradeModifiers(fitted, catalog, 4).aaMul).toBeCloseTo(1.4);
     expect(upgradeModifiers(fitted, catalog, 4).hpMul).toBeCloseTo(1.1);
   });
@@ -120,7 +123,7 @@ describe('ProgressStore.parseProgress', () => {
   it('tolerates missing or malformed data', () => {
     expect(parseProgress(null)).toEqual(emptyProgress());
     expect(parseProgress('not json')).toEqual(emptyProgress());
-    const p = parseProgress('{"captainXp":{"a":"x","b":120},"upgrades":{"s":["boiler",3],"t":"no"}}');
+    const p = parseProgress('{"captainXp":{"a":"x","b":120},"upgrades":{"s":["boiler",3],"t":"no"},"refits":{"s":1},"research":["engine_1"]}');
     expect(p.captainXp).toEqual({ b: 120 });
     expect(p.upgrades).toEqual({ s: ['boiler'] });
     // v1 saves from before Sprint 6 get the old starting resources and no damage.

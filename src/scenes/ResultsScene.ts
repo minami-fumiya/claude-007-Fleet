@@ -36,10 +36,17 @@ export class ResultsScene extends Phaser.Scene {
 
     // Captain XP lines push the buttons down and grow the card.
     const reports = data?.captainReports ?? [];
-    const rewardLines = [data?.campaign ?? '', data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : ''].filter((l) => l);
+    // The campaign line ("海域攻略: … 初回報酬 …") is split at its reward so neither half runs off the card (#69).
+    const campaignLines = (data?.campaign ?? '').split(/\s{2,}(?=初回報酬)/);
+    const rewardLines = [...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : ''].filter((l) => l);
+    // Long lines wrap inside the card; their measured heights size the report area.
+    const rewardTexts = rewardLines.map((line) =>
+      this.add.text(CANVAS_W / 2, 0, line, textStyle(14, Css.cyan, { fontStyle: 'bold', align: 'center', wordWrap: { width: CARD_W - 56, useAdvancedWrap: true } })).setOrigin(0.5, 0),
+    );
+    const rewardH = rewardTexts.reduce((sum, t) => sum + Math.max(REPORT_LINE_H, t.height + 6), 0);
     const reportCols = !IS_PORTRAIT && reports.length >= REPORT_COLS_FROM ? 2 : 1;
-    const lineCount = Math.ceil(reports.length / reportCols) + rewardLines.length;
-    const reportH = lineCount > 0 ? 18 + lineCount * REPORT_LINE_H : 0;
+    const reportLines = Math.ceil(reports.length / reportCols);
+    const reportH = reportLines + rewardTexts.length > 0 ? 18 + rewardH + reportLines * REPORT_LINE_H : 0;
     const cardH = CARD_H + reportH;
     const x = (CANVAS_W - CARD_W) / 2;
     const y = (CANVAS_H - cardH) / 2;
@@ -47,10 +54,10 @@ export class ResultsScene extends Phaser.Scene {
 
     this.drawEmblem(CANVAS_W / 2, y + 84, accent, victory);
 
-    this.add.text(CANVAS_W / 2, y + 160, 'BATTLE REPORT', eyebrowStyle(13, Css.cyan)).setOrigin(0.5);
+    this.add.text(CANVAS_W / 2, y + 160, '戦闘結果', eyebrowStyle(13, Css.cyan)).setOrigin(0.5);
     this.add
-      .text(CANVAS_W / 2, y + 210, victory ? 'VICTORY' : 'DEFEAT', displayStyle(64, accentCss, {
-        letterSpacing: 10,
+      .text(CANVAS_W / 2, y + 210, victory ? '勝利' : '敗北', displayStyle(64, accentCss, {
+        letterSpacing: 24,
         shadow: { offsetX: 0, offsetY: 0, color: victory ? 'rgba(255,201,74,0.5)' : 'rgba(255,95,122,0.5)', blur: 24, fill: true },
       }))
       .setOrigin(0.5);
@@ -68,23 +75,22 @@ export class ResultsScene extends Phaser.Scene {
     const cardW = STAT.w;
     const gap = STAT.gap;
     const startX = CANVAS_W / 2 - (cardW * 3 + gap * 2) / 2;
-    addStatCard(this, startX, y + 300, cardW, STAT.h, '撃沈 SUNK', `${sunk} / ${total}`, Css.gold);
-    addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存 AFLOAT', `${survivors} / ${fleetSize}`, Css.success);
-    addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間 TIME', time, Css.cyan);
+    addStatCard(this, startX, y + 300, cardW, STAT.h, '撃沈', `${sunk} / ${total}`, Css.gold);
+    addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存', `${survivors} / ${fleetSize}`, Css.success);
+    addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間', time, Css.cyan);
 
-    rewardLines.forEach((line, i) => {
-      this.add
-        .text(CANVAS_W / 2, y + 300 + STAT.h + 22 + i * REPORT_LINE_H, line, textStyle(14, Css.cyan, { fontStyle: 'bold' }))
-        .setOrigin(0.5, 0);
-    });
+    let ty = y + 300 + STAT.h + 22;
+    for (const t of rewardTexts) {
+      t.setY(ty).setDepth(1);
+      ty += Math.max(REPORT_LINE_H, t.height + 6);
+    }
     const colW = (CARD_W - 40) / reportCols;
     reports.forEach((r, j) => {
-      const i = Math.floor(j / reportCols) + rewardLines.length;
-      const ry = y + 300 + STAT.h + 22 + i * REPORT_LINE_H;
+      const ry = ty + Math.floor(j / reportCols) * REPORT_LINE_H;
       const cx = reportCols === 1 ? CANVAS_W / 2 : x + 20 + colW * (j % reportCols) + colW / 2;
-      const up = r.leveledUp ? (reportCols === 1 ? '  ▲ LEVEL UP' : '  ▲') : '';
+      const up = r.leveledUp ? (reportCols === 1 ? '  ▲ 昇級' : '  ▲') : '';
       const t = this.add
-        .text(cx, ry, `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
+        .text(cx, ry, r.maxed ? `艦長 ${r.name}  Lv ${r.level} (最大)` : `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
         .setOrigin(0.5, 0);
       if (t.width > colW - 8) t.setScale((colW - 8) / t.width);
     });
@@ -94,7 +100,6 @@ export class ResultsScene extends Phaser.Scene {
       width: CARD_W - 96,
       height: BUTTONS.h1,
       fontSize: 22,
-      caption: 'RETRY',
     });
     new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => this.scene.start(data?.returnScene ?? SceneKeys.HOME), {
       variant: 'secondary',

@@ -85,3 +85,28 @@ describe('v2 → v3: light / heavy cruiser research (#37)', () => {
     expect(step({ nations: 'x' })).toEqual({ nations: 'x' });
   });
 });
+
+describe('v3 → v4: upgrade slots come with remodelling (#72)', () => {
+  it('unremodelled ships lose their upgrades; remodelled ones keep up to their slots', () => {
+    const v3 = {
+      version: 3, current: 'IJN', record: {},
+      nations: { IJN: {
+        research: ['engine_1', 'radar_1', 'aa_1'],
+        ships: ['fubuki', 'takao', 'yamato'],
+        refits: { takao: 1, yamato: 3 },
+        upgrades: { fubuki: ['boiler', 'radar'], takao: ['boiler', 'radar', 'aa_guns'], yamato: ['boiler', 'radar'] },
+      } },
+    };
+    const np = parseSave(JSON.stringify(v3)).nations[Nation.IJN]!;
+    expect(np.upgrades).toEqual({ fubuki: [], takao: ['boiler', 'radar'], yamato: ['boiler', 'radar'] });
+    expect(np.ships).toEqual(['fubuki', 'takao', 'yamato']);
+  });
+
+  it('upgrades whose research is missing come off (強装薬 needed none before)', () => {
+    const v3 = {
+      version: 3, current: 'IJN', record: {},
+      nations: { IJN: { research: ['engine_1'], refits: { yamato: 3 }, upgrades: { yamato: ['heavy_shells', 'boiler'] } } },
+    };
+    expect(parseSave(JSON.stringify(v3)).nations[Nation.IJN]!.upgrades).toEqual({ yamato: ['boiler'] });
+  });
+});

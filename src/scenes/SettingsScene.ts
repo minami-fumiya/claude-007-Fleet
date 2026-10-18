@@ -39,7 +39,6 @@ export class SettingsScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, backLabel, () => this.scene.start(this.returnTo), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'SETTINGS', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '設定', displayStyle(24)).setOrigin(0.5);
     addPanel(this, P.x, P.y, P.w, P.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
     this.refresh();
@@ -58,7 +57,7 @@ export class SettingsScene extends Phaser.Scene {
     const s = audio.settings;
     let y = P.y + 24;
 
-    this.track(this.add.text(x, y, 'SOUND  ·  サウンド', eyebrowStyle(11)));
+    this.track(this.add.text(x, y, 'サウンド', eyebrowStyle(11)));
     y += 34;
     this.volumeRow(x, y, w, 'BGM', s.bgm, (v) => audio.update({ bgm: v }));
     y += ROW_H;
@@ -73,7 +72,7 @@ export class SettingsScene extends Phaser.Scene {
     );
     y += BTN_H + (IS_PORTRAIT ? 44 : 32);
 
-    this.track(this.add.text(x, y, 'CONTROLS  ·  操作', eyebrowStyle(11)));
+    this.track(this.add.text(x, y, '操作', eyebrowStyle(11)));
     y += 34;
     this.track(this.add.text(x, y + BTN_H / 2, '移動スティック (タッチ)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
     this.track(
@@ -85,7 +84,7 @@ export class SettingsScene extends Phaser.Scene {
     this.track(this.add.text(x, y, '非表示にすると、海面のタップと AUTO で移動します。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 44 : 32;
 
-    this.track(this.add.text(x, y, 'DATA  ·  進行データ', eyebrowStyle(11)));
+    this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
     this.track(this.add.text(x, y, 'セーブコードで別の端末やブラウザへ進行状況を移せます。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 48 : 30;

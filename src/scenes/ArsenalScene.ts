@@ -4,7 +4,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { research, TECH_TREE } from '@/systems/ResearchSystem';
 import { ITechNode } from '@/types/Progression';
-import { displayStyle, eyebrowStyle } from '@/ui/theme';
+import { displayStyle } from '@/ui/theme';
 import { addBackdrop, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { ResearchView } from '@/ui/components/ResearchView';
@@ -32,7 +32,6 @@ export class ArsenalScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'ARSENAL', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '工廠 — 技術研究', displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, IS_PORTRAIT ? 2 : 4);
     addArsenalTabs(this, 'research');
