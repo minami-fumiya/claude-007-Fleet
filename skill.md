@@ -208,3 +208,14 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   and rename, don't keep both.
 - Agents hit usage limits mid-task; ask them to commit after every passing check so a stop loses nothing.
 - Scenario balance needs AUTO sims from both sides after every change — a fix for one side easily flips the result.
+
+### Sprint 13 — Playtest feedback round 2 (#32)
+- Save format changes go through `src/utils/SaveMigration.ts` (#60): append one step to `MIGRATIONS` (raw JSON
+  v(n) → v(n+1)), never edit a released step, and add a test that loads an old save and checks nothing owned
+  (ships, captains, resources, docks) was lost. `SAVE_VERSION` follows automatically; v1 saves are converted to v2
+  first and then run through the same steps.
+- AI targeting that only scores targets independently makes the whole side pile onto one ship. Pass "how many of my
+  side already attack it" (`attackers`) and update the count after each ship decides within the frame; tune the
+  per-nation `crowdPenalty` with a small assignment sim (4 v 4) rather than by feel — 0.3 spread fire perfectly evenly.
+- When rebalancing a resource, test the invariant ("steel regen time ≤ 1.5× fuel/ammo for every ship") instead of
+  pinning numbers, so later cost changes keep the intent.

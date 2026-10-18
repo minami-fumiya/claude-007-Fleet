@@ -1,4 +1,4 @@
-/** Player settings (pure): sound volumes and mute, kept apart from game progress. */
+/** Player settings (pure): sound volumes and mute, and touch controls, kept apart from game progress. */
 
 export interface ISettings {
   /** 0..100 */
@@ -6,9 +6,11 @@ export interface ISettings {
   /** 0..100 */
   sfx: number;
   muted: boolean;
+  /** Show the virtual movement stick on touch screens (#46); hidden, the flagship moves by sea taps and AUTO */
+  joystick: boolean;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -33,6 +35,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       bgm: typeof d.bgm === 'number' ? clampVolume(d.bgm) : DEFAULT_SETTINGS.bgm,
       sfx: typeof d.sfx === 'number' ? clampVolume(d.sfx) : DEFAULT_SETTINGS.sfx,
       muted: typeof d.muted === 'boolean' ? d.muted : legacyMuted,
+      joystick: typeof d.joystick === 'boolean' ? d.joystick : DEFAULT_SETTINGS.joystick,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

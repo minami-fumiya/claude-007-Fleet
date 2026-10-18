@@ -19,8 +19,15 @@ describe('SettingsSystem', () => {
   it('parses stored settings tolerantly and keeps the old mute flag', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings(null, true).muted).toBe(true);
-    expect(parseSettings('{"bgm":140,"sfx":"x"}')).toEqual({ bgm: 100, sfx: DEFAULT_SETTINGS.sfx, muted: false });
+    expect(parseSettings('{"bgm":140,"sfx":"x"}')).toEqual({ bgm: 100, sfx: DEFAULT_SETTINGS.sfx, muted: false, joystick: true });
     expect(parseSettings('not json', true)).toEqual({ ...DEFAULT_SETTINGS, muted: true });
+  });
+
+  it('shows the touch stick by default and remembers hiding it (#46)', () => {
+    expect(DEFAULT_SETTINGS.joystick).toBe(true);
+    expect(parseSettings('{"bgm":50}').joystick).toBe(true);
+    expect(parseSettings('{"joystick":false}').joystick).toBe(false);
+    expect(parseSettings('{"joystick":"no"}').joystick).toBe(true);
   });
 });
 

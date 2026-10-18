@@ -11,8 +11,15 @@ other side's sonar).
 ## Target choice
 ```
 score = distanceWeight * near + focusWeakWeight * (1 - hpFraction) + capitalWeight * classValue (+0.6 if a submerged boat)
+        - crowdPenalty * attackers + priority
 near  = 1 - min(1, distance / (2 * maxRange))
 ```
+- `attackers` (#34): how many other ships of the same side already target that ship. BattleScene keeps the count
+  current as each enemy decides, so the fleet spreads its fire instead of piling onto the leading flagship.
+  `crowdPenalty` per nation: IJN 0.15 · USN 0.2 · KM 0.05 (wolf pack — keeps focusing) · RN 0.15 · FR 0.2 · SU 0.12 · RM 0.2.
+- `priority`: convoy ships +0.6, scenario targets +0.5, the player's flagship **−0.15** (escorts draw their share).
+- With a line-ahead fleet of four, a healthy flagship draws at most two of four attackers (tested in `AIBrain.test.ts`);
+  a badly damaged flagship is still finished off — protecting it is the escorts' and formations' job (#59).
 | Class | classValue |
 |---|---|
 | Battleship | 1.0 |

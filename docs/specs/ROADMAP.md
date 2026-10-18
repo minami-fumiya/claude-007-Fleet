@@ -1,5 +1,7 @@
 # Roadmap
 
+> バージョン番号 (アルファ版のくくり) は `docs/VERSIONS.md` を正とする。下の「v1.0」などの表記は旧来の呼び方。
+
 ## Phase 1: Foundation (Sprints 0–2)
 - Sprint 0: Environment & infrastructure setup
 - Sprint 1: Type system, scene base, Yamato playable
@@ -20,4 +22,6 @@
 - Sprint 10: Fictional ships, more scenarios and a third theater, service record and medals (implemented)
 - Sprint 11: Polish — settings (volume), help, save export / import / reset (proposed and implemented)
 - Sprint 12: Playtest feedback (#15–#30) — nation bases, growth from one destroyer, 7 navies, research / refit expansion, square map (implemented)
-- Sprint 13+: Multiplayer (TBD — needs a server)
+- Sprint 13: Playtest feedback round 2 (#32) → 0.0.8-alpha (steps 0–1, PR #62); steps 2–7 → 0.0.9–0.0.14-alpha
+- Sprint 14+: Expansion — allied fleets, open-world free mode and steps 8+ (#63) → 0.0.15-alpha and later
+- Later: Multiplayer (TBD — needs a server)
