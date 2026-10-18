@@ -32,8 +32,12 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   envSpeedMul = 1;
   /** Turns a wanted heading away from land (set by the battle when the map has islands) */
   avoid: ((x: number, y: number, headingDeg: number) => number) | null = null;
-  /** Component damage (expiry times) */
+  /** Component damage (expiry times, on `clock`) */
   criticals: CriticalState = {};
+  /** Short note the HUD shows after the name, e.g. why an escort left the formation (#80) */
+  aiNote = '';
+  /** The battle clock (ms) that critical-damage expiry times use; the battle stops it while paused (#79) */
+  clock: () => number = () => this.scene?.time.now ?? 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string, stats: IShipStats) {
     super(scene, x, y, texture);
@@ -56,7 +60,7 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
 
   /** Effects of the component damage active now. */
   critEffects(): ICriticalEffects {
-    return criticalEffects(this.criticals, this.scene?.time.now ?? 0);
+    return criticalEffects(this.criticals, this.clock());
   }
 
   /** Top speed right now (submerged boats and damaged engines are slower). */

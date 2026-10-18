@@ -45,9 +45,29 @@ function pick<T>(items: T[], rng: () => number): T {
 }
 
 /**
- * Builds the enemy fleet (flagship first) from a nation's roster. Falls back to any ship of that
- * nation when a wanted class is missing, and returns [] if the nation has no ships at all.
- * `size` is clamped to 1–8; a ship already in the fleet is only picked again once its class runs out.
+ * Takes the first pool that still has a ship not in `used`, picks one of those (optionally narrowed by `prefer`), and
+ * marks it used. Returns null when every pool is exhausted: a fleet never contains the same ship twice (#76).
+ */
+function takeUnique(
+  pools: IShipData[][],
+  used: Set<string>,
+  rng: () => number,
+  prefer: (candidates: IShipData[]) => IShipData[] = (c) => c,
+): IShipData | null {
+  for (const pool of pools) {
+    const fresh = pool.filter((s) => !used.has(s.id));
+    if (fresh.length === 0) continue;
+    const chosen = pick(prefer(fresh), rng);
+    used.add(chosen.id);
+    return chosen;
+  }
+  return null;
+}
+
+/**
+ * Builds the enemy fleet (flagship first) from a nation's roster. Falls back to any ship of that nation when a
+ * wanted class is missing; every ship appears at most once, so a small roster gives a smaller fleet (#76).
+ * `size` is clamped to 1–8.
  */
 export function generateEnemyFleet(
   registry: ShipRegistry,
@@ -59,68 +79,62 @@ export function generateEnemyFleet(
   const count = enemyFleetSize(size);
   // Fictional ships are the player's research reward; the enemy only fields historical ones.
   const roster = registry.byNation(nation).filter((s) => !s.fictional);
-  if (roster.length === 0) return [];
-
-  if (mode === BattleMode.ASW) {
-    const subs = roster.filter((s) => s.shipClass === ShipClass.Submarine);
-    const pool = subs.length > 0 ? subs : roster;
-    return Array.from({ length: count }, () => pick(pool, rng));
-  }
-
+  const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
   const used = new Set<string>();
-  const fresh = (ships: IShipData[]): IShipData[] => {
-    const unused = ships.filter((s) => !used.has(s.id));
-    return unused.length > 0 ? unused : ships;
-  };
-  return (mode === BattleMode.CarrierStrike ? CARRIER_SLOTS : SURFACE_SLOTS).slice(0, count).map((wanted) => {
-    let chosen: IShipData | null = null;
-    for (const shipClass of wanted) {
-      const candidates = roster.filter((s) => s.shipClass === shipClass);
-      if (candidates.length > 0) {
-        chosen = pick(fresh(candidates), rng);
-        break;
-      }
-    }
-    if (!chosen) {
-      const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
-      chosen = pick(fresh(surface.length > 0 ? surface : roster), rng);
-    }
-    used.add(chosen.id);
-    return chosen;
-  });
+  const slots: ShipClass[][] =
+    mode === BattleMode.ASW
+      ? Array.from({ length: count }, () => [ShipClass.Submarine])
+      : (mode === BattleMode.CarrierStrike ? CARRIER_SLOTS : SURFACE_SLOTS).slice(0, count);
+  const fleet: IShipData[] = [];
+  for (const wanted of slots) {
+    const pools = [...wanted.map((c) => roster.filter((s) => s.shipClass === c)), surface, roster];
+    const chosen = takeUnique(pools, used, rng);
+    if (chosen) fleet.push(chosen);
+  }
+  return fleet;
 }
 
-/** Opponent size choices for a free battle (#25): same number as the player, one more, two more. */
-export const EXERCISE_EXTRA_CHOICES = [0, 1, 2] as const;
+/** Largest free-battle (演習) opponent (#78). */
+export const MAX_EXERCISE_ENEMIES = 10;
+
+/** Clamps a requested exercise opponent size to 1..MAX_EXERCISE_ENEMIES. */
+export function exerciseEnemyCount(size: number): number {
+  if (!Number.isFinite(size)) return 1;
+  return Math.min(MAX_EXERCISE_ENEMIES, Math.max(1, Math.round(size)));
+}
 
 /**
- * Free-battle (演習) opponent sized to the player's fleet (#25): one enemy per player ship plus `extra`. Each mirrors
- * the class of the player's ship in that position (extras mirror the player's smallest ship) and is the enemy ship of
- * that class closest in HP, so a lone destroyer meets a destroyer. ASW battles field submarines and a carrier
- * battle puts a carrier in front, as before.
+ * Free-battle (演習) opponent of `size` ships (1–10, #78). Each mirrors the class of the player's ship in that position
+ * (extras mirror the player's smallest ship) and is the enemy ship of that class closest in HP, so a lone destroyer
+ * meets a destroyer. ASW battles field submarines and a carrier battle puts a carrier in front. No ship appears twice
+ * (#76); when the nation runs out of ships the fleet is smaller than asked.
  */
 export function exerciseEnemyFleet(
   registry: ShipRegistry,
   nation: Nation,
   mode: BattleMode,
   playerShips: IShipData[],
-  extra: number,
+  size: number,
   rng: () => number = Math.random,
 ): IShipData[] {
   const roster = registry.byNation(nation).filter((s) => !s.fictional);
   if (roster.length === 0 || playerShips.length === 0) return [];
   const smallest = playerShips.reduce((a, b) => (b.hp < a.hp ? b : a));
-  const size = playerShips.length + Math.max(0, Math.floor(extra));
-  return Array.from({ length: size }, (_, i) => {
+  const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
+  const used = new Set<string>();
+  const fleet: IShipData[] = [];
+  for (let i = 0; i < exerciseEnemyCount(size); i++) {
     const model = playerShips[i] ?? smallest;
     const wanted =
       mode === BattleMode.ASW ? ShipClass.Submarine : mode === BattleMode.CarrierStrike && i === 0 ? ShipClass.Carrier : model.shipClass;
-    let pool = roster.filter((s) => s.shipClass === wanted);
-    if (pool.length === 0) pool = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
-    if (pool.length === 0) pool = roster;
     // The closest in HP, with a random pick among those within 10% of it.
     const gap = (s: IShipData): number => Math.abs(s.hp - model.hp);
-    const best = Math.min(...pool.map(gap));
-    return pick(pool.filter((s) => gap(s) <= best + model.hp * 0.1), rng);
-  });
+    const near = (c: IShipData[]): IShipData[] => {
+      const best = Math.min(...c.map(gap));
+      return c.filter((s) => gap(s) <= best + model.hp * 0.1);
+    };
+    const chosen = takeUnique([roster.filter((s) => s.shipClass === wanted), surface, roster], used, rng, near);
+    if (chosen) fleet.push(chosen);
+  }
+  return fleet;
 }

@@ -44,6 +44,8 @@ const L = IS_PORTRAIT
 const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary' }> = [
   { label: '作戦', caption: '', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
   { label: '演習', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
+  // Straight to the fleet (#77): the same builder as 演習, which keeps the fleet between visits.
+  { label: '編成', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'secondary' },
   { label: '史実', caption: '', scene: SceneKeys.SCENARIO, variant: 'primary' },
   { label: '工廠', caption: '', scene: SceneKeys.ARSENAL, variant: 'secondary' },
   { label: '改装', caption: '', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },

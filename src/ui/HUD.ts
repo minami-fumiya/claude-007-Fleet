@@ -70,8 +70,9 @@ export interface IHudStatus {
 
 /** Name plus badges for component damage, e.g. "大和 (Yamato) [機舵]". */
 function labelFor(ship: BaseShip): string {
-  const crits = activeCriticals(ship.criticals, ship.scene?.time.now ?? 0);
-  return crits.length > 0 ? `${ship.stats.name} [${crits.map((c) => CRITICAL_BADGE[c]).join('')}]` : ship.stats.name;
+  const crits = activeCriticals(ship.criticals, ship.clock());
+  const name = ship.aiNote ? `${ship.stats.name} 〈${ship.aiNote}〉` : ship.stats.name;
+  return crits.length > 0 ? `${name} [${crits.map((c) => CRITICAL_BADGE[c]).join('')}]` : name;
 }
 
 /** Updates a label's text only when it changed (setText re-renders the texture). */

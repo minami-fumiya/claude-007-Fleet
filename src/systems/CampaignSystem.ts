@@ -48,23 +48,49 @@ export function enemyNationFor(data: ICampaignData, area: ICampaignArea, player?
  */
 export function enemyShips(area: ICampaignArea, registry: ShipRegistry, nation: Nation = area.enemy.nation): IShipData[] {
   const written = area.enemy.ships.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
-  if (nation === area.enemy.nation) return written;
+  if (nation === area.enemy.nation) return uniqueShips(written, registry.byNation(nation).filter((s) => !s.fictional));
   const roster = registry.byNation(nation).filter((s) => !s.fictional);
   if (roster.length === 0) return written;
   const used = new Set<string>();
   const fallback = [ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer];
-  return written.map((orig) => {
-    const classes = [orig.shipClass, ...fallback];
-    for (const cls of classes) {
-      const pool = roster.filter((s) => s.shipClass === cls);
-      if (pool.length === 0) continue;
-      const fresh = pool.filter((s) => !used.has(s.id));
-      const pick = (fresh.length > 0 ? fresh : pool).reduce((best, s) => (Math.abs(s.hp - orig.hp) < Math.abs(best.hp - orig.hp) ? s : best));
+  const out: IShipData[] = [];
+  for (const orig of written) {
+    // The closest unused ship of the same class, else of a fallback class, else any unused ship; none left → the
+    // slot stays empty (#76).
+    for (const cls of [orig.shipClass, ...fallback, null]) {
+      const fresh = roster.filter((s) => (cls === null || s.shipClass === cls) && !used.has(s.id));
+      if (fresh.length === 0) continue;
+      const pick = fresh.reduce((best, s) => (Math.abs(s.hp - orig.hp) < Math.abs(best.hp - orig.hp) ? s : best));
       used.add(pick.id);
-      return pick;
+      out.push(pick);
+      break;
     }
-    return roster[0];
-  });
+  }
+  return out;
+}
+
+/**
+ * The same fleet with repeated ships (area data lists e.g. two Fletchers) swapped for an unused ship of the same class
+ * closest in HP; a repeat with no replacement is dropped. No battle has the same ship twice (#76).
+ */
+export function uniqueShips(ships: IShipData[], roster: IShipData[]): IShipData[] {
+  const used = new Set(ships.map((s) => s.id));
+  const seen = new Set<string>();
+  const out: IShipData[] = [];
+  for (const ship of ships) {
+    if (!seen.has(ship.id)) {
+      seen.add(ship.id);
+      out.push(ship);
+      continue;
+    }
+    const pool = roster.filter((s) => s.shipClass === ship.shipClass && !used.has(s.id));
+    if (pool.length === 0) continue;
+    const swap = pool.reduce((best, s) => (Math.abs(s.hp - ship.hp) < Math.abs(best.hp - ship.hp) ? s : best));
+    used.add(swap.id);
+    seen.add(swap.id);
+    out.push(swap);
+  }
+  return out;
 }
 
 /** A fleet of nothing but submarines is fought as an ASW battle (for AI and visuals). */

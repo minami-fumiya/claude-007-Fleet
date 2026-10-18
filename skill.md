@@ -229,3 +229,18 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   start): never subtract one from the other. Take battle start times on the first `update` instead.
 - Data defaults leak features: an upgrade with no `requires` was usable from the start. Test "every catalog entry is
   gated" rather than trusting the data.
+
+### 0.0.11 — Bugs and usability (#76–#80 #98 #101)
+- Pausing a Phaser battle means one battle clock: `battleNow()` = loop time − paused ms, and every timer that used
+  `this.time.now` (reloads, crit effects, flashes) reads it instead. Give entities a `clock()` callback rather than
+  letting them read the scene clock. Pause physics, tweens and `this.time` together, and auto-pause on `HIDDEN`.
+- Escorts that steer straight at a slot behind a turning flagship swing back and forth. Smooth the formation heading
+  (≤ 30°/s), hold it with matching throttle when on station, and only steer to the slot when off it (`EscortSteering`).
+- "No duplicate ships" must hold for every generator (exercise, campaign swaps, scenario data): pick from pools with a
+  `used` set and let the fleet come out short rather than repeat; test the data files, not just the generator.
+- A sheet over a scrolling page: lay it out at camera scroll 0 (save and restore the scroll), so a masked
+  `ScrollList` inside it lines up with its taps; give the list a depth above the page.
+- Settings that rarely change belong in collapsible radio groups rebuilt from a `settingGroups()` description — one
+  builder handles the layout, open state and portrait height, and adding a setting is one entry.
+- Playwright e2e: drive scenes through `window.game` (dev only). Starting a scene that is running restarts it, so
+  stop only the *other* scenes first — stopping and starting the same key in one tick leaves it stopped.
