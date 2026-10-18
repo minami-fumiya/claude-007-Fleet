@@ -196,4 +196,23 @@ test.describe('screens', () => {
     await page.screenshot({ path: info.outputPath('previous-save-home.png') });
     expect(errors).toEqual([]);
   });
+
+  test('the encyclopedia shows every tab, owned-only and everything (#43 #44 #91)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    await open(page, 'EncyclopediaScene');
+    for (const tab of ['ships', 'captains', 'aircraft', 'ground']) {
+      for (const ownedOnly of [true, false]) {
+        await page.evaluate(([t, o]) => {
+          const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('EncyclopediaScene') as unknown as { tab: string; ownedOnly: boolean; selectedId: string; refresh(): void };
+          s.tab = t as string;
+          s.ownedOnly = o as boolean;
+          s.selectedId = '';
+          s.refresh();
+        }, [tab, ownedOnly] as const);
+        expect(await overflowingTexts(page, 'EncyclopediaScene'), `${tab} ${ownedOnly}`).toEqual([]);
+      }
+      await page.screenshot({ path: info.outputPath(`encyclopedia-${tab}.png`) });
+    }
+    expect(errors).toEqual([]);
+  });
 });

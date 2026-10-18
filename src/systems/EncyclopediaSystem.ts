@@ -1,4 +1,5 @@
 import { IShipData, SUBTYPE_JA } from '@/types/Ship';
+import { ADDITIVE_MODIFIERS, IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { ShipClass } from '@/types/ShipClass';
 
 export const CLASS_JA: Record<ShipClass, string> = {
@@ -39,6 +40,44 @@ export function summarizeWeapons(ids: string[]): Array<{ id: string; count: numb
     const hit = out.find((e) => e.id === id);
     if (hit) hit.count++;
     else out.push({ id, count: 1 });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Captains, aircraft and ground targets (#43 / #44 / #91)
+// ---------------------------------------------------------------------------
+
+/** Encyclopedia tabs. */
+export type EncyclopediaTab = 'ships' | 'captains' | 'aircraft' | 'ground';
+export const TAB_LABEL: Record<EncyclopediaTab, string> = { ships: '艦艇', captains: '艦長', aircraft: '航空機', ground: '地上・支援' };
+export const TABS: EncyclopediaTab[] = ['ships', 'captains', 'aircraft', 'ground'];
+
+/** "艦艇 12 / 25" — owned / all. */
+export function collectionLabel(label: string, owned: number, all: number): string {
+  return `${label} ${owned} / ${all}`;
+}
+
+const MOD_LABEL: Partial<Record<keyof IShipModifiers, string>> = {
+  hpMul: '耐久', armorAdd: '装甲', speedMul: '速力', gunPowerMul: '砲火力', gunReloadMul: '主砲装填', torpedoPowerMul: '魚雷',
+  visionMul: '視界', aaMul: '対空', airPowerMul: '航空攻撃', planesAdd: '艦載機', rearmMul: '再出撃準備', sonarMul: 'ソナー',
+  depthChargeMul: '爆雷', nightAimMul: '夜間の照準誤差', nightVisionMul: '夜間の視界', evadeAdd: '回避',
+};
+
+/** "砲火力 +15%" / "主砲装填 −5%" / "装甲 +2" for every field that differs from no bonus. */
+export function modifierLines(mods: IShipModifiers): string[] {
+  const out: string[] = [];
+  for (const key of Object.keys(NO_MODIFIERS) as Array<keyof IShipModifiers>) {
+    const label = MOD_LABEL[key];
+    const v = mods[key];
+    if (!label || v === NO_MODIFIERS[key]) continue;
+    if (ADDITIVE_MODIFIERS.includes(key)) {
+      const n = key === 'evadeAdd' ? Math.round(v * 100) : Math.round(v);
+      if (n !== 0) out.push(`${label} ${n > 0 ? '+' : '−'}${Math.abs(n)}${key === 'evadeAdd' ? '%' : ''}`);
+    } else {
+      const pct = Math.round((v - 1) * 100);
+      if (pct !== 0) out.push(`${label} ${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`);
+    }
   }
   return out;
 }
