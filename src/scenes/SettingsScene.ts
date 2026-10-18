@@ -73,6 +73,18 @@ export class SettingsScene extends Phaser.Scene {
     );
     y += BTN_H + (IS_PORTRAIT ? 44 : 32);
 
+    this.track(this.add.text(x, y, 'CONTROLS  ·  操作', eyebrowStyle(11)));
+    y += 34;
+    this.track(this.add.text(x, y + BTN_H / 2, '移動スティック (タッチ)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    this.track(
+      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.joystick ? '表示' : '非表示', () => this.change({ joystick: !s.joystick }), {
+        variant: s.joystick ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
+      }),
+    );
+    y += BTN_H + 6;
+    this.track(this.add.text(x, y, '非表示にすると、海面のタップと AUTO で移動します。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    y += IS_PORTRAIT ? 44 : 32;
+
     this.track(this.add.text(x, y, 'DATA  ·  進行データ', eyebrowStyle(11)));
     y += 30;
     this.track(this.add.text(x, y, 'セーブコードで別の端末やブラウザへ進行状況を移せます。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));

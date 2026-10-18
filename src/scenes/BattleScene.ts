@@ -915,7 +915,8 @@ export class BattleScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private setupInput(): void {
-    this.joystick = this.isTouch ? new VirtualJoystick(this, JOYSTICK_POS.x, JOYSTICK_POS.y, JOYSTICK_RADIUS) : null;
+    // The stick can be turned off in the settings (#46); sea taps and AUTO still move the flagship.
+    this.joystick = this.isTouch && audio.settings.joystick ? new VirtualJoystick(this, JOYSTICK_POS.x, JOYSTICK_POS.y, JOYSTICK_RADIUS) : null;
 
     const kb = this.input.keyboard!;
     this.wasd = {
