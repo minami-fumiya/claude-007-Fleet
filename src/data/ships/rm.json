@@ -1,0 +1,163 @@
+{
+  "ships": [
+    {
+      "id": "vittorio_veneto",
+      "name": "ヴィットリオ・ヴェネト (Vittorio Veneto)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 760,
+      "armor": 61,
+      "speed": 150,
+      "weapons": [
+        "381mm_m1934",
+        "152mm_m1934"
+      ],
+      "spriteKey": "vittorio_veneto",
+      "description": "リットリオ級戦艦。1941年3月のマタパン岬沖海戦で英雷撃機の魚雷を受けたが、生還した。"
+    },
+    {
+      "id": "roma",
+      "name": "ローマ (Roma)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 765,
+      "armor": 61,
+      "speed": 148,
+      "weapons": [
+        "381mm_m1934",
+        "152mm_m1934"
+      ],
+      "spriteKey": "roma",
+      "description": "リットリオ級戦艦3番艦。1943年9月、休戦後に艦隊とともに回航中、ドイツ空軍の誘導爆弾フリッツXを受けて沈没した。"
+    },
+    {
+      "id": "conte_di_cavour",
+      "name": "コンテ・ディ・カヴール (Conte di Cavour)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 630,
+      "armor": 48,
+      "speed": 135,
+      "weapons": [
+        "320mm_m1936",
+        "120mm_m1926"
+      ],
+      "spriteKey": "conte_di_cavour",
+      "description": "第一次世界大戦前に建造され、大改装で近代化された戦艦。1940年11月、タラント空襲で英雷撃機の魚雷を受けて着底した。"
+    },
+    {
+      "id": "zara",
+      "name": "ザラ (Zara)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 425,
+      "armor": 43,
+      "speed": 168,
+      "weapons": [
+        "203mm_ansaldo",
+        "100mm_m1928"
+      ],
+      "spriteKey": "zara",
+      "description": "ザラ級重巡洋艦1番艦。装甲の厚い重巡だったが、1941年3月のマタパン岬沖海戦の夜戦で英戦艦の砲撃を受けて沈没した。"
+    },
+    {
+      "id": "trento",
+      "name": "トレント (Trento)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "203mm_ansaldo",
+        "533mm_si270"
+      ],
+      "spriteKey": "trento",
+      "description": "トレント級重巡洋艦1番艦。速力を重視した設計。1942年6月、マルタへの英船団を迎え撃つ作戦中に航空魚雷と潜水艦の雷撃で沈没した。"
+    },
+    {
+      "id": "garibaldi",
+      "name": "ジュゼッペ・ガリバルディ (Giuseppe Garibaldi)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "garibaldi",
+      "description": "コンドッティエーリ級軽巡洋艦の最終型。終戦まで生き残り、戦後はミサイル巡洋艦に改装された。"
+    },
+    {
+      "id": "aviere",
+      "name": "アヴィエーレ (Aviere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦。北アフリカへの船団護衛に従事し、1942年12月に英潜水艦の雷撃で沈没した。"
+    },
+    {
+      "id": "maestrale",
+      "name": "マエストラーレ (Maestrale)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "maestrale",
+      "description": "マエストラーレ級駆逐艦1番艦。のちのソルダティ級の原型となった設計で、1943年9月の休戦後にジェノヴァで自沈した。"
+    },
+    {
+      "id": "aquila",
+      "name": "アクィラ (Aquila)",
+      "nation": "RM",
+      "shipClass": "Carrier",
+      "hp": 520,
+      "armor": 30,
+      "speed": 165,
+      "weapons": [
+        "135mm_m1938"
+      ],
+      "spriteKey": "aquila",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 2
+      },
+      "fictional": true,
+      "description": "客船ローマを改造したイタリア初の航空母艦。ほぼ完成したが、就役することなく終戦を迎えた (架空艦)。"
+    },
+    {
+      "id": "marcello",
+      "name": "マルチェロ (Marcello)",
+      "nation": "RM",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 145,
+      "weapons": [
+        "533mm_sub_torpedo"
+      ],
+      "spriteKey": "marcello",
+      "description": "マルチェロ級潜水艦1番艦。大西洋に進出してボルドーの基地から通商破壊を行い、1941年に消息を絶った。"
+    }
+  ]
+}

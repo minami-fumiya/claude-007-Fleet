@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ShipRegistry } from '@/systems/ShipRegistry';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
 import { IWeaponData } from '@/types/Weapon';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
@@ -8,6 +8,9 @@ import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
 import rn from '@/data/ships/rn.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
+import rm from '@/data/ships/rm.json';
 import weapons from '@/data/weapons/weapons.json';
 
 const FILES: Array<[Nation, IShipData[]]> = [
@@ -15,6 +18,9 @@ const FILES: Array<[Nation, IShipData[]]> = [
   [Nation.USN, usn.ships as IShipData[]],
   [Nation.KM, km.ships as IShipData[]],
   [Nation.RN, rn.ships as IShipData[]],
+  [Nation.FR, fr.ships as IShipData[]],
+  [Nation.SU, su.ships as IShipData[]],
+  [Nation.RM, rm.ships as IShipData[]],
 ];
 const ALL = FILES.flatMap(([, ships]) => ships);
 
@@ -64,6 +70,31 @@ describe('ship data files', () => {
   it.each(FILES)('%s has every ship class including a submarine', (_nation, ships) => {
     for (const shipClass of Object.values(ShipClass)) {
       expect(ships.some((s) => s.shipClass === shipClass), shipClass).toBe(true);
+    }
+  });
+
+  it('covers every nation', () => {
+    expect(FILES.map(([n]) => n).sort()).toEqual(Object.values(Nation).sort());
+  });
+
+  it.each(FILES)('%s has about ten ships or more', (_nation, ships) => {
+    expect(ships.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('gives subtypes only to ships of the matching class', () => {
+    const CLASS_OF: Record<ShipSubtype, ShipClass> = {
+      [ShipSubtype.BattleCruiser]: ShipClass.Battleship,
+      [ShipSubtype.AviationBattleship]: ShipClass.Battleship,
+      [ShipSubtype.HeavyCruiser]: ShipClass.Cruiser,
+      [ShipSubtype.LightCruiser]: ShipClass.Cruiser,
+      [ShipSubtype.LightCarrier]: ShipClass.Carrier,
+      [ShipSubtype.EscortCarrier]: ShipClass.Carrier,
+      [ShipSubtype.Escort]: ShipClass.Destroyer,
+    };
+    const wrong = ALL.filter((s) => s.subtype && CLASS_OF[s.subtype] !== s.shipClass).map((s) => s.id);
+    expect(wrong).toEqual([]);
+    for (const subtype of Object.values(ShipSubtype)) {
+      expect(ALL.some((s) => s.subtype === subtype), subtype).toBe(true);
     }
   });
 

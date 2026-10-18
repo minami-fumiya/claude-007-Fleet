@@ -8,15 +8,19 @@ import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
 import rn from '@/data/ships/rn.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
+import rm from '@/data/ships/rm.json';
 import weapons from '@/data/weapons/weapons.json';
 
 /** Balance invariants over the ship data (see docs/specs/systems/balance.md). */
 
 const W = new Map((weapons.weapons as IWeaponData[]).map((w) => [w.id, w]));
-const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[];
+const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships, ...su.ships, ...rm.ships] as IShipData[];
 /** Historical ships; fictional ones are a research reward and are checked separately. */
 const ALL = EVERY.filter((s) => !s.fictional);
-const FICTIONAL = EVERY.filter((s) => s.fictional);
+/** Fictional battleships; fictional carriers (USSR, Italy) only have to keep the hull order. */
+const FICTIONAL = EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Battleship);
 const loadout = (s: IShipData): IWeaponData[] => s.weapons.map((id) => W.get(id)!);
 const of = (cls: ShipClass): IShipData[] => ALL.filter((s) => s.shipClass === cls);
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -44,7 +48,7 @@ describe('balance', () => {
       of(ShipClass.Battleship)
         .filter((s) => s.nation === n)
         .sort((a, b) => b.hp * shipDps(loadout(b), BB_TARGET) - a.hp * shipDps(loadout(a), BB_TARGET))[0];
-    const nations = [Nation.IJN, Nation.USN, Nation.KM, Nation.RN];
+    const nations = Object.values(Nation);
     for (const a of nations) {
       for (const b of nations) {
         if (a === b) continue;
@@ -61,6 +65,17 @@ describe('balance', () => {
       const weakestBig = Math.min(...of(order[i]).map((s) => s.hp));
       const strongestSmall = Math.max(...of(order[i + 1]).map((s) => s.hp));
       expect(weakestBig, `${order[i]} > ${order[i + 1]}`).toBeGreaterThan(strongestSmall);
+    }
+  });
+
+  it('keeps fictional carriers in the carrier hull band', () => {
+    const fictionalCarriers = EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Carrier);
+    expect(fictionalCarriers.length).toBeGreaterThan(0);
+    const minBattleship = Math.min(...of(ShipClass.Battleship).map((s) => s.hp));
+    const maxCruiser = Math.max(...of(ShipClass.Cruiser).map((s) => s.hp));
+    for (const c of fictionalCarriers) {
+      expect(c.hp, c.id).toBeLessThan(minBattleship);
+      expect(c.hp, c.id).toBeGreaterThan(maxCruiser);
     }
   });
 
@@ -82,7 +97,7 @@ describe('balance', () => {
   });
 
   it('keeps the fictional battleships even with each other', () => {
-    expect(FICTIONAL.length).toBe(4);
+    expect(FICTIONAL.length).toBe(5);
     for (const a of FICTIONAL) {
       for (const b of FICTIONAL) {
         if (a === b) continue;

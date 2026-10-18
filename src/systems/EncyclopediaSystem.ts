@@ -1,4 +1,4 @@
-import { IShipData } from '@/types/Ship';
+import { IShipData, SUBTYPE_JA } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 
 export const CLASS_JA: Record<ShipClass, string> = {
@@ -8,6 +8,11 @@ export const CLASS_JA: Record<ShipClass, string> = {
   [ShipClass.Carrier]: '空母',
   [ShipClass.Submarine]: '潜水艦',
 };
+
+/** The ship's type for display: its subtype (巡洋戦艦, 軽空母 …) when it has one, else its class. */
+export function kindLabel(ship: Pick<IShipData, 'shipClass' | 'subtype'>): string {
+  return ship.subtype ? SUBTYPE_JA[ship.subtype] : CLASS_JA[ship.shipClass];
+}
 
 /** Display order of ship classes in the encyclopedia. */
 export const CLASS_ORDER: ShipClass[] = [

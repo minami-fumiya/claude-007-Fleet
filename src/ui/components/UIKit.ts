@@ -363,6 +363,7 @@ export class UIButton extends Phaser.GameObjects.Container {
       .text(0, 0, text, textStyle(opts.fontSize ?? 20, BUTTON_TEXT[variant], { fontStyle: 'bold' }))
       .setOrigin(0.5);
     this.add([this.bg, this.label]);
+    this.fitLabel();
 
     if (opts.caption) {
       this.caption = scene.add
@@ -409,7 +410,15 @@ export class UIButton extends Phaser.GameObjects.Container {
 
   setLabel(text: string): this {
     this.label.setText(text);
+    this.fitLabel();
     return this;
+  }
+
+  /** Shrinks a label that is wider than the button (e.g. seven nation tabs in one row). */
+  private fitLabel(): void {
+    this.label.setScale(1);
+    const room = this.btnW - 12;
+    if (room > 0 && this.label.width > room) this.label.setScale(room / this.label.width);
   }
 
   /** Swaps the fill style, e.g. to show a toggle's on/off state. */

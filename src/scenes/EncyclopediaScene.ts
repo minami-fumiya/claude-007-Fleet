@@ -4,7 +4,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
-import { CLASS_JA, CLASS_ORDER, filterEntries, summarizeWeapons } from '@/systems/EncyclopediaSystem';
+import { CLASS_JA, CLASS_ORDER, filterEntries, kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
@@ -120,7 +120,10 @@ export class EncyclopediaScene extends Phaser.Scene {
       const icon = this.add.image(26, L.rowH / 2, ship.spriteKey).setAngle(90);
       icon.setScale(Math.min(1, 40 / Math.max(1, icon.height)));
       const name = this.add.text(52, L.rowH / 2, ship.name.replace(/\s*\(.*\)\s*$/, ''), textStyle(IS_PORTRAIT ? 16 : 14, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
-      const cls = this.add.text(colW - 12, L.rowH / 2, `${ship.fictional ? '架空  ' : ''}${CLASS_JA[ship.shipClass]}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.dim)).setOrigin(1, 0.5);
+      const cls = this.add.text(colW - 12, L.rowH / 2, `${ship.fictional ? '架空  ' : ''}${kindLabel(ship)}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.dim)).setOrigin(1, 0.5);
+      // Long names (オクチャブリスカヤ・レボリューツィヤ …) shrink to stay clear of the type label.
+      const room = colW - 52 - cls.width - 12;
+      if (name.width > room) name.setScale(room / name.width);
       const card = this.track(this.add.container(x + PAD + col * (colW + 8), top + row * (L.rowH + 6), [frame, icon, name, cls]));
       makeClickable(card, colW, L.rowH);
       card.on('pointerup', () => {
@@ -145,7 +148,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     const x = d.x + 26;
     const w = d.w - 52;
     const wrap = { wordWrap: { width: w, useAdvancedWrap: true } };
-    const kind = ship.fictional ? `${CLASS_JA[ship.shipClass]}  ·  架空艦` : CLASS_JA[ship.shipClass];
+    const kind = ship.fictional ? `${kindLabel(ship)}  ·  架空艦` : kindLabel(ship);
     this.track(this.add.text(x, d.y + 20, `${NATION_INFO[ship.nation].ja}  ·  ${kind}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.cyan)));
     const title = this.track(this.add.text(x, d.y + 42, ship.name, displayStyle(IS_PORTRAIT ? 24 : 26)));
     let y = title.y + title.height + 18;
