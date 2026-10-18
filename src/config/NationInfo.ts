@@ -6,6 +6,8 @@ export interface INationInfo {
   short: string;
   /** Japanese navy name shown in headers */
   ja: string;
+  /** Short Japanese country name for tabs and chips (国名は日本語で表示する: #21) */
+  jaShort: string;
   en: string;
 }
 
@@ -13,8 +15,8 @@ export interface INationInfo {
 export const PLAYABLE_NATIONS: Nation[] = [Nation.IJN, Nation.USN, Nation.KM, Nation.RN];
 
 export const NATION_INFO: Record<Nation, INationInfo> = {
-  [Nation.IJN]: { dataKey: 'ijn', short: 'IJN', ja: '帝国海軍', en: 'IMPERIAL JAPANESE NAVY' },
-  [Nation.USN]: { dataKey: 'usn', short: 'USN', ja: '米国海軍', en: 'UNITED STATES NAVY' },
-  [Nation.KM]: { dataKey: 'km', short: 'KM', ja: 'ドイツ海軍', en: 'KRIEGSMARINE' },
-  [Nation.RN]: { dataKey: 'rn', short: 'RN', ja: '英国海軍', en: 'ROYAL NAVY' },
+  [Nation.IJN]: { dataKey: 'ijn', short: 'IJN', ja: '帝国海軍', jaShort: '日本', en: 'IMPERIAL JAPANESE NAVY' },
+  [Nation.USN]: { dataKey: 'usn', short: 'USN', ja: '米国海軍', jaShort: '米国', en: 'UNITED STATES NAVY' },
+  [Nation.KM]: { dataKey: 'km', short: 'KM', ja: 'ドイツ海軍', jaShort: 'ドイツ', en: 'KRIEGSMARINE' },
+  [Nation.RN]: { dataKey: 'rn', short: 'RN', ja: '英国海軍', jaShort: '英国', en: 'ROYAL NAVY' },
 };
