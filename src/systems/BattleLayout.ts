@@ -18,7 +18,7 @@ export interface IWorldSize {
 
 export const BATTLE_WORLD: IWorldSize = { w: 3200, h: 3200 };
 
-/** Most ships a side can field in one battle. */
+/** Most ships the player can field in one battle (exercise enemies go up to MAX_EXERCISE_ENEMIES, #78). */
 export const MAX_FLEET_SIZE = 8;
 
 /**
@@ -31,6 +31,9 @@ export const START_GAP = 1300;
 export const ENEMY_SPACING = 200;
 /** Each step out from the middle of the enemy line also starts this much farther back (a shallow wedge). */
 const ENEMY_WEDGE_STEP = 40;
+/** Enemy ships per start row (slots -5..+5 stay well inside the world) and the gap between rows. */
+export const ENEMY_ROW_SHIPS = 11;
+const ENEMY_ROW_GAP = 260;
 
 /** Convoy route: merchant ships start on the west edge, in the middle of the sea. */
 export const CONVOY_START_X = 140;
@@ -59,8 +62,11 @@ export function enemySpawnPoints(count: number, world: IWorldSize = BATTLE_WORLD
   const cx = world.w / 2;
   const cy = world.h / 2 - START_GAP / 2;
   return Array.from({ length: Math.max(0, count) }, (_, i) => {
-    const slot = lineSlot(i);
-    return { x: cx + slot * ENEMY_SPACING, y: cy - Math.abs(slot) * ENEMY_WEDGE_STEP };
+    // Big exercise fleets (up to 20, #78) form a second, staggered row behind the first.
+    const row = Math.floor(i / ENEMY_ROW_SHIPS);
+    const slot = lineSlot(i % ENEMY_ROW_SHIPS);
+    const stagger = row % 2 === 1 ? ENEMY_SPACING / 2 : 0;
+    return { x: cx + slot * ENEMY_SPACING + stagger, y: cy - Math.abs(slot) * ENEMY_WEDGE_STEP - row * ENEMY_ROW_GAP };
   });
 }
 

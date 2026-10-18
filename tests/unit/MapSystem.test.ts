@@ -68,7 +68,7 @@ describe('MapSystem', () => {
     const p = playerStart();
     for (let k = 0; k <= 7; k++) expect(onIsland(r, p.x, p.y + k * 90, 60), `${data.id} player ${k}`).toBe(false);
     // The enemy line shifts north / south as a whole to get off land; the gap to the player stays sensible.
-    for (const n of [1, 3, 8]) {
+    for (const n of [1, 3, 8, 20]) {
       const line = lineAtSea(r, enemySpawnPoints(n));
       for (const e of line) expect(onIsland(r, e.x, e.y, 60), `${data.id} enemy ${n}`).toBe(false);
       const gap = p.y - line[0].y;
