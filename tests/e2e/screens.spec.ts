@@ -1,4 +1,9 @@
 import { expect, Page, test } from '@playwright/test';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+/** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.11.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -68,15 +73,22 @@ async function open(page: Page, key: string, data: object = {}): Promise<void> {
   await page.waitForTimeout(700);
 }
 
-/** Visible texts of `key` sticking out of the canvas left or right, as "text (left..right)". */
+/**
+ * Visible texts of `key` sticking out of the canvas, as "text (left..right, top..bottom)". Sideways always counts;
+ * below the bottom edge counts on screens that don't scroll (the settings once ran off the bottom, 0.0.12). Rows
+ * inside masked scrolling lists are skipped.
+ */
 async function overflowingTexts(page: Page, key: string): Promise<string[]> {
   return page.evaluate((k) => {
     const g = (window as unknown as { game: Phaser.Game }).game;
     const scene = g.scene.getScene(k);
     const w = g.scale.width;
+    const h = g.scale.height;
+    const scrolls = scene.cameras.main.useBounds;
     const out: string[] = [];
     const visit = (o: Phaser.GameObjects.GameObject, visible: boolean): void => {
       const v = visible && (o as unknown as { visible?: boolean }).visible !== false && ((o as unknown as { alpha?: number }).alpha ?? 1) > 0;
+      if ((o as unknown as { mask?: unknown }).mask) return;
       if (o.type === 'Container') {
         (o as Phaser.GameObjects.Container).list.forEach((c) => visit(c, v));
         return;
@@ -84,7 +96,8 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
       const t = o as Phaser.GameObjects.Text;
       if (!v || o.type !== 'Text' || t.text.trim() === '') return;
       const b = t.getBounds();
-      if (b.left < -2 || b.right > w + 2) out.push(`${t.text.replace(/\n/g, ' ')} (${Math.round(b.left)}..${Math.round(b.right)})`);
+      const below = !scrolls && t.scrollFactorY !== 0 ? b.bottom > h + 2 : t.scrollFactorY === 0 && b.bottom > h + 2;
+      if (b.left < -2 || b.right > w + 2 || below) out.push(`${t.text.replace(/\n/g, ' ')} (${Math.round(b.left)}..${Math.round(b.right)}, ${Math.round(b.top)}..${Math.round(b.bottom)})`);
     };
     scene.children.list.forEach((o) => visit(o, true));
     return out;
@@ -155,28 +168,32 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
-  test('a new save starts the tutorial; a sortie moves it to the battle step (#90)', async ({ page }, info) => {
+  test('a new save plays without a tutorial (postponed to the end of the alpha, #90)', async ({ page }, info) => {
     const fresh = { ...SAVE, tutorial: { step: 0, done: false }, nations: { IJN: { ...SAVE.nations.IJN, merit: 0, ships: ['fubuki'], campaign: [] } } };
     const errors = await boot(page, info.project.metadata.layout as string, fresh);
     await open(page, 'HomeScene');
-    await page.screenshot({ path: info.outputPath('tutorial-home.png') });
-    const game = (): Promise<unknown> => page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.get('tutorial.seen'));
-    expect(await game()).toBe(0);
-    await open(page, 'FleetBuilderScene');
-    await page.evaluate(() => {
-      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
-        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
-      };
-      s.openPicker(0);
-      s.pickShip(s.ships[0]);
-      s.startBattle();
+    expect(await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.get('tutorial.seen'))).toBeUndefined();
+    expect(errors).toEqual([]);
+  });
+
+  test("the previous release's save loads with its fleet (CLAUDE.md: セーブデータを消さない)", async ({ page }, info) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(`/?layout=${info.project.metadata.layout as string}`);
+    await page.waitForFunction(() => (window as GameWindow).game !== undefined, null, { timeout: 60_000 });
+    await page.evaluate((raw) => { localStorage.clear(); localStorage.setItem('ww2fleet.progress.v2', raw); }, PREVIOUS_SAVE);
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScene('MainMenuScene')?.sys.settings.active === true, null, { timeout: 60_000 });
+    await open(page, 'HomeScene');
+    const stored = await page.evaluate(() => {
+      const save = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations?: Record<string, { ships: string[] }> };
+      const backups = JSON.parse(localStorage.getItem('ww2fleet.progress.backups') ?? '[]') as Array<{ reason: string }>;
+      return { ships: save.nations?.IJN?.ships ?? [], backups: backups.map((b) => b.reason) };
     });
-    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
-    await page.waitForTimeout(1000);
-    // The battle step's sheet is open and the battle waits for it.
-    expect(await game()).toBe(2);
-    expect(await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { paused: boolean }).paused)).toBe(true);
-    await page.screenshot({ path: info.outputPath('tutorial-battle.png') });
+    const before = (JSON.parse(PREVIOUS_SAVE) as { nations: { IJN: { ships: string[] } } }).nations.IJN.ships;
+    expect(stored.ships).toEqual(expect.arrayContaining(before));
+    expect(stored.backups).toContain('migration');
+    await page.screenshot({ path: info.outputPath('previous-save-home.png') });
     expect(errors).toEqual([]);
   });
 });

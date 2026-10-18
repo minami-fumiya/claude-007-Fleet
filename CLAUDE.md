@@ -63,6 +63,14 @@ When starting a new sprint, read in this order:
 - GitHub の issue・PR の本文やコメントも日本語。コミットメッセージは英語の Conventional Commits。
 - コード中のコメントと識別子は英語のまま、画面に出る文言は日本語。
 
+## セーブデータを消さない (Save data must survive every release)
+リリースのたびにプレイヤーの進行が消えてはならない (0.0.12 で消えた報告あり)。保存形式に触れる変更では必ず:
+- **形式の変更は `src/utils/SaveMigration.ts` に移行ステップを 1 つ追加**して行う。公開済みのステップは書き換えない。項目を減らす・名前を変える時も、旧データを読み替えて残す。
+- **リリースごとにセーブの fixture を追加**: `tests/fixtures/saves/save-<版>.json` (その版のコードで作ったセーブ)。`tests/unit/SaveCompat.test.ts` が全版のセーブを読み、艦・資源・攻略・研究・艦長・出撃枠が減らないことを確かめる。
+- 読み込み時の安全装置 (`ProgressStore.loadSave`): 旧版のセーブは移行前に、読めないセーブは置き換え前に、生データを `ww2fleet.progress.backups` に退避する (最新 5 件、設定 → バックアップから復元)。この仕組みを外さない。
+- `parseSave` が例外で空のセーブを返す経路を増やさない。新しい項目は必ず既定値付きで読む (欠けていても落ちない)。
+- 注意: Vercel のプレビュー URL (PR ごとの URL) と本番 URL は保存場所 (localStorage) が別。プレビューで遊んだ進行は本番には無い。
+
 ## Conventions
 - **Branches**: `feature/sprint<N>-<slug>` → develop → main
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`)
