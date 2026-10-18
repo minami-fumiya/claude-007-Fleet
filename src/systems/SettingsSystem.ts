@@ -10,9 +10,11 @@ export interface ISettings {
   joystick: boolean;
   /** Fleet Builder: keep the last exercise settings (opponent, mode, weather, time, enemy count) between visits (#108); off = start from the standard setup each time */
   keepExercise: boolean;
+  /** 図鑑: show only what the nation has (#44); off shows everything, the rest as silhouettes */
+  encyclopediaOwnedOnly: boolean;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -39,6 +41,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       muted: typeof d.muted === 'boolean' ? d.muted : legacyMuted,
       joystick: typeof d.joystick === 'boolean' ? d.joystick : DEFAULT_SETTINGS.joystick,
       keepExercise: typeof d.keepExercise === 'boolean' ? d.keepExercise : DEFAULT_SETTINGS.keepExercise,
+      encyclopediaOwnedOnly: typeof d.encyclopediaOwnedOnly === 'boolean' ? d.encyclopediaOwnedOnly : DEFAULT_SETTINGS.encyclopediaOwnedOnly,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

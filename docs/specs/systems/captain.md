@@ -50,3 +50,29 @@ Shown on the results screen (gold with ▲ LEVEL UP when a level is gained) and 
 aerial-torpedo damage in `AirOpsSystem`. Both are ordinary `IShipModifiers` fields, so upgrades / research can use them too.
 
 Captain bonuses combine with upgrades (`CustomizationSystem.combineModifiers`) and apply to player ships at battle start.
+
+## Owning captains (#44, 0.0.13)
+A nation has a list of captains (`INationProgress.captains`); only those can be assigned in the Fleet Builder. A new
+nation starts with its first listed captain. More join, in data order (`CaptainRoster.recruitCaptain`):
+- the first clear of a campaign area (one),
+- a promotion (one),
+- a won battle, with a 5% chance (`CAPTAIN_DROP_CHANCE`).
+Save v6: every older save owns all captains of each started nation, so no captain in use is lost.
+
+## Learned skills and traits (#45, 0.0.13)
+- Learn slots open at Lv3 / Lv6 / Lv9 (`learnSlots`). Any speciality but the captain's own, no repeats. A learned skill
+  works at 60% of the same speciality (`LEARNED_SKILL_SCALE`: the level is scaled). Filling an empty slot is free;
+  swapping one out (retraining) costs fuel 200 + ammo 200. Learned in 図鑑 → 艦長 (current nation only).
+- Traits are earned from battle stats kept per captain (`captainStats`), need no slot and always apply:
+  | Trait | Condition | Effect |
+  |---|---|---|
+  | 夜戦巧者 | 3 enemies sunk by the fleet in night battles | at night: guns ×1.05, night vision ×1.05 |
+  | 不沈艦長 | 3 battles survived at 25% HP or less | HP ×1.05, armor +1 |
+  | 潜水艦キラー | 5 submarines sunk by the fleet | depth charges ×1.1, sonar ×1.1 |
+- `captainModifiers(captain, ctx, learned, stats)` combines the speciality, learned skills and traits; with none of
+  the latter it equals the old single-skill bonus exactly.
+
+## Encyclopedia (#43 / #91)
+図鑑 has tabs 艦艇 / 艦長 / 航空機 / 地上・支援, a 所持のみ / 全て toggle (saved in settings; not-owned entries are
+silhouettes with how to get them) and the collection rate per nation. A captain's page shows level, XP, the current
+total bonus (`modifierLines`), learned skills (learn / retrain buttons) and the traits with their conditions.

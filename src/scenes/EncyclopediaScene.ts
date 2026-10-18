@@ -99,6 +99,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.dynamic = [];
     this.status = '';
     this.nation = loadSave().current;
+    this.ownedOnly = audio.settings.encyclopediaOwnedOnly;
     const all = DataLoader.getRegistry(this).all();
     this.maxStat = {
       hp: Math.max(...all.map((s) => s.hp)),
@@ -213,7 +214,10 @@ export class EncyclopediaScene extends Phaser.Scene {
     const kinds = [...TABS.map((t) => TAB_LABEL[t]), this.ownedOnly ? '所持のみ' : '全て'];
     tab(0, kinds, TABS.indexOf(this.tab), (i) => {
       if (i < TABS.length) this.tab = TABS[i];
-      else this.ownedOnly = !this.ownedOnly;
+      else {
+        this.ownedOnly = !this.ownedOnly;
+        audio.update({ encyclopediaOwnedOnly: this.ownedOnly });
+      }
       this.list.setOffset(0);
       this.refresh();
     }, IS_PORTRAIT ? 13 : 11);
