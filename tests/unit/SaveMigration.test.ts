@@ -61,3 +61,27 @@ describe('SaveMigration (#60)', () => {
     expect(loaded.current).toBe(Nation.USN);
   });
 });
+
+describe('v2 → v3: light / heavy cruiser research (#37)', () => {
+  it('a nation that could build cruisers keeps building heavy ones', () => {
+    const v2 = {
+      version: 2, current: 'IJN', record: {},
+      nations: {
+        IJN: { ships: ['fubuki', 'takao'], research: ['build_cruiser', 'gunnery_1'] },
+        USN: { ships: ['fletcher'], research: [] },
+      },
+    };
+    const save = parseSave(JSON.stringify(v2));
+    expect(save.version).toBe(LATEST_VERSION);
+    expect(save.nations[Nation.IJN]?.research).toEqual(['build_cruiser', 'gunnery_1', 'build_heavy_cruiser']);
+    expect(save.nations[Nation.IJN]?.ships).toEqual(['fubuki', 'takao']);
+    expect(save.nations[Nation.USN]?.research).toEqual([]);
+  });
+
+  it('is idempotent and tolerates malformed nations', () => {
+    const step = MIGRATIONS[0];
+    const once = step({ nations: { IJN: { research: ['build_cruiser'] }, KM: 7 } });
+    expect(step(once)).toEqual(once);
+    expect(step({ nations: 'x' })).toEqual({ nations: 'x' });
+  });
+});

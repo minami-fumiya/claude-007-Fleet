@@ -18,7 +18,26 @@ export const FIRST_VERSION = 2;
  * MIGRATIONS[i] migrates version FIRST_VERSION + i → FIRST_VERSION + i + 1. Append new steps at the end; never
  * reorder or edit a released one.
  */
-export const MIGRATIONS: MigrationStep[] = [];
+export const MIGRATIONS: MigrationStep[] = [
+  // v2 → v3 (#37): cruiser research split into light and heavy; whoever could build cruisers keeps both.
+  (data) => mapNations(data, (nation) => {
+    const research = Array.isArray(nation.research) ? nation.research : [];
+    return research.includes('build_cruiser') && !research.includes('build_heavy_cruiser')
+      ? { ...nation, research: [...research, 'build_heavy_cruiser'] }
+      : nation;
+  }),
+];
+
+/** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */
+function mapNations(data: RawSave, fn: (nation: RawSave) => RawSave): RawSave {
+  const nations = data.nations;
+  if (typeof nations !== 'object' || nations === null || Array.isArray(nations)) return data;
+  const out: RawSave = {};
+  for (const [key, value] of Object.entries(nations as RawSave)) {
+    out[key] = typeof value === 'object' && value !== null && !Array.isArray(value) ? fn(value as RawSave) : value;
+  }
+  return { ...data, nations: out };
+}
 
 /** The version written by this build. */
 export const LATEST_VERSION = FIRST_VERSION + MIGRATIONS.length;

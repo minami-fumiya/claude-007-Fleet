@@ -219,3 +219,9 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   per-nation `crowdPenalty` with a small assignment sim (4 v 4) rather than by feel — 0.3 spread fire perfectly evenly.
 - When rebalancing a resource, test the invariant ("steel regen time ≤ 1.5× fuel/ammo for every ship") instead of
   pinning numbers, so later cost changes keep the intent.
+- Phaser `Container.getBounds()` ignores a Graphics child, so a pill made of graphics + text reports only the text
+  width; measure the text and add the padding (`chipWidth`) before placing anything to its right.
+- When a portrait panel's height depends on game state (fleet slots), compute the layout in `create()` instead of a
+  module-level constant; every panel below it moves with it.
+- New gameplay that only re-weights existing stats (formations) fits as `IShipModifiers` combined at spawn; one new
+  additive field (`evadeAdd`) was enough for evasion. Test "no option dominates another" instead of fixed numbers.

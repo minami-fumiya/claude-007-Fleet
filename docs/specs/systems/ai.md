@@ -17,7 +17,9 @@ near  = 1 - min(1, distance / (2 * maxRange))
 - `attackers` (#34): how many other ships of the same side already target that ship. BattleScene keeps the count
   current as each enemy decides, so the fleet spreads its fire instead of piling onto the leading flagship.
   `crowdPenalty` per nation: IJN 0.15 · USN 0.2 · KM 0.05 (wolf pack — keeps focusing) · RN 0.15 · FR 0.2 · SU 0.12 · RM 0.2.
-- `priority`: convoy ships +0.6, scenario targets +0.5, the player's flagship **−0.15** (escorts draw their share).
+- `priority`: convoy ships +0.6, scenario targets +0.5, the player's flagship **−0.15** (escorts draw their share),
+  plus the formation's screening (輪形陣 −0.25, 警戒陣 −0.3; see `formations.md`).
+- `classValue` uses the subtype for cruisers (#37): heavy cruiser 0.65, light cruiser 0.5.
 - With a line-ahead fleet of four, a healthy flagship draws at most two of four attackers (tested in `AIBrain.test.ts`);
   a badly damaged flagship is still finished off — protecting it is the escorts' and formations' job (#59).
 | Class | classValue |

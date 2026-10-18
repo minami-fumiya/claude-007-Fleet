@@ -1,5 +1,5 @@
 import { IResources } from '@/types/Progression';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 
 /** Resources a newly founded nation starts with (#28): nothing, natural regeneration fills it up. */
@@ -24,6 +24,11 @@ const SORTIE_COST: Record<ShipClass, Partial<IResources>> = {
   [ShipClass.Cruiser]: { fuel: 35, ammo: 40 },
   [ShipClass.Destroyer]: { fuel: 15, ammo: 20 },
   [ShipClass.Submarine]: { fuel: 10, ammo: 15 },
+};
+/** Light cruisers are cheap to run, heavy cruisers dear (#37); other subtypes pay their class's cost. */
+const SUBTYPE_SORTIE_COST: Partial<Record<ShipSubtype, Partial<IResources>>> = {
+  [ShipSubtype.HeavyCruiser]: { fuel: 40, ammo: 45 },
+  [ShipSubtype.LightCruiser]: { fuel: 25, ammo: 30 },
 };
 /** Bauxite to replace one aircraft lost in battle. */
 export const BAUXITE_PER_PLANE = 6;
@@ -52,7 +57,7 @@ export function pay(have: Partial<IResources>, cost: Partial<IResources>): IReso
 }
 
 export function sortieCost(ships: IShipData[]): IResources {
-  return ships.reduce((sum, s) => addResources(sum, SORTIE_COST[s.shipClass] ?? {}), resources());
+  return ships.reduce((sum, s) => addResources(sum, (s.subtype && SUBTYPE_SORTIE_COST[s.subtype]) ?? SORTIE_COST[s.shipClass] ?? {}), resources());
 }
 
 /** Spoils of a battle: per enemy sunk (half on a defeat) plus a victory bonus. Steel is the scarcest resource, so it pays most (#35). */

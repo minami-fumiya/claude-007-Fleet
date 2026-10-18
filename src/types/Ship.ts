@@ -54,6 +54,8 @@ export interface IShipStats {
   speed: number;
   firePower: number;
   shipClass: ShipClass;
+  /** Finer type (重巡 / 軽巡 …), for the AI's idea of a target's value (#37) */
+  subtype?: ShipSubtype;
   /** Crew proficiency 0..100 (aim and evasion) */
   proficiency?: number;
 }

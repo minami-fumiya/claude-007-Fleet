@@ -5,6 +5,7 @@ import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH } from './ResearchSystem';
 import { RANKS, rankOf } from './RankSystem';
+import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -20,8 +21,16 @@ export const BUILD_TECH: Partial<Record<ShipClass, string>> = {
   [ShipClass.Submarine]: 'build_submarine',
 };
 
+/** Heavy cruisers need their own research on top of the (light) cruiser one (#37). */
+export const HEAVY_CRUISER_TECH = 'build_heavy_cruiser';
+
+/** Research that allows building this ship (undefined = none needed). */
+export function buildTechFor(ship: Pick<IShipData, 'shipClass' | 'subtype'>): string | undefined {
+  return isHeavyCruiser(ship) ? HEAVY_CRUISER_TECH : BUILD_TECH[ship.shipClass];
+}
+
 export function isBuildTech(id: string): boolean {
-  return Object.values(BUILD_TECH).includes(id);
+  return id === HEAVY_CRUISER_TECH || Object.values(BUILD_TECH).includes(id);
 }
 
 /** A ship's grade is how many of these HP marks it exceeds (0..5); it must not exceed the admiral's rank index. */
@@ -49,11 +58,13 @@ const COST_PER_HP: Record<ShipClass, IResources> = {
 };
 const ARMOR_HP = 5;
 const FICTIONAL_COST_MUL = 1.3;
+/** Light cruisers are cheaper to build than heavy ones (#37). */
+const LIGHT_CRUISER_COST_MUL = 0.85;
 
 /** Build cost from the ship's class, HP and armour (rounded to tens). */
 export function buildCost(ship: IShipData): IResources {
   const k = COST_PER_HP[ship.shipClass] ?? COST_PER_HP[ShipClass.Cruiser];
-  const mul = ship.fictional ? FICTIONAL_COST_MUL : 1;
+  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1);
   const size = { fuel: ship.hp, ammo: ship.hp, steel: ship.hp + ship.armor * ARMOR_HP, bauxite: ship.hp };
   const out = resources();
   for (const key of RESOURCE_KEYS) out[key] = Math.round((k[key] * size[key] * mul) / 10) * 10;
@@ -97,7 +108,7 @@ export type BuildState = 'owned' | 'research' | 'fictional' | 'rank' | 'resource
 /** Why a ship can or can't be built right now; `techNames` maps research ids to their display names. */
 export function buildState(progress: IProgress, roster: IShipData[], ship: IShipData): BuildState {
   if (isOwned(progress, roster, ship.id)) return 'owned';
-  const tech = BUILD_TECH[ship.shipClass];
+  const tech = buildTechFor(ship);
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (shipGrade(ship) > rankOf(progress).index) return 'rank';
@@ -110,7 +121,7 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
   switch (state) {
     case 'owned': return '保有';
     case 'research': {
-      const id = BUILD_TECH[ship.shipClass] ?? '';
+      const id = buildTechFor(ship) ?? '';
       return `要研究: ${techNames[id] ?? id}`;
     }
     case 'fictional': return `要研究: ${techNames[FICTIONAL_TECH] ?? FICTIONAL_TECH}`;

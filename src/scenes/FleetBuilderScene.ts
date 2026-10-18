@@ -21,11 +21,15 @@ import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
-import { fleetSlots, nextRank, rankOf } from '@/systems/RankSystem';
+import { fleetSlots, nextRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { proficiencyLabel } from '@/systems/ProficiencySystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
+import { filterAndSort, isHeavyCruiser, KIND_FILTERS, KindFilter, kindShort, ShipSort, SORT_LABEL } from '@/systems/ShipKind';
+import { FORMATION_ORDER, FORMATION_RULES, formationUnlocked, usableFormation } from '@/systems/FormationRules';
+import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, withPreset } from '@/systems/PresetSystem';
+import { kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
 import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData } from '@/types/Scene';
@@ -33,7 +37,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 
-/** Slots that fit one column; a bigger fleet (rank 少将 and up) is laid out in two columns. */
+/** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
 const COLUMN_SLOTS = 3;
 const PANEL_PAD = 14;
 /** Space for a panel's eyebrow + title; taller in portrait where text is enlarged. */
@@ -49,13 +53,15 @@ interface IRect { x: number; y: number; w: number; h: number }
 interface IBuilderLayout {
   ships: IRect;
   shipItemH: number;
-  /** Height of the nation tab row at the top of the ship list */
+  /** Height of the info line at the top of the ship list */
   tabH: number;
+  /** Height of the kind-filter and sort rows above the ship list (#33) */
+  filterH: number;
   fleet: IRect;
+  /** Fleet preset buttons row (#33) */
+  presetH: number;
   slotH: number;
   formations: IRect;
-  /** 'column' stacks formation cards vertically, 'row' lays them side by side */
-  formationFlow: 'column' | 'row';
   formationCardH: number;
   /** Opponent nation + battle mode toggles */
   enemy: IRect;
@@ -71,71 +77,91 @@ const TOGGLE_ROW_GAP = IS_PORTRAIT ? 12 : 6;
 /** With more nations than fit one row, the opponent toggles drop the 敵 prefix (the panel says 交戦相手). */
 const ENEMY_PREFIX = PLAYABLE_NATIONS.length > NATION_COLS ? '' : '敵 ';
 
+const ITEM_GAP = IS_PORTRAIT ? 8 : 6;
+const CARD_GAP = 10;
+/** Formation cards: two columns, three rows (#59). */
+const FORMATION_COLS = 2;
+
 const P_SHIP_ITEM_H = 120;
-const P_TAB_H = 64;
+const P_TAB_H = 48;
+const P_FILTER_H = 52;
 /** Portrait ship list viewport: five and a half rows, so the cut-off row hints that it scrolls (#20). */
 const P_LIST_VIEW_H = Math.round(5.5 * (P_SHIP_ITEM_H + 8));
-const P_SLOT_H = 150;
-const P_FLEET_H = 84 + 3 * P_SLOT_H + 2 * 10 + 14;
-const P_SHIPS_Y = HEADER_BAR_H + 12 + P_FLEET_H + 16;
-const P_SHIPS_H = 84 + P_TAB_H + 12 + P_LIST_VIEW_H + 14;
-const P_FORMATIONS_Y = P_SHIPS_Y + P_SHIPS_H + 18;
-const P_FORMATIONS_H = 84 + 180 + 14;
-const P_ENEMY_Y = P_FORMATIONS_Y + P_FORMATIONS_H + 18;
+/** Portrait slot cards stay in one column whatever the fleet size, so every card shows its stats (#33). */
+const P_SLOT_H = 168;
+const P_PRESET_H = 56;
+const P_HINT_H = 64;
+const P_FORMATION_CARD_H = 128;
 /** Free-battle opponent rows: nation (may wrap), mode, weather, time, size */
 const P_ENEMY_ROWS = NATION_ROWS + 4;
 /** Landscape: wrapped opponent rows take room from the formation cards above them. */
 const L_FORMATIONS_H = NATION_ROWS > 1 ? 226 : 262;
+const L_FLEET_H = 512;
 
 /**
  * Landscape: ships | fleet | formations in three columns, everything on one screen.
- * Portrait: fleet, ships, formations stacked on a page that scrolls between a fixed header and footer.
+ * Portrait: fleet, ships, formations stacked on a page that scrolls between a fixed header and footer; the fleet
+ * panel grows with the number of slots (up to 8).
  */
-const LAYOUT: IBuilderLayout = IS_PORTRAIT
-  ? {
-      fleet: { x: 16, y: HEADER_BAR_H + 12, w: CANVAS_W - 32, h: P_FLEET_H },
+function builderLayout(slotCount: number, promotionHint: boolean): IBuilderLayout {
+  if (IS_PORTRAIT) {
+    const fleetH = PANEL_HEADER_H + P_PRESET_H + 12 + slotCount * P_SLOT_H + (slotCount - 1) * CARD_GAP + (promotionHint ? CARD_GAP + P_HINT_H : 0) + 14;
+    const fleet = { x: 16, y: HEADER_BAR_H + 12, w: CANVAS_W - 32, h: fleetH };
+    const shipsY = fleet.y + fleet.h + 16;
+    const shipsH = PANEL_HEADER_H + P_TAB_H + 2 * (P_FILTER_H + 10) + 4 + P_LIST_VIEW_H + 14;
+    const formationsY = shipsY + shipsH + 18;
+    const formationsH = PANEL_HEADER_H + 3 * P_FORMATION_CARD_H + 2 * CARD_GAP + 14;
+    const enemyY = formationsY + formationsH + 18;
+    return {
+      fleet,
+      presetH: P_PRESET_H,
       slotH: P_SLOT_H,
-      ships: { x: 16, y: P_SHIPS_Y, w: CANVAS_W - 32, h: P_SHIPS_H },
+      ships: { x: 16, y: shipsY, w: CANVAS_W - 32, h: shipsH },
       shipItemH: P_SHIP_ITEM_H,
       tabH: P_TAB_H,
-      formations: { x: 16, y: P_FORMATIONS_Y, w: CANVAS_W - 32, h: P_FORMATIONS_H },
-      formationFlow: 'row',
-      formationCardH: 180,
-      enemy: { x: 16, y: P_ENEMY_Y, w: CANVAS_W - 32, h: 84 + P_ENEMY_ROWS * 60 + (P_ENEMY_ROWS - 1) * 12 + 18 },
+      filterH: P_FILTER_H,
+      formations: { x: 16, y: formationsY, w: CANVAS_W - 32, h: formationsH },
+      formationCardH: P_FORMATION_CARD_H,
+      enemy: { x: 16, y: enemyY, w: CANVAS_W - 32, h: 84 + P_ENEMY_ROWS * 60 + (P_ENEMY_ROWS - 1) * 12 + 18 },
       enemyButtonH: 60,
       footer: { x: 16, y: CANVAS_H - FOOTER_BAR_H + 6, w: CANVAS_W - 32, h: FOOTER_BAR_H - 18 },
-    }
-  : {
-      ships: { x: 24, y: 92, w: 404, h: 512 },
-      shipItemH: 62,
-      tabH: 36,
-      fleet: { x: 444, y: 92, w: 412, h: 512 },
-      slotH: 136,
-      formations: { x: 872, y: 92, w: 384, h: L_FORMATIONS_H },
-      formationFlow: 'column',
-      formationCardH: NATION_ROWS > 1 ? 48 : 56,
-      enemy: { x: 872, y: 92 + L_FORMATIONS_H + 12, w: 384, h: 604 - (92 + L_FORMATIONS_H + 12) },
-      enemyButtonH: NATION_ROWS > 1 ? 26 : 30,
-      footer: { x: 24, y: 616, w: CANVAS_W - 48, h: 92 },
     };
+  }
+  const presetH = 30;
+  const rows = slotCount <= COLUMN_SLOTS ? COLUMN_SLOTS : Math.ceil(slotCount / 2);
+  const slotRoom = L_FLEET_H - PANEL_HEADER_H - presetH - 8 - 14;
+  return {
+    ships: { x: 24, y: 92, w: 404, h: 512 },
+    shipItemH: 62,
+    tabH: 30,
+    filterH: 26,
+    fleet: { x: 444, y: 92, w: 412, h: L_FLEET_H },
+    presetH,
+    slotH: Math.min(136, Math.floor((slotRoom - (rows - 1) * CARD_GAP) / rows)),
+    formations: { x: 872, y: 92, w: 384, h: L_FORMATIONS_H },
+    formationCardH: Math.floor((L_FORMATIONS_H - PANEL_HEADER_H - 14 - 2 * 8) / 3),
+    enemy: { x: 872, y: 92 + L_FORMATIONS_H + 12, w: 384, h: 604 - (92 + L_FORMATIONS_H + 12) },
+    enemyButtonH: NATION_ROWS > 1 ? 26 : 30,
+    footer: { x: 24, y: 616, w: CANVAS_W - 48, h: 92 },
+  };
+}
 
-const ITEM_GAP = IS_PORTRAIT ? 8 : 6;
-const CARD_GAP = 10;
+/** Width of an addChip badge (its container bounds leave out the pill's padding). */
+function chipWidth(chip: Phaser.GameObjects.Container): number {
+  return (chip.list[1] as Phaser.GameObjects.Text).width + 18;
+}
 
-const FORMATION_LIST: Formation[] = [Formation.LineAhead, Formation.DoubleLine, Formation.Circle];
-const FORMATION_INFO: Record<Formation, { ja: string; en: string; desc: string }> = {
-  [Formation.LineAhead]: { ja: '縦陣', en: 'LINE AHEAD', desc: '旗艦の後ろに一列で続く' },
-  [Formation.DoubleLine]: { ja: '複縦陣', en: 'DOUBLE LINE', desc: '後方に二列で並び火力を集中' },
-  [Formation.Circle]: { ja: '輪形陣', en: 'CIRCLE', desc: '旗艦の左右を広く守る' },
-};
-
-const CLASS_BADGE: Record<string, { label: string; color: number; css: string }> = {
-  [ShipClass.Battleship]: { label: 'BATTLESHIP', color: Colors.gold, css: Css.gold },
-  [ShipClass.Cruiser]: { label: 'CRUISER', color: Colors.cyan, css: Css.cyan },
-  [ShipClass.Destroyer]: { label: 'DESTROYER', color: Colors.success, css: Css.success },
-  [ShipClass.Carrier]: { label: 'CARRIER', color: 0xc58bff, css: '#c58bff' },
-  [ShipClass.Submarine]: { label: 'SUBMARINE', color: Colors.blue, css: Css.blue },
-};
+/** Badge colour by class; cruisers split heavy (cyan) / light (blue) (#37). */
+function kindColor(ship: IShipData): { color: number; css: string } {
+  if (isHeavyCruiser(ship)) return { color: Colors.cyan, css: Css.cyan };
+  switch (ship.shipClass) {
+    case ShipClass.Battleship: return { color: Colors.gold, css: Css.gold };
+    case ShipClass.Cruiser: return { color: Colors.blue, css: Css.blue };
+    case ShipClass.Destroyer: return { color: Colors.success, css: Css.success };
+    case ShipClass.Carrier: return { color: 0xc58bff, css: '#c58bff' };
+    default: return { color: Colors.muted, css: Css.muted };
+  }
+}
 
 /** "大和 (Yamato)" → "大和": the Japanese part of a display name. */
 function shortName(name: string): string {
@@ -221,6 +247,21 @@ export class FleetBuilderScene extends Phaser.Scene {
   private maxStats = { hp: 1, armor: 1, speed: 1 };
   /** Portrait scrolling: true while the current pointer gesture is a drag, so taps are ignored */
   private dragging = false;
+  /** Layout for this fleet size (the portrait fleet panel grows with the slots) */
+  private L!: IBuilderLayout;
+  /** Admiral rank index: unlocks formations (#59) */
+  private rankIndex = 0;
+  /** Ship list filter and order (#33) */
+  private kindFilter: KindFilter = KindFilter.All;
+  private sort: ShipSort = ShipSort.Default;
+  private filterButtons: UIButton[] = [];
+  private sortButtons: UIButton[] = [];
+  /** Preset buttons; while `saveArmed` the next preset tapped is overwritten with the current fleet */
+  private presetButtons: UIButton[] = [];
+  private presetSaveBtn: UIButton | null = null;
+  private saveArmed = false;
+  /** Open ship detail sheet (#33) */
+  private detail: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: SceneKeys.FLEET_BUILDER });
@@ -237,6 +278,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.enemyNation = restored?.enemyNation ?? PLAYABLE_NATIONS.find((n) => n !== this.nation) ?? Nation.USN;
     this.extra = saved?.extra ?? 0;
     this.slotCount = fleetSlots(progress);
+    this.rankIndex = rankOf(progress).index;
+    this.L = builderLayout(this.slotCount, IS_PORTRAIT && nextRank(progress) !== null);
     this.mode = saved?.mode ?? BattleMode.Surface;
     this.weatherChoice = saved?.weather ?? RANDOM;
     this.timeChoice = saved?.time ?? TimeOfDay.Day;
@@ -246,7 +289,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const id = saved?.slotIds[i];
       return id ? this.ships.find((s) => s.id === id) ?? null : null;
     });
-    this.formation = saved?.formation ?? Formation.LineAhead;
+    this.formation = usableFormation(saved?.formation, this.rankIndex);
     this.captainData = DataLoader.getCaptains(this);
     const areaId = this.registry.get(CAMPAIGN_AREA_KEY) as string | undefined;
     this.area = (campaignData as ICampaignData).areas.find((a) => a.id === areaId) ?? null;
@@ -261,6 +304,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.timeButtons = [];
     this.nationChip = null;
     this.dragging = false;
+    this.filterButtons = [];
+    this.sortButtons = [];
+    this.presetButtons = [];
+    this.presetSaveBtn = null;
+    this.saveArmed = false;
+    this.detail = [];
     // Meters share one scale across nations so ships compare fairly between tabs.
     const all = this.shipRegistry.all();
     this.maxStats = {
@@ -271,16 +320,18 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     addBackdrop(this, 'menu').setScrollFactor(0);
     this.buildHeader();
-    this.buildPanelFrame(LAYOUT.ships, 'AVAILABLE SHIPS', '利用可能な艦');
+    this.buildPanelFrame(this.L.ships, 'AVAILABLE SHIPS', '利用可能な艦');
     const rank = rankOf(progress);
-    this.buildPanelFrame(LAYOUT.fleet, 'YOUR FLEET', `艦隊編成 — ${rank.name} · 出撃枠 ${this.slotCount}`);
+    this.buildPanelFrame(this.L.fleet, 'YOUR FLEET', `艦隊編成 — ${rank.name} · 出撃枠 ${this.slotCount}`);
     this.buildRefitButton();
-    this.buildPanelFrame(LAYOUT.formations, 'FORMATION', '陣形');
-    this.buildPanelFrame(LAYOUT.enemy, 'OPPONENT', '交戦相手');
+    this.buildPanelFrame(this.L.formations, 'FORMATION', '陣形');
+    this.buildPanelFrame(this.L.enemy, 'OPPONENT', '交戦相手');
     this.buildNationTabs();
     this.buildShipCount();
+    this.buildListControls();
     this.createShipList();
     this.buildShipList();
+    this.buildPresetRow();
     this.buildSlotPanel();
     this.buildFormationPanel();
     this.buildEnemyPanel();
@@ -297,7 +348,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private setupScrolling(): void {
-    const contentBottom = LAYOUT.enemy.y + LAYOUT.enemy.h + 24;
+    const contentBottom = this.L.enemy.y + this.L.enemy.h + 24;
     // Let the last panel scroll clear of the fixed footer.
     const cam = this.cameras.main;
     cam.setBounds(0, 0, CANVAS_W, contentBottom + FOOTER_BAR_H);
@@ -311,7 +362,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       // Drags that start on the ship list scroll the list; it passes back what it cannot use.
-      if (!p.isDown || this.shipList.ownsGesture()) return;
+      if (!p.isDown || this.shipList.ownsGesture() || this.detail.length > 0) return;
       const dy = p.y - startY;
       if (!this.dragging && Math.abs(dy) < DRAG_THRESHOLD) return;
       this.dragging = true;
@@ -402,15 +453,15 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   /** The row above the ship list: how many ships the nation owns and where more come from. */
   private buildNationTabs(): void {
-    const p = LAYOUT.ships;
+    const p = this.L.ships;
     this.add
-      .text(p.x + PANEL_PAD + 8, p.y + PANEL_HEADER_H + LAYOUT.tabH / 2, `保有艦 ${this.ships.length} 隻  ·  新しい艦は工廠の建造・作戦の初回報酬で入手`, textStyle(12, Css.muted, { wordWrap: { width: p.w - PANEL_PAD * 2 - 16, useAdvancedWrap: true } }))
+      .text(p.x + PANEL_PAD + 8, p.y + PANEL_HEADER_H + this.L.tabH / 2, `保有艦 ${this.ships.length} 隻  ·  新しい艦は工廠の建造・作戦の初回報酬で入手`, textStyle(12, Css.muted, { wordWrap: { width: p.w - PANEL_PAD * 2 - 16, useAdvancedWrap: true } }))
       .setOrigin(0, 0.5);
   }
 
   /** Campaign sortie: the opponent comes from the operation, so the panel shows its briefing instead. */
   private buildCampaignPanel(area: ICampaignArea): void {
-    const p = LAYOUT.enemy;
+    const p = this.L.enemy;
     const x = p.x + PANEL_PAD + 8;
     let y = p.y + PANEL_HEADER_H + (IS_PORTRAIT ? 4 : 0);
     const enemyNation = enemyNationFor(campaignData as ICampaignData, area, this.nation);
@@ -435,8 +486,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       this.buildCampaignPanel(this.area);
       return;
     }
-    const p = LAYOUT.enemy;
-    const h = LAYOUT.enemyButtonH;
+    const p = this.L.enemy;
+    const h = this.L.enemyButtonH;
     const x = p.x + PANEL_PAD;
     const w = p.w - PANEL_PAD * 2;
     const rowGap = TOGGLE_ROW_GAP;
@@ -485,7 +536,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   /** "12 隻" in the ship panel header, where the page buttons used to be. */
   private buildShipCount(): void {
-    const p = LAYOUT.ships;
+    const p = this.L.ships;
     this.shipCountText = this.add
       .text(p.x + p.w - PANEL_PAD - 8, p.y + (IS_PORTRAIT ? 42 : 32), '', textStyle(13, Css.muted, { fontStyle: 'bold' }))
       .setOrigin(1, 0.5);
@@ -493,7 +544,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   /** The masked, scrolling viewport under the nation tabs (#20). */
   private createShipList(): void {
-    const p = LAYOUT.ships;
+    const p = this.L.ships;
     const top = this.shipListTop();
     this.shipList = new ScrollList(this, {
       x: p.x + PANEL_PAD,
@@ -507,9 +558,53 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private shipListTop(): number {
-    const p = LAYOUT.ships;
-    // One info line (owned ships) sits where the nation tabs used to be.
-    return p.y + PANEL_HEADER_H + LAYOUT.tabH + (IS_PORTRAIT ? 12 : 6);
+    // One info line (owned ships), then the kind filter and sort rows (#33).
+    return this.filterRowY(1) + this.L.filterH + (IS_PORTRAIT ? 12 : 6);
+  }
+
+  /** Top of filter row 0 (kinds) / 1 (sort) above the ship list. */
+  private filterRowY(row: number): number {
+    const p = this.L.ships;
+    return p.y + PANEL_HEADER_H + this.L.tabH + row * (this.L.filterH + (IS_PORTRAIT ? 10 : 6));
+  }
+
+  /** Kind filter (全て / 戦艦 / 空母 / 重巡 / 軽巡 / 駆逐 / 潜水) and sort toggles above the ship list (#33 / #37). */
+  private buildListControls(): void {
+    const p = this.L.ships;
+    const x = p.x + PANEL_PAD;
+    const w = p.w - PANEL_PAD * 2;
+    const h = this.L.filterH;
+    const small = { fontSize: IS_PORTRAIT ? 14 : 11 };
+    const row = (y: number, labels: string[], onSelect: (i: number) => void): UIButton[] => {
+      const gap = IS_PORTRAIT ? 6 : 4;
+      const bw = (w - gap * (labels.length - 1)) / labels.length;
+      return labels.map((label, i) =>
+        new UIButton(this, x + i * (bw + gap) + bw / 2, y + h / 2, label, this.onTap(() => onSelect(i)), { variant: 'secondary', width: bw, height: h, ...small }),
+      );
+    };
+    this.filterButtons = row(this.filterRowY(0), KIND_FILTERS.map((k) => k.label), (i) => {
+      this.kindFilter = KIND_FILTERS[i].id;
+      this.rebuildShipList();
+    });
+    const sorts = [ShipSort.Default, ShipSort.Hp, ShipSort.Speed];
+    this.sortButtons = row(this.filterRowY(1), sorts.map((k) => `並び: ${SORT_LABEL[k]}`), (i) => {
+      this.sort = sorts[i];
+      this.rebuildShipList();
+    });
+    this.refreshListControls();
+  }
+
+  private refreshListControls(): void {
+    FleetBuilderScene.setToggle(this.filterButtons, KIND_FILTERS.findIndex((k) => k.id === this.kindFilter));
+    FleetBuilderScene.setToggle(this.sortButtons, [ShipSort.Default, ShipSort.Hp, ShipSort.Speed].indexOf(this.sort));
+  }
+
+  private rebuildShipList(): void {
+    this.shipList.clear();
+    this.shipCards = [];
+    this.buildShipList();
+    this.shipList.setOffset(0);
+    this.refreshListControls();
   }
 
   /** Keeps objects in place while the portrait page scrolls underneath them. */
@@ -533,15 +628,16 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private buildShipList(): void {
-    const p = LAYOUT.ships;
-    const itemH = LAYOUT.shipItemH;
+    const p = this.L.ships;
+    const itemH = this.L.shipItemH;
     // Rows leave a gutter on the right for the scrollbar.
     const w = p.w - PANEL_PAD * 2 - 12;
     const statX = IS_PORTRAIT ? 100 : 74;
     const plusR = IS_PORTRAIT ? 26 : 17;
     const statSpacing = (w - statX - plusR * 2 - 30) / 3;
+    const shown = filterAndSort(this.ships, this.kindFilter, this.sort);
 
-    this.ships.forEach((ship, i) => {
+    shown.forEach((ship, i) => {
       const y = i * (itemH + ITEM_GAP);
       const bg = drawPanel(this.add.graphics(), 0, 0, w, itemH, { radius: 16, fill: Colors.panelHi, fillAlpha: 0.55 });
       const hover = this.add.graphics();
@@ -550,18 +646,18 @@ export class FleetBuilderScene extends Phaser.Scene {
 
       const icon = this.addShipIcon(statX / 2, itemH / 2, ship.spriteKey, statX - 20, 1.2);
       const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
-      const badgeInfo = CLASS_BADGE[ship.shipClass] ?? CLASS_BADGE[ShipClass.Cruiser];
-      const badge = addChip(this, 0, name.y + name.height / 2, badgeInfo.label, badgeInfo.color, badgeInfo.css);
-      // Long names drop their English part so the class badge clears the + button.
+      const kc = kindColor(ship);
+      const badge = addChip(this, 0, name.y + name.height / 2, kindShort(ship), kc.color, kc.css);
+      // Long names drop their English part so the kind badge clears the + button.
       const nameRoom = w - statX - plusR * 2 - 30 - badge.getBounds().width - 10;
       fitName(name, ship.name, nameRoom);
       badge.setX(statX + name.displayWidth + 10);
 
       const meters = this.add.graphics();
       const stats: Array<[string, number, number, number]> = [
-        ['HP', ship.hp, this.maxStats.hp, Colors.success],
-        ['ARM', ship.armor, this.maxStats.armor, Colors.gold],
-        ['SPD', ship.speed, this.maxStats.speed, Colors.cyan],
+        ['耐久', ship.hp, this.maxStats.hp, Colors.success],
+        ['装甲', ship.armor, this.maxStats.armor, Colors.gold],
+        ['速力', ship.speed, this.maxStats.speed, Colors.cyan],
       ];
       const statLabels: Phaser.GameObjects.Text[] = [];
       stats.forEach(([label, value, max, color], si) => {
@@ -584,22 +680,26 @@ export class FleetBuilderScene extends Phaser.Scene {
       card.on('pointerout', () => hover.setVisible(false));
       this.shipCards.push(card);
     });
-    this.shipList.setContentHeight(Math.max(0, this.ships.length * (itemH + ITEM_GAP) - ITEM_GAP));
-    this.shipCountText.setText(`${this.ships.length} 隻`);
+    this.shipList.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
+    this.shipCountText.setText(shown.length === this.ships.length ? `${this.ships.length} 隻` : `${shown.length} / ${this.ships.length} 隻`);
   }
 
-  /** True when the fleet has more slots than one column holds: cards go in two narrower columns. */
+  /** Landscape only: more slots than one column holds go in two narrower columns. Portrait stays one column (#33). */
   private get gridSlots(): boolean {
-    return this.slotCount > COLUMN_SLOTS;
+    return !IS_PORTRAIT && this.slotCount > COLUMN_SLOTS;
   }
 
-  /** Slot `i`'s card: one column for up to three ships, two columns (same height) beyond that. */
+  /** Top of the first slot card, under the preset row. */
+  private slotsTop(): number {
+    return this.L.fleet.y + PANEL_HEADER_H + this.L.presetH + (IS_PORTRAIT ? 12 : 8);
+  }
+
   private slotRect(i: number): IRect {
-    const p = LAYOUT.fleet;
-    const top = p.y + PANEL_HEADER_H + 4;
+    const p = this.L.fleet;
+    const top = this.slotsTop();
     const x = p.x + PANEL_PAD;
     const w = p.w - PANEL_PAD * 2;
-    const h = LAYOUT.slotH;
+    const h = this.L.slotH;
     if (!this.gridSlots) return { x, y: top + i * (h + CARD_GAP), w, h };
     const cw = (w - CARD_GAP) / 2;
     return { x: x + (i % 2) * (cw + CARD_GAP), y: top + Math.floor(i / 2) * (h + CARD_GAP), w: cw, h };
@@ -612,59 +712,119 @@ export class FleetBuilderScene extends Phaser.Scene {
       const hint = this.gridSlots ? '艦を追加' : IS_PORTRAIT ? '↓ 下の一覧から艦を追加' : '← 左の一覧から艦を追加';
       const emptyLabel = this.add.text(r.x + r.w / 2, r.y + r.h / 2 + 10, hint, textStyle(14, Css.dim)).setOrigin(0.5);
       const role = i === 0 ? 'FLAGSHIP · 旗艦' : this.gridSlots ? `ESCORT ${i}` : `ESCORT ${i} · 護衛`;
-      this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
+      this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : this.gridSlots ? 8 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
       this.slotViews.push({ frame, content: null, emptyLabel });
     }
-    // Unused room under a small fleet explains how to get more slots (#30).
+    // How to get more slots (#30): under the cards in portrait, in the unused room in landscape.
     const next = nextRank(loadProgress());
-    if (this.slotCount < COLUMN_SLOTS && next) {
-      const last = this.slotRect(this.slotCount - 1);
-      const free = this.slotRect(this.slotCount);
-      this.add
-        .text(free.x + free.w / 2, last.y + last.h + CARD_GAP + LAYOUT.slotH / 2, `${next.rank.name}に昇進すると出撃枠 ${next.rank.slots}\n(作戦 あと ${next.clearsNeeded} 海域攻略)`, textStyle(13, Css.dim, { align: 'center' }))
-        .setOrigin(0.5);
+    if (!next) return;
+    const text = `${next.rank.name}に昇進すると出撃枠 ${next.rank.slots}\n(作戦 あと ${next.clearsNeeded} 海域攻略)`;
+    const last = this.slotRect(this.slotCount - 1);
+    if (IS_PORTRAIT) {
+      this.add.text(last.x + last.w / 2, last.y + last.h + CARD_GAP + P_HINT_H / 2, text, textStyle(13, Css.dim, { align: 'center' })).setOrigin(0.5);
+    } else if (this.slotCount < COLUMN_SLOTS) {
+      this.add.text(last.x + last.w / 2, last.y + last.h + CARD_GAP + this.L.slotH / 2, text, textStyle(13, Css.dim, { align: 'center' })).setOrigin(0.5);
     }
+  }
+
+  /** 編成 1-3 buttons and 保存 above the slots (#33): tap a preset to load it; 保存 then a preset to overwrite it. */
+  private buildPresetRow(): void {
+    const p = this.L.fleet;
+    const h = this.L.presetH;
+    const y = p.y + PANEL_HEADER_H + h / 2;
+    const x = p.x + PANEL_PAD;
+    const w = p.w - PANEL_PAD * 2;
+    const gap = 8;
+    const saveW = IS_PORTRAIT ? 130 : 76;
+    const bw = (w - saveW - gap * PRESET_COUNT) / PRESET_COUNT;
+    const font = IS_PORTRAIT ? 13 : 10;
+    this.presetButtons = Array.from({ length: PRESET_COUNT }, (_, i) =>
+      new UIButton(this, x + i * (bw + gap) + bw / 2, y, '', this.onTap(() => this.onPreset(i)), { variant: 'secondary', width: bw, height: h, fontSize: font }),
+    );
+    this.presetSaveBtn = new UIButton(this, x + w - saveW / 2, y, '保存', this.onTap(() => {
+      this.saveArmed = !this.saveArmed;
+      this.refreshPresets();
+    }), { variant: 'secondary', width: saveW, height: h, fontSize: font });
+    this.refreshPresets();
+  }
+
+
+  private refreshPresets(): void {
+    const presets = loadProgress().presets;
+    const nameOf = (id: string): string | undefined => {
+      const ship = this.shipRegistry.byId(id);
+      return ship ? shortName(ship.name) : undefined;
+    };
+    this.presetButtons.forEach((b, i) => {
+      const preset = presets[i] ?? null;
+      b.setLabel(this.saveArmed ? `${i + 1}: ここに保存` : `${i + 1}: ${presetLabel(preset, nameOf)}`);
+      b.setVariant(this.saveArmed ? 'gold' : preset ? 'primary' : 'secondary');
+      b.setEnabled(this.saveArmed || preset !== null);
+    });
+    this.presetSaveBtn?.setLabel(this.saveArmed ? 'やめる' : '保存').setVariant(this.saveArmed ? 'gold' : 'secondary');
+  }
+
+  private onPreset(index: number): void {
+    const progress = loadProgress();
+    if (this.saveArmed) {
+      const preset: IFleetPreset = {
+        slotIds: this.slots.map((s) => s?.id ?? null),
+        captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
+        formation: this.formation,
+      };
+      saveProgress({ ...progress, presets: withPreset(progress.presets, index, preset) });
+      this.saveArmed = false;
+      this.refreshPresets();
+      return;
+    }
+    const preset = progress.presets[index];
+    if (!preset) return;
+    const placed = applyPreset(preset, this.ships.map((s) => s.id), this.slotCount);
+    this.slots = placed.slotIds.map((id) => (id ? this.ships.find((s) => s.id === id) ?? null : null));
+    this.captainIds = placed.captainIds;
+    this.formation = usableFormation(preset.formation, this.rankIndex);
+    this.refresh();
   }
 
   private formationCardRect(i: number): IRect {
-    const p = LAYOUT.formations;
+    const p = this.L.formations;
     const top = p.y + PANEL_HEADER_H + 4;
-    const inner = p.w - PANEL_PAD * 2;
-    const h = LAYOUT.formationCardH;
-    if (LAYOUT.formationFlow === 'row') {
-      const w = (inner - CARD_GAP * (FORMATION_LIST.length - 1)) / FORMATION_LIST.length;
-      return { x: p.x + PANEL_PAD + i * (w + CARD_GAP), y: top, w, h };
-    }
-    return { x: p.x + PANEL_PAD, y: top + i * (h + CARD_GAP), w: inner, h };
+    const gap = IS_PORTRAIT ? CARD_GAP : 8;
+    const w = (p.w - PANEL_PAD * 2 - gap * (FORMATION_COLS - 1)) / FORMATION_COLS;
+    const h = this.L.formationCardH;
+    return { x: p.x + PANEL_PAD + (i % FORMATION_COLS) * (w + gap), y: top + Math.floor(i / FORMATION_COLS) * (h + gap), w, h };
   }
 
+  /** Six formation cards (#59): name, its trade-off in one line and a small diagram; locked ones show the rank needed. */
   private buildFormationPanel(): void {
-    FORMATION_LIST.forEach((formation, i) => {
+    FORMATION_ORDER.forEach((formation, i) => {
       const r = this.formationCardRect(i);
-      const compact = r.w < 260;
-      const info = FORMATION_INFO[formation];
+      const rule = FORMATION_RULES[formation];
+      const open = formationUnlocked(formation, this.rankIndex);
       const frame = this.add.graphics();
       this.formationFrames.push(frame);
-
+      const p = IS_PORTRAIT;
+      const textW = r.w - (p ? 120 : 64);
       const parts: Phaser.GameObjects.GameObject[] = [
         frame,
-        this.add.text(18, IS_PORTRAIT ? 18 : 6, info.ja, displayStyle(IS_PORTRAIT ? 24 : 20)),
-        this.add.text(18, IS_PORTRAIT ? 66 : 40, info.en, eyebrowStyle(10, Css.muted)),
+        this.add.text(p ? 18 : 12, p ? 14 : 5, rule.ja, p ? displayStyle(22) : textStyle(15, Css.text, { fontStyle: 'bold' })),
       ];
-      if (!compact && r.h >= 80) {
-        parts.push(this.add.text(18, IS_PORTRAIT ? 84 : 62, info.desc, textStyle(12, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } })));
+      const sub = open ? rule.summary : `要 ${RANKS[Math.min(rule.minRank, RANKS.length - 1)].name}`;
+      const subText = this.add.text(p ? 18 : 12, p ? 56 : r.h - 18, sub, textStyle(p ? 12 : 9, open ? Css.muted : Css.danger, {
+        wordWrap: p ? { width: textW, useAdvancedWrap: true } : undefined,
+      }));
+      if (!p && subText.width > r.w - 24) subText.setScale((r.w - 24) / subText.width);
+      parts.push(subText);
+      // Landscape cards are too short for a diagram next to the text.
+      if (p) {
+        const diagram = this.add.graphics();
+        this.drawFormationDiagram(diagram, formation, r.w - 56, r.h / 2, 0.8);
+        parts.push(diagram);
       }
-      const diagram = this.add.graphics();
-      if (compact) {
-        this.drawFormationDiagram(diagram, formation, r.w / 2, r.h - 50, 0.75);
-      } else {
-        this.drawFormationDiagram(diagram, formation, r.w - 60, r.h / 2, Math.min(1, (r.h - 12) / 100));
-      }
-      parts.push(diagram);
 
-      const card = this.add.container(r.x, r.y, parts);
+      const card = this.add.container(r.x, r.y, parts).setAlpha(open ? 1 : 0.45);
       makeClickable(card, r.w, r.h);
-      card.on('pointerup', this.onTap(() => this.selectFormation(formation)));
+      card.on('pointerup', this.onTap(() => open && this.selectFormation(formation)));
     });
   }
 
@@ -676,25 +836,34 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     const ship = (dx: number, dy: number, color: number): void => {
       g.fillStyle(color, 1);
-      g.fillRoundedRect(cx + (dx - 5) * k, cy + (dy - 12) * k, 10 * k, 24 * k, 5 * k);
+      g.fillRoundedRect(cx + (dx - 4) * k, cy + (dy - 10) * k, 8 * k, 20 * k, 4 * k);
     };
-    if (formation === Formation.LineAhead) {
-      ship(0, -30, Colors.gold);
-      ship(0, 0, Colors.cyan);
-      ship(0, 30, Colors.cyan);
-    } else if (formation === Formation.DoubleLine) {
-      ship(0, -20, Colors.gold);
-      ship(-16, 18, Colors.cyan);
-      ship(16, 18, Colors.cyan);
-    } else {
-      ship(0, -18, Colors.gold);
-      ship(-30, 16, Colors.cyan);
-      ship(30, 16, Colors.cyan);
+    const flag = Colors.gold;
+    const esc = Colors.cyan;
+    switch (formation) {
+      case Formation.LineAhead:
+        ship(0, -32, flag); ship(0, 0, esc); ship(0, 32, esc);
+        break;
+      case Formation.DoubleLine:
+        ship(0, -22, flag); ship(-14, 14, esc); ship(14, 14, esc); ship(-14, 40, esc); ship(14, 40, esc);
+        break;
+      case Formation.Circle:
+        ship(0, 0, flag); ship(0, -34, esc); ship(-30, 14, esc); ship(30, 14, esc); ship(0, 34, esc);
+        break;
+      case Formation.Echelon:
+        ship(-24, -28, flag); ship(-8, -6, esc); ship(8, 16, esc); ship(24, 38, esc);
+        break;
+      case Formation.LineAbreast:
+        ship(0, 0, flag); ship(-20, 0, esc); ship(20, 0, esc); ship(-40, 0, esc); ship(40, 0, esc);
+        break;
+      case Formation.Vanguard:
+        ship(-14, -34, esc); ship(14, -34, esc); ship(0, 4, flag); ship(-14, 32, esc); ship(14, 32, esc);
+        break;
     }
   }
 
   private buildFooter(): void {
-    const f = LAYOUT.footer;
+    const f = this.L.footer;
     const onStart = this.onTap(() => {
       if (this.canStart()) this.startBattle();
     });
@@ -751,8 +920,6 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   private refreshSlots(): void {
-    const compact = IS_PORTRAIT;
-
     this.slots.forEach((ship, i) => {
       const { w, h } = this.slotRect(i);
       const view = this.slotViews[i];
@@ -776,80 +943,163 @@ export class FleetBuilderScene extends Phaser.Scene {
         glow: 0.8,
       });
       view.emptyLabel.setVisible(false);
-      if (this.gridSlots) {
-        view.content = this.add.container(view.frame.x, view.frame.y, this.narrowSlotParts(ship, i, w, h));
-        return;
-      }
-
-      const nameX = compact ? 124 : 100;
-      const nameText = this.add.text(nameX, compact ? h * 0.24 : 44, ship.name, textStyle(18, Css.text, { fontStyle: 'bold' }));
-      // Leave room for the remove button on the right.
-      fitName(nameText, ship.name, w - nameX - (compact ? 84 : 64));
-      const parts: Phaser.GameObjects.GameObject[] = compact
-        ? [
-            this.addShipIcon(62, h * 0.6, ship.spriteKey, 88, 1.3),
-            nameText,
-            this.add.text(124, h * 0.5, this.slotStatus(ship), textStyle(13, this.isDamaged(ship) ? Css.danger : Css.muted)),
-          ]
-        : [
-            this.addShipIcon(54, 78, ship.spriteKey, 76, 1.3),
-            nameText,
-            this.add.text(100, 74, this.slotStatus(ship), textStyle(13, this.isDamaged(ship) ? Css.danger : Css.muted)),
-          ];
-
-      const captain = this.captainOf(i);
-      const captainLabel = captain
-        ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}`
-        : '艦長を任命  ›';
-      const captainBtn = new UIButton(
-        this,
-        compact ? 124 + 160 : 100 + 125,
-        compact ? h * 0.82 : 120,
-        captainLabel,
-        this.onTap(() => this.cycleCaptain(i)),
-        { variant: captain ? 'primary' : 'secondary', width: compact ? 320 : 250, height: compact ? 40 : 24, fontSize: 11 },
-      );
-      parts.push(captainBtn);
-
-      const remove = new UIButton(this, compact ? w - 44 : w - 34, compact ? h / 2 : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
-        variant: 'secondary',
-        width: compact ? 60 : 40,
-        height: compact ? 56 : 36,
-        fontSize: 15,
-      });
-
-      const frameX = view.frame.x;
-      const frameY = view.frame.y;
-      view.content = this.add.container(frameX, frameY, [...parts, remove]);
+      const parts = this.gridSlots ? this.narrowSlotParts(ship, i, w, h) : this.wideSlotParts(ship, i, w, h);
+      view.content = this.add.container(view.frame.x, view.frame.y, parts);
     });
   }
 
-  /** A two-column slot card: icon and name on top, short status, captain button along the bottom. */
-  private narrowSlotParts(ship: IShipData, i: number, w: number, h: number): Phaser.GameObjects.GameObject[] {
+  /** "41cm 連装砲 ×4": the ship's first (main) weapon. */
+  private mainArmament(ship: IShipData): string {
+    const first = summarizeWeapons(ship.weapons)[0];
+    if (!first) return ship.airWing ? '艦載機' : '—';
+    const name = DataLoader.getWeaponById(this, first.id)?.name ?? first.id;
+    return `${name}${first.count > 1 ? ` ×${first.count}` : ''}`;
+  }
+
+  /**
+   * A full-width slot card: kind badge and name, HP / armour / speed (or damage) with crew proficiency, main
+   * armament, then the captain, detail and remove buttons. Used for every slot in portrait (#33).
+   */
+  private wideSlotParts(ship: IShipData, i: number, w: number, h: number): Phaser.GameObjects.GameObject[] {
     const p = IS_PORTRAIT;
-    const nameX = p ? 96 : 66;
-    const name = this.add.text(nameX, p ? 44 : 34, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
-    fitName(name, ship.name, w - nameX - 10);
-    const status = this.add.text(nameX, name.y + name.displayHeight + 4, this.slotStatus(ship, true), textStyle(11, this.isDamaged(ship) ? Css.danger : Css.muted));
-    if (status.width > w - nameX - 10) status.setScale((w - nameX - 10) / status.width);
+    const nameX = p ? 124 : 100;
+    const kc = kindColor(ship);
+    const rowY = p ? 52 : 44;
+    const badge = addChip(this, nameX, rowY, kindShort(ship), kc.color, kc.css);
+    const nameLeft = nameX + chipWidth(badge) + 8;
+    const name = this.add.text(nameLeft, rowY, ship.name, textStyle(p ? 18 : 16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
+    // Leave room for the remove button on the right.
+    fitName(name, ship.name, w - nameLeft - (p ? 84 : 64));
+    const status = this.add.text(nameX, rowY + (p ? 20 : 16), this.slotStatus(ship), textStyle(13, this.isDamaged(ship) ? Css.danger : Css.muted));
+    const arm = this.add.text(nameX, status.y + status.height + 4, `主兵装  ${this.mainArmament(ship)}`, textStyle(12, Css.muted));
+    const room = w - nameX - 16;
+    for (const t of [status, arm]) if (t.width > room) t.setScale(room / t.width);
+
     const captain = this.captainOf(i);
-    const captainBtn = new UIButton(this, w / 2, h - (p ? 30 : 20), captain ? `${captain.name} Lv${captain.level}` : '艦長を任命 ›', this.onTap(() => this.cycleCaptain(i)), {
-      variant: captain ? 'primary' : 'secondary', width: w - 20, height: p ? 44 : 26, fontSize: 11,
+    const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}` : '艦長を任命  ›';
+    const btnH = p ? 40 : 24;
+    const btnY = h - (p ? 26 : 18);
+    const detailW = p ? 110 : 64;
+    const captainW = Math.min(p ? 320 : 220, w - nameX - detailW - 24);
+    const captainBtn = new UIButton(this, nameX + captainW / 2, btnY, captainLabel, this.onTap(() => this.cycleCaptain(i)), {
+      variant: captain ? 'primary' : 'secondary', width: captainW, height: btnH, fontSize: 11,
     });
-    const remove = new UIButton(this, w - (p ? 30 : 20), p ? 26 : 18, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
-      variant: 'secondary', width: p ? 48 : 30, height: p ? 42 : 26, fontSize: 13,
+    const detailBtn = new UIButton(this, nameX + captainW + 10 + detailW / 2, btnY, '詳細  ›', this.onTap(() => this.openDetail(ship, i)), {
+      variant: 'secondary', width: detailW, height: btnH, fontSize: 11,
     });
-    return [this.addShipIcon(p ? 50 : 36, p ? 66 : 54, ship.spriteKey, p ? 70 : 50, 1), name, status, captainBtn, remove];
+    const remove = new UIButton(this, p ? w - 44 : w - 34, p ? 44 : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
+      variant: 'secondary', width: p ? 60 : 40, height: p ? 52 : 36, fontSize: 15,
+    });
+    const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
+    return [icon, badge, name, status, arm, captainBtn, detailBtn, remove];
+  }
+
+  /** A two-column slot card (landscape, more than three slots): badge and name, short stats, captain and detail buttons. */
+  private narrowSlotParts(ship: IShipData, i: number, w: number, h: number): Phaser.GameObjects.GameObject[] {
+    const nameX = 62;
+    const kc = kindColor(ship);
+    const badge = addChip(this, nameX, 36, kindShort(ship), kc.color, kc.css);
+    const nameLeft = nameX + chipWidth(badge) + 6;
+    const name = this.add.text(nameLeft, 36, ship.name, textStyle(13, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
+    fitName(name, ship.name, w - nameLeft - 8);
+    const status = this.add.text(nameX, 47, this.slotStatus(ship, true), textStyle(11, this.isDamaged(ship) ? Css.danger : Css.muted));
+    if (status.width > w - nameX - 8) status.setScale((w - nameX - 8) / status.width);
+    const captain = this.captainOf(i);
+    const btnH = Math.min(24, h - 70);
+    const detailW = 48;
+    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level}` : '艦長 ›', this.onTap(() => this.cycleCaptain(i)), {
+      variant: captain ? 'primary' : 'secondary', width: w - detailW - 22, height: btnH, fontSize: 10,
+    });
+    const detailBtn = new UIButton(this, w - 8 - detailW / 2, h - btnH / 2 - 6, '詳細', this.onTap(() => this.openDetail(ship, i)), {
+      variant: 'secondary', width: detailW, height: btnH, fontSize: 10,
+    });
+    const remove = new UIButton(this, w - 18, 16, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
+      variant: 'secondary', width: 26, height: 22, fontSize: 12,
+    });
+    return [this.addShipIcon(32, 42, ship.spriteKey, 44, 1), badge, name, status, captainBtn, detailBtn, remove];
+  }
+
+  /**
+   * Detail sheet for a fleet ship (#33): kind, stats, every weapon, aircraft, crew, damage and captain. Covers the
+   * screen (fixed to the camera) until closed.
+   */
+  private openDetail(ship: IShipData, slot: number): void {
+    this.closeDetail();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(80);
+      this.detail.push(o);
+      return o;
+    };
+    // Swallows taps so nothing underneath reacts while the sheet is open.
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive());
+    const d = IS_PORTRAIT ? { x: 16, y: 150, w: CANVAS_W - 32, h: CANVAS_H - 300 } : { x: 240, y: 70, w: 800, h: 580 };
+    add(addPanel(this, d.x, d.y, d.w, d.h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
+    const x = d.x + 28;
+    const w = d.w - 56;
+    const wrap = { wordWrap: { width: w, useAdvancedWrap: true } };
+    add(this.add.text(x, d.y + 22, `${NATION_INFO[ship.nation].ja}  ·  ${kindLabel(ship)}${ship.fictional ? '  ·  架空艦' : ''}`, eyebrowStyle(11, Css.cyan)));
+    const title = add(this.add.text(x, d.y + 46, ship.name, displayStyle(IS_PORTRAIT ? 26 : 24)));
+    const icon = add(this.add.image(d.x + d.w - 40, d.y + 30, ship.spriteKey).setOrigin(1, 0));
+    icon.setScale(Math.min(2, (IS_PORTRAIT ? 150 : 120) / Math.max(1, icon.height)));
+
+    let y = title.y + title.height + 20;
+    const meters = add(this.add.graphics());
+    const rows: Array<[string, number, number, number]> = [
+      ['耐久', ship.hp, this.maxStats.hp, Colors.success],
+      ['装甲', ship.armor, this.maxStats.armor, Colors.gold],
+      ['速力', ship.speed, this.maxStats.speed, Colors.cyan],
+    ];
+    const meterW = Math.min(IS_PORTRAIT ? w - 230 : 360, w - 200);
+    for (const [label, v, max, color] of rows) {
+      add(this.add.text(x, y, label, eyebrowStyle(11, Css.muted)));
+      drawMeter(meters, x + 60, y + 4, meterW, 9, v / max, color);
+      add(this.add.text(x + 74 + meterW, y - 3, String(v), textStyle(15, Css.text, { fontStyle: 'bold' })));
+      y += 30;
+    }
+    y += 8;
+    add(this.add.text(x, y, '状態', eyebrowStyle(11, Css.gold)));
+    y += 22;
+    const state = add(this.add.text(x, y, this.slotStatus(ship), textStyle(14, this.isDamaged(ship) ? Css.danger : Css.text, wrap)));
+    y += state.height + 14;
+
+    add(this.add.text(x, y, '兵装', eyebrowStyle(11, Css.gold)));
+    y += 22;
+    const lines = summarizeWeapons(ship.weapons).map(({ id, count }) => {
+      const wd = DataLoader.getWeaponById(this, id);
+      return `${wd?.name ?? id}${count > 1 ? ` ×${count}` : ''}`;
+    });
+    if (ship.airWing) {
+      const a = ship.airWing;
+      lines.push(`艦載機  戦闘機 ${a.fighters} / 艦爆 ${a.diveBombers} / 艦攻 ${a.torpedoBombers}`);
+    }
+    const arm = add(this.add.text(x, y, lines.join('\n') || '—', textStyle(14, Css.text, { ...wrap, lineSpacing: 4 })));
+    y += arm.height + 14;
+
+    const captain = this.captainOf(slot);
+    add(this.add.text(x, y, '艦長', eyebrowStyle(11, Css.gold)));
+    y += 22;
+    add(this.add.text(x, y, captain ? `${captain.name}  Lv${captain.level}  ${SKILL_LABEL[captain.skill]}` : '未任命 (カードの「艦長を任命」で選べます)', textStyle(14, captain ? Css.text : Css.muted, wrap)));
+
+    const closeW = IS_PORTRAIT ? d.w - 56 : 240;
+    add(new UIButton(this, d.x + d.w / 2, d.y + d.h - (IS_PORTRAIT ? 50 : 40), '閉じる', () => this.closeDetail(), {
+      variant: 'secondary', width: closeW, height: IS_PORTRAIT ? 64 : 48, fontSize: 16,
+    }));
+  }
+
+  private closeDetail(): void {
+    for (const o of this.detail) o.destroy();
+    this.detail = [];
   }
 
   private refreshFormations(): void {
-    FORMATION_LIST.forEach((f, i) => {
+    FORMATION_ORDER.forEach((f, i) => {
       const { w, h } = this.formationCardRect(i);
       const selected = f === this.formation;
       const g = this.formationFrames[i];
       g.clear();
       drawPanel(g, 0, 0, w, h, {
-        radius: 18,
+        radius: IS_PORTRAIT ? 18 : 12,
         fill: selected ? Colors.panelHi : Colors.panel,
         fillAlpha: selected ? 0.9 : 0.45,
         rimAlpha: selected ? 0.85 : 0.2,
@@ -857,7 +1107,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       });
       if (selected) {
         g.fillStyle(Colors.cyan, 1);
-        g.fillCircle(w - 18, 18, 5);
+        g.fillCircle(w - (IS_PORTRAIT ? 18 : 10), IS_PORTRAIT ? 18 : 10, IS_PORTRAIT ? 5 : 3);
       }
     });
   }
@@ -870,7 +1120,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     } else {
       const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const minSpeed = Math.min(...ships.map((s) => s.speed));
-      const formation = FORMATION_INFO[this.formation].ja;
+      const formation = FORMATION_RULES[this.formation].ja;
       const opts = this.sortieOptions();
       const blockers = sortieBlockers(loadProgress(), ships, Date.now(), opts);
       const price = isFreeSortie(opts) ? (opts.exercise ? '無料 (演習)' : '無料 (最初の海域)') : formatResources(sortieCostFor(ships, opts));
@@ -906,7 +1156,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
     const f = hpFraction(progress, ship.id);
     const p = progress.proficiency[ship.id] ?? 0;
-    if (f >= 1) return short ? `HP ${ship.hp} · ${proficiencyLabel(p)} ${p}` : `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}  ·  ${proficiencyLabel(p)} ${p}`;
+    if (f >= 1) return short ? `HP ${ship.hp} 装 ${ship.armor} 速 ${ship.speed}` : `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}  ·  ${proficiencyLabel(p)} ${p}`;
     const tag = isDocked(progress, ship.id) ? '入渠中' : f <= 0.25 ? '大破' : f <= 0.5 ? '中破' : '小破';
     // Exercises start at full HP, so the damage only matters for a campaign sortie.
     const note = this.area ? '' : ' (演習は満タン)';
@@ -932,7 +1182,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   /** 改装: refit the ships of this fleet (upgrade slots). */
   private buildRefitButton(): void {
-    const p = LAYOUT.fleet;
+    const p = this.L.fleet;
     const bw = IS_PORTRAIT ? 150 : 110;
     const bh = IS_PORTRAIT ? 52 : 32;
     new UIButton(

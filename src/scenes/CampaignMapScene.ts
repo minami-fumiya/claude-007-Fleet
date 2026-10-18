@@ -6,7 +6,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress } from '@/utils/ProgressStore';
 import { areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
-import { CLASS_JA } from '@/systems/EncyclopediaSystem';
+import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
@@ -169,7 +169,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const progress = loadProgress();
     const roster = registry.byNation(progress.nation);
     const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(a.rewardShip, roster, ownedIds(progress, roster));
-    const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${CLASS_JA[rewardShip.shipClass]})` : '');
+    const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
       ['目標', OBJECTIVE_LABEL[a.objective]],
       ['敵', `${NATION_INFO[a.enemy.nation].ja} ${enemy.length} 隻  ${ships}`],

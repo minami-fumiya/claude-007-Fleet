@@ -30,6 +30,7 @@ export function shipView(ship: BaseShip, detected: boolean): IShipView {
     alive: ship.isAlive,
     hpFraction: ship.stats.maxHp > 0 ? ship.stats.currentHp / ship.stats.maxHp : 0,
     shipClass: ship.stats.shipClass,
+    subtype: ship.stats.subtype,
     submerged: ship.submerged,
     detected,
   };

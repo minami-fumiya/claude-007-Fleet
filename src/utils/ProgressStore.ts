@@ -17,6 +17,8 @@ import { IServiceRecord } from '@/types/Record';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import ijnShips from '@/data/ships/ijn.json';
 import { FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
+import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
+import { Formation } from '@/types/Formation';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -45,6 +47,8 @@ export interface INationProgress {
   captainXp: Record<string, number>;
   /** Cleared campaign area ids (the admiral's rank is derived from these) */
   campaign: string[];
+  /** Saved fleet setups (#33); null = unused */
+  presets: (IFleetPreset | null)[];
 }
 
 /** The whole save (v2 and later). */
@@ -66,7 +70,7 @@ export interface IProgress extends INationProgress {
 export function emptyNationProgress(ships: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [],
+    upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
   };
 }
 
@@ -166,6 +170,22 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     proficiency: numbers(data.proficiency),
     captainXp: numbers(data.captainXp),
     campaign: strings(data.campaign),
+    presets: (Array.isArray(data.presets) ? data.presets : []).slice(0, PRESET_COUNT).map(parsePreset),
+  };
+}
+
+const FORMATIONS = new Set<string>(Object.values(Formation));
+
+function idOrNull(v: unknown): string | null {
+  return typeof v === 'string' ? v : null;
+}
+
+function parsePreset(v: unknown): IFleetPreset | null {
+  if (!isObject(v) || !Array.isArray(v.slotIds)) return null;
+  return {
+    slotIds: v.slotIds.map(idOrNull),
+    captainIds: (Array.isArray(v.captainIds) ? v.captainIds : []).map(idOrNull),
+    formation: typeof v.formation === 'string' && FORMATIONS.has(v.formation) ? (v.formation as Formation) : Formation.LineAhead,
   };
 }
 
