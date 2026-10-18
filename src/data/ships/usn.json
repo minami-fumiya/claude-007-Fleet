@@ -1,0 +1,368 @@
+{
+  "ships": [
+    {
+      "id": "iowa",
+      "name": "アイオワ (Iowa)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 750,
+      "armor": 58,
+      "speed": 160,
+      "weapons": [
+        "16in_mk7",
+        "5in_38"
+      ],
+      "spriteKey": "iowa",
+      "description": "アイオワ級戦艦1番艦。33ノットの高速と16インチ砲9門を備える。朝鮮戦争や冷戦期にも現役を務め、1990年に退役した。"
+    },
+    {
+      "id": "north_carolina",
+      "name": "ノースカロライナ (North Carolina)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 705,
+      "armor": 56,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "north_carolina",
+      "description": "ノースカロライナ級戦艦1番艦。軍縮条約明けに建造された最初の米新戦艦。1942年9月、伊19の雷撃で損傷した。"
+    },
+    {
+      "id": "missouri",
+      "name": "ミズーリ (Missouri)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 750,
+      "armor": 58,
+      "speed": 160,
+      "weapons": [
+        "16in_mk7",
+        "5in_38"
+      ],
+      "spriteKey": "missouri",
+      "description": "アイオワ級戦艦3番艦。1945年9月2日、東京湾に停泊した本艦の艦上で日本の降伏文書調印式が行われた。"
+    },
+    {
+      "id": "new_jersey",
+      "name": "ニュージャージー (New Jersey)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 750,
+      "armor": 58,
+      "speed": 160,
+      "weapons": [
+        "16in_mk7",
+        "5in_38"
+      ],
+      "spriteKey": "new_jersey",
+      "description": "アイオワ級戦艦2番艦。第二次大戦後も朝鮮戦争、ベトナム戦争、レバノン沖に投入された。"
+    },
+    {
+      "id": "south_dakota",
+      "name": "サウスダコタ (South Dakota)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 725,
+      "armor": 58,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "south_dakota",
+      "description": "サウスダコタ級戦艦1番艦。1942年11月の第三次ソロモン海戦で日本艦隊の集中砲火を浴びながらも生き残った。"
+    },
+    {
+      "id": "montana",
+      "name": "モンタナ (Montana)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 830,
+      "armor": 63,
+      "speed": 135,
+      "weapons": [
+        "16in_mk7_quad",
+        "5in_38"
+      ],
+      "spriteKey": "montana",
+      "fictional": true,
+      "description": "アイオワ級に続く戦艦として5隻が計画された。16インチ砲12門を備える予定だったが、1943年に建造が中止された (架空艦)。"
+    },
+    {
+      "id": "baltimore",
+      "name": "ボルチモア (Baltimore)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "description": "ボルチモア級重巡洋艦1番艦。大戦後半、空母機動部隊の護衛として活躍した。"
+    },
+    {
+      "id": "des_moines",
+      "name": "デ・モイン (Des Moines)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 450,
+      "armor": 44,
+      "speed": 170,
+      "weapons": [
+        "8in_mk16",
+        "5in_38"
+      ],
+      "spriteKey": "des_moines",
+      "description": "デ・モイン級重巡洋艦1番艦。自動装填式の8インチ砲を備えた最後の重巡洋艦。完成は大戦後の1948年。"
+    },
+    {
+      "id": "cleveland",
+      "name": "クリーブランド (Cleveland)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "description": "クリーブランド級軽巡洋艦1番艦。6インチ砲12門を持つ。同級は米海軍で最も多く建造された巡洋艦となった。"
+    },
+    {
+      "id": "atlanta",
+      "name": "アトランタ (Atlanta)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 182,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "atlanta",
+      "description": "防空巡洋艦。5インチ両用砲16門を搭載した。1942年11月、第三次ソロモン海戦の夜戦で大破し、自沈処分された。"
+    },
+    {
+      "id": "fletcher",
+      "name": "フレッチャー (Fletcher)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "description": "フレッチャー級駆逐艦1番艦。同級は175隻が建造され、米海軍の主力駆逐艦となった。"
+    },
+    {
+      "id": "gearing",
+      "name": "ギアリング (Gearing)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 240,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "gearing",
+      "description": "ギアリング級駆逐艦1番艦。フレッチャー級を発展させた大型駆逐艦で、1945年に就役した。"
+    },
+    {
+      "id": "sumner",
+      "name": "アレン・M・サムナー (Allen M. Sumner)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sumner",
+      "description": "アレン・M・サムナー級駆逐艦1番艦。5インチ連装砲3基を備え、フレッチャー級より対空火力を強化した。"
+    },
+    {
+      "id": "buckley",
+      "name": "バックレイ (Buckley)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 205,
+      "armor": 11,
+      "speed": 190,
+      "weapons": [
+        "3in_50",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "buckley",
+      "description": "バックレイ級護衛駆逐艦1番艦。船団を守る対潜艦として量産された。1944年5月、Uボート U-66 に体当たりして撃沈した。"
+    },
+    {
+      "id": "essex",
+      "name": "エセックス (Essex)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "description": "エセックス級航空母艦1番艦。同級は24隻が建造され、太平洋戦争後半の米機動部隊の中核となった。"
+    },
+    {
+      "id": "enterprise",
+      "name": "エンタープライズ (Enterprise)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 510,
+      "armor": 27,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "enterprise",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "description": "ヨークタウン級航空母艦2番艦。ミッドウェー海戦をはじめ太平洋戦争の主要な海戦の多くに参加し、生き残った。"
+    },
+    {
+      "id": "midway",
+      "name": "ミッドウェイ (Midway)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 575,
+      "armor": 36,
+      "speed": 155,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "midway",
+      "airWing": {
+        "fighters": 6,
+        "diveBombers": 6,
+        "torpedoBombers": 5
+      },
+      "description": "ミッドウェイ級航空母艦1番艦。装甲飛行甲板を持つ大型空母で、完成は終戦直後の1945年9月。"
+    },
+    {
+      "id": "yorktown",
+      "name": "ヨークタウン (Yorktown)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 505,
+      "armor": 27,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "yorktown",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 3
+      },
+      "description": "ヨークタウン級航空母艦1番艦。珊瑚海海戦で損傷したが急いで修理され、ミッドウェー海戦に参加して沈没した。"
+    },
+    {
+      "id": "independence",
+      "name": "インディペンデンス (Independence)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "description": "クリーブランド級軽巡洋艦の船体を流用した軽空母。高速のため正規空母と行動をともにできた。"
+    },
+    {
+      "id": "casablanca",
+      "name": "カサブランカ (Casablanca)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "casablanca",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "description": "カサブランカ級護衛空母1番艦。商船の設計を元に50隻が量産され、船団護衛や上陸支援に使われた。"
+    },
+    {
+      "id": "gato",
+      "name": "ガトー (Gato)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "description": "ガトー級潜水艦1番艦。同級は太平洋で日本の商船と艦艇に大きな打撃を与えた。"
+    },
+    {
+      "id": "balao",
+      "name": "バラオ (Balao)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 7,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "balao",
+      "description": "バラオ級潜水艦1番艦。ガトー級の改良型で、より深く潜航できる。"
+    }
+  ]
+}

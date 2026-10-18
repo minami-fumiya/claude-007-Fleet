@@ -1,0 +1,163 @@
+{
+  "ships": [
+    {
+      "id": "marat",
+      "name": "マラート (Marat)",
+      "nation": "SU",
+      "shipClass": "Battleship",
+      "hp": 680,
+      "armor": 52,
+      "speed": 125,
+      "weapons": [
+        "305mm_obukhov",
+        "120mm_vickers"
+      ],
+      "spriteKey": "marat",
+      "description": "ガングート級戦艦。1941年9月、クロンシュタットでドイツ空軍の爆撃を受けて大破着底したが、浮き砲台として砲撃を続けた。"
+    },
+    {
+      "id": "oktyabrskaya_revolutsiya",
+      "name": "オクチャブリスカヤ・レボリューツィヤ (Oktyabrskaya Revolutsiya)",
+      "nation": "SU",
+      "shipClass": "Battleship",
+      "hp": 690,
+      "armor": 53,
+      "speed": 125,
+      "weapons": [
+        "305mm_obukhov",
+        "120mm_vickers"
+      ],
+      "spriteKey": "oktyabrskaya_revolutsiya",
+      "description": "ガングート級戦艦 (旧名ガングート)。レニングラード包囲戦で艦砲射撃を行い、たびたび損傷しながらも戦争を生き延びた。"
+    },
+    {
+      "id": "sovetsky_soyuz",
+      "name": "ソビエツキー・ソユーズ (Sovetsky Soyuz)",
+      "nation": "SU",
+      "shipClass": "Battleship",
+      "hp": 840,
+      "armor": 64,
+      "speed": 140,
+      "weapons": [
+        "406mm_b37",
+        "152mm_b38"
+      ],
+      "spriteKey": "sovetsky_soyuz",
+      "fictional": true,
+      "description": "40.6cm砲9門を持つ大型戦艦として起工されたが、独ソ戦の開始で工事が止まり、未完成のまま解体された (架空艦)。"
+    },
+    {
+      "id": "kirov",
+      "name": "キーロフ (Kirov)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "180mm_b1p",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "kirov",
+      "description": "キーロフ級巡洋艦1番艦。18cm砲9門を持つ。バルト艦隊に属し、レニングラード防衛戦で艦砲射撃を行った。"
+    },
+    {
+      "id": "maxim_gorky",
+      "name": "マクシム・ゴーリキー (Maxim Gorky)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 405,
+      "armor": 35,
+      "speed": 178,
+      "weapons": [
+        "180mm_b1p",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "maxim_gorky",
+      "description": "キーロフ級の改良型 (26-bis型)。1941年6月に触雷して艦首を失ったが修理され、レニングラード防衛戦を戦った。"
+    },
+    {
+      "id": "tashkent",
+      "name": "タシュケント (Tashkent)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 14,
+      "speed": 260,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "tashkent",
+      "description": "イタリアで建造された嚮導駆逐艦。公試で43ノットを超えた高速艦で、包囲されたセヴァストポリへの輸送で活躍したが、1942年7月に爆撃で沈没した。"
+    },
+    {
+      "id": "gnevny",
+      "name": "グネフヌイ (Gnevny)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "gnevny",
+      "description": "7型駆逐艦1番艦。独ソ戦の開戦直後の1941年6月、バルト海で触雷して沈没した。"
+    },
+    {
+      "id": "project71",
+      "name": "71号計画空母 (Project 71)",
+      "nation": "SU",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 470,
+      "armor": 22,
+      "speed": 160,
+      "weapons": [
+        "100mm_b34"
+      ],
+      "spriteKey": "project71",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "fictional": true,
+      "description": "1930年代末に計画されたソ連初の空母。巡洋艦の船体を使う設計だったが、起工されなかった (架空艦)。"
+    },
+    {
+      "id": "shch",
+      "name": "Shch 型潜水艦 (Shchuka)",
+      "nation": "SU",
+      "shipClass": "Submarine",
+      "hp": 140,
+      "armor": 5,
+      "speed": 140,
+      "weapons": [
+        "53_38_sub_torpedo"
+      ],
+      "spriteKey": "shch",
+      "description": "シチューカ (Shch) 型潜水艦。多くの改良型が建造され、バルト海や黒海で通商破壊に従事した。"
+    },
+    {
+      "id": "s13",
+      "name": "S-13 (S-13)",
+      "nation": "SU",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "53_38_sub_torpedo"
+      ],
+      "spriteKey": "s13",
+      "description": "S型潜水艦。1945年1月、マリネスコ艦長のもとでドイツの客船ヴィルヘルム・グストロフを撃沈した。"
+    }
+  ]
+}

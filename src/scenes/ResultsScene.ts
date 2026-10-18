@@ -9,6 +9,15 @@ import { addBackdrop, addPanel, addStatCard, UIButton } from '@/ui/components/UI
 const CARD_W = IS_PORTRAIT ? 664 : 620;
 const CARD_H = IS_PORTRAIT ? 680 : 560;
 const STAT = IS_PORTRAIT ? { w: 202, h: 104, gap: 12 } : { w: 168, h: 72, gap: 14 };
+const BACK_LABEL: Record<string, string> = {
+  [SceneKeys.HOME]: '鎮守府へ戻る',
+  [SceneKeys.CAMPAIGN]: '作戦地図へ戻る',
+  [SceneKeys.SCENARIO]: 'シナリオ選択へ戻る',
+};
+/** Landscape: 7 lines (campaign, reward, cost, medals, 3 captains) must still fit in 720 px. */
+const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
+/** Landscape: more than 3 captains (fleets of up to 8) go in two columns so the card still fits. */
+const REPORT_COLS_FROM = 4;
 const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
 
 export class ResultsScene extends Phaser.Scene {
@@ -25,9 +34,16 @@ export class ResultsScene extends Phaser.Scene {
     // Tint the scene toward the outcome colour
     this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, accent, 0.05).setOrigin(0, 0);
 
+    // Captain XP lines push the buttons down and grow the card.
+    const reports = data?.captainReports ?? [];
+    const rewardLines = [data?.campaign ?? '', data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : ''].filter((l) => l);
+    const reportCols = !IS_PORTRAIT && reports.length >= REPORT_COLS_FROM ? 2 : 1;
+    const lineCount = Math.ceil(reports.length / reportCols) + rewardLines.length;
+    const reportH = lineCount > 0 ? 18 + lineCount * REPORT_LINE_H : 0;
+    const cardH = CARD_H + reportH;
     const x = (CANVAS_W - CARD_W) / 2;
-    const y = (CANVAS_H - CARD_H) / 2;
-    addPanel(this, x, y, CARD_W, CARD_H, { radius: 32, fillAlpha: 0.7, rim: accent, rimAlpha: 0.45, glow: 1 });
+    const y = (CANVAS_H - cardH) / 2;
+    addPanel(this, x, y, CARD_W, cardH, { radius: 32, fillAlpha: 0.7, rim: accent, rimAlpha: 0.45, glow: 1 });
 
     this.drawEmblem(CANVAS_W / 2, y + 84, accent, victory);
 
@@ -56,14 +72,31 @@ export class ResultsScene extends Phaser.Scene {
     addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存 AFLOAT', `${survivors} / ${fleetSize}`, Css.success);
     addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間 TIME', time, Css.cyan);
 
-    new UIButton(this, CANVAS_W / 2, y + BUTTONS.y1, '再出撃', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    rewardLines.forEach((line, i) => {
+      this.add
+        .text(CANVAS_W / 2, y + 300 + STAT.h + 22 + i * REPORT_LINE_H, line, textStyle(14, Css.cyan, { fontStyle: 'bold' }))
+        .setOrigin(0.5, 0);
+    });
+    const colW = (CARD_W - 40) / reportCols;
+    reports.forEach((r, j) => {
+      const i = Math.floor(j / reportCols) + rewardLines.length;
+      const ry = y + 300 + STAT.h + 22 + i * REPORT_LINE_H;
+      const cx = reportCols === 1 ? CANVAS_W / 2 : x + 20 + colW * (j % reportCols) + colW / 2;
+      const up = r.leveledUp ? (reportCols === 1 ? '  ▲ LEVEL UP' : '  ▲') : '';
+      const t = this.add
+        .text(cx, ry, `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
+        .setOrigin(0.5, 0);
+      if (t.width > colW - 8) t.setScale((colW - 8) / t.width);
+    });
+
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, '再出撃', () => (data?.retry ? this.scene.start(SceneKeys.BATTLE, data.retry) : this.scene.start(SceneKeys.FLEET_BUILDER)), {
       variant: victory ? 'gold' : 'primary',
       width: CARD_W - 96,
       height: BUTTONS.h1,
       fontSize: 22,
       caption: 'RETRY',
     });
-    new UIButton(this, CANVAS_W / 2, y + BUTTONS.y2, 'タイトルへ戻る', () => this.scene.start(SceneKeys.MAIN_MENU), {
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => this.scene.start(data?.returnScene ?? SceneKeys.HOME), {
       variant: 'secondary',
       width: CARD_W - 96,
       height: BUTTONS.h2,

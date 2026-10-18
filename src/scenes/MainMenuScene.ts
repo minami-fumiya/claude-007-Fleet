@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
+import { CONTROLS } from '@/config/Controls';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
@@ -24,19 +26,6 @@ const INFO_TILES: Array<{ title: string; body: string }> = [
   { title: '★ 勝利条件', body: '敵艦隊をすべて撃沈' },
 ];
 
-const CONTROLS: Array<{ label: string; text: string }> = IS_PORTRAIT
-  ? [
-      { label: '移動', text: '海をタップした地点へ航行。左下のスティックでも操作できます' },
-      { label: '目標', text: '敵艦をタップすると攻撃目標に指定' },
-      { label: '砲撃', text: '射程内の目標へ自動で砲撃' },
-      { label: 'AUTO', text: 'ON にすると自動で敵を追尾し、戦闘します' },
-    ]
-  : [
-      { label: '移動', text: 'W / S で前進・後退、A / D で旋回' },
-      { label: '砲撃', text: 'マウスで照準、クリックで砲撃' },
-      { label: 'AUTO', text: 'ボタンで自動航行・自動砲撃に切り替え' },
-    ];
-
 export class MainMenuScene extends Phaser.Scene {
   private howToLayer: Phaser.GameObjects.Container | null = null;
 
@@ -45,9 +34,14 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.music('menu');
     this.howToLayer = null;
     addBackdrop(this, 'menu');
     addPanel(this, CARD.x, CARD.y, CARD.w, CARD.h, { radius: 32, fillAlpha: 0.45, glow: 1 });
+    const corner = IS_PORTRAIT ? { w: 112, h: 56 } : { w: 112, h: 40 };
+    new UIButton(this, CARD.x + CARD.w - 20 - corner.w / 2, CARD.y + 20 + corner.h / 2, '設定', () => this.scene.start(SceneKeys.SETTINGS, { returnTo: SceneKeys.MAIN_MENU }), {
+      variant: 'secondary', width: corner.w, height: corner.h, fontSize: 14,
+    });
 
     if (IS_PORTRAIT) {
       this.buildPortrait();
@@ -65,7 +59,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.add.text(LEFT_X - 2, CARD.y + 180, 'FLEET', displayStyle(96, Css.gold, { letterSpacing: 18, shadow: FLEET_GLOW }));
     this.add.text(LEFT_X, CARD.y + 300, TAGLINE, textStyle(20, '#c9d6ee', { fontStyle: 'bold' }));
 
-    new UIButton(this, LEFT_X + 140, CARD.y + 386, '出撃準備  →', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, LEFT_X + 140, CARD.y + 386, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
       variant: 'primary',
       width: 280,
       height: 64,
@@ -99,7 +93,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.add.text(cx, CARD.y + 682, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
 
-    new UIButton(this, cx, CARD.y + 780, '出撃準備  →', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    new UIButton(this, cx, CARD.y + 780, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
       variant: 'primary',
       width: btnW,
       height: 80,

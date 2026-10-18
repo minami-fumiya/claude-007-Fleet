@@ -43,5 +43,5 @@
 
 ### 完了処理
 - [x] `docs/specs/sprints/current.md` に `[IMPLEMENTED: sprint2]` タグ記入
-- [ ] feature/sprint2-* → develop PR → CI → merge
-- [ ] Vercel Preview URL 動作確認
+- [x] feature/sprint2-* → develop PR → CI → merge (PR #3 ✅)
+- [x] Vercel Preview URL 動作確認

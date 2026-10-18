@@ -2,68 +2,63 @@ import Phaser from 'phaser';
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { WeaponSystem } from './WeaponSystem';
 import { FormationSystem } from './FormationSystem';
-import { IWeaponData } from '@/types/Weapon';
 import { IFormationSlotOffset } from '@/types/Formation';
+import { AI_AIM_ERROR, aiSelf, fireAt, IShipView } from './AISystem';
+import { chooseTarget, isEngageable, ITacticsProfile, TURN_RATE_DEG } from './AIBrain';
+import { headingTo, waypointSteer } from './AutoPilot';
 
 const ARRIVE_THRESHOLD = 24;
-const ROTATE_SPEED_DEG = 100;
+/** Escorts with depth charges leave the formation to attack a submarine on sonar this close. */
+const ASW_BREAK_DISTANCE = 380;
 
+/**
+ * Player escort: keeps its formation slot and fires at the best target in range. Escorts carrying
+ * depth charges break formation to run over a detected submerged submarine nearby.
+ */
 export class EscortAISystem {
-  private weaponSystem: WeaponSystem;
-  private weapon: IWeaponData;
-  private offset: IFormationSlotOffset;
+  constructor(
+    private readonly weapons: WeaponSystem,
+    private readonly offset: IFormationSlotOffset,
+    private readonly profile: ITacticsProfile,
+  ) {}
 
-  constructor(weaponSystem: WeaponSystem, weapon: IWeaponData, offset: IFormationSlotOffset) {
-    this.weaponSystem = weaponSystem;
-    this.weapon = weapon;
-    this.offset = offset;
-  }
-
-  update(escort: BaseShip, flagship: BaseShip, enemies: BaseShip[], time: number, delta: number): void {
+  update(escort: BaseShip, flagship: BaseShip, foes: IShipView[], time: number, delta: number): void {
     if (!escort.isAlive || !flagship.isAlive) return;
-
     const dtSec = delta / 1000;
-    const target = FormationSystem.getWorldPosition(flagship, this.offset);
-    const distToSlot = Phaser.Math.Distance.Between(escort.x, escort.y, target.x, target.y);
-    const body = escort.body as Phaser.Physics.Arcade.Body;
+    const turnRate = TURN_RATE_DEG[escort.stats.shipClass];
+    const self = aiSelf(escort);
 
-    if (distToSlot > ARRIVE_THRESHOLD) {
-      const angleToSlot = Phaser.Math.Angle.Between(escort.x, escort.y, target.x, target.y);
-      body.setVelocity(
-        Math.cos(angleToSlot) * escort.stats.speed,
-        Math.sin(angleToSlot) * escort.stats.speed,
-      );
-      const targetAngleDeg = Phaser.Math.RadToDeg(angleToSlot) + 90;
-      const currentAngleDeg = escort.angle;
-      const diff = Phaser.Math.Angle.ShortestBetween(currentAngleDeg, targetAngleDeg);
-      const step = ROTATE_SPEED_DEG * dtSec;
-      escort.angle += Math.abs(diff) < step ? diff : Math.sign(diff) * step;
+    const sub = self.hasDepthCharges ? this.nearbySubmarine(escort, foes) : null;
+    if (sub) {
+      escort.steer({ headingDeg: headingTo(escort, sub), throttle: 1 }, dtSec, turnRate);
+      fireAt(this.weapons, escort, sub, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
+      return;
+    }
+
+    const slot = FormationSystem.getWorldPosition(flagship, this.offset);
+    const steer = waypointSteer(escort, slot, ARRIVE_THRESHOLD);
+    if (steer) {
+      escort.steer(steer, dtSec, turnRate);
     } else {
-      body.setVelocity(0, 0);
+      (escort.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
       escort.angle = flagship.angle;
     }
 
-    const nearestEnemy = this.findNearestEnemy(escort, enemies);
-    if (nearestEnemy) {
-      const dist = Phaser.Math.Distance.Between(escort.x, escort.y, nearestEnemy.x, nearestEnemy.y);
-      if (dist <= this.weapon.range) {
-        const angleToEnemy = Phaser.Math.Angle.Between(escort.x, escort.y, nearestEnemy.x, nearestEnemy.y);
-        this.weaponSystem.fireWeapon(escort, this.weapon, angleToEnemy, time);
-      }
-    }
+    const target = chooseTarget(self, foes, this.profile);
+    if (target) fireAt(this.weapons, escort, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
   }
 
-  private findNearestEnemy(escort: BaseShip, enemies: BaseShip[]): BaseShip | null {
-    let nearest: BaseShip | null = null;
-    let minDist = Infinity;
-    for (const e of enemies) {
-      if (!e.isAlive) continue;
-      const d = Phaser.Math.Distance.Between(escort.x, escort.y, e.x, e.y);
-      if (d < minDist) {
-        minDist = d;
-        nearest = e;
+  private nearbySubmarine(escort: BaseShip, foes: IShipView[]): IShipView | null {
+    let best: IShipView | null = null;
+    let bestDist = ASW_BREAK_DISTANCE;
+    for (const f of foes) {
+      if (!f.submerged || !isEngageable(aiSelf(escort), f)) continue;
+      const d = Phaser.Math.Distance.Between(escort.x, escort.y, f.x, f.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = f;
       }
     }
-    return nearest;
+    return best;
   }
 }

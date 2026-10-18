@@ -5,6 +5,15 @@ export const SceneKeys = {
   FLEET_BUILDER: 'FleetBuilderScene',
   BATTLE: 'BattleScene',
   RESULTS: 'ResultsScene',
+  CUSTOMIZATION: 'CustomizationScene',
+  ARSENAL: 'ArsenalScene',
+  SHIPYARD: 'ShipyardScene',
+  CAMPAIGN: 'CampaignMapScene',
+  SCENARIO: 'ScenarioScene',
+  ENCYCLOPEDIA: 'EncyclopediaScene',
+  RECORD: 'RecordScene',
+  SETTINGS: 'SettingsScene',
+  HELP: 'HelpScene',
   HOME: 'HomeScene',
 } as const;
 

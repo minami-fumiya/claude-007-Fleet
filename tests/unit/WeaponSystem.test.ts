@@ -89,3 +89,19 @@ describe('ReloadState.progress', () => {
     expect(state.progress(owner, 0, 1000)).toBe(1);
   });
 });
+
+describe('ReloadState slots', () => {
+  it('keeps one timer per weapon slot', () => {
+    const state = new ReloadState();
+    const ship = {};
+    state.markFired(ship, 1000, 'gun');
+    expect(state.isReady(ship, 1500, 2000, 'gun')).toBe(false);
+    expect(state.isReady(ship, 1500, 2000, 'torpedo')).toBe(true);
+    expect(state.progress(ship, 1000, 1500, 'gun')).toBeCloseTo(0.5);
+    expect(state.progress(ship, 1000, 1500, 'torpedo')).toBe(1);
+  });
+
+  it('is ready at time 0 when never fired', () => {
+    expect(new ReloadState().isReady({}, 1500, 0)).toBe(true);
+  });
+});

@@ -49,4 +49,24 @@ describe('FormationSystem', () => {
     expect(result.x).toBeCloseTo(160, 0);
     expect(result.y).toBeCloseTo(200, 0);
   });
+
+  it.each([Formation.LineAhead, Formation.DoubleLine, Formation.Circle])('%s gives 1-9 escorts distinct, spaced slots', (formation) => {
+    for (let n = 1; n <= 9; n++) {
+      const offsets = FormationSystem.getOffsets(formation, n);
+      expect(offsets).toHaveLength(n);
+      const points = [{ forward: 0, right: 0 }, ...offsets];
+      for (let i = 0; i < points.length; i++) {
+        for (let j = i + 1; j < points.length; j++) {
+          const d = Math.hypot(points[i].forward - points[j].forward, points[i].right - points[j].right);
+          expect(d, `${formation} ${n}: ${i}-${j}`).toBeGreaterThanOrEqual(80);
+        }
+      }
+    }
+  });
+
+  it('keeps the classic two slots first', () => {
+    for (const f of [Formation.LineAhead, Formation.DoubleLine, Formation.Circle]) {
+      expect(FormationSystem.getOffsets(f, 7).slice(0, 2)).toEqual(FormationSystem.getOffsets(f));
+    }
+  });
 });
