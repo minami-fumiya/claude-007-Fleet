@@ -52,7 +52,8 @@ import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers } from '@/systems/CustomizationSystem';
 import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/CaptainSystem';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { settleBattle, startingHp } from '@/systems/ProgressionSystem';
+import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
+import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { researchModifiers, unlockedUpgrades } from '@/systems/ResearchSystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
 import { ITechNode } from '@/types/Progression';
@@ -168,6 +169,8 @@ export class BattleScene extends Phaser.Scene {
   private seenByPlayer = new Set<BaseShip>();
   private objective: Objective = Objective.Annihilate;
   private scenario: IScenario | null = null;
+  /** Free battle (演習, #15): starts at full HP and keeps no damage */
+  private exercise = false;
   private scenarioSetup: IScenarioSetup | null = null;
   private scenarioTargets: BaseShip[] = [];
   private convoy: BaseShip[] = [];
@@ -282,6 +285,7 @@ export class BattleScene extends Phaser.Scene {
     const scenario = sc ? DataLoader.getScenarios(this).find((s) => s.id === sc.id) : undefined;
     this.scenario = scenario ?? null;
     this.scenarioSetup = scenario && sc ? setupFor(scenario, sc.side) : null;
+    this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
     this.objective = this.scenarioSetup?.side.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
@@ -541,7 +545,7 @@ export class BattleScene extends Phaser.Scene {
     const progress = loadProgress();
     ship.stats.proficiency = progress.proficiency[ship.dataId] ?? 0;
     ship.stats.name = refitName(REFITS, ship.stats.name, ship.stats.shipClass, progress.refits[ship.dataId] ?? 0);
-    const f = startingHp(loadProgress(), ship.dataId);
+    const f = startingHp(progress, ship.dataId, this.exercise);
     ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }
 
@@ -570,7 +574,8 @@ export class BattleScene extends Phaser.Scene {
     const escortSlots = fleet.slots.filter((s, i) => i !== fleet.flagshipIndex && s.shipData !== null);
     escortSlots.forEach((slot, i) => {
       const escortData = slot.shipData as IShipData;
-      const offset = offsets[Math.min(i, offsets.length - 1)];
+      // Fleets bigger than the formation table repeat the pattern further astern (#25).
+      const offset = offsets[i] ?? FormationSystem.getOffset(formation, i);
       const placed = this.scenarioSetup?.player.positions[i + 1];
       const spawnPos = placed ? placeAt(placed, WORLD.w, WORLD.h) : FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
       const captain = this.captainFor(slot.slotIndex);
@@ -588,7 +593,10 @@ export class BattleScene extends Phaser.Scene {
     const profile = TACTICS[fleet.nation];
     FleetSystem.getShips(fleet).forEach((shipData, i) => {
         const placed = this.scenarioSetup?.enemy.positions[i];
-      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w / 2, y: ENEMY_TOP };
+      // Ships beyond the three fixed spots (campaign fleets of up to 8, #25) line up across a second row.
+      const pos = placed
+        ? placeAt(placed, WORLD.w, WORLD.h)
+        : ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w * (0.12 + 0.19 * ((i - ENEMY_SPAWN_POSITIONS.length) % 5)), y: ENEMY_TOP + 170 };
       const enemy = this.spawnShip(shipData, pos.x, pos.y);
       enemy.setTint(0xdd4444);
       enemy.setAngle(placed ? placed.angle : 180);
@@ -1319,7 +1327,7 @@ export class BattleScene extends Phaser.Scene {
       enemiesSunk,
       planesLost: this.playerAir.totalLost(),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    });
+    }, { exercise: this.exercise });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over.
       result.reward = undefined;
@@ -1342,12 +1350,24 @@ export class BattleScene extends Phaser.Scene {
     if (area && victory) {
       const rec = recordClear(progress.campaign, area.id);
       progress = { ...progress, campaign: rec.cleared };
-      if (rec.firstClear) progress = { ...progress, resources: addResources(progress.resources, area.reward) };
-      result.campaign = `海域攻略: ${area.name}${rec.firstClear ? `  初回報酬 ${formatResources(area.reward)}` : ''}`;
+      let newShip = '';
+      if (rec.firstClear) {
+        progress = { ...progress, resources: addResources(progress.resources, area.reward) };
+        // First-clear ship (#18): one of this nation's ships of the area's reward class.
+        const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+        const ship = rewardShipFor(area.rewardShip, roster, ownedIds(progress, roster));
+        if (ship) {
+          progress = grantShip(progress, roster, ship.id);
+          newShip = `  新しい艦: ${ship.name.replace(/\s*\(.*\)\s*$/, '')}`;
+        }
+      }
+      result.campaign = `海域攻略: ${area.name}${rec.firstClear ? `  初回報酬 ${formatResources(area.reward)}${newShip}` : ''}`;
       result.returnScene = SceneKeys.CAMPAIGN;
     } else if (area) {
       result.campaign = `作戦失敗: ${area.name}`;
       result.returnScene = SceneKeys.CAMPAIGN;
+    } else if (this.exercise) {
+      result.campaign = '演習: 損傷なし・資源報酬は半分';
     }
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
     saveProgress(progress);

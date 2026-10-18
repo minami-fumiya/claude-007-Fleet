@@ -4,7 +4,9 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress } from '@/utils/ProgressStore';
-import { areasOf, enemyShips, isCleared, isUnlocked, theaterProgress } from '@/systems/CampaignSystem';
+import { areasOf, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress } from '@/systems/CampaignSystem';
+import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
+import { CLASS_JA } from '@/systems/EncyclopediaSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
@@ -156,13 +158,19 @@ export class CampaignMapScene extends Phaser.Scene {
     const x = d.x + 24;
     const wrap = { wordWrap: { width: d.w - 48, useAdvancedWrap: true } };
     const registry = DataLoader.getRegistry(this);
-    const ships = enemyShips(a, registry).map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
+    const enemy = enemyShips(a, registry);
+    const ships = enemy.map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
     const map = DataLoader.getMap(this, a.map);
+    // First-clear ship for the nation being played (#18).
+    const progress = loadProgress();
+    const roster = registry.byNation(progress.nation);
+    const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(a.rewardShip, roster, ownedIds(progress, roster));
+    const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${CLASS_JA[rewardShip.shipClass]})` : '');
     const lines: Array<[string, string]> = [
       ['目標', OBJECTIVE_LABEL[a.objective]],
-      ['敵', `${NATION_INFO[a.enemy.nation].ja}  ${ships}`],
-      ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}`],
-      ['初回報酬', formatResources(a.reward)],
+      ['敵', `${NATION_INFO[a.enemy.nation].ja} ${enemy.length} 隻  ${ships}`],
+      ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
+      ['初回報酬', reward],
     ];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       this.detailLayer.push(o);

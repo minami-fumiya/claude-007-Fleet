@@ -3,14 +3,17 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { canResearch, prerequisitesMet, research, techTier } from '@/systems/ResearchSystem';
+import { isBuildTech } from '@/systems/ShipyardSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { ITechNode } from '@/types/Progression';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
+import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import techTree from '@/data/tech-tree.json';
 
-const TREE = techTree.tech as ITechNode[];
+// Construction research (build_*) is shown on the 建造 tab next to the ships it unlocks.
+const TREE = (techTree.tech as ITechNode[]).filter((n) => !isBuildTech(n.id));
 
 const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, cols: 2, top: 290, cardW: (CANVAS_W - 32 - 12) / 2, cardH: 150, gapX: 12, gapY: 12, left: 16 }
@@ -38,6 +41,7 @@ export class ArsenalScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'ARSENAL', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '工廠 — 技術研究', displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, IS_PORTRAIT ? 2 : 4);
+    addArsenalTabs(this, 'research');
 
     // Order by tier so prerequisites come first.
     const ordered = [...TREE].sort((a, b) => techTier(TREE, a.id) - techTier(TREE, b.id));
