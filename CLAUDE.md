@@ -17,6 +17,7 @@ Turn-based/real-time naval combat featuring IJN, USN, Kriegsmarine, Royal Navy.
 | `npm run preview` | Preview production build locally |
 | `npm run test` | Run Vitest tests once |
 | `npm run test:watch` | Vitest in watch mode |
+| `npm run test:e2e` | Playwright screen tests (all menu screens, portrait + landscape, a sortie) |
 | `npm run typecheck` | TypeScript type check (no emit) |
 | `npm run lint` | ESLint on `src/` |
 
@@ -42,6 +43,7 @@ docs/
   specs/        # Game design documents (read order below)
 tests/
   unit/         # Vitest unit tests
+  e2e/          # Playwright screen tests (dev server, `window.game`)
 ```
 
 ---

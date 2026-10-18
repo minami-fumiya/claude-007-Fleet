@@ -46,12 +46,12 @@ describe('generateEnemyFleet', () => {
     expect(fleet.every((s) => s.shipClass === ShipClass.Submarine)).toBe(true);
   });
 
-  it('falls back to other classes when a nation lacks the wanted ones', () => {
+  it('falls back to other classes when a nation lacks the wanted ones, never repeating a ship (#76)', () => {
     const small = new ShipRegistry([ship('dd', ShipClass.Destroyer), ship('ss', ShipClass.Submarine)]);
     const surface = generateEnemyFleet(small, Nation.KM, BattleMode.Surface, first);
-    expect(surface.map((s) => s.id)).toEqual(['dd', 'dd', 'dd']);
+    expect(surface.map((s) => s.id)).toEqual(['dd', 'ss']);
     const onlySurface = new ShipRegistry([ship('ca', ShipClass.Cruiser)]);
-    expect(generateEnemyFleet(onlySurface, Nation.KM, BattleMode.ASW, first).map((s) => s.id)).toEqual(['ca', 'ca', 'ca']);
+    expect(generateEnemyFleet(onlySurface, Nation.KM, BattleMode.ASW, first).map((s) => s.id)).toEqual(['ca']);
   });
 
   it('returns an empty fleet for a nation without ships', () => {

@@ -38,9 +38,9 @@ import { Explosion } from '@/entities/effects/Explosion';
 import { WaterSplash } from '@/entities/effects/WaterSplash';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
-import { addChip, addOceanWorld, UIButton } from '@/ui/components/UIKit';
+import { addChip, addOceanWorld, addPanel, UIButton } from '@/ui/components/UIKit';
 import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
-import { Colors, Css, textStyle } from '@/ui/theme';
+import { Colors, Css, displayStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
@@ -107,6 +107,8 @@ const CONVOY_EXIT_MARGIN = 90;
 const OBJECTIVE_PRIORITY = 0.5;
 /** Enemy AI prefers convoy ships over warships by this much. */
 const CONVOY_PRIORITY = 0.6;
+/** A lost contact's last known position stays marked this long (ms, #98). */
+const LAST_SEEN_MS = 30_000;
 
 interface ISpecialData {
   convoy: IShipData;
@@ -209,6 +211,14 @@ export class BattleScene extends Phaser.Scene {
   private edgeMarkers!: Phaser.GameObjects.Graphics;
   /** Game-loop time of the first battle frame (-1 until then); the HUD clock and results count from it */
   private battleStartedAt = -1;
+  /** Pause (#79): while paused nothing advances; the battle clock is the game-loop time minus all paused time */
+  private paused = false;
+  private pauseStartedAt = 0;
+  private pausedMs = 0;
+  private pauseLayer: Phaser.GameObjects.GameObject[] = [];
+  /** Where each enemy was last seen (battle clock), drawn as a fading ring after contact is lost (#98) */
+  private lastSeen = new Map<BaseShip, { x: number; y: number; at: number }>();
+  private lastSeenMarks!: Phaser.GameObjects.Graphics;
 
   private aimAngle = 0;
   private gameOver = false;
@@ -254,6 +264,10 @@ export class BattleScene extends Phaser.Scene {
     // Set on the first update with the game-loop time: the scene clock in create() can be stale, which once made the
     // battle clock start at the time the page had been open (e.g. 14 minutes).
     this.battleStartedAt = -1;
+    this.paused = false;
+    this.pausedMs = 0;
+    this.pauseLayer = [];
+    this.lastSeen = new Map();
     this.aimTarget = { x: playerStart().x, y: playerStart().y - 300 };
     this.isTouch = this.sys.game.device.input.touch;
     this.autoMode = false;
@@ -339,8 +353,10 @@ export class BattleScene extends Phaser.Scene {
     this.setupOverlaps();
   }
 
-  update(time: number, delta: number): void {
-    if (this.gameOver) return;
+  update(loopTime: number, delta: number): void {
+    if (this.gameOver || this.paused) return;
+    // Everything in the battle runs on the battle clock, which stands still while paused (#79).
+    const time = loopTime - this.pausedMs;
     if (this.battleStartedAt < 0) this.battleStartedAt = time;
 
     // Flagship may have been destroyed by a physics overlap callback in the previous frame.
@@ -352,8 +368,8 @@ export class BattleScene extends Phaser.Scene {
 
     const dtSec = delta / 1000;
     this.updateSubmarines(dtSec);
-    this.playerRecon.update(time, delta, aaGuns(this.enemies));
-    this.enemyRecon.update(time, delta, aaGuns(this.playerSide()));
+    this.playerRecon.update(time, delta, aaGuns(this.enemies), this.enemies);
+    this.enemyRecon.update(time, delta, aaGuns(this.playerSide()), this.playerSide());
     this.updateDetection();
     const playerView = this.playerSide().map((s) => ({
       ...shipView(s, this.seenByEnemy.has(s)),
@@ -398,6 +414,7 @@ export class BattleScene extends Phaser.Scene {
     for (let i = 0; i < this.escorts.length; i++) {
       if (this.escorts[i].isAlive) {
         this.escortAISystems[i].update(this.escorts[i], this.flagship, enemyView, time, delta);
+        this.escorts[i].aiNote = this.escortAISystems[i].hunting ? '対潜攻撃' : '';
       }
     }
 
@@ -529,6 +546,7 @@ export class BattleScene extends Phaser.Scene {
     ship.envSpeedMul = this.conditions.speedMul;
     if (this.map.islands.length > 0) ship.avoid = (px, py, h) => avoidHeading(this.map, px, py, h);
     ship.mods = mods;
+    ship.clock = () => this.battleNow();
     const night = this.conditions.time === TimeOfDay.Night;
     ship.visionMul = mods.visionMul * (night ? mods.nightVisionMul : 1);
     ship.aimErrorMul = night ? mods.nightAimMul : 1;
@@ -718,13 +736,42 @@ export class BattleScene extends Phaser.Scene {
     return sources;
   }
 
+  /** Fading rings where enemies were last seen, for LAST_SEEN_MS after contact is lost (#98). */
+  private drawLastSeen(): void {
+    const now = this.battleNow();
+    const g = this.lastSeenMarks;
+    g.clear();
+    for (const enemy of this.enemies) {
+      if (!enemy.isAlive) {
+        this.lastSeen.delete(enemy);
+        continue;
+      }
+      if (this.seenByPlayer.has(enemy)) {
+        this.lastSeen.set(enemy, { x: enemy.x, y: enemy.y, at: now });
+        continue;
+      }
+      const seen = this.lastSeen.get(enemy);
+      if (!seen) continue;
+      const age = now - seen.at;
+      if (age > LAST_SEEN_MS) {
+        this.lastSeen.delete(enemy);
+        continue;
+      }
+      const alpha = 0.6 * (1 - age / LAST_SEEN_MS);
+      g.lineStyle(2, Colors.danger, alpha);
+      g.strokeCircle(seen.x, seen.y, 34);
+      g.lineBetween(seen.x - 10, seen.y - 10, seen.x + 10, seen.y + 10);
+      g.lineBetween(seen.x - 10, seen.y + 10, seen.x + 10, seen.y - 10);
+    }
+  }
+
   /** At night a ship that just fired is seen by any enemy within the flash range. */
   private flashed(ship: BaseShip, weapons: WeaponSystem, observers: BaseShip[]): boolean {
     const last = weapons.lastFiredAt(ship);
     if (last === undefined) return false;
     let nearest = Infinity;
     for (const o of observers) if (o.isAlive) nearest = Math.min(nearest, Phaser.Math.Distance.Between(ship.x, ship.y, o.x, o.y));
-    return revealedByFlash(this.conditions.time, last, this.time.now, nearest);
+    return revealedByFlash(this.conditions.time, last, this.battleNow(), nearest);
   }
 
   /**
@@ -756,6 +803,7 @@ export class BattleScene extends Phaser.Scene {
       ship.setAlpha(ship.submerged ? SUBMERGED_ALPHA : 1);
     }
     if (this.lockedTarget && !this.seenByPlayer.has(this.lockedTarget)) this.lockedTarget = null;
+    this.drawLastSeen();
     this.fog.update(playerSight);
   }
 
@@ -936,9 +984,14 @@ export class BattleScene extends Phaser.Scene {
       S: kb.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: kb.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
-    kb.on('keydown-Q', () => this.toggleDive());
-    kb.on('keydown-E', () => this.fireTorpedoes());
-    kb.on('keydown-F', () => this.launchPlayerStrike());
+    kb.on('keydown-Q', () => !this.paused && this.toggleDive());
+    kb.on('keydown-E', () => !this.paused && this.fireTorpedoes());
+    kb.on('keydown-F', () => !this.paused && this.launchPlayerStrike());
+    kb.on('keydown-P', () => this.setPaused(!this.paused));
+    kb.on('keydown-ESC', () => this.setPaused(!this.paused));
+    // Leaving the tab or locking the phone pauses the battle (#79).
+    this.game.events.on(Phaser.Core.Events.HIDDEN, this.onHidden, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off(Phaser.Core.Events.HIDDEN, this.onHidden, this));
     kb.on('keydown-M', () => this.toggleMute());
   }
 
@@ -955,7 +1008,7 @@ export class BattleScene extends Phaser.Scene {
       this.aimTarget = { x: pointer.worldX, y: pointer.worldY };
       this.updateAim();
       if (this.flagship.submerged && weaponKind(this.playerWeapon) !== WeaponKind.Torpedo) return;
-      this.playerWeapons.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.time.now);
+      this.playerWeapons.fireWeapon(this.flagship, this.playerWeapon, this.aimAngle, this.battleNow());
     });
   }
 
@@ -965,7 +1018,7 @@ export class BattleScene extends Phaser.Scene {
     if (torpedoes.length === 0 || this.gameOver) return;
     const target = this.isTouch || this.autoMode ? this.currentTarget() : null;
     const angle = target ? angleBetween(this.flagship.x, this.flagship.y, target.x, target.y) : this.aimAngle;
-    for (const w of torpedoes) this.playerWeapons.fireWeapon(this.flagship, w, angle, this.time.now);
+    for (const w of torpedoes) this.playerWeapons.fireWeapon(this.flagship, w, angle, this.battleNow());
   }
 
   /** Touch: tapping an enemy locks it as the target; tapping open sea sails there (and leaves AUTO). */
@@ -1087,7 +1140,7 @@ export class BattleScene extends Phaser.Scene {
     if (!target.isAlive) return;
     const crit = rollCriticalHit(weapon.type, dmg, target.stats.maxHp);
     if (!crit) return;
-    target.criticals = applyCritical(target.criticals, crit, this.time.now);
+    target.criticals = applyCritical(target.criticals, crit, this.battleNow());
     if (!target.visible) return;
     const friendly = this.playerSide().includes(target);
     const t = this.add
@@ -1175,8 +1228,16 @@ export class BattleScene extends Phaser.Scene {
   // Overlay UI
   // -------------------------------------------------------------------------
 
+  private onHidden(): void {
+    this.setPaused(true);
+  }
+
   private buildOverlayUi(): void {
     const b = TOP_BUTTON;
+    const pw = IS_PORTRAIT ? 140 : 110;
+    new UIButton(this, CANVAS_W / 2, b.y, this.isTouch ? '一時停止' : '一時停止 [P]', () => this.setPaused(true), {
+      variant: 'secondary', width: pw, height: b.h, fontSize: IS_PORTRAIT ? 15 : 13,
+    }).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     new UIButton(this, 20 + b.w / 2, b.y, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
       variant: 'secondary',
       width: b.w,
@@ -1200,6 +1261,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.sonarRings = this.add.graphics().setDepth(DEPTH_WATER_FX);
+    this.lastSeenMarks = this.add.graphics().setDepth(DEPTH_WATER_FX + 1);
     this.reticle = this.add.graphics().setDepth(DEPTH_HUD - 1);
     this.edgeMarkers = this.add.graphics().setDepth(DEPTH_HUD - 1).setScrollFactor(0);
   }
@@ -1266,7 +1328,7 @@ export class BattleScene extends Phaser.Scene {
   private drawReticle(): void {
     const g = this.reticle;
     g.clear();
-    const ready = this.playerWeapons.reloadProgress(this.flagship, this.playerWeapon, this.time.now) >= 1;
+    const ready = this.playerWeapons.reloadProgress(this.flagship, this.playerWeapon, this.battleNow()) >= 1;
 
     if (!this.isTouch) {
       const { x, y } = this.aimTarget;
@@ -1357,9 +1419,58 @@ export class BattleScene extends Phaser.Scene {
     return reports;
   }
 
-  /** Seconds since the first battle frame, on the game-loop clock the HUD uses. */
+  /** The battle clock (ms): game-loop time without the time spent paused (#79). */
+  private battleNow(): number {
+    return (this.paused ? this.pauseStartedAt : this.game.loop.time) - this.pausedMs;
+  }
+
+  /** Seconds since the first battle frame, on the battle clock. */
   private elapsedSec(): number {
-    return this.battleStartedAt < 0 ? 0 : (this.game.loop.time - this.battleStartedAt) / 1000;
+    return this.battleStartedAt < 0 ? 0 : (this.battleNow() - this.battleStartedAt) / 1000;
+  }
+
+  /** Stops (or resumes) the battle: physics, tweens, timers, AI and the battle clock (#79). */
+  private setPaused(paused: boolean): void {
+    if (paused === this.paused || this.gameOver) return;
+    if (paused) {
+      this.pauseStartedAt = this.game.loop.time;
+      this.paused = true;
+      this.physics.world.pause();
+      this.tweens.pauseAll();
+      this.time.paused = true;
+      this.showPauseMenu();
+    } else {
+      this.pausedMs += this.game.loop.time - this.pauseStartedAt;
+      this.paused = false;
+      this.physics.world.resume();
+      this.tweens.resumeAll();
+      this.time.paused = false;
+      for (const o of this.pauseLayer) o.destroy();
+      this.pauseLayer = [];
+    }
+  }
+
+  private showPauseMenu(): void {
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(DEPTH_HUD + 20);
+      this.pauseLayer.push(o);
+      return o;
+    };
+    // Swallows taps so the sea and HUD underneath don't react.
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.6).setOrigin(0, 0).setInteractive());
+    const w = IS_PORTRAIT ? CANVAS_W - 96 : 420;
+    const h = IS_PORTRAIT ? 380 : 300;
+    const x = (CANVAS_W - w) / 2;
+    const y = (CANVAS_H - h) / 2;
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
+    add(this.add.text(CANVAS_W / 2, y + 48, '一時停止中', displayStyle(IS_PORTRAIT ? 30 : 26)).setOrigin(0.5));
+    const bh = IS_PORTRAIT ? 72 : 56;
+    add(new UIButton(this, CANVAS_W / 2, y + h / 2 + 8, '再開  ▶', () => this.setPaused(false), { variant: 'gold', width: w - 64, height: bh, fontSize: 20 }));
+    add(new UIButton(this, CANVAS_W / 2, y + h - bh / 2 - 28, '撤退する', () => {
+      this.setPaused(false);
+      this.scene.start(SceneKeys.FLEET_BUILDER);
+    }, { variant: 'secondary', width: w - 64, height: bh - 8, fontSize: 16 }));
   }
 
   private triggerGameOver(victory: boolean): void {

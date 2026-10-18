@@ -100,3 +100,51 @@ export function reconPatrol(
     heading: orbit + Math.PI / 2,
   };
 }
+
+/** A recon plane stays on a contact this long before it must go home (fuel), ms (#98). */
+export const SHADOW_MS = 90_000;
+/** Radius of the circle a shadowing plane flies around its contact. */
+export const SHADOW_RADIUS = 200;
+
+/** Worth of a contact to a scout: carriers and battleships first (#98). */
+export function shadowValue(shipClass: ShipClass): number {
+  switch (shipClass) {
+    case ShipClass.Carrier: return 5;
+    case ShipClass.Battleship: return 4;
+    case ShipClass.Cruiser: return 3;
+    case ShipClass.Destroyer: return 2;
+    default: return 1;
+  }
+}
+
+export interface IShadowCandidate<T> {
+  ref: T;
+  x: number;
+  y: number;
+  shipClass: ShipClass;
+  /** Submerged boats can't be shadowed from the air */
+  submerged: boolean;
+}
+
+/**
+ * The contact a patrolling scout starts shadowing: the most valuable surface ship inside its cone that no other scout
+ * of the side is already on (ties: the nearest). Null when the cone holds nothing new (#98).
+ */
+export function pickShadowTarget<T>(cone: IVisionCone, candidates: IShadowCandidate<T>[], taken: Set<T>): T | null {
+  let best: IShadowCandidate<T> | null = null;
+  let bestScore = -Infinity;
+  for (const c of candidates) {
+    if (c.submerged || taken.has(c.ref) || !inSource(c.x, c.y, cone)) continue;
+    const score = shadowValue(c.shipClass) * 10000 - Math.hypot(c.x - cone.x, c.y - cone.y);
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return best ? best.ref : null;
+}
+
+/** Where a shadowing plane flies: around its contact, `orbit` radians along the circle. */
+export function shadowOrbit(targetX: number, targetY: number, orbit: number, radius = SHADOW_RADIUS): { x: number; y: number } {
+  return { x: targetX + Math.cos(orbit) * radius, y: targetY + Math.sin(orbit) * radius };
+}
