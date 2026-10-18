@@ -8,6 +8,7 @@ import { displayStyle, eyebrowStyle } from '@/ui/theme';
 import { addBackdrop, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { ResearchView } from '@/ui/components/ResearchView';
+import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 
 const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, view: { x: 16, y: 282, w: CANVAS_W - 32, h: CANVAS_H - 282 - 24 } }
@@ -34,6 +35,7 @@ export class ArsenalScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'ARSENAL', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '工廠 — 技術研究', displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, IS_PORTRAIT ? 2 : 4);
+    addArsenalTabs(this, 'research');
     this.view = new ResearchView(
       this,
       L.view,

@@ -1,7 +1,7 @@
 # Progression Spec — 鎮守府・資源・入渠・研究 (Sprint 6)
 
 Implementation: `ResourceSystem.ts`, `DockSystem.ts`, `ResearchSystem.ts`, `ProgressionSystem.ts` (pure, tested),
-`src/data/tech-tree.json`, scenes `HomeScene` / `ArsenalScene`, progress in `ProgressStore` (localStorage `ww2fleet.progress.v1`).
+`src/data/tech-tree.json`, scenes `HomeScene` / `ArsenalScene`, progress in `ProgressStore` (localStorage `ww2fleet.progress.v2`, per nation since Sprint 12 — see `nation-progress.md`).
 
 ## Flow
 タイトル → **鎮守府** (resources, docks) → 出撃 (Fleet Builder) / 工廠 (research) / 改装 (refit) → battle → results → 鎮守府.
@@ -9,8 +9,10 @@ Implementation: `ResourceSystem.ts`, `DockSystem.ts`, `ResearchSystem.ts`, `Prog
 ## Resources
 | | 燃料 fuel | 弾薬 ammo | 鋼材 steel | ボーキ bauxite |
 |---|---|---|---|---|
-| Start | 1500 | 1500 | 1500 | 800 |
-Cap 20000 each.
+| Start (new nation, Sprint 12) | 0 | 0 | 0 | 0 |
+| Natural regeneration per minute (up to 1500) | +3 | +3 | +3 | +1 |
+Cap 20000 each. Pre-Sprint-6 v1 saves without resources still migrate with 1500 / 1500 / 1500 / 800.
+Each nation has its own resources, docks and research (`nation-progress.md`).
 
 ### Sortie cost (per ship)
 | Class | fuel | ammo | bauxite |
@@ -21,10 +23,12 @@ Cap 20000 each.
 | Destroyer | 15 | 20 | — |
 | Submarine | 10 | 15 | — |
 The Fleet Builder shows the cost; the sortie is blocked (with the reason) when resources are short or a ship is in dock.
+演習 (free battle) and the first area of each theater are free; 演習 also allows docked ships (Sprint 12).
 
 ### Battle reward
 Per enemy sunk: fuel 40 / ammo 40 / steel 60 / bauxite 20 (halved on a defeat). Victory bonus: 100 / 100 / 120 / 50.
 Each carrier aircraft shot down costs 6 bauxite to replace. Shown on the results screen.
+演習: half the reward, no aircraft cost, and no damage is kept (ships also start at full HP).
 
 ## Damage and docks
 - Ships keep the HP fraction they finished with; a ship sunk in battle returns 大破 at 10% (never lost).
@@ -69,5 +73,7 @@ New modifier fields (`IShipModifiers`): `airPowerMul` (bomb / aerial torpedo dam
 selected branch's projects ordered by level (`ResearchView` component). Each card shows the level, effect,
 prerequisites (other branches named in brackets, red while unmet), cost and state (研究済 / 研究可 / 資源不足 / 前提未達).
 A line under the tabs sums the branch's current effect.
+
+| build_cruiser / build_battleship / build_carrier / build_submarine | 〜建造 | — (battleship: build_cruiser) | — | building that class (工廠 › 建造) |
 
 `強装薬` needs no research. Locked upgrades show 要研究 in the refit screen and are ignored in battle.

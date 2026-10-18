@@ -4,7 +4,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { clampVolume, ISettings, stepVolume } from '@/systems/SettingsSystem';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
-import { emptyProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { emptySave, loadSave, saveSave } from '@/utils/ProgressStore';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
 
@@ -133,7 +133,7 @@ export class SettingsScene extends Phaser.Scene {
 
   private exportSave(): void {
     this.resetArmed = false;
-    const code = encodeSave(loadProgress());
+    const code = encodeSave(loadSave());
     const fallback = (): void => {
       window.prompt('このセーブコードをコピーしてください', code);
       this.say('セーブコードを表示しました');
@@ -146,20 +146,20 @@ export class SettingsScene extends Phaser.Scene {
     this.resetArmed = false;
     const text = window.prompt('セーブコードを貼り付けてください');
     if (!text) return;
-    const progress = decodeSave(text);
-    if (!progress) return this.say('セーブコードが正しくありません。読み込みを中止しました。', Css.danger);
-    saveProgress(progress);
+    const save = decodeSave(text);
+    if (!save) return this.say('セーブコードが正しくありません。読み込みを中止しました。', Css.danger);
+    saveSave(save);
     this.say('セーブコードを読み込みました');
   }
 
   private resetSave(): void {
     if (!this.resetArmed) {
       this.resetArmed = true;
-      this.say('進行データ (資源・研究・攻略状況・戦績など) がすべて消えます。', Css.danger);
+      this.say('全ての国の進行データ (資源・保有艦・研究・攻略状況・戦績など) が消えます。', Css.danger);
       return;
     }
     this.resetArmed = false;
-    saveProgress(emptyProgress());
+    saveSave(emptySave());
     this.say('進行データをリセットしました');
   }
 }

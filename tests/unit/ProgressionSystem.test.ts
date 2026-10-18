@@ -11,14 +11,14 @@ const bb: IShipData = { id: 'bb', name: '戦艦', nation: Nation.IJN, shipClass:
 
 describe('ProgressionSystem', () => {
   it('pays for a sortie and refuses when short', () => {
-    const p = emptyProgress();
+    const p = { ...emptyProgress(), resources: resources({ fuel: 500, ammo: 500 }) };
     const after = paySortie(p, [bb])!;
     expect(after.resources.fuel).toBeLessThan(p.resources.fuel);
     expect(paySortie({ ...p, resources: resources() }, [bb])).toBeNull();
   });
 
   it('blocks sorties for docked ships or missing resources', () => {
-    const p = emptyProgress();
+    const p = { ...emptyProgress(), resources: resources({ fuel: 500, ammo: 500 }) };
     expect(sortieBlockers(p, [bb], 0)).toEqual([]);
     const docked = { ...p, damage: { bb: 0.5 }, docks: [{ shipId: 'bb', endsAt: 1000 }] };
     expect(sortieBlockers(docked, [bb], 0)).toEqual(['戦艦 は入渠中']);

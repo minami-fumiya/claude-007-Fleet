@@ -1,4 +1,5 @@
 import { Nation } from './Nation';
+import { ShipClass } from './ShipClass';
 import { IResources } from './Progression';
 import { TimeOfDay, Weather } from './Weather';
 
@@ -37,6 +38,8 @@ export interface ICampaignArea {
   time: TimeOfDay;
   /** Paid on the first clear */
   reward: Partial<IResources>;
+  /** Class of the ship the first clear adds to the player's nation (see ShipyardSystem.rewardShipFor) */
+  rewardShip?: ShipClass;
 }
 
 export interface ITheater {

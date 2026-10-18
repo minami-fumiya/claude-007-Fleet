@@ -14,6 +14,7 @@ import { unlockedUpgrades } from '@/systems/ResearchSystem';
 import techTree from '@/data/tech-tree.json';
 import { canRefit, currentStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { formatResources } from '@/systems/ResourceSystem';
+import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
@@ -73,8 +74,10 @@ export class CustomizationScene extends Phaser.Scene {
   create(): void {
     const selection = this.registry.get(SELECTION_KEY) as ISelection | undefined;
     const registry = DataLoader.getRegistry(this);
+    // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.
+    const owned = ownedShips(loadProgress(), registry.byNation(loadProgress().nation));
     this.ships = (selection?.slotIds ?? [])
-      .map((id) => (id ? registry.byId(id) : undefined))
+      .map((id) => owned.find((s) => s.id === id))
       .filter((s): s is IShipData => s !== undefined);
     this.catalog = DataLoader.getUpgrades(this);
     this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));

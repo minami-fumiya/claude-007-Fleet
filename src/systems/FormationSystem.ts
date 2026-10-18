@@ -37,6 +37,17 @@ export class FormationSystem {
     return FORMATION_CONFIGS[formation].slotOffsets;
   }
 
+  /**
+   * Offset of escort `index` for fleets larger than the formation's table: the pattern repeats further astern,
+   * one table depth per repetition (so a 6-ship line ahead keeps going back in a line).
+   */
+  static getOffset(formation: Formation, index: number): IFormationSlotOffset {
+    const table = FORMATION_CONFIGS[formation].slotOffsets;
+    const base = table[index % table.length];
+    const depth = Math.min(...table.map((o) => o.forward));
+    return { forward: base.forward + Math.floor(index / table.length) * depth, right: base.right };
+  }
+
   /** Returns world-space position for a formation slot given raw values (testable without Phaser). */
   static getWorldPositionFromValues(
     fx: number,
