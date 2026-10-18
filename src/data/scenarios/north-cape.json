@@ -11,7 +11,7 @@
     "B": { "nation": "RN", "ships": ["king_george_v", "belfast", "javelin"], "positions": [{ "x": 0.38, "y": 0.86, "angle": 30 }, { "x": 0.52, "y": 0.12, "angle": 150 }, { "x": 0.46, "y": 0.8, "angle": 30 }] }
   },
   "sides": [
-    { "force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["scharnhorst"], "zone": { "x": 0.92, "y": 0.5, "r": 0.06, "label": "ノルウェー沿岸" }, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "シャルンホルストがノルウェー沿岸に逃げ込む前に撃沈せよ。" },
-    { "force": "A", "label": "シャルンホルストで帰投", "objective": "Breakthrough", "zone": { "x": 0.92, "y": 0.5, "r": 0.06, "label": "ノルウェー沿岸" }, "timeLimitSec": 300, "brief": "英艦隊の包囲をかわし、ノルウェー沿岸へ逃げ込め。" }
+    { "force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["scharnhorst"], "zone": { "x": 0.92, "y": 0.5, "r": 0.036, "label": "ノルウェー沿岸" }, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "シャルンホルストがノルウェー沿岸に逃げ込む前に撃沈せよ。" },
+    { "force": "A", "label": "シャルンホルストで帰投", "objective": "Breakthrough", "zone": { "x": 0.92, "y": 0.5, "r": 0.036, "label": "ノルウェー沿岸" }, "timeLimitSec": 300, "brief": "英艦隊の包囲をかわし、ノルウェー沿岸へ逃げ込め。" }
   ]
 }

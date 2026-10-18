@@ -11,7 +11,7 @@
     "B": { "nation": "USN", "ships": ["north_carolina", "fletcher", "fletcher"], "positions": [{ "x": 0.62, "y": 0.7, "angle": 315 }, { "x": 0.72, "y": 0.62, "angle": 315 }, { "x": 0.54, "y": 0.8, "angle": 315 }] }
   },
   "sides": [
-    { "force": "A", "label": "挺身攻撃隊で突入", "objective": "Breakthrough", "zone": { "x": 0.88, "y": 0.86, "r": 0.08, "label": "飛行場沖" }, "timeLimitSec": 300, "brief": "夜陰に乗じ、制限時間内に旗艦を飛行場沖へ突入させよ。" },
-    { "force": "B", "label": "米艦隊で迎撃", "objective": "Delay", "targets": ["kongo"], "zone": { "x": 0.88, "y": 0.86, "r": 0.08, "label": "飛行場沖" }, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "敵戦艦を飛行場沖に入れるな。時間を稼ぐか、撃沈せよ。" }
+    { "force": "A", "label": "挺身攻撃隊で突入", "objective": "Breakthrough", "zone": { "x": 0.88, "y": 0.86, "r": 0.048, "label": "飛行場沖" }, "timeLimitSec": 300, "brief": "夜陰に乗じ、制限時間内に旗艦を飛行場沖へ突入させよ。" },
+    { "force": "B", "label": "米艦隊で迎撃", "objective": "Delay", "targets": ["kongo"], "zone": { "x": 0.88, "y": 0.86, "r": 0.048, "label": "飛行場沖" }, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "敵戦艦を飛行場沖に入れるな。時間を稼ぐか、撃沈せよ。" }
   ]
 }

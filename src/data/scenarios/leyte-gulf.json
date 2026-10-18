@@ -11,7 +11,7 @@
     "B": { "nation": "USN", "ships": ["enterprise", "fletcher", "gearing"], "positions": [{ "x": 0.5, "y": 0.16, "angle": 180 }, { "x": 0.4, "y": 0.26, "angle": 180 }, { "x": 0.6, "y": 0.26, "angle": 180 }] }
   },
   "sides": [
-    { "force": "A", "label": "栗田艦隊で突入", "objective": "Breakthrough", "zone": { "x": 0.5, "y": 0.06, "r": 0.08, "label": "レイテ湾" }, "timeLimitSec": 300, "brief": "制限時間内に旗艦をレイテ湾へ突入させよ。" },
-    { "force": "B", "label": "米艦隊で阻止", "objective": "Delay", "targets": ["yamato"], "zone": { "x": 0.5, "y": 0.06, "r": 0.08, "label": "レイテ湾" }, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "大和をレイテ湾に入れるな。時間を稼ぐか、大和を撃沈せよ。" }
+    { "force": "A", "label": "栗田艦隊で突入", "objective": "Breakthrough", "zone": { "x": 0.5, "y": 0.06, "r": 0.048, "label": "レイテ湾" }, "timeLimitSec": 300, "brief": "制限時間内に旗艦をレイテ湾へ突入させよ。" },
+    { "force": "B", "label": "米艦隊で阻止", "objective": "Delay", "targets": ["yamato"], "zone": { "x": 0.5, "y": 0.06, "r": 0.048, "label": "レイテ湾" }, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "大和をレイテ湾に入れるな。時間を稼ぐか、大和を撃沈せよ。" }
   ]
 }

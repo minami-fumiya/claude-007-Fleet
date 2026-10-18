@@ -11,7 +11,7 @@
     "B": { "nation": "RN", "ships": ["king_george_v", "hood", "cossack"], "positions": [{ "x": 0.42, "y": 0.86, "angle": 30 }, { "x": 0.36, "y": 0.9, "angle": 30 }, { "x": 0.5, "y": 0.82, "angle": 30 }] }
   },
   "sides": [
-    { "force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["bismarck"], "zone": { "x": 0.97, "y": 0.5, "r": 0.2, "label": "脱出海域" }, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "ビスマルクが東の脱出海域に達する前に撃沈せよ。" },
-    { "force": "A", "label": "ビスマルクで突破", "objective": "Breakthrough", "zone": { "x": 0.97, "y": 0.5, "r": 0.2, "label": "脱出海域" }, "timeLimitSec": 300, "brief": "英艦隊を振り切り、東の脱出海域へ逃れよ。" }
+    { "force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["bismarck"], "zone": { "x": 0.97, "y": 0.5, "r": 0.12, "label": "脱出海域" }, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "ビスマルクが東の脱出海域に達する前に撃沈せよ。" },
+    { "force": "A", "label": "ビスマルクで突破", "objective": "Breakthrough", "zone": { "x": 0.97, "y": 0.5, "r": 0.12, "label": "脱出海域" }, "timeLimitSec": 300, "brief": "英艦隊を振り切り、東の脱出海域へ逃れよ。" }
   ]
 }
