@@ -10,7 +10,8 @@ Implementation: `ResourceSystem.ts`, `DockSystem.ts`, `ResearchSystem.ts`, `Prog
 | | 燃料 fuel | 弾薬 ammo | 鋼材 steel | ボーキ bauxite |
 |---|---|---|---|---|
 | Start (new nation, Sprint 12) | 0 | 0 | 0 | 0 |
-| Natural regeneration per minute (up to 1500) | +3 | +3 | +3 | +1 |
+| Natural regeneration per minute (up to 1500) | +3 | +3 | +5 | +1 |
+Steel regenerates fastest because building, repairs, refits and research all spend most steel (#35).
 Cap 20000 each. Pre-Sprint-6 v1 saves without resources still migrate with 1500 / 1500 / 1500 / 800.
 Each nation has its own resources, docks and research (`nation-progress.md`).
 
@@ -26,14 +27,14 @@ The Fleet Builder shows the cost; the sortie is blocked (with the reason) when r
 演習 (free battle) and the first area of each theater are free; 演習 also allows docked ships (Sprint 12).
 
 ### Battle reward
-Per enemy sunk: fuel 40 / ammo 40 / steel 60 / bauxite 20 (halved on a defeat). Victory bonus: 100 / 100 / 120 / 50.
+Per enemy sunk: fuel 40 / ammo 40 / steel 80 / bauxite 20 (halved on a defeat). Victory bonus: 100 / 100 / 160 / 50 (steel raised in #35).
 Each carrier aircraft shot down costs 6 bauxite to replace. Shown on the results screen.
 演習: half the reward, no aircraft cost, and no damage is kept (ships also start at full HP).
 
 ## Damage and docks
 - Ships keep the HP fraction they finished with; a ship sunk in battle returns 大破 at 10% (never lost).
 - Fleet Builder shows `HP x / max` with 小破 (>50%) / 中破 (≤50%) / 大破 (≤25%) / 入渠中.
-- 2 docks repair in real time: 40 ms per HP; cost fuel 0.2 + steel 0.4 per missing HP.
+- 2 docks repair in real time: 40 ms per HP; cost fuel 0.25 + steel 0.25 per missing HP (was 0.2 / 0.4 before #35).
 - 高速修理 finishes a docked ship immediately for fuel 40 + steel 80.
 
 ## Research (工廠) — Sprint 12: branches and levels I–V

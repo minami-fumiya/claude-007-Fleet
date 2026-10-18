@@ -5,7 +5,8 @@
  * the shared record, so `loadProgress()` / `saveProgress()` read and write the nation being played.
  *
  * Stored in localStorage when available; every access is guarded so a blocked or missing storage only loses
- * persistence. Saves from before v2 (one flat progress object) are migrated into the IJN slot.
+ * persistence. Saves from before v2 (one flat progress object) are migrated into the IJN slot; later format changes
+ * are step-by-step migrations in SaveMigration (#60).
  */
 
 import { IDockJob, IResources } from '@/types/Progression';
@@ -15,11 +16,12 @@ import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
 import { IServiceRecord } from '@/types/Record';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import ijnShips from '@/data/ships/ijn.json';
+import { FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
 export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = LATEST_VERSION;
 
 /** Everything one nation's admiral has built up. */
 export interface INationProgress {
@@ -45,9 +47,9 @@ export interface INationProgress {
   campaign: string[];
 }
 
-/** The whole save (v2). */
+/** The whole save (v2 and later). */
 export interface ISave {
-  version: typeof SAVE_VERSION;
+  version: number;
   /** Nation being played; its slot may not exist yet (a brand-new save still has to pick one) */
   current: Nation;
   nations: Partial<Record<Nation, INationProgress>>;
@@ -179,14 +181,14 @@ function legacyIjnFleet(): string[] {
 export function migrateV1(data: Record<string, unknown>): ISave {
   const ijn = parseNation(data, LEGACY_STARTING_RESOURCES);
   return {
-    version: SAVE_VERSION,
+    version: FIRST_VERSION,
     current: Nation.IJN,
     nations: { [Nation.IJN]: { ...ijn, ships: legacyIjnFleet() } },
     record: parseRecord(data.record),
   };
 }
 
-function parseV2(data: Record<string, unknown>): ISave {
+function parseLatest(data: Record<string, unknown>): ISave {
   const nations: Partial<Record<Nation, INationProgress>> = {};
   if (isObject(data.nations)) {
     for (const [key, value] of Object.entries(data.nations)) {
@@ -201,17 +203,19 @@ function parseV2(data: Record<string, unknown>): ISave {
   };
 }
 
+/** True for a per-nation save (v2 or later); anything else is read as a v1 save. */
 export function isV2(data: Record<string, unknown>): boolean {
-  return data.version === SAVE_VERSION || isObject(data.nations);
+  return (isNum(data.version) && data.version >= FIRST_VERSION) || isObject(data.nations);
 }
 
-/** Parses a stored save of either version, ignoring anything malformed. */
+/** Parses a stored save of any version, migrating it to the latest and ignoring anything malformed. */
 export function parseSave(raw: string | null): ISave {
   if (!raw) return emptySave();
   try {
     const data: unknown = JSON.parse(raw);
     if (!isObject(data)) return emptySave();
-    return isV2(data) ? parseV2(data) : migrateV1(data);
+    const v2 = isV2(data) ? data : (migrateV1(data) as unknown as Record<string, unknown>);
+    return parseLatest(runMigrations(v2));
   } catch {
     return emptySave();
   }
