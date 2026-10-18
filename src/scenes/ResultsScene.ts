@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { IBattleResultData } from '@/types/Scene';
@@ -14,7 +15,7 @@ const BACK_LABEL: Record<string, string> = {
   [SceneKeys.CAMPAIGN]: '作戦地図へ戻る',
   [SceneKeys.SCENARIO]: 'シナリオ選択へ戻る',
 };
-/** Landscape: 7 lines (campaign, reward, cost, medals, 3 captains) must still fit in 720 px. */
+/** Landscape: 8 lines (campaign, reward, cost, medals, merit, 3 captains) must still fit in 720 px. */
 const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
 /** Landscape: more than 3 captains (fleets of up to 8) go in two columns so the card still fits. */
 const REPORT_COLS_FROM = 4;
@@ -26,6 +27,8 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   create(data: IBattleResultData): void {
+    // First-play tutorial (#90): drawn above the screen, so it can be made first.
+    new TutorialGuide(this);
     const victory = data?.victory ?? false;
     const accent = victory ? Colors.gold : Colors.danger;
     const accentCss = victory ? Css.gold : Css.danger;
@@ -38,7 +41,7 @@ export class ResultsScene extends Phaser.Scene {
     const reports = data?.captainReports ?? [];
     // The campaign line ("海域攻略: … 初回報酬 …") is split at its reward so neither half runs off the card (#69).
     const campaignLines = (data?.campaign ?? '').split(/\s{2,}(?=初回報酬)/);
-    const rewardLines = [...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : ''].filter((l) => l);
+    const rewardLines = [...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? ''].filter((l) => l);
     // Long lines wrap inside the card; their measured heights size the report area.
     const rewardTexts = rewardLines.map((line) =>
       this.add.text(CANVAS_W / 2, 0, line, textStyle(14, Css.cyan, { fontStyle: 'bold', align: 'center', wordWrap: { width: CARD_W - 56, useAdvancedWrap: true } })).setOrigin(0.5, 0),

@@ -49,15 +49,15 @@ export const FORMATION_RULES: Record<Formation, IFormationRule> = {
   },
   [Formation.Echelon]: {
     ja: '梯形陣', en: 'ECHELON', summary: '対潜 +20%・回避 +5% / 砲 −8%',
-    all: { depthChargeMul: 1.2, sonarMul: 1.15, evadeAdd: 0.05, gunPowerMul: 0.92 }, flagshipPriority: 0, minRank: 1,
+    all: { depthChargeMul: 1.2, sonarMul: 1.15, evadeAdd: 0.05, gunPowerMul: 0.92 }, flagshipPriority: 0, minRank: 2,
   },
   [Formation.LineAbreast]: {
     ja: '単横陣', en: 'LINE ABREAST', summary: '対潜 +40%・ソナー +30% / 砲 −25%',
-    all: { depthChargeMul: 1.4, sonarMul: 1.3, gunPowerMul: 0.75, torpedoPowerMul: 0.9 }, flagshipPriority: 0, minRank: 2,
+    all: { depthChargeMul: 1.4, sonarMul: 1.3, gunPowerMul: 0.75, torpedoPowerMul: 0.9 }, flagshipPriority: 0, minRank: 4,
   },
   [Formation.Vanguard]: {
     ja: '警戒陣', en: 'VANGUARD', summary: '前衛の回避 +12%・旗艦を守る / 砲 −15%',
-    all: { gunPowerMul: 0.85 }, escorts: { evadeAdd: 0.12 }, flagship: { evadeAdd: 0.06 }, flagshipPriority: -0.3, minRank: 3,
+    all: { gunPowerMul: 0.85 }, escorts: { evadeAdd: 0.12 }, flagship: { evadeAdd: 0.06 }, flagshipPriority: -0.3, minRank: 7,
   },
 };
 

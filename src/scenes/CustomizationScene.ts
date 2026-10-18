@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { selectionFor } from '@/scenes/FleetBuilderScene';
@@ -72,6 +73,8 @@ export class CustomizationScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-play tutorial (#90): drawn above the screen, so it can be made first.
+    new TutorialGuide(this);
     const selection = selectionFor(this.registry, loadProgress().nation);
     const registry = DataLoader.getRegistry(this);
     // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.

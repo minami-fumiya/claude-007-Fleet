@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { restartTutorial } from '@/systems/TutorialSystem';
+import { loadSave, saveSave } from '@/utils/ProgressStore';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { CONTROLS } from '@/config/Controls';
@@ -52,6 +54,13 @@ export class HelpScene extends Phaser.Scene {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, 'ヘルプ', displayStyle(24)).setOrigin(0.5);
+    // Replays the first-play tutorial from the home port (#90).
+    const tw = IS_PORTRAIT ? 230 : 230;
+    new UIButton(this, CANVAS_W - 20 - tw / 2, back.y, 'チュートリアルをもう一度', () => {
+      saveSave(restartTutorial(loadSave()));
+      this.registry.remove('tutorial.seen');
+      this.scene.start(SceneKeys.HOME);
+    }, { variant: 'secondary', width: tw, height: back.h, fontSize: 13 });
     addPanel(this, P.x, P.y, P.w, P.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
     this.refresh();
   }

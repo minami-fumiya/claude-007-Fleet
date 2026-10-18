@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
@@ -25,6 +26,7 @@ import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
 import { IResolvedMap } from '@/types/Map';
+import { addMerit, meritFor, rankOf } from '@/systems/RankSystem';
 import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
@@ -351,6 +353,10 @@ export class BattleScene extends Phaser.Scene {
     this.buildOverlayUi();
     this.setupClickFire();
     this.setupOverlaps();
+    // First-play tutorial (#90): the battle waits while its explanation is open (not in historical scenarios).
+    if (!this.scenario) {
+      new TutorialGuide(this, { chip: false, onOpen: () => this.setPaused(true, false), onClose: () => this.setPaused(false) });
+    }
   }
 
   update(loopTime: number, delta: number): void {
@@ -1432,7 +1438,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Stops (or resumes) the battle: physics, tweens, timers, AI and the battle clock (#79). */
-  private setPaused(paused: boolean): void {
+  /** `menu` false pauses without the pause menu (another sheet, e.g. the tutorial, is on screen). */
+  private setPaused(paused: boolean, menu = true): void {
     if (paused === this.paused || this.gameOver) return;
     if (paused) {
       this.pauseStartedAt = this.game.loop.time;
@@ -1440,7 +1447,7 @@ export class BattleScene extends Phaser.Scene {
       this.physics.world.pause();
       this.tweens.pauseAll();
       this.time.paused = true;
-      this.showPauseMenu();
+      if (menu) this.showPauseMenu();
     } else {
       this.pausedMs += this.game.loop.time - this.pauseStartedAt;
       this.paused = false;
@@ -1516,15 +1523,17 @@ export class BattleScene extends Phaser.Scene {
     progress = { ...progress, proficiency };
     const areaId = this.battleData?.areaId;
     const area = areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === areaId) : undefined;
+    let firstClear = false;
     if (area && victory) {
       const rec = recordClear(progress.campaign, area.id);
+      firstClear = rec.firstClear;
       progress = { ...progress, campaign: rec.cleared };
       let newShip = '';
       if (rec.firstClear) {
         progress = { ...progress, resources: addResources(progress.resources, area.reward) };
         // First-clear ship (#18): one of this nation's ships of the area's reward class.
         const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-        const ship = rewardShipFor(area.rewardShip, roster, ownedIds(progress, roster));
+        const ship = rewardShipFor(area.rewardShip, roster, ownedIds(progress, roster), area.id);
         if (ship) {
           progress = grantShip(progress, roster, ship.id);
           newShip = `  新しい艦: ${ship.name.replace(/\s*\(.*\)\s*$/, '')}`;
@@ -1538,8 +1547,17 @@ export class BattleScene extends Phaser.Scene {
     } else if (this.exercise) {
       result.campaign = '演習: 損傷なし・資源報酬は半分';
     }
+    // Merit (戦功, #36): first clears count most; the rank (and slots, docks, ship grades) follow from it.
+    const before = rankOf(progress);
+    const merit = meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk });
+    const promoted = addMerit(progress, merit);
+    progress = promoted.progress;
+    if (merit > 0) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
     saveProgress(progress);
+    // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
+    emitTutorial('battleEnd', this.registry);
+    if (firstClear) emitTutorial('firstClear', this.registry);
     result.reward = formatResources(settlement.reward);
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));

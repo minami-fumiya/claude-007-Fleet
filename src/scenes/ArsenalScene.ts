@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
@@ -19,6 +20,7 @@ const L = IS_PORTRAIT
  * finished research strengthens every ship, unlocks refit upgrades and ship construction.
  */
 export class ArsenalScene extends Phaser.Scene {
+  private guide!: TutorialGuide;
   private bar!: ResourceBar;
   private view!: ResearchView;
 
@@ -27,6 +29,7 @@ export class ArsenalScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.guide = new TutorialGuide(this);
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
@@ -53,6 +56,7 @@ export class ArsenalScene extends Phaser.Scene {
     const result = research(node, progress.research, progress.resources);
     if (!result) return;
     saveProgress({ ...progress, research: result.done, resources: result.resources });
+    if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.bar.refresh(result.resources);
     this.view.refresh();
   }
