@@ -1,103 +1,278 @@
 /**
- * Player progress that survives reloads: captain XP and fitted upgrades. Stored in localStorage
- * when available; every access is guarded so a blocked or missing storage only loses persistence.
+ * Player progress that survives reloads (save v2, #27). One save holds a separate progress slot per nation
+ * (resources, docks, research, owned ships, ...) plus what is shared by all of them (the service record and
+ * medals; settings live in their own key). Scenes work on an `IProgress` *view*: the current nation's slot plus
+ * the shared record, so `loadProgress()` / `saveProgress()` read and write the nation being played.
+ *
+ * Stored in localStorage when available; every access is guarded so a blocked or missing storage only loses
+ * persistence. Saves from before v2 (one flat progress object) are migrated into the IJN slot.
  */
 
 import { IDockJob, IResources } from '@/types/Progression';
-import { resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
+import { Nation } from '@/types/Nation';
+import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
 import { IServiceRecord } from '@/types/Record';
+import { PLAYABLE_NATIONS } from '@/config/NationInfo';
+import ijnShips from '@/data/ships/ijn.json';
 
-const STORAGE_KEY = 'ww2fleet.progress.v1';
+export const STORAGE_KEY = 'ww2fleet.progress.v2';
+/** The v1 key is read (never written or deleted) to migrate old saves. */
+export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
+export const SAVE_VERSION = 2;
 
-export interface IProgress {
-  /** Captain id → total XP */
-  captainXp: Record<string, number>;
-  /** Ship id → fitted upgrade ids */
-  upgrades: Record<string, string[]>;
+/** Everything one nation's admiral has built up. */
+export interface INationProgress {
   resources: IResources;
+  /** Epoch ms the next natural regeneration tick counts from (0 = not started yet) */
+  regenAt: number;
   /** Ship id → HP fraction it came home with (absent = undamaged) */
   damage: Record<string, number>;
   docks: IDockJob[];
   /** Finished research ids */
   research: string[];
-  /** Cleared campaign area ids */
-  campaign: string[];
-  /** Ship id → crew proficiency 0..100 */
-  proficiency: Record<string, number>;
+  /** Owned ship ids (#18): what the Fleet Builder offers for campaign and free battles */
+  ships: string[];
+  /** Ship id → fitted upgrade ids */
+  upgrades: Record<string, string[]>;
   /** Ship id → refit stage (0 = original) */
   refits: Record<string, number>;
-  /** Career totals and medals */
+  /** Ship id → crew proficiency 0..100 */
+  proficiency: Record<string, number>;
+  /** Captain id → total XP */
+  captainXp: Record<string, number>;
+  /** Cleared campaign area ids (the admiral's rank is derived from these) */
+  campaign: string[];
+}
+
+/** The whole save (v2). */
+export interface ISave {
+  version: typeof SAVE_VERSION;
+  /** Nation being played; its slot may not exist yet (a brand-new save still has to pick one) */
+  current: Nation;
+  nations: Partial<Record<Nation, INationProgress>>;
+  /** Career totals and medals, shared by every nation */
   record: IServiceRecord;
 }
 
-export function emptyProgress(): IProgress {
-  return { captainXp: {}, upgrades: {}, resources: { ...STARTING_RESOURCES }, damage: {}, docks: [], research: [], campaign: [], proficiency: {}, refits: {}, record: emptyRecord() };
+/** What scenes work with: the current nation's progress plus the shared record. */
+export interface IProgress extends INationProgress {
+  nation: Nation;
+  record: IServiceRecord;
 }
+
+export function emptyNationProgress(ships: string[] = []): INationProgress {
+  return {
+    resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
+    upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [],
+  };
+}
+
+export function emptySave(): ISave {
+  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord() };
+}
+
+// ---------------------------------------------------------------------------
+// Accessors (pure)
+// ---------------------------------------------------------------------------
+
+export function isStarted(save: ISave, nation: Nation): boolean {
+  return save.nations[nation] !== undefined;
+}
+
+/** Nations with a progress slot, in PLAYABLE_NATIONS order (then any others). */
+export function startedNations(save: ISave): Nation[] {
+  const all = [...PLAYABLE_NATIONS, ...Object.values(Nation).filter((n) => !PLAYABLE_NATIONS.includes(n))];
+  return all.filter((n) => isStarted(save, n));
+}
+
+/** The current nation's progress (an empty one if it has not been started). */
+export function currentNation(save: ISave): INationProgress {
+  return save.nations[save.current] ?? emptyNationProgress();
+}
+
+/** The scene-facing view of `save`; with `now`, natural regeneration up to that time is applied. */
+export function progressView(save: ISave, now?: number): IProgress {
+  const np = currentNation(save);
+  const view: IProgress = { ...np, nation: save.current, record: save.record };
+  if (now === undefined) return view;
+  const r = regenerate(view.resources, view.regenAt, now);
+  return r.resources === view.resources && r.regenAt === view.regenAt ? view : { ...view, resources: r.resources, regenAt: r.regenAt };
+}
+
+/** Writes a view back into its nation's slot (and the shared record). */
+export function withProgress(save: ISave, progress: IProgress): ISave {
+  const { nation, record, ...np } = progress;
+  return { ...save, nations: { ...save.nations, [nation]: np }, record };
+}
+
+/**
+ * Makes `nation` the current one. A nation played for the first time gets a fresh slot (#18 / #28): no
+ * resources, and only `starterId` (its starter destroyer) in the fleet; regeneration starts at `now`.
+ */
+export function switchNation(save: ISave, nation: Nation, starterId: string | undefined, now: number): ISave {
+  if (isStarted(save, nation)) return { ...save, current: nation };
+  const slot: INationProgress = { ...emptyNationProgress(starterId ? [starterId] : []), regenAt: now };
+  return { ...save, current: nation, nations: { ...save.nations, [nation]: slot } };
+}
+
+// ---------------------------------------------------------------------------
+// Parsing and migration
+// ---------------------------------------------------------------------------
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const NATIONS = new Set<string>(Object.values(Nation));
+const isNation = (v: unknown): v is Nation => typeof v === 'string' && NATIONS.has(v);
 
-let memory: IProgress | null = null;
+function numbers(src: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (isObject(src)) for (const [id, v] of Object.entries(src)) if (isNum(v)) out[id] = v;
+  return out;
+}
 
-/** Parses stored JSON, ignoring anything malformed. */
-export function parseProgress(raw: string | null): IProgress {
-  if (!raw) return emptyProgress();
-  try {
-    const data = JSON.parse(raw) as Partial<IProgress>;
-    const captainXp: Record<string, number> = {};
-    for (const [id, xp] of Object.entries(data.captainXp ?? {})) {
-      if (typeof xp === 'number' && Number.isFinite(xp)) captainXp[id] = xp;
-    }
-    const upgrades: Record<string, string[]> = {};
-    for (const [id, list] of Object.entries(data.upgrades ?? {})) {
+function strings(src: unknown): string[] {
+  return (Array.isArray(src) ? src : []).filter((id): id is string => typeof id === 'string');
+}
+
+/** One nation's progress from stored JSON, ignoring anything malformed. */
+function parseNation(data: Record<string, unknown>, defaultResources: IResources): INationProgress {
+  const upgrades: Record<string, string[]> = {};
+  if (isObject(data.upgrades)) {
+    for (const [id, list] of Object.entries(data.upgrades)) {
       if (Array.isArray(list)) upgrades[id] = list.filter((u): u is string => typeof u === 'string');
     }
-    const r = (data.resources ?? {}) as Partial<IResources>;
-    const res = data.resources
-      ? resources({ fuel: isNum(r.fuel) ? r.fuel : 0, ammo: isNum(r.ammo) ? r.ammo : 0, steel: isNum(r.steel) ? r.steel : 0, bauxite: isNum(r.bauxite) ? r.bauxite : 0 })
-      : { ...STARTING_RESOURCES };
-    const damage: Record<string, number> = {};
-    for (const [id, f] of Object.entries(data.damage ?? {})) {
-      if (isNum(f)) damage[id] = Math.min(1, Math.max(0, f));
+  }
+  const r = isObject(data.resources) ? data.resources : null;
+  const res = r
+    ? resources({ fuel: isNum(r.fuel) ? r.fuel : 0, ammo: isNum(r.ammo) ? r.ammo : 0, steel: isNum(r.steel) ? r.steel : 0, bauxite: isNum(r.bauxite) ? r.bauxite : 0 })
+    : { ...defaultResources };
+  const damage: Record<string, number> = {};
+  for (const [id, f] of Object.entries(numbers(data.damage))) damage[id] = Math.min(1, Math.max(0, f));
+  const docks = (Array.isArray(data.docks) ? data.docks : []).filter(
+    (d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt),
+  );
+  return {
+    resources: res,
+    regenAt: isNum(data.regenAt) ? data.regenAt : 0,
+    damage,
+    docks,
+    research: strings(data.research),
+    ships: [...new Set(strings(data.ships))],
+    upgrades,
+    refits: numbers(data.refits),
+    proficiency: numbers(data.proficiency),
+    captainXp: numbers(data.captainXp),
+    campaign: strings(data.campaign),
+  };
+}
+
+/** Every IJN ship id at the time of migration (fictional ones stay gated by research in the Fleet Builder). */
+function legacyIjnFleet(): string[] {
+  return (ijnShips as { ships: Array<{ id: string }> }).ships.map((s) => s.id);
+}
+
+/**
+ * v1 (one flat progress object, every nation's ships usable) → v2: everything goes into the IJN slot, which owns
+ * the whole IJN roster so an existing player loses nothing. Other nations start fresh when first picked.
+ */
+export function migrateV1(data: Record<string, unknown>): ISave {
+  const ijn = parseNation(data, LEGACY_STARTING_RESOURCES);
+  return {
+    version: SAVE_VERSION,
+    current: Nation.IJN,
+    nations: { [Nation.IJN]: { ...ijn, ships: legacyIjnFleet() } },
+    record: parseRecord(data.record),
+  };
+}
+
+function parseV2(data: Record<string, unknown>): ISave {
+  const nations: Partial<Record<Nation, INationProgress>> = {};
+  if (isObject(data.nations)) {
+    for (const [key, value] of Object.entries(data.nations)) {
+      if (isNation(key) && isObject(value)) nations[key] = parseNation(value, STARTING_RESOURCES);
     }
-    const docks = (Array.isArray(data.docks) ? data.docks : []).filter(
-      (d): d is IDockJob => typeof d?.shipId === 'string' && isNum(d?.endsAt),
-    );
-    const research = (Array.isArray(data.research) ? data.research : []).filter((id): id is string => typeof id === 'string');
-    const campaign = (Array.isArray(data.campaign) ? data.campaign : []).filter((id): id is string => typeof id === 'string');
-    const numbers = (src: unknown): Record<string, number> => {
-      const out: Record<string, number> = {};
-      for (const [id, v] of Object.entries((src ?? {}) as Record<string, unknown>)) if (isNum(v)) out[id] = v;
-      return out;
-    };
-    return {
-      captainXp, upgrades, resources: res, damage, docks, research, campaign,
-      proficiency: numbers(data.proficiency),
-      refits: numbers(data.refits),
-      record: parseRecord(data.record),
-    };
+  }
+  return {
+    version: SAVE_VERSION,
+    current: isNation(data.current) ? data.current : emptySave().current,
+    nations,
+    record: parseRecord(data.record),
+  };
+}
+
+export function isV2(data: Record<string, unknown>): boolean {
+  return data.version === SAVE_VERSION || isObject(data.nations);
+}
+
+/** Parses a stored save of either version, ignoring anything malformed. */
+export function parseSave(raw: string | null): ISave {
+  if (!raw) return emptySave();
+  try {
+    const data: unknown = JSON.parse(raw);
+    if (!isObject(data)) return emptySave();
+    return isV2(data) ? parseV2(data) : migrateV1(data);
   } catch {
-    return emptyProgress();
+    return emptySave();
   }
 }
 
-export function loadProgress(): IProgress {
-  if (memory) return memory;
-  let raw: string | null = null;
+/** The current nation's view of a stored save (kept for callers and tests that only need one nation). */
+export function parseProgress(raw: string | null): IProgress {
+  return progressView(parseSave(raw));
+}
+
+export function emptyProgress(): IProgress {
+  return progressView(emptySave());
+}
+
+// ---------------------------------------------------------------------------
+// Storage
+// ---------------------------------------------------------------------------
+
+let memory: ISave | null = null;
+
+function read(key: string): string | null {
   try {
-    raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
   } catch {
-    raw = null;
+    return null;
   }
-  memory = parseProgress(raw);
+}
+
+export function loadSave(): ISave {
+  if (memory) return memory;
+  memory = parseSave(read(STORAGE_KEY) ?? read(LEGACY_STORAGE_KEY));
   return memory;
 }
 
-export function saveProgress(progress: IProgress): void {
-  memory = progress;
+export function saveSave(save: ISave): void {
+  memory = save;
   try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
   } catch {
     // Storage full or blocked: keep the in-memory copy for this session.
   }
+}
+
+/**
+ * The current nation's progress with natural regeneration applied up to now. When regeneration changed
+ * anything it is saved straight away, so the timer advances even on screens that never save.
+ */
+export function loadProgress(): IProgress {
+  const save = loadSave();
+  const view = progressView(save, Date.now());
+  const np = save.nations[save.current];
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources)) saveSave(withProgress(save, view));
+  return view;
+}
+
+/** Saves a view into its own nation's slot (whichever nation is current). */
+export function saveProgress(progress: IProgress): void {
+  saveSave(withProgress(loadSave(), progress));
+}
+
+/** Drops the in-memory copy so the next load reads storage again (tests). */
+export function resetProgressCache(): void {
+  memory = null;
 }

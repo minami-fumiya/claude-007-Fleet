@@ -10,6 +10,11 @@ export function isUnlocked(area: ICampaignArea, cleared: string[]): boolean {
   return area.requires.every((r) => cleared.includes(r));
 }
 
+/** The first area of a theater (no prerequisites) is sortied to for free (#28), so a new nation can't get stuck. */
+export function isFreeArea(area: ICampaignArea): boolean {
+  return area.requires.length === 0;
+}
+
 export function isCleared(area: ICampaignArea, cleared: string[]): boolean {
   return cleared.includes(area.id);
 }

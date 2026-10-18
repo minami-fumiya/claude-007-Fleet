@@ -2,8 +2,10 @@ import { IResources } from '@/types/Progression';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 
-/** Resources a new admiral starts with. */
-export const STARTING_RESOURCES: IResources = { fuel: 1500, ammo: 1500, steel: 1500, bauxite: 800 };
+/** Resources a newly founded nation starts with (#28): nothing, natural regeneration fills it up. */
+export const STARTING_RESOURCES: IResources = { fuel: 0, ammo: 0, steel: 0, bauxite: 0 };
+/** What a pre-Sprint-6 save (no resources stored) was given; only used when migrating such saves. */
+export const LEGACY_STARTING_RESOURCES: IResources = { fuel: 1500, ammo: 1500, steel: 1500, bauxite: 800 };
 /** Each resource is capped here. */
 export const RESOURCE_CAP = 20000;
 export const RESOURCE_KEYS: Array<keyof IResources> = ['fuel', 'ammo', 'steel', 'bauxite'];
@@ -65,4 +67,47 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
   return RESOURCE_KEYS.filter((k) => !onlyNonZero || x[k] !== 0)
     .map((k) => `${RESOURCE_LABEL[k]} ${x[k]}`)
     .join('  ');
+}
+
+// ---------------------------------------------------------------------------
+// Natural regeneration (#28)
+// ---------------------------------------------------------------------------
+
+/** Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. */
+export const REGEN_PER_TICK: IResources = { fuel: 3, ammo: 3, steel: 3, bauxite: 1 };
+export const REGEN_INTERVAL_MS = 60_000;
+/** Regeneration stops at this amount; rewards can still take a resource above it. */
+export const REGEN_CAP = 1500;
+
+export interface IRegenResult {
+  resources: IResources;
+  /** Epoch ms the next tick counts from */
+  regenAt: number;
+}
+
+/**
+ * Applies the regeneration ticks that elapsed since `regenAt` (epoch ms, like dock `endsAt`). A resource at or
+ * above REGEN_CAP is left alone; one below it rises to at most the cap. `regenAt <= 0` (never started) or a clock
+ * that went backwards just restarts the timer. Returns the input object unchanged when nothing happened.
+ */
+export function regenerate(have: IResources, regenAt: number, now: number): IRegenResult {
+  if (regenAt <= 0 || now < regenAt) return { resources: have, regenAt: now };
+  const ticks = Math.floor((now - regenAt) / REGEN_INTERVAL_MS);
+  if (ticks <= 0) return { resources: have, regenAt };
+  const out = resources(have);
+  for (const k of RESOURCE_KEYS) {
+    if (out[k] < REGEN_CAP) out[k] = Math.min(REGEN_CAP, out[k] + REGEN_PER_TICK[k] * ticks);
+  }
+  return { resources: out, regenAt: regenAt + ticks * REGEN_INTERVAL_MS };
+}
+
+/** Milliseconds until the next regeneration tick. */
+export function nextRegenMs(regenAt: number, now: number): number {
+  if (regenAt <= 0 || now < regenAt) return REGEN_INTERVAL_MS;
+  return REGEN_INTERVAL_MS - ((now - regenAt) % REGEN_INTERVAL_MS);
+}
+
+/** True when every resource has reached the regeneration cap. */
+export function regenFull(have: IResources): boolean {
+  return RESOURCE_KEYS.every((k) => have[k] >= REGEN_CAP);
 }

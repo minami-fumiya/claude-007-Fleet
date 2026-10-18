@@ -9,6 +9,10 @@
     { "id": "damage_control_1", "name": "ダメージコントロール", "description": "全艦の耐久 +5%・応急修理班を解放", "cost": { "fuel": 300, "steel": 700 }, "requires": ["armor_1"], "effects": { "hpMul": 1.05 } },
     { "id": "radar_1", "name": "電探研究", "description": "全艦の視界 +5%・水上レーダーを解放", "cost": { "steel": 600, "bauxite": 300 }, "requires": ["fire_control"], "effects": { "visionMul": 1.05 } },
     { "id": "aa_1", "name": "対空研究", "description": "全艦の対空 +10%・対空機銃増設を解放", "cost": { "ammo": 400, "bauxite": 300 }, "requires": [], "effects": { "aaMul": 1.1 } },
-    { "id": "fictional_ships", "name": "架空艦計画", "description": "計画のみの戦艦 (超大和型など) を建造可能にする", "cost": { "ammo": 2000, "steel": 3000, "bauxite": 600 }, "requires": ["gunnery_2", "damage_control_1"], "effects": {} }
+    { "id": "fictional_ships", "name": "架空艦計画", "description": "計画のみの戦艦 (超大和型など) を建造可能にする", "cost": { "ammo": 2000, "steel": 3000, "bauxite": 600 }, "requires": ["gunnery_2", "damage_control_1"], "effects": {} },
+    { "id": "build_cruiser", "name": "巡洋艦建造", "description": "工廠で巡洋艦を建造できるようにする", "cost": { "ammo": 200, "steel": 300 }, "requires": [], "effects": {} },
+    { "id": "build_battleship", "name": "戦艦建造", "description": "工廠で戦艦を建造できるようにする", "cost": { "ammo": 600, "steel": 1000 }, "requires": ["build_cruiser"], "effects": {} },
+    { "id": "build_carrier", "name": "空母建造", "description": "工廠で空母を建造できるようにする", "cost": { "fuel": 400, "steel": 600, "bauxite": 400 }, "requires": [], "effects": {} },
+    { "id": "build_submarine", "name": "潜水艦建造", "description": "工廠で潜水艦を建造できるようにする", "cost": { "fuel": 150, "ammo": 150 }, "requires": [], "effects": {} }
   ]
 }
