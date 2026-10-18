@@ -5,55 +5,411 @@
       "name": "大和 (Yamato)",
       "nation": "IJN",
       "shipClass": "Battleship",
-      "hp": 500,
+      "hp": 800,
       "armor": 65,
       "speed": 120,
-      "weapons": ["46cm_main_gun"],
-      "spriteKey": "yamato"
+      "weapons": [
+        "46cm_main_gun",
+        "15_5cm_triple"
+      ],
+      "spriteKey": "yamato",
+      "description": "大和型戦艦1番艦。史上最大の46cm砲を搭載した戦艦。1945年4月、沖縄へ向かう途中の坊ノ岬沖で米艦載機の攻撃を受け沈没。"
     },
     {
       "id": "musashi",
       "name": "武蔵 (Musashi)",
       "nation": "IJN",
       "shipClass": "Battleship",
-      "hp": 490,
+      "hp": 785,
       "armor": 63,
       "speed": 118,
-      "weapons": ["46cm_main_gun"],
-      "spriteKey": "musashi"
+      "weapons": [
+        "46cm_main_gun",
+        "15_5cm_triple"
+      ],
+      "spriteKey": "musashi",
+      "description": "大和型戦艦2番艦。1944年10月のレイテ沖海戦 (シブヤン海) で多数の魚雷と爆弾を受けて沈没。"
+    },
+    {
+      "id": "nagato",
+      "name": "長門 (Nagato)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 690,
+      "armor": 58,
+      "speed": 130,
+      "weapons": [
+        "41cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "nagato",
+      "description": "長門型戦艦1番艦。41cm砲を搭載し、長く連合艦隊旗艦を務めた。終戦まで生き残り、1946年のビキニ環礁の原爆実験で沈没。"
+    },
+    {
+      "id": "mutsu",
+      "name": "陸奥 (Mutsu)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 680,
+      "armor": 57,
+      "speed": 130,
+      "weapons": [
+        "41cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "mutsu",
+      "description": "長門型戦艦2番艦。1943年6月、柱島泊地で原因不明の爆発事故により沈没。"
+    },
+    {
+      "id": "kongo",
+      "name": "金剛 (Kongo)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 610,
+      "armor": 45,
+      "speed": 170,
+      "weapons": [
+        "36cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "kongo",
+      "description": "金剛型戦艦1番艦。英ヴィッカース社で建造された巡洋戦艦を改装した高速戦艦。1944年11月、米潜水艦の雷撃で沈没。"
+    },
+    {
+      "id": "ise",
+      "name": "伊勢 (Ise)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "AviationBattleship",
+      "hp": 650,
+      "armor": 52,
+      "speed": 130,
+      "weapons": [
+        "36cm_main_gun",
+        "14cm_gun"
+      ],
+      "spriteKey": "ise",
+      "description": "伊勢型戦艦1番艦。ミッドウェー海戦の後、後部の砲塔2基を撤去して飛行甲板を設けた航空戦艦に改装され、1944年10月のエンガノ岬沖海戦に参加した。"
+    },
+    {
+      "id": "a150",
+      "name": "超大和型 (A-150)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 880,
+      "armor": 70,
+      "speed": 120,
+      "weapons": [
+        "51cm_main_gun",
+        "15_5cm_triple"
+      ],
+      "spriteKey": "a150",
+      "fictional": true,
+      "description": "大和型に続いて計画された戦艦。51cm砲を搭載する予定だったが、戦局の悪化により建造されなかった (架空艦)。"
     },
     {
       "id": "takao",
       "name": "高雄 (Takao)",
       "nation": "IJN",
       "shipClass": "Cruiser",
-      "hp": 250,
+      "subtype": "HeavyCruiser",
+      "hp": 400,
       "armor": 40,
       "speed": 180,
-      "weapons": ["20cm_twin_gun"],
-      "spriteKey": "takao"
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "takao",
+      "description": "高雄型重巡洋艦1番艦。大きな艦橋が特徴。レイテ沖海戦で米潜水艦の雷撃により大破し、シンガポールで終戦を迎えた。"
+    },
+    {
+      "id": "atago",
+      "name": "愛宕 (Atago)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 40,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "atago",
+      "description": "高雄型重巡洋艦2番艦。レイテ沖海戦で栗田艦隊の旗艦を務めたが、1944年10月に米潜水艦ダーターの雷撃で沈没。"
+    },
+    {
+      "id": "tone",
+      "name": "利根 (Tone)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "tone",
+      "description": "利根型重巡洋艦1番艦。主砲を前部に集中し、後部を水上偵察機の運用に充てた。1945年7月、呉付近で空襲を受け大破着底。"
+    },
+    {
+      "id": "myoko",
+      "name": "妙高 (Myoko)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 39,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "myoko",
+      "description": "妙高型重巡洋艦1番艦。20cm砲10門と魚雷を備え、スラバヤ沖海戦やレイテ沖海戦などで戦った。"
+    },
+    {
+      "id": "mogami",
+      "name": "最上 (Mogami)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 37,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "mogami",
+      "description": "最上型巡洋艦1番艦。15.5cm砲の軽巡洋艦として竣工し、のちに20cm砲へ換装された。1944年10月、スリガオ海峡の戦いで大破し沈没した。"
+    },
+    {
+      "id": "sendai",
+      "name": "川内 (Sendai)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 30,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "sendai",
+      "description": "川内型軽巡洋艦1番艦。水雷戦隊の旗艦として夜戦で活躍したが、1943年11月のブーゲンビル島沖海戦で撃沈された。"
     },
     {
       "id": "fubuki",
       "name": "吹雪 (Fubuki)",
       "nation": "IJN",
       "shipClass": "Destroyer",
-      "hp": 130,
+      "hp": 210,
       "armor": 15,
       "speed": 240,
-      "weapons": ["12cm_gun", "torpedo_type93"],
-      "spriteKey": "fubuki"
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "description": "特型駆逐艦 (吹雪型) 1番艦。重武装の新型駆逐艦として列強に衝撃を与えた。1942年10月、サボ島沖海戦で沈没。"
+    },
+    {
+      "id": "shimakaze",
+      "name": "島風 (Shimakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shimakaze",
+      "description": "島風型駆逐艦。40ノットを超える高速と5連装魚雷発射管3基を備えた。1944年11月、オルモック湾で空襲により沈没。"
+    },
+    {
+      "id": "yukikaze",
+      "name": "雪風 (Yukikaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "description": "陽炎型駆逐艦。数多くの激戦を生き抜いた「幸運艦」。戦後は中華民国に引き渡され「丹陽」となった。"
+    },
+    {
+      "id": "etorofu",
+      "name": "択捉 (Etorofu)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "description": "択捉型海防艦1番艦。船団護衛のために爆雷を多く積んだ小型の護衛艦で、終戦まで生き残った。"
     },
     {
       "id": "shokaku",
       "name": "翔鶴 (Shokaku)",
       "nation": "IJN",
       "shipClass": "Carrier",
-      "hp": 310,
+      "hp": 495,
       "armor": 30,
       "speed": 150,
-      "weapons": ["12cm_gun"],
-      "spriteKey": "shokaku"
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "shokaku",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 4
+      },
+      "description": "翔鶴型航空母艦1番艦。真珠湾攻撃に参加した主力空母。1944年6月、マリアナ沖海戦で米潜水艦の雷撃により沈没。"
+    },
+    {
+      "id": "akagi",
+      "name": "赤城 (Akagi)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 545,
+      "armor": 32,
+      "speed": 145,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "akagi",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "description": "巡洋戦艦から改造された航空母艦。真珠湾攻撃では機動部隊の旗艦を務めた。1942年6月、ミッドウェー海戦で沈没。"
+    },
+    {
+      "id": "kaga",
+      "name": "加賀 (Kaga)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 560,
+      "armor": 34,
+      "speed": 135,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "kaga",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 5
+      },
+      "description": "戦艦から改造された航空母艦。多くの艦載機を搭載できた。1942年6月、ミッドウェー海戦で沈没。"
+    },
+    {
+      "id": "zuikaku",
+      "name": "瑞鶴 (Zuikaku)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 495,
+      "armor": 30,
+      "speed": 152,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "zuikaku",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 4
+      },
+      "description": "翔鶴型航空母艦2番艦。真珠湾攻撃から多くの海戦に参加した歴戦の空母。1944年10月、エンガノ岬沖海戦で沈没した。"
+    },
+    {
+      "id": "taiho",
+      "name": "大鳳 (Taiho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 555,
+      "armor": 40,
+      "speed": 150,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "taiho",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 3
+      },
+      "description": "装甲飛行甲板を持つ航空母艦。1944年6月のマリアナ沖海戦で米潜水艦アルバコアの魚雷を受け、漏れた燃料の気化ガスが爆発して沈没した。"
+    },
+    {
+      "id": "ryujo",
+      "name": "龍驤 (Ryujo)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 460,
+      "armor": 22,
+      "speed": 150,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "ryujo",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "description": "小型の航空母艦。1942年8月の第二次ソロモン海戦で米空母機の攻撃を受けて沈没した。"
+    },
+    {
+      "id": "i19",
+      "name": "伊19 (I-19)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19",
+      "description": "乙型潜水艦。1942年9月、一度の雷撃で空母ワスプを撃沈し、戦艦ノースカロライナにも損傷を与えた。"
+    },
+    {
+      "id": "i400",
+      "name": "伊400 (I-400)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 175,
+      "armor": 7,
+      "speed": 140,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i400",
+      "description": "伊四百型潜水艦。攻撃機「晴嵐」3機を搭載できる当時最大の潜水艦。終戦後に米軍に接収された。"
     }
   ]
 }

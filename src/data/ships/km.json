@@ -1,0 +1,303 @@
+{
+  "ships": [
+    {
+      "id": "bismarck",
+      "name": "ビスマルク (Bismarck)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 770,
+      "armor": 62,
+      "speed": 145,
+      "weapons": [
+        "38cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "bismarck",
+      "description": "ビスマルク級戦艦1番艦。1941年5月、デンマーク海峡で巡洋戦艦フッドを撃沈したが、英艦隊の追撃を受けて撃沈された。"
+    },
+    {
+      "id": "tirpitz",
+      "name": "ティルピッツ (Tirpitz)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 775,
+      "armor": 63,
+      "speed": 143,
+      "weapons": [
+        "38cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "tirpitz",
+      "description": "ビスマルク級戦艦2番艦。ノルウェーのフィヨルドに潜んで英艦隊を牽制し続けたが、1944年11月に英空軍の爆撃で転覆した。"
+    },
+    {
+      "id": "scharnhorst",
+      "name": "シャルンホルスト (Scharnhorst)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 640,
+      "armor": 55,
+      "speed": 175,
+      "weapons": [
+        "28cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "scharnhorst",
+      "description": "シャルンホルスト級戦艦1番艦。28cm砲を搭載した高速戦艦。1943年12月、北岬沖海戦で英艦隊に撃沈された。"
+    },
+    {
+      "id": "gneisenau",
+      "name": "グナイゼナウ (Gneisenau)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 640,
+      "armor": 55,
+      "speed": 173,
+      "weapons": [
+        "28cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "gneisenau",
+      "description": "シャルンホルスト級戦艦2番艦。姉妹艦とともに通商破壊で戦果を挙げた。1942年の空襲で損傷し、戦線に戻らなかった。"
+    },
+    {
+      "id": "h39",
+      "name": "H級 (H-39)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "hp": 830,
+      "armor": 64,
+      "speed": 150,
+      "weapons": [
+        "40_6cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "h39",
+      "fictional": true,
+      "description": "Z計画で起工された戦艦。40.6cm砲8門を搭載する予定だったが、開戦により建造は中止された (架空艦)。"
+    },
+    {
+      "id": "prinz_eugen",
+      "name": "プリンツ・オイゲン (Prinz Eugen)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 410,
+      "armor": 41,
+      "speed": 178,
+      "weapons": [
+        "20cm_skc34",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "prinz_eugen",
+      "description": "アドミラル・ヒッパー級重巡洋艦3番艦。ビスマルクとともに出撃し、終戦まで生き残った。"
+    },
+    {
+      "id": "admiral_hipper",
+      "name": "アドミラル・ヒッパー (Admiral Hipper)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 40,
+      "speed": 176,
+      "weapons": [
+        "20cm_skc34",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "admiral_hipper",
+      "description": "アドミラル・ヒッパー級重巡洋艦1番艦。ノルウェー侵攻や大西洋での通商破壊に参加した。"
+    },
+    {
+      "id": "deutschland",
+      "name": "ドイッチュラント (Deutschland)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 430,
+      "armor": 38,
+      "speed": 160,
+      "weapons": [
+        "28cm_skc28",
+        "15cm_skc28"
+      ],
+      "spriteKey": "deutschland",
+      "description": "装甲艦 (ポケット戦艦) 1番艦。28cm砲を持つ通商破壊艦で、1939年末にリュッツォウと改名され、のちに重巡洋艦に類別変更された。"
+    },
+    {
+      "id": "admiral_graf_spee",
+      "name": "アドミラル・グラーフ・シュペー (Admiral Graf Spee)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 425,
+      "armor": 38,
+      "speed": 160,
+      "weapons": [
+        "28cm_skc28",
+        "15cm_skc28"
+      ],
+      "spriteKey": "admiral_graf_spee",
+      "description": "ドイッチュラント級装甲艦3番艦。南大西洋で通商破壊を行い、1939年12月のラプラタ沖海戦の後、モンテビデオ沖で自沈した。"
+    },
+    {
+      "id": "blucher",
+      "name": "ブリュッヒャー (Blücher)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 40,
+      "speed": 175,
+      "weapons": [
+        "20cm_skc34",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "blucher",
+      "description": "アドミラル・ヒッパー級重巡洋艦2番艦。1940年4月のノルウェー侵攻で、オスロフィヨルドの要塞から砲撃と魚雷を受けて沈没した。"
+    },
+    {
+      "id": "nurnberg",
+      "name": "ニュルンベルク (Nürnberg)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "15cm_skc25",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "nurnberg",
+      "description": "ライプツィヒ級を改良した軽巡洋艦。終戦まで生き残り、戦後はソ連海軍に引き渡されてアドミラル・マカロフとなった。"
+    },
+    {
+      "id": "emden",
+      "name": "エムデン (Emden)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 165,
+      "weapons": [
+        "15cm_skc16",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "emden",
+      "description": "第一次世界大戦後にドイツで最初に建造された軽巡洋艦。練習艦として多くの士官候補生を育てた。"
+    },
+    {
+      "id": "z1",
+      "name": "Z1 レーベレヒト・マース (Z1)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z1",
+      "description": "1934年型駆逐艦の1番艦「レーベレヒト・マース」。1940年2月、味方機の誤爆と触雷により沈没した。"
+    },
+    {
+      "id": "z23",
+      "name": "Z23 (Z23)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 15,
+      "speed": 230,
+      "weapons": [
+        "15cm_tbk_c36",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z23",
+      "description": "1936A型駆逐艦 (ナルヴィク級) の1番艦。巡洋艦並みの15cm砲を積んだが、重い艦首砲塔のため凌波性は悪かった。"
+    },
+    {
+      "id": "z20",
+      "name": "Z20 カール・ガルスター (Z20)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z20",
+      "description": "1936年型駆逐艦。同型艦のうち5隻はナルヴィクで失われ、ただ1隻戦争を生き延びて戦後はソ連海軍に引き渡された。"
+    },
+    {
+      "id": "graf_zeppelin",
+      "name": "グラーフ・ツェッペリン (Graf Zeppelin)",
+      "nation": "KM",
+      "shipClass": "Carrier",
+      "hp": 480,
+      "armor": 32,
+      "speed": 150,
+      "weapons": [
+        "15cm_skc28"
+      ],
+      "spriteKey": "graf_zeppelin",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 4,
+        "torpedoBombers": 2
+      },
+      "description": "ドイツ唯一の航空母艦として建造されたが、未完成のまま終戦を迎えた。本ゲームでは完成した姿を想定している。"
+    },
+    {
+      "id": "u_boat_viic",
+      "name": "U ボート VIIC 型 (Type VIIC)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 135,
+      "armor": 5,
+      "speed": 145,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_viic",
+      "description": "VIIC型Uボート。大西洋の戦いで群狼戦術を担った、最も多く建造された潜水艦。"
+    },
+    {
+      "id": "u_boat_ixc",
+      "name": "U ボート IXC 型 (Type IXC)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_ixc",
+      "description": "IXC型Uボート。航続距離の長い大型潜水艦で、遠方の海域で通商破壊を行った。"
+    },
+    {
+      "id": "u_boat_xxi",
+      "name": "U ボート XXI 型 (Type XXI)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 160,
+      "armor": 6,
+      "speed": 165,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_xxi",
+      "description": "XXI型Uボート。大容量の電池で長時間の水中高速航行ができた「エレクトロボート」。実戦投入は終戦直前だった。"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "upgrades": [
+    {
+      "id": "fire_director",
+      "name": "射撃指揮装置",
+      "description": "主砲・副砲の装填 -10%",
+      "effects": {
+        "gunReloadMul": 0.9
+      },
+      "requires": "fire_control"
+    },
+    {
+      "id": "heavy_shells",
+      "name": "強装薬",
+      "description": "砲の火力 +12%、装填 +5%",
+      "effects": {
+        "gunPowerMul": 1.12,
+        "gunReloadMul": 1.05
+      }
+    },
+    {
+      "id": "torpedo_mod",
+      "name": "魚雷改良",
+      "description": "魚雷の火力 +15%",
+      "effects": {
+        "torpedoPowerMul": 1.15
+      },
+      "requires": "torpedo_1"
+    },
+    {
+      "id": "extra_armor",
+      "name": "追加装甲",
+      "description": "装甲 +8、速力 -5%",
+      "effects": {
+        "armorAdd": 8,
+        "speedMul": 0.95
+      },
+      "requires": "armor_1"
+    },
+    {
+      "id": "boiler",
+      "name": "機関強化",
+      "description": "速力 +8%",
+      "effects": {
+        "speedMul": 1.08
+      },
+      "requires": "engine_1"
+    },
+    {
+      "id": "damage_control",
+      "name": "応急修理班",
+      "description": "耐久 +10%",
+      "effects": {
+        "hpMul": 1.1
+      },
+      "requires": "damage_control_1"
+    },
+    {
+      "id": "radar",
+      "name": "水上レーダー",
+      "description": "視界 +20%",
+      "effects": {
+        "visionMul": 1.2
+      },
+      "requires": "radar_1"
+    },
+    {
+      "id": "aa_guns",
+      "name": "対空機銃増設",
+      "description": "対空火力 +40%",
+      "effects": {
+        "aaMul": 1.4
+      },
+      "requires": "aa_1"
+    }
+  ]
+}

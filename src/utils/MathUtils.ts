@@ -71,3 +71,41 @@ export function edgePoint(px: number, py: number, rect: IRectArea): { x: number;
   const t = Math.min(dx === 0 ? Infinity : halfW / Math.abs(dx), dy === 0 ? Infinity : halfH / Math.abs(dy));
   return { x: cx + dx * t, y: cy + dy * t, angle: Math.atan2(dy, dx) };
 }
+
+/**
+ * Angle (radians) to fire a projectile of `speed` from (sx, sy) so it meets a target at (tx, ty)
+ * moving with velocity (vx, vy). Falls back to aiming straight at the target when it cannot be
+ * caught (target faster than the projectile) or the projectile speed is not positive.
+ */
+export function interceptAngle(
+  sx: number,
+  sy: number,
+  tx: number,
+  ty: number,
+  vx: number,
+  vy: number,
+  speed: number,
+): number {
+  const dx = tx - sx;
+  const dy = ty - sy;
+  const direct = Math.atan2(dy, dx);
+  if (speed <= 0) return direct;
+  // Solve |d + v t| = speed t for the smallest positive t.
+  const a = vx * vx + vy * vy - speed * speed;
+  const b = 2 * (dx * vx + dy * vy);
+  const c = dx * dx + dy * dy;
+  let t: number;
+  if (Math.abs(a) < 1e-9) {
+    if (Math.abs(b) < 1e-9) return direct;
+    t = -c / b;
+  } else {
+    const disc = b * b - 4 * a * c;
+    if (disc < 0) return direct;
+    const root = Math.sqrt(disc);
+    const t1 = (-b - root) / (2 * a);
+    const t2 = (-b + root) / (2 * a);
+    t = Math.min(t1, t2) > 0 ? Math.min(t1, t2) : Math.max(t1, t2);
+  }
+  if (!(t > 0)) return direct;
+  return Math.atan2(dy + vy * t, dx + vx * t);
+}

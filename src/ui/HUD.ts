@@ -4,6 +4,7 @@ import { HealthBar } from './components/HealthBar';
 import { CANVAS_W, DEPTH_HUD, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawMeter, drawPanel } from '@/ui/components/UIKit';
+import { activeCriticals, CRITICAL_BADGE } from '@/systems/DamageSystem';
 
 // Friendly ships carry their name + HP just below the hull, enemies just above it, so the
 // labels never cover the sprite. Gaps are measured from the hull's outer radius.
@@ -67,6 +68,18 @@ export interface IHudStatus {
   elapsedSec: number;
 }
 
+/** Name plus badges for component damage, e.g. "大和 (Yamato) [機舵]". */
+function labelFor(ship: BaseShip): string {
+  const crits = activeCriticals(ship.criticals, ship.scene?.time.now ?? 0);
+  return crits.length > 0 ? `${ship.stats.name} [${crits.map((c) => CRITICAL_BADGE[c]).join('')}]` : ship.stats.name;
+}
+
+/** Updates a label's text only when it changed (setText re-renders the texture). */
+function syncLabel(label: Phaser.GameObjects.Text, ship: BaseShip): void {
+  const text = labelFor(ship);
+  if (label.text !== text) label.setText(text);
+}
+
 export class HUD {
   private playerBar: HealthBar;
   private playerNameLabel: Phaser.GameObjects.Text;
@@ -90,6 +103,8 @@ export class HUD {
     player: BaseShip,
     enemies: BaseShip[],
     escorts: BaseShip[] = [],
+    /** Name of the weapon whose reload the strip shows */
+    mainWeaponLabel = '主砲',
   ) {
     this.totalEnemies = enemies.length;
 
@@ -104,7 +119,8 @@ export class HUD {
     };
     label(L.hpLabel, IS_PORTRAIT ? `旗艦 · ${player.stats.name}` : `FLAGSHIP · ${player.stats.name}`);
     label(L.sunkLabel, IS_PORTRAIT ? '撃沈' : '撃沈 SUNK');
-    label(L.gunLabel, IS_PORTRAIT ? '主砲' : '主砲 MAIN GUN');
+    const en = mainWeaponLabel === '主砲' ? 'MAIN GUN' : 'TORPEDO';
+    label(L.gunLabel, IS_PORTRAIT ? mainWeaponLabel : `${mainWeaponLabel} ${en}`);
     label(L.timeLabel, 'TIME');
 
     const value = (pos: IPos, size: number, color: string, originX = 0): Phaser.GameObjects.Text =>
@@ -162,6 +178,7 @@ export class HUD {
     if (status) this.status = status;
     // Player HP bar and name follow the flagship
     if (player.active) {
+      syncLabel(this.playerNameLabel, player);
       this.playerNameLabel
         .setPosition(player.x, player.y + hullRadius(player) + LABEL_GAP)
         .setVisible(true);
@@ -178,7 +195,9 @@ export class HUD {
 
     for (const [ship, bar] of this.enemyBars) {
       const label = this.enemyLabels.get(ship)!;
-      if (ship.active) {
+      // Hidden enemies (submerged boats off sonar) don't give themselves away with a label.
+      if (ship.active && ship.visible) {
+        syncLabel(label, ship);
         const top = ship.y - hullRadius(ship) - LABEL_GAP;
         bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, top - 7);
         label.setPosition(ship.x, top - 9).setVisible(true);
@@ -191,6 +210,7 @@ export class HUD {
     for (const [ship, bar] of this.escortBars) {
       const label = this.escortLabels.get(ship)!;
       if (ship.active) {
+        syncLabel(label, ship);
         const bottom = ship.y + hullRadius(ship) + LABEL_GAP;
         label.setPosition(ship.x, bottom).setVisible(true);
         bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, Colors.cyan);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { angleBetween, distanceBetween, clamp, stickVector, wrapDegrees, rotateTowardsDegrees, edgePoint } from '@/utils/MathUtils';
+import { angleBetween, distanceBetween, clamp, stickVector, wrapDegrees, rotateTowardsDegrees, edgePoint, interceptAngle } from '@/utils/MathUtils';
 
 describe('clamp', () => {
   it('clamps below min', () => expect(clamp(-5, 0, 10)).toBe(0));
@@ -80,5 +80,26 @@ describe('edgePoint', () => {
     // centre (50,100) → direction (250,300): reaches x=100 at t=0.2 before y=200 at t=0.333
     expect(e.x).toBeCloseTo(100);
     expect(e.y).toBeCloseTo(160);
+  });
+});
+
+describe('interceptAngle', () => {
+  it('aims straight at a stationary target', () => {
+    expect(interceptAngle(0, 0, 100, 0, 0, 0, 500)).toBeCloseTo(0);
+    expect(interceptAngle(0, 0, 0, 100, 0, 0, 500)).toBeCloseTo(Math.PI / 2);
+  });
+
+  it('leads a crossing target so the projectile meets it', () => {
+    const speed = 100;
+    const angle = interceptAngle(0, 0, 100, 0, 0, 50, speed);
+    expect(angle).toBeGreaterThan(0);
+    // Simulate: find t where the projectile reaches the target's x and compare positions.
+    const t = 100 / (Math.cos(angle) * speed);
+    expect(Math.sin(angle) * speed * t).toBeCloseTo(50 * t, 5);
+  });
+
+  it('falls back to a direct shot when the target cannot be caught', () => {
+    expect(interceptAngle(0, 0, 100, 0, 1000, 0, 100)).toBeCloseTo(0);
+    expect(interceptAngle(0, 0, 100, 0, 0, 0, 0)).toBeCloseTo(0);
   });
 });

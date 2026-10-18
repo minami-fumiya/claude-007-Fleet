@@ -1,0 +1,164 @@
+{
+  "ships": [
+    {
+      "id": "richelieu",
+      "name": "リシュリュー (Richelieu)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "hp": 765,
+      "armor": 62,
+      "speed": 150,
+      "weapons": [
+        "380mm_m1935",
+        "152mm_m1930"
+      ],
+      "spriteKey": "richelieu",
+      "description": "リシュリュー級戦艦1番艦。38cm4連装砲塔2基を艦の前部に集中配置した。1940年のダカール沖海戦で英艦隊と交戦し、のちに連合国側で戦った。"
+    },
+    {
+      "id": "dunkerque",
+      "name": "ダンケルク (Dunkerque)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 640,
+      "armor": 52,
+      "speed": 170,
+      "weapons": [
+        "330mm_m1931",
+        "130mm_m1932"
+      ],
+      "spriteKey": "dunkerque",
+      "description": "ダンケルク級戦艦1番艦。33cm4連装砲塔2基を前部に集めた高速戦艦。1940年7月、メルセルケビールで英艦隊の攻撃を受けて損傷した。"
+    },
+    {
+      "id": "strasbourg",
+      "name": "ストラスブール (Strasbourg)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 650,
+      "armor": 53,
+      "speed": 170,
+      "weapons": [
+        "330mm_m1931",
+        "130mm_m1932"
+      ],
+      "spriteKey": "strasbourg",
+      "description": "ダンケルク級戦艦2番艦。メルセルケビールでの英艦隊の攻撃から脱出してトゥーロンへ逃れたが、1942年11月にトゥーロンで自沈した。"
+    },
+    {
+      "id": "algerie",
+      "name": "アルジェリー (Algérie)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 420,
+      "armor": 42,
+      "speed": 172,
+      "weapons": [
+        "203mm_m1924",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "algerie",
+      "description": "フランス最後の条約型重巡洋艦。防御を重視した設計で、1942年11月にトゥーロンで自沈した。"
+    },
+    {
+      "id": "dupleix",
+      "name": "デュプレクス (Dupleix)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 178,
+      "weapons": [
+        "203mm_m1924",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "dupleix",
+      "description": "シュフラン級重巡洋艦。地中海で船団護衛などに従事し、1942年11月にトゥーロンで自沈した。"
+    },
+    {
+      "id": "la_galissonniere",
+      "name": "ラ・ガリソニエール (La Galissonnière)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "la_galissonniere",
+      "description": "ラ・ガリソニエール級軽巡洋艦1番艦。攻防のバランスのよい設計で知られ、1942年11月にトゥーロンで自沈した。"
+    },
+    {
+      "id": "le_fantasque",
+      "name": "ル・ファンタスク (Le Fantasque)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_fantasque",
+      "description": "ル・ファンタスク級大型駆逐艦1番艦。巡洋艦に迫る砲力を持つ高速艦で、同型艦ル・テリブルは公試で45ノットを記録した。"
+    },
+    {
+      "id": "mogador",
+      "name": "モガドール (Mogador)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 240,
+      "armor": 14,
+      "speed": 255,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mogador",
+      "description": "モガドール級大型駆逐艦1番艦。13.86cm連装砲4基を持つ。1940年7月、メルセルケビールで英戦艦の砲弾を受けて艦尾を失った。"
+    },
+    {
+      "id": "bearn",
+      "name": "ベアルン (Béarn)",
+      "nation": "FR",
+      "shipClass": "Carrier",
+      "hp": 490,
+      "armor": 30,
+      "speed": 115,
+      "weapons": [
+        "155mm_m1920"
+      ],
+      "spriteKey": "bearn",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 3,
+        "torpedoBombers": 2
+      },
+      "description": "建造途中の戦艦を改造したフランス唯一の航空母艦。低速のため、戦時は主に航空機の輸送に使われた。"
+    },
+    {
+      "id": "surcouf",
+      "name": "シュルクーフ (Surcouf)",
+      "nation": "FR",
+      "shipClass": "Submarine",
+      "hp": 175,
+      "armor": 7,
+      "speed": 135,
+      "weapons": [
+        "550mm_sub_torpedo"
+      ],
+      "spriteKey": "surcouf",
+      "description": "20.3cm連装砲を備えた大型潜水艦 (潜水巡洋艦)。自由フランス海軍に加わったが、1942年2月にカリブ海で消息を絶った。"
+    }
+  ]
+}

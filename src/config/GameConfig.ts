@@ -6,6 +6,16 @@ import { MainMenuScene } from '@/scenes/MainMenuScene';
 import { FleetBuilderScene } from '@/scenes/FleetBuilderScene';
 import { BattleScene } from '@/scenes/BattleScene';
 import { ResultsScene } from '@/scenes/ResultsScene';
+import { CustomizationScene } from '@/scenes/CustomizationScene';
+import { HomeScene } from '@/scenes/HomeScene';
+import { ArsenalScene } from '@/scenes/ArsenalScene';
+import { ShipyardScene } from '@/scenes/ShipyardScene';
+import { CampaignMapScene } from '@/scenes/CampaignMapScene';
+import { ScenarioScene } from '@/scenes/ScenarioScene';
+import { EncyclopediaScene } from '@/scenes/EncyclopediaScene';
+import { RecordScene } from '@/scenes/RecordScene';
+import { SettingsScene } from '@/scenes/SettingsScene';
+import { HelpScene } from '@/scenes/HelpScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -29,5 +39,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene, HomeScene, ArsenalScene, ShipyardScene, CampaignMapScene, ScenarioScene, EncyclopediaScene, RecordScene, SettingsScene, HelpScene],
 };

@@ -153,185 +153,221 @@
 
 #### Sprint 2 完了処理
 - [x] 仕様書タグ更新 (`[IMPLEMENTED: sprint2]`)
-- [ ] feature/sprint2-* → develop PR → CI → merge
-- [ ] Vercel Preview URL 動作確認
+- [x] feature/sprint2-* → develop PR → CI → merge (PR #3 ✅)
+- [x] Vercel Preview URL 動作確認 ✅
 
 ---
 
 ## Phase 2: コンテンツ拡充
 
-### Sprint 3: IJN 全艦種・FleetBuilder・護衛艦・陣形
+### Sprint 3: IJN 艦隊・FleetBuilder・護衛艦・陣形 ✅
 
-#### IJN 艦種実装 (src/entities/ships/)
-- [ ] `src/entities/ships/Battleship.ts` (主砲 2 連装)
-- [ ] `src/entities/ships/Cruiser.ts` (中速・副砲多め)
-- [ ] `src/entities/ships/Destroyer.ts` (高速・魚雷搭載)
-- [ ] `src/entities/ships/Carrier.ts` (低耐久・艦載機発艦ポイント)
-- [ ] `src/entities/ships/Submarine.ts` (潜航フラグ・表示切替)
+> 詳細: `docs/specs/sprints/sprint3.md`。当初計画のうち未実装分は `docs/specs/sprints/backlog.md`「Deferred from Sprint 3」へ移動。
 
-#### IJN データ (`src/data/ships/ijn.json`)
-- [ ] 戦艦: 大和 / 武蔵 / 長門 / 陸奥 / 金剛 + 架空枠
-- [ ] 巡洋艦: 高雄 / 愛宕 / 利根 / 筑摩 等
-- [ ] 駆逐艦: 島風 / 雪風 / 初春 等
-- [ ] 空母: 赤城 / 加賀 / 翔鶴 / 瑞鶴 / 大鳳 等
-- [ ] 潜水艦: 伊400 / 伊19 等
-- [ ] `docs/specs/ships/IJN/` 仕様書一式
+#### IJN データ / 武器
+- [x] `src/data/ships/ijn.json` — 5 隻 (大和 / 武蔵 / 高雄 / 吹雪 / 翔鶴)
+- [x] `src/data/weapons/weapons.json` — 46cm / 20cm / 12cm / 93式魚雷
 
-#### 武器追加
-- [ ] `src/entities/weapons/Torpedo.ts` — 低速・高威力・AOE
-- [ ] `src/data/weapons/torpedoes.json` / `main-guns.json` / `secondary.json`
-
-#### FleetBuilder
-- [ ] `src/scenes/FleetBuilderScene.ts`
-- [ ] `src/ui/FleetPanel.ts` — 艦船カード一覧・編成
-- [ ] `src/ui/components/ShipCard.ts` — 艦名・HP・攻撃力カード
-- [ ] `src/systems/FleetSystem.ts` — 陣形計算・隊列維持 AI
-- [ ] 陣形種別: 単縦陣 / 輪形陣 / 複縦陣
+#### FleetBuilder・陣形
+- [x] `src/scenes/MainMenuScene.ts` / `src/scenes/FleetBuilderScene.ts` (最大 3 スロット)
+- [x] `src/types/Formation.ts` + `src/systems/FormationSystem.ts` — 単縦陣 / 複縦陣 / 輪形陣
+- [x] `src/systems/FleetSystem.ts` — 艦隊生成・検証・旗艦取得
 
 #### 護衛艦 AI
-- [ ] `AISystem.ts` 拡張: 旗艦 / 空母を追従しつつ脅威排除
+- [x] `src/systems/EscortAISystem.ts` — 陣形位置へ追従・射程内の敵を自動攻撃
+
+#### テスト
+- [x] `tests/unit/FleetSystem.test.ts` / `tests/unit/FormationSystem.test.ts`
 
 #### Sprint 3 完了処理
-- [ ] develop PR → CI → Vercel Preview → main マージ
+- [x] develop PR → CI → Vercel Preview → main マージ (PR #4 ✅)
+
+### Sprint 3 後の追加対応 (計画外)
+- [x] Issue #5〜#9 修正 — クラッシュ / テクスチャ / 艦名 / HP バー位置 (PR #10)
+- [x] モバイル対応 — レスポンシブスケーリング / バーチャルジョイスティック / タップ射撃 (PR #11)
+- [x] UI 刷新 — 日本語フォント / 縦画面レイアウト / AUTO 操縦 / 戦闘海域拡大 (PR #12)
 
 ---
 
-### Sprint 4: USN・Kriegsmarine・AI 強化・潜水艦戦
+### Sprint 4: USN・Kriegsmarine・AI 強化・潜水艦戦 ✅
+
+> 詳細: `docs/specs/sprints/current.md`。Fleet Builder の艦リストは 6 隻ごとのページ切替。
 
 #### USN データ (`src/data/ships/usn.json`)
-- [ ] 戦艦: Iowa / Missouri / New Jersey / North Carolina 等
-- [ ] 巡洋艦: Baltimore / Des Moines 等
-- [ ] 駆逐艦: Fletcher / Gearing 等
-- [ ] 空母: Essex / Enterprise / Midway 等
-- [ ] 潜水艦: Gato / Balao 等
-- [ ] `docs/specs/ships/USN/` 仕様書
+- [x] 戦艦: Iowa / North Carolina
+- [x] 戦艦: Missouri / New Jersey
+- [x] 巡洋艦: Baltimore
+- [x] 巡洋艦: Des Moines
+- [x] 駆逐艦: Fletcher
+- [x] 駆逐艦: Gearing
+- [x] 空母: Essex (艦載機は Sprint 5)
+- [x] 空母: Enterprise / Midway
+- [x] 潜水艦: Gato
+- [x] 潜水艦: Balao
+- [x] `docs/specs/ships/USN/` 仕様書
 
-#### Kriegsmarine データ (`src/data/ships/kriegsmarine.json`)
-- [ ] 戦艦: Bismarck / Tirpitz / Scharnhorst / Gneisenau
-- [ ] 巡洋艦: Admiral Hipper / Prinz Eugen 等
-- [ ] 駆逐艦: Z 級各艦
-- [ ] 空母: Graf Zeppelin (架空扱い)
-- [ ] 潜水艦: VIIC 型 / IXC 型 / XXI 型 等
-- [ ] `docs/specs/ships/Kriegsmarine/` 仕様書
+#### Kriegsmarine データ (`src/data/ships/km.json`)
+- [x] 戦艦: Bismarck / Tirpitz
+- [x] 戦艦: Scharnhorst / Gneisenau
+- [x] 巡洋艦: Prinz Eugen
+- [x] 巡洋艦: Admiral Hipper
+- [x] 駆逐艦: Z1 (Leberecht Maass)
+- [x] 空母: Graf Zeppelin (架空扱い)
+- [x] 潜水艦: VIIC 型
+- [x] 潜水艦: IXC 型 / XXI 型
+- [x] `docs/specs/ships/KM/` 仕様書
 
 #### AI 強化
-- [ ] `AISystem.ts` v2: 優先目標選択 / 撤退判断 / 国籍別戦術差
+- [x] `AIBrain.ts` + `AISystem.ts` v2: 優先目標選択 / 撤退判断 / 国籍別戦術差 (`docs/specs/systems/ai.md`)
 
 #### 潜水艦戦メカニクス
-- [ ] `Submarine.ts` 潜航 / 浮上 状態管理 (alpha=0 / 速度低下 / 魚雷のみ)
-- [ ] `src/entities/weapons/DepthCharge.ts` — 爆雷 (AOE・遅延爆発)
-- [ ] ソナー探知: 探知範囲内の潜水艦をミニマップに表示
-- [ ] ASW モード基本版 (護衛艦 vs 潜水艦群)
+- [x] 潜航 / 浮上 状態管理 (`SubmarineSystem.ts`: 半透明 / 速度低下 / 魚雷のみ / 潜航時間制限)
+- [x] `src/entities/weapons/DepthCharge.ts` — 爆雷 (AOE・遅延爆発)
+- [x] `src/entities/weapons/Torpedo.ts` — 魚雷 (Sprint 3 から持ち越し)
+- [x] ソナー探知 (`SonarSystem.ts`): 探知中のみ表示 + ソナー波紋 (ミニマップ表示は Sprint 7)
+- [x] ASW モード基本版 (Fleet Builder の「対潜戦」で敵が潜水艦群)
 
 #### Sprint 4 完了処理
-- [ ] develop PR → CI → Vercel Preview → main マージ
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 
-### Sprint 5: Royal Navy・カスタマイズ・艦長・艦載機
+### Sprint 5: Royal Navy・カスタマイズ・艦長・艦載機 ✅
 
-#### Royal Navy データ (`src/data/ships/royal-navy.json`)
-- [ ] 戦艦: Hood / King George V / Warspite / Rodney 等
-- [ ] 巡洋艦: Belfast / Southampton 等
-- [ ] 駆逐艦: Tribal 級 / J 級 等
-- [ ] 空母: Illustrious / Ark Royal 等
-- [ ] 潜水艦: T 級 / U 級 等
-- [ ] `docs/specs/ships/RoyalNavy/` 仕様書
+> 詳細: `docs/specs/sprints/current.md`
+
+#### Royal Navy データ (`src/data/ships/rn.json`)
+- [x] 戦艦: Hood / King George V / Warspite / Rodney
+- [x] 巡洋艦: Belfast / Southampton
+- [x] 駆逐艦: Tribal 級 (Cossack) / J 級 (Javelin)
+- [x] 空母: Illustrious / Ark Royal
+- [x] 潜水艦: T 級 (Truant) / U 級 (Upholder)
+- [x] `docs/specs/ships/RN/` 仕様書
 
 #### カスタマイズシステム
-- [ ] `src/systems/CustomizationSystem.ts` — スロット管理・ステータス再計算
-- [ ] `src/scenes/CustomizationScene.ts`
-- [ ] `src/ui/CustomizationPanel.ts` — スロット UI・装備選択
-- [ ] `docs/specs/systems/customization.md`
+- [x] `src/systems/CustomizationSystem.ts` — スロット管理・ステータス再計算
+- [x] `src/scenes/CustomizationScene.ts` (パネル UI はシーン内に実装)
+- [x] `docs/specs/systems/customization.md`
 
 #### 艦長システム
-- [ ] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill` enum
-- [ ] `src/systems/CaptainSystem.ts` — 任命 / スキル3種 / 経験値・レベルアップ
-- [ ] `docs/specs/systems/captain.md`
+- [x] `src/types/Captain.ts` — `ICaptain` / `CaptainSkill` enum
+- [x] `src/systems/CaptainSystem.ts` — 任命 / スキル3種 / 経験値・レベルアップ
+- [x] `docs/specs/systems/captain.md`
 
 #### 艦載機システム
-- [ ] `src/types/Aircraft.ts` — `AircraftType` enum (Fighter / DiveBomber / TorpedoBomber)
-- [ ] `src/entities/aircraft/BaseAircraft.ts`
-- [ ] `src/entities/aircraft/Fighter.ts` — 制空権確保・敵機迎撃
-- [ ] `src/entities/aircraft/DiveBomber.ts` — 急降下爆撃
-- [ ] `src/entities/aircraft/TorpedoBomber.ts` — 低空雷撃
-- [ ] `Carrier.ts` に発艦 / 着艦メソッド追加
-- [ ] `docs/specs/systems/aircraft.md`
+- [x] `src/types/Aircraft.ts` — `AircraftType` enum (Fighter / DiveBomber / TorpedoBomber / Recon)
+- [x] `src/entities/aircraft/Squadron.ts` — 編隊 (機種ごとのクラスではなく編隊 1 クラスで実装)
+- [x] 戦闘機 (直掩・迎撃) / 急降下爆撃 / 雷撃 — `AirOpsSystem.ts`
+- [x] 空母の発艦 / 着艦・再装備 — `AirWingSystem.ts`
+- [x] `docs/specs/systems/aircraft.md`
 
 #### 航空偵察機
-- [ ] `src/entities/aircraft/Recon.ts` — 水上機・扇形索敵範囲
-- [ ] FogOfWar 実装 (RenderTexture マスク)
+- [x] 水上偵察機 (`ReconSystem.ts`)・扇形索敵範囲 (`VisionSystem.ts`)
+- [x] FogOfWar 実装 (RenderTexture マスク、`ui/FogOfWar.ts`)
 
 #### Sprint 5 完了処理
-- [ ] develop PR → CI → Vercel Preview → main マージ
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 
 ## Phase 3: システム拡張・品質
 
-### Sprint 6: 鎮守府・基地システム
+### Sprint 6: 鎮守府・基地システム ✅
 
-- [ ] `src/scenes/HomeScene.ts` — 鎮守府ハブ画面 (編成 / 出撃 / 工廠 / 管理)
-- [ ] `src/systems/DockSystem.ts` — 修理キュー管理 (最大2隻並列・時間コスト)
-- [ ] `src/systems/ResourceSystem.ts` — 燃料 / 弾薬 / 鋼材 / ボーキサイト 管理
-- [ ] `src/scenes/ArsenalScene.ts` — 工廠画面
-- [ ] `src/systems/ResearchSystem.ts` — 技術ツリー・資源消費でアンロック
-- [ ] `src/data/tech-tree.json` — 技術ツリー定義
-- [ ] `src/systems/ProgressionSystem.ts` — 経験値付与・資源獲得統合
-- [ ] `docs/specs/systems/progression.md`
-- [ ] develop PR → CI → Vercel Preview → main マージ
+> 詳細: `docs/specs/systems/progression.md`
+
+- [x] `src/scenes/HomeScene.ts` — 鎮守府ハブ画面 (出撃 / 工廠 / 改装 + 資源 + 入渠パネル)
+- [x] `src/systems/DockSystem.ts` — 修理キュー管理 (最大2隻並列・時間コスト・高速修理)
+- [x] `src/systems/ResourceSystem.ts` — 燃料 / 弾薬 / 鋼材 / ボーキサイト 管理
+- [x] `src/scenes/ArsenalScene.ts` — 工廠画面
+- [x] `src/systems/ResearchSystem.ts` — 技術ツリー・資源消費でアンロック
+- [x] `src/data/tech-tree.json` — 技術ツリー定義
+- [x] `src/systems/ProgressionSystem.ts` — 資源報酬・損傷の反映 (艦長 XP は CaptainSystem)
+- [x] `docs/specs/systems/progression.md`
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 
-### Sprint 7: 演出・品質・バランス
+### Sprint 7: 演出・品質・バランス ✅
 
-- [ ] `src/systems/AudioSystem.ts` — BGM フェード・SE 管理
-- [ ] `assets/audio/bgm/` / `assets/audio/sfx/` アセット配置
-- [ ] Explosion / WaterSplash エフェクト強化 (黒煙・波紋アニメーション)
-- [ ] `src/ui/Minimap.ts` — RenderTexture 縮小表示 (味方: 青 / 敵: 赤)
-- [ ] `src/systems/WeatherSystem.ts` — 晴天 / 曇天 / 嵐 / 霧 (命中・視界補正)
-- [ ] 夜戦モード: 暗転オーバーレイ・視界円・レーダー拡大
-- [ ] `src/types/ShipDamage.ts` — 部位別損傷フラグ
-- [ ] `CombatSystem.ts` に `rollCriticalHit` 追加 (主砲破壊 / 機関損傷 / 舵損傷)
-- [ ] 全体バランス調整 (HP / ダメージ / 速度 / AI 強度)
-- [ ] develop PR → CI → Vercel Preview → main マージ → **v1.0 タグ**
+> 詳細: `docs/specs/sprints/current.md` / `docs/specs/systems/balance.md`
+
+- [x] `src/systems/AudioSystem.ts` — BGM フェード・SE 管理 (WebAudio 合成)
+- [x] ~~`assets/audio/` アセット配置~~ → 音はすべて合成するため不要
+- [x] Explosion / WaterSplash エフェクト強化 (黒煙・波紋・航跡・炎上煙)
+- [x] `src/ui/Minimap.ts` — 縮小表示 (味方: 青 / 敵: 赤)。Graphics で毎フレーム描画
+- [x] `src/systems/WeatherSystem.ts` — 晴天 / 曇天 / 嵐 / 霧 (照準・視界・速力補正)
+- [x] 夜戦モード: 暗い視界外・視界縮小・発砲炎で発見
+- [x] `src/types/ShipDamage.ts` — 部位別損傷 (主砲 / 機関 / 舵)
+- [x] `rollCriticalHit` (`DamageSystem.ts`) — 主砲損傷 / 機関損傷 / 舵損傷
+- [x] 全体バランス調整 (`BalanceModel` + 不変条件テスト + AUTO 対戦)
+- [ ] develop PR → CI → Vercel Preview → main マージ → **v1.0 タグ** (PR #14)
 
 ---
 
 ## Phase 4: 高度機能・拡張
 
-### Sprint 8: 作戦マップ・キャンペーン・特殊モード
+### Sprint 8: 作戦マップ・キャンペーン・特殊モード ✅
 
-- [ ] `src/scenes/CampaignMapScene.ts` — 太平洋 / 大西洋 戦略マップ
-- [ ] `src/data/campaign.json` — 海域定義 (解放条件・敵艦隊構成)
-- [ ] `src/systems/CampaignSystem.ts` — 進行管理・海域ロック / アンロック
-- [ ] 護衛作戦モード: `src/entities/ConvoyShip.ts` + 護衛シナリオ
-- [ ] 砲撃支援モード: `src/entities/LandTarget.ts` (砲台 / 港湾 / 飛行場)
-- [ ] FogOfWar 完全実装 (視界外は不可視)
-- [ ] Tiled マップ対応 (`assets/maps/stage-01.json`) + 島・浅瀬の衝突判定
-- [ ] 潮流ベクトルフィールド (一定方向に艦を押し流す)
-- [ ] develop PR → CI → Vercel Preview → main マージ
+> 詳細: `docs/specs/systems/campaign.md`
+
+- [x] `src/scenes/CampaignMapScene.ts` — 太平洋 / 大西洋 戦略マップ
+- [x] `src/data/campaign.json` — 海域定義 (解放条件・敵艦隊構成・目標・初回報酬)
+- [x] `src/systems/CampaignSystem.ts` — 進行管理・海域ロック / アンロック
+- [x] 護衛作戦モード: 輸送船 (`special.json`) + 護衛シナリオ (`ObjectiveSystem`)
+- [x] 砲撃支援モード: 陸上目標 (砲台 / 港湾 / 飛行場)
+- [x] FogOfWar 完全実装 (Sprint 5 で実装済み)
+- [x] ~~Tiled マップ~~ → 独自 JSON マップ (`src/data/maps/`) + 島・浅瀬の衝突判定
+- [x] 潮流ベクトルフィールド (矩形ゾーン)
+- [ ] develop PR → CI → Vercel Preview → main マージ (PR #14)
 
 ---
 
-### Sprint 9: 史実シナリオ・育成深化・図鑑
+### Sprint 9: 史実シナリオ・育成深化・図鑑 ✅
 
-- [ ] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
-- [ ] シナリオ読み込みシステム (固定配置・特殊勝利条件)
-- [ ] `src/systems/RefitSystem.ts` — 改装/改造 (資源消費で段階解放)
-- [ ] `src/data/refits/` — 各国改装データ JSON
-- [ ] `IShipStats` に `proficiency: number (0-100)` 追加 → 命中 / 回避補正
-- [ ] `src/scenes/EncyclopediaScene.ts` — 艦船図鑑 (国籍 / 艦種フィルタ・史実解説)
+> 詳細: `docs/specs/systems/scenario.md` / `refit.md`
+
+- [x] `src/data/scenarios/midway.json` / `leyte-gulf.json` / `bismarck-chase.json`
+- [x] シナリオ読み込みシステム (固定配置・特殊勝利条件) + `ScenarioScene`
+- [x] `src/systems/RefitSystem.ts` — 改装/改造 (資源消費で段階解放)
+- [x] ~~`src/data/refits/` — 各国改装データ JSON~~ → 艦種別の段階を `src/data/refits.json` に集約
+- [x] `IShipStats` に `proficiency: number (0-100)` 追加 → 命中 / 回避補正
+- [x] `src/scenes/EncyclopediaScene.ts` — 艦船図鑑 (国籍 / 艦種フィルタ・史実解説)
 - [ ] develop PR → CI → Vercel Preview → main マージ → **v2.0 タグ**
 
 ---
 
-### Sprint 10+: 架空艦・追加コンテンツ
+### Sprint 10: 架空艦・追加コンテンツ・戦績 ✅
 
-- [ ] 架空艦実装 (IJN: 超大和型・A-150 / USN: モンタナ級 / KM: H 級 / RN: ライオン級)
-- [ ] 追加シナリオ / 海域 (地中海 / インド洋 等)
-- [ ] 戦績・勲章システム拡充
-- [ ] (検討) マルチプレイヤー対戦 (WebSocket)
+> 詳細: `docs/specs/systems/records.md` / `scenario.md` / `campaign.md`
+
+- [x] 架空艦実装 (IJN: 超大和型 A-150 / USN: モンタナ級 / KM: H 級 / RN: ライオン級) — 研究「架空艦計画」で解放
+- [x] 追加シナリオ (第三次ソロモン海戦 / 北岬沖海戦) / 海域 (第 3 戦域「地中海」: 地中海・インド洋 5 海域)
+- [x] 戦績・勲章システム (`RecordSystem` + 戦績画面 + 戦闘結果の勲章表示)
+- [ ] (検討) マルチプレイヤー対戦 (WebSocket) — サーバーが必要なため Sprint 11 以降で検討
+
+---
+
+### Sprint 11: 仕上げ — 設定・ヘルプ・セーブ管理 ✅ (提案スプリント)
+
+> 詳細: `docs/specs/systems/settings.md`
+
+- [x] 設定画面 — BGM / 効果音の音量・ミュート (進行データとは別に保存)
+- [x] ヘルプ画面 — 操作・艦種・作戦目標の早見表
+- [x] セーブコードのエクスポート / インポート (検証付き) / リセット (2 回押し)
+
+---
+
+### Sprint 12: プレイテストのフィードバック対応 ✅ (Issue #15〜#30)
+
+> 詳細: `docs/specs/sprints/sprint12.md`, `docs/specs/systems/{nation-progress,progression,refit,records,campaign,scenario,balance,captain}.md`
+
+- [x] UI: 艦一覧のスクロール化・国名の日本語表示・スマホの入渠表示 (#20 #21 #22)
+- [x] 艦の種類 (サブ艦種・31 隻追加)・フランス / ソ連 / イタリア・艦長 各国 8 名 (#16 #17 #24)
+- [x] 国別の鎮守府と資源・駆逐艦 1 隻 / 資源 0 スタート・建造・階級と出撃枠・損傷なしの演習 (#15 #18 #25 #27 #28 #29 #30)
+- [x] 研究 12 系統 I〜V・改三と専用改造・改装スロット拡張 (#19)
+- [x] 正方形の戦闘マップ・ミッドウェーの調整・最大 8 隻の戦闘 (#26 #23 #25)
+- [x] 国別の作戦戦域とバルト海戦域
 
 ---
 
