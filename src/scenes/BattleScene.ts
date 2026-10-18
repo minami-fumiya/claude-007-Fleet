@@ -102,8 +102,6 @@ const SONAR_PING_MS = 2200;
 
 /** Convoy route: merchant ships enter on the west edge (CONVOY_START_X) and escape off the east edge. */
 const CONVOY_EXIT_MARGIN = 90;
-/** AUTO strikes in a sink-the-targets scenario hold for the targets unless a foe comes this close to the carrier. */
-const STRIKE_HOLD_THREAT = 700;
 /** Player escorts and air strikes prefer the scenario's target ships by this much. */
 const OBJECTIVE_PRIORITY = 0.5;
 /** Enemy AI prefers convoy ships over warships by this much. */
@@ -837,12 +835,11 @@ export class BattleScene extends Phaser.Scene {
           const locked = foes.find((f) => f.ship === this.lockedTarget);
           if (locked) return locked;
         }
-        // With target ships to sink, strikes wait for them unless something gets close to the carrier.
+        // With target ships to sink, strikes go for them when they are in sight; otherwise strike what is
+        // visible rather than hold (holding let the enemy's carriers strike first, #23).
         if (this.scenarioTargets.length > 0) {
           const wanted = foes.filter((f) => this.scenarioTargets.includes(f.ship));
-          const threats = foes.filter((f) => Phaser.Math.Distance.Between(carrier.x, carrier.y, f.x, f.y) <= STRIKE_HOLD_THREAT);
-          if (wanted.length === 0 && threats.length === 0) return null;
-          return pick(this.playerNation)(carrier, wanted.length > 0 ? wanted : threats);
+          if (wanted.length > 0) return pick(this.playerNation)(carrier, wanted);
         }
         return pick(this.playerNation)(carrier, foes);
       },
