@@ -1235,7 +1235,9 @@ export class BattleScene extends Phaser.Scene {
   private buildOverlayUi(): void {
     const b = TOP_BUTTON;
     const pw = IS_PORTRAIT ? 140 : 110;
-    new UIButton(this, CANVAS_W / 2, b.y, this.isTouch ? '一時停止' : '一時停止 [P]', () => this.setPaused(true), {
+    // Portrait: top centre between 撤退 and 自動; landscape: next to 撤退, clear of the status bar in the middle.
+    const px = IS_PORTRAIT ? CANVAS_W / 2 : 20 + b.w + 10 + pw / 2;
+    new UIButton(this, px, b.y, this.isTouch ? '一時停止' : '一時停止 [P]', () => this.setPaused(true), {
       variant: 'secondary', width: pw, height: b.h, fontSize: IS_PORTRAIT ? 15 : 13,
     }).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     new UIButton(this, 20 + b.w / 2, b.y, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {

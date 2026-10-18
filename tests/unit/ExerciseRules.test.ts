@@ -74,9 +74,9 @@ describe('演習 (free battle, #15) and free sorties (#28)', () => {
 });
 
 describe('exercise opponent (#25 / #76 / #78)', () => {
-  it('fields the asked number of enemies, 1 to 10', () => {
+  it('fields the asked number of enemies, 1 to 20', () => {
     const fleet = [ship('fubuki')];
-    for (const size of [1, 3, 10]) {
+    for (const size of [1, 3, 10, 20]) {
       expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, fleet, size)).toHaveLength(size);
     }
     expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, fleet, 99)).toHaveLength(MAX_EXERCISE_ENEMIES);

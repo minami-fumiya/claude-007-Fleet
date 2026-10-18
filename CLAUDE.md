@@ -58,6 +58,11 @@ When starting a new sprint, read in this order:
 
 ---
 
+## Language (言語)
+- **ユーザーへの返信・途中経過の報告は、すべて日本語で書く** (短い一言や作業中のメモも含む)。
+- GitHub の issue・PR の本文やコメントも日本語。コミットメッセージは英語の Conventional Commits。
+- コード中のコメントと識別子は英語のまま、画面に出る文言は日本語。
+
 ## Conventions
 - **Branches**: `feature/sprint<N>-<slug>` → develop → main
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`)

@@ -95,7 +95,7 @@ export function generateEnemyFleet(
 }
 
 /** Largest free-battle (演習) opponent (#78). */
-export const MAX_EXERCISE_ENEMIES = 10;
+export const MAX_EXERCISE_ENEMIES = 20;
 
 /** Clamps a requested exercise opponent size to 1..MAX_EXERCISE_ENEMIES. */
 export function exerciseEnemyCount(size: number): number {

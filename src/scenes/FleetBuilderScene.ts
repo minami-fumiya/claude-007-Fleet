@@ -173,9 +173,8 @@ const MODE_LABEL: Record<BattleMode, string> = {
   [BattleMode.CarrierStrike]: '機動部隊',
   [BattleMode.ASW]: '対潜戦',
 };
-/** Free battle enemy count (#78): 0 = as many as the player's fleet, otherwise 1-10 ships. */
+/** Free battle enemy count (#78): 0 = as many as the player's fleet, otherwise 1 to MAX_EXERCISE_ENEMIES ships. */
 const SAME_COUNT = 0;
-const COUNT_CHOICES: number[] = [SAME_COUNT, ...Array.from({ length: MAX_EXERCISE_ENEMIES }, (_, i) => i + 1)];
 
 function choiceLabel<T extends string>(c: Choice<T>, labels: Record<T, string>): string {
   return c === RANDOM ? 'ランダム' : labels[c];
@@ -228,6 +227,16 @@ interface ISettingGroup {
   cols: number;
   /** Extra line under the open options (e.g. the chosen formation's trade-off) */
   note?: string;
+  /** A one-line − / + stepper with a 同数 toggle instead of radio options (enemy count, up to 20 ships) */
+  stepper?: IStepper;
+}
+
+interface IStepper {
+  same: boolean;
+  toggleSame: () => void;
+  step: (delta: number) => void;
+  canDec: boolean;
+  canInc: boolean;
 }
 
 /** Kind filter + sort toggle rows above a ship list. */
@@ -762,7 +771,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const radio = <T>(choices: T[], current: T, label: (c: T) => string, set: (c: T) => void): IOption[] =>
       choices.map((c) => ({ label: label(c), selected: c === current, enabled: true, pick: () => set(c) }));
     const nationLabel = (n: Choice<Nation>): string => (n === RANDOM ? 'ランダム' : NATION_INFO[n].jaShort);
-    const countLabel = (c: number): string => (c === SAME_COUNT ? '同数' : `${c} 隻`);
+    const fleetSize = Math.max(1, this.fleetShips().length);
+    const count = this.enemyCount === SAME_COUNT ? fleetSize : this.enemyCount;
     groups.push(
       { key: 'enemy', title: '交戦相手', value: nationLabel(this.enemyNation), cols: 4, options: radio(foes, this.enemyNation, nationLabel, (c) => { this.enemyNation = c; }) },
       { key: 'mode', title: '戦闘の種類', value: choiceLabel(this.mode, MODE_LABEL), cols: p ? 4 : 2, options: radio(MODE_CHOICES, this.mode, (c) => choiceLabel(c, MODE_LABEL), (c) => { this.mode = c; }) },
@@ -771,10 +781,17 @@ export class FleetBuilderScene extends Phaser.Scene {
       {
         key: 'count',
         title: '敵の数',
-        value: this.enemyCount === SAME_COUNT ? `同数 (${this.fleetShips().length || 1} 隻)` : countLabel(this.enemyCount),
-        cols: p ? 6 : 4,
-        note: '敵は自艦隊の艦種に合わせて選ばれ、同じ艦は重複しません',
-        options: radio(COUNT_CHOICES, this.enemyCount, countLabel, (c) => { this.enemyCount = c; }),
+        value: `${count} 隻`,
+        cols: 1,
+        options: [],
+        // − / + from the current number; leaving 同数 starts from the fleet's size.
+        stepper: {
+          same: this.enemyCount === SAME_COUNT,
+          toggleSame: () => { this.enemyCount = this.enemyCount === SAME_COUNT ? fleetSize : SAME_COUNT; },
+          step: (delta) => { this.enemyCount = exerciseEnemyCount(count + delta); },
+          canDec: count > 1,
+          canInc: count < MAX_EXERCISE_ENEMIES,
+        },
       },
     );
     return groups;
@@ -795,6 +812,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     let y = s.y + PANEL_HEADER_H + (p ? 4 : 0);
 
     for (const g of this.settingGroups()) {
+      if (g.stepper) {
+        objs.push(this.addStepperRow(x, y, w, rowH, g.title, g.value, g.stepper));
+        y += rowH + gap;
+        continue;
+      }
       const open = this.openGroup === g.key;
       const frame = drawPanel(this.add.graphics(), 0, 0, w, rowH, { radius: p ? 16 : 12, fill: open ? Colors.panelHi : Colors.panel, fillAlpha: open ? 0.9 : 0.55, rimAlpha: open ? 0.7 : 0.25 });
       const title = this.add.text(p ? 20 : 12, rowH / 2, g.title, textStyle(p ? 15 : 13, Css.muted, { fontStyle: 'bold' })).setOrigin(0, 0.5);
@@ -835,6 +857,32 @@ export class FleetBuilderScene extends Phaser.Scene {
     for (const o of objs) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(1);
     this.settingsObjs = [...frame, ...objs];
     this.updateScrollBounds();
+  }
+
+  /** A settings row with 同数 and − value + controls on the right; changes apply at once. */
+  private addStepperRow(x: number, y: number, w: number, h: number, titleText: string, valueText: string, st: IStepper): Phaser.GameObjects.Container {
+    const p = IS_PORTRAIT;
+    const frame = drawPanel(this.add.graphics(), 0, 0, w, h, { radius: p ? 16 : 12, fill: Colors.panel, fillAlpha: 0.55, rimAlpha: 0.25 });
+    const title = this.add.text(p ? 20 : 12, h / 2, titleText, textStyle(p ? 15 : 13, Css.muted, { fontStyle: 'bold' })).setOrigin(0, 0.5);
+    const bh = h - (p ? 14 : 6);
+    const stepW = p ? 64 : 36;
+    const valueW = p ? 96 : 64;
+    const sameW = p ? 104 : 56;
+    const font = p ? 15 : 12;
+    const apply = (fn: () => void) => this.onTap(() => {
+      fn();
+      this.buildSettings();
+      this.refreshFooter();
+    });
+    let right = w - (p ? 10 : 6);
+    const plus = new UIButton(this, right - stepW / 2, h / 2, '+', apply(() => st.step(1)), { variant: 'secondary', width: stepW, height: bh, fontSize: font + 4 }).setEnabled(st.canInc);
+    right -= stepW;
+    const value = this.add.text(right - valueW / 2, h / 2, valueText, textStyle(p ? 17 : 14, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
+    right -= valueW;
+    const minus = new UIButton(this, right - stepW / 2, h / 2, '−', apply(() => st.step(-1)), { variant: 'secondary', width: stepW, height: bh, fontSize: font + 4 }).setEnabled(st.canDec);
+    right -= stepW + (p ? 12 : 8);
+    const same = new UIButton(this, right - sameW / 2, h / 2, '同数', apply(st.toggleSame), { variant: st.same ? 'primary' : 'secondary', width: sameW, height: bh, fontSize: font });
+    return this.add.container(x, y, [frame, title, same, minus, value, plus]);
   }
 
   /** A radio option: ring (filled when selected) and label; disabled options are dimmed and inert. */

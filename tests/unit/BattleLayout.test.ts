@@ -18,7 +18,7 @@ describe('BattleLayout', () => {
     expect([0, 1, 2, 3, 4, 5, 6, 7].map(lineSlot)).toEqual([0, -1, 1, -2, 2, -3, 3, -4]);
   });
 
-  it.each([1, 2, 3, 4, 5, 6, 7, 8])('spreads %i enemies inside the world without overlap', (n) => {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 15, 20])('spreads %i enemies inside the world without overlap', (n) => {
     const pts = enemySpawnPoints(n);
     expect(pts).toHaveLength(n);
     for (const p of pts) {
