@@ -61,6 +61,8 @@ describe('CampaignSystem', () => {
     for (const a of data.areas) {
       expect(enemyShips(a, registry), a.id).toHaveLength(a.enemy.ships.length);
       expect(enemyShips(a, registry).some((sh) => sh.fictional), `${a.id} fields a fictional ship`).toBe(false);
+      // No area lists the same ship twice (#76).
+      expect(new Set(a.enemy.ships).size, `${a.id} repeats a ship`).toBe(a.enemy.ships.length);
       expect(maps.has(a.map), a.id).toBe(true);
       expect(theaters.has(a.theater), a.id).toBe(true);
       for (const r of a.requires) expect(ids.has(r), `${a.id} -> ${r}`).toBe(true);
@@ -96,6 +98,13 @@ describe('campaign by nation (#27)', () => {
     });
     // Same nation as written: unchanged.
     expect(enemyShips(p5, registry, Nation.USN)).toEqual(written);
+    // Swapped fleets never repeat a ship, for any playing nation (#76).
+    for (const a of data.areas) {
+      for (const n of PLAYABLE_NATIONS) {
+        const ships = enemyShips(a, registry, enemyNationFor(data, a, n));
+        expect(new Set(ships.map((s) => s.id)).size, `${a.id} as ${n}`).toBe(ships.length);
+      }
+    }
   });
 
   it('falls back to a battleship when the opponent has no historical carrier', () => {

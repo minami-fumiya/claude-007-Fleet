@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   EXERCISE_REWARD_SCALE, isExercise, isFreeSortie, paySortie, settleBattle, sortieBlockers, sortieCostFor, startingHp,
 } from '@/systems/ProgressionSystem';
-import { exerciseEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { exerciseEnemyFleet, MAX_EXERCISE_ENEMIES } from '@/systems/EnemyFleetGenerator';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { battleReward, resources } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -73,26 +73,37 @@ describe('演習 (free battle, #15) and free sorties (#28)', () => {
   });
 });
 
-describe('exercise opponent size (#25)', () => {
-  it('同数 / +1 / +2: one enemy per player ship plus the extra', () => {
+describe('exercise opponent (#25 / #76 / #78)', () => {
+  it('fields the asked number of enemies, 1 to 10', () => {
     const fleet = [ship('fubuki')];
-    for (const extra of [0, 1, 2]) {
-      expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, fleet, extra)).toHaveLength(1 + extra);
+    for (const size of [1, 3, 10]) {
+      expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, fleet, size)).toHaveLength(size);
     }
+    expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, fleet, 99)).toHaveLength(MAX_EXERCISE_ENEMIES);
+    expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, fleet, 0)).toHaveLength(1);
     expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, [], 2)).toEqual([]);
   });
 
+  it('never fields the same ship twice, even ten ships from a small navy', () => {
+    for (const nation of Object.values(Nation)) {
+      for (const mode of [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW]) {
+        const enemy = exerciseEnemyFleet(registry, nation, mode, [ship('yamato'), ship('fubuki')], 10, () => 0);
+        expect(new Set(enemy.map((s) => s.id)).size, `${nation} ${mode}`).toBe(enemy.length);
+      }
+    }
+  });
+
   it('mirrors the class of each player ship so a lone destroyer meets a destroyer', () => {
-    const enemy = exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, [ship('fubuki')], 0);
+    const enemy = exerciseEnemyFleet(registry, Nation.USN, BattleMode.Surface, [ship('fubuki')], 1);
     expect(enemy[0].shipClass).toBe(ShipClass.Destroyer);
-    const mixed = exerciseEnemyFleet(registry, Nation.KM, BattleMode.Surface, [ship('yamato'), ship('takao')], 1, () => 0);
+    const mixed = exerciseEnemyFleet(registry, Nation.KM, BattleMode.Surface, [ship('yamato'), ship('takao')], 3, () => 0);
     expect(mixed.map((s) => s.shipClass)).toEqual([ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Cruiser]);
     expect(mixed.every((s) => s.nation === Nation.KM && !s.fictional)).toBe(true);
   });
 
-  it('ASW fields submarines, a carrier battle leads with a carrier', () => {
-    expect(exerciseEnemyFleet(registry, Nation.RN, BattleMode.ASW, [ship('fubuki')], 1).every((s) => s.shipClass === ShipClass.Submarine)).toBe(true);
-    expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.CarrierStrike, [ship('fubuki')], 0)[0].shipClass).toBe(ShipClass.Carrier);
+  it('ASW fields submarines first, a carrier battle leads with a carrier', () => {
+    expect(exerciseEnemyFleet(registry, Nation.RN, BattleMode.ASW, [ship('fubuki')], 2)[0].shipClass).toBe(ShipClass.Submarine);
+    expect(exerciseEnemyFleet(registry, Nation.USN, BattleMode.CarrierStrike, [ship('fubuki')], 1)[0].shipClass).toBe(ShipClass.Carrier);
   });
 });
 

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
-import { ISelection, SELECTION_KEY } from '@/scenes/FleetBuilderScene';
+import { selectionFor } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { applyToStats, applyToWeapons, combineModifiers, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
@@ -72,7 +72,7 @@ export class CustomizationScene extends Phaser.Scene {
   }
 
   create(): void {
-    const selection = this.registry.get(SELECTION_KEY) as ISelection | undefined;
+    const selection = selectionFor(this.registry, loadProgress().nation);
     const registry = DataLoader.getRegistry(this);
     // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.
     const owned = ownedShips(loadProgress(), registry.byNation(loadProgress().nation));

@@ -158,6 +158,13 @@ export class ScrollList {
     return this.setOffset(scrollIntoView(this.scroll, top, h, this.contentH, this.opts.h));
   }
 
+  /** Draws the rows and scrollbar at `depth`, e.g. inside an overlay sheet. */
+  setDepth(depth: number): this {
+    this.content.setDepth(depth);
+    this.bar?.setDepth(depth + 1);
+    return this;
+  }
+
   /** Whether a pointer is over the visible part of the viewport. */
   contains(pointer: Phaser.Input.Pointer): boolean {
     const clip = this.opts.screenClip;

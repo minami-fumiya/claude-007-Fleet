@@ -42,6 +42,7 @@ describe('ScenarioSystem', () => {
   it.each(SCENARIOS)('$id: ships exist, positions match and side goals are consistent', (sc) => {
     for (const f of [sc.forces.A, sc.forces.B]) {
       expect(forceShips(f, registry)).toHaveLength(f.ships.length);
+      expect(new Set(f.ships).size, `${sc.id} repeats a ship`).toBe(f.ships.length);
       expect(f.positions).toHaveLength(f.ships.length);
       expect(forceShips(f, registry).every((s) => s.nation === f.nation)).toBe(true);
     }
