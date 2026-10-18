@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { IShipStats } from '@/types/Ship';
+import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { IWeaponData } from '@/types/Weapon';
 import { ShipClass } from '@/types/ShipClass';
 import { ISteer } from '@/systems/AutoPilot';
@@ -17,6 +18,10 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   /** From upgrades: radar widens vision, extra guns strengthen AA */
   visionMul = 1;
   aaMul = 1;
+  /** Every modifier applied at spawn (sonar, aviation and night bonuses are read from here) */
+  mods: IShipModifiers = NO_MODIFIERS;
+  /** Aim error scale from modifiers (night-battle research); proficiency is applied separately */
+  aimErrorMul = 1;
   /** Ship data id (for saving damage after the battle) */
   dataId = '';
   /** Shore installation: never moves, can't be hit by torpedoes */

@@ -412,6 +412,12 @@ export class UIButton extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Changes the caption line (only on buttons created with a `caption`). */
+  setCaption(text: string): this {
+    this.caption?.setText(text);
+    return this;
+  }
+
   /** Swaps the fill style, e.g. to show a toggle's on/off state. */
   setVariant(variant: ButtonVariant): this {
     this.bg.setTexture(buttonTexture(this.scene, variant, this.btnW, this.btnH));
