@@ -8,7 +8,7 @@ export interface ISettings {
   muted: boolean;
   /** Show the virtual movement stick on touch screens (#46); hidden, the flagship moves by sea taps and AUTO */
   joystick: boolean;
-  /** Fleet Builder: keep the last exercise settings (opponent, mode, weather, time, enemy count) between visits (#108); off = start from random each time */
+  /** Fleet Builder: keep the last exercise settings (opponent, mode, weather, time, enemy count) between visits (#108); off = start from the standard setup each time */
   keepExercise: boolean;
 }
 

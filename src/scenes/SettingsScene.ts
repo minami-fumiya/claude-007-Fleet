@@ -4,11 +4,14 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { clampVolume, ISettings, stepVolume } from '@/systems/SettingsSystem';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
-import { emptySave, loadSave, saveSave } from '@/utils/ProgressStore';
+import { backupStoredSave, emptySave, listBackups, loadSave, restoreBackup, saveSave } from '@/utils/ProgressStore';
+import { backupLabel, ISaveBackup } from '@/utils/SaveBackup';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
 
-const P = IS_PORTRAIT ? { x: 16, y: 140, w: CANVAS_W - 32, h: CANVAS_H - 156 } : { x: 240, y: 96, w: 800, h: 604 };
+/** Landscape lays the settings out in two columns (sound / controls / builder | save data), so nothing runs off the bottom. */
+const P = IS_PORTRAIT ? { x: 16, y: 140, w: CANVAS_W - 32, h: CANVAS_H - 156 } : { x: 40, y: 96, w: CANVAS_W - 80, h: 604 };
+const COL_GAP = 48;
 const ROW_H = IS_PORTRAIT ? 84 : 64;
 const BTN_H = IS_PORTRAIT ? 64 : 48;
 
@@ -17,6 +20,7 @@ export class SettingsScene extends Phaser.Scene {
   private returnTo: string = SceneKeys.HOME;
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private resetArmed = false;
+  private backupsOpen = false;
   private status = '';
   private statusCss: string = Css.muted;
 
@@ -52,8 +56,9 @@ export class SettingsScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
-    const x = P.x + 28;
-    const w = P.w - 56;
+    const colW = IS_PORTRAIT ? P.w - 56 : (P.w - 56 - COL_GAP) / 2;
+    let x = P.x + 28;
+    let w = colW;
     const s = audio.settings;
     let y = P.y + 24;
 
@@ -88,14 +93,18 @@ export class SettingsScene extends Phaser.Scene {
     y += 34;
     this.track(this.add.text(x, y + BTN_H / 2, '演習の設定を引き継ぐ', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
     this.track(
-      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.keepExercise ? '引き継ぐ' : '毎回ランダム', () => this.change({ keepExercise: !s.keepExercise }), {
+      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.keepExercise ? '引き継ぐ' : '毎回 標準', () => this.change({ keepExercise: !s.keepExercise }), {
         variant: s.keepExercise ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
       }),
     );
     y += BTN_H + 6;
-    this.track(this.add.text(x, y, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回ランダム」にすると、編成画面を開くたびにランダムから始まります。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    this.track(this.add.text(x, y, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回 標準」にすると、編成画面を開くたびに標準 (戦域の相手国・水上戦・晴天・昼・同数) から始まります。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 60 : 32;
 
+    if (!IS_PORTRAIT) {
+      x = P.x + 28 + colW + COL_GAP;
+      y = P.y + 24;
+    }
     this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
     this.track(this.add.text(x, y, 'セーブコードで別の端末やブラウザへ進行状況を移せます。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
@@ -105,7 +114,7 @@ export class SettingsScene extends Phaser.Scene {
       ['セーブコードを読み込む', () => this.importSave(), 'secondary'],
       [this.resetArmed ? 'もう一度押すとリセット' : '進行データをリセット', () => this.resetSave(), this.resetArmed ? 'danger' : 'secondary'],
     ];
-    const cols = IS_PORTRAIT ? 1 : 3;
+    const cols = 1;
     const gap = 12;
     const bw = (w - gap * (cols - 1)) / cols;
     buttons.forEach(([label, fn, variant], i) => {
@@ -114,6 +123,20 @@ export class SettingsScene extends Phaser.Scene {
       this.track(new UIButton(this, bx, by, label, fn, { variant, width: bw, height: BTN_H, fontSize: 14 }));
     });
     y += Math.ceil(buttons.length / cols) * (BTN_H + gap) + 10;
+    // Backups taken before updates, imports and resets: tap one to restore it (#114).
+    const backups = listBackups();
+    this.track(new UIButton(this, x + w / 2, y + BTN_H / 2, this.backupsOpen ? 'バックアップを閉じる' : `バックアップから復元 (${backups.length})`, () => {
+      this.backupsOpen = !this.backupsOpen;
+      this.refresh();
+    }, { variant: 'secondary', width: w, height: BTN_H, fontSize: 14 })).setEnabled(backups.length > 0);
+    y += BTN_H + gap;
+    if (this.backupsOpen) {
+      for (const b of backups) {
+        this.track(new UIButton(this, x + w / 2, y + BTN_H / 2, backupLabel(b), () => this.restore(b), { variant: 'primary', width: w, height: BTN_H - 8, fontSize: 13 }));
+        y += BTN_H - 8 + 6;
+      }
+      y += 4;
+    }
     if (this.status) this.track(this.add.text(x, y, this.status, textStyle(14, this.statusCss, { wordWrap: { width: w, useAdvancedWrap: true } })));
   }
 
@@ -171,8 +194,16 @@ export class SettingsScene extends Phaser.Scene {
     if (!text) return;
     const save = decodeSave(text);
     if (!save) return this.say('セーブコードが正しくありません。読み込みを中止しました。', Css.danger);
+    backupStoredSave('import');
     saveSave(save);
-    this.say('セーブコードを読み込みました');
+    this.say('セーブコードを読み込みました (前のデータはバックアップに残っています)');
+  }
+
+  private restore(b: ISaveBackup): void {
+    this.resetArmed = false;
+    this.backupsOpen = false;
+    if (!restoreBackup(b)) return this.say('このバックアップは読み込めませんでした。', Css.danger);
+    this.say(`バックアップ (${backupLabel(b)}) を復元しました`);
   }
 
   private resetSave(): void {
@@ -182,7 +213,8 @@ export class SettingsScene extends Phaser.Scene {
       return;
     }
     this.resetArmed = false;
+    backupStoredSave('reset');
     saveSave(emptySave());
-    this.say('進行データをリセットしました');
+    this.say('進行データをリセットしました (バックアップから戻せます)');
   }
 }

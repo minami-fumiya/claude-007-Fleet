@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
-import { applyTutorialEvent, currentStep, ITutorialResult, skipTutorial, stepLabel, TUTORIAL_REWARD, TutorialEvent } from '@/systems/TutorialSystem';
+import { applyTutorialEvent, currentStep, TUTORIAL_ENABLED, ITutorialResult, skipTutorial, stepLabel, TUTORIAL_REWARD, TutorialEvent } from '@/systems/TutorialSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { loadSave, saveSave } from '@/utils/ProgressStore';
 import { Colors, Css, displayStyle, textStyle } from '@/ui/theme';
@@ -17,6 +17,7 @@ const FINISHED_KEY = 'tutorial.finished';
  * with a guide can announce the promotion.
  */
 export function emitTutorial(event: TutorialEvent, registry?: Phaser.Data.DataManager): ITutorialResult {
+  if (!TUTORIAL_ENABLED) return { save: loadSave(), advanced: false, finished: false };
   const result = applyTutorialEvent(loadSave(), event);
   if (result.advanced) saveSave(result.save);
   if (result.finished) registry?.set(FINISHED_KEY, true);
@@ -52,6 +53,7 @@ export class TutorialGuide {
   /** Redraws after the save changed (an event on this screen); opens a step's sheet the first time it shows. */
   refresh(): void {
     this.clearChip();
+    if (!TUTORIAL_ENABLED) return;
     const registry = this.scene.registry;
     if (registry.get(FINISHED_KEY)) {
       registry.remove(FINISHED_KEY);

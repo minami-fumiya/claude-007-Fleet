@@ -255,3 +255,12 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   the explain-only steps before it, so closing a sheet and just playing still advances.
 - An overlay text measured before its panel is drawn ends up under the panel at the same depth — lift it.
 - A one-shot reward the player can replay (tutorial from ヘルプ) needs a `rewarded` flag in the save.
+
+### 0.0.12-alpha.1 — Never lose a save
+- Back up the raw stored save before migrating it, before replacing an unreadable one, and before imports and
+  resets; read the save once at boot (`main.ts`) so the backup exists before any screen writes.
+- Keep a save fixture per release (`tests/fixtures/saves/`) made with that release's own code (check out the old
+  commit in a worktree and serialise a save with its pure API), and test that each loads without losing anything.
+- Preview deployments have their own localStorage: "my save is gone" may be a different URL, not a bug.
+- A feature that has to be rewritten whenever others change (the tutorial) is better postponed until the rest is
+  stable than shipped half-right.

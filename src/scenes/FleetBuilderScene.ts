@@ -178,6 +178,25 @@ const MODE_LABEL: Record<BattleMode, string> = {
 /** Free battle enemy count (#78): 0 = as many as the player's fleet, otherwise 1 to MAX_EXERCISE_ENEMIES ships. */
 const SAME_COUNT = 0;
 
+/** Exercise opponent, battle type, weather, time and enemy count. */
+interface IExerciseChoices {
+  enemyNation: Choice<Nation>;
+  mode: Choice<BattleMode>;
+  weather: Choice<Weather>;
+  time: Choice<TimeOfDay>;
+  count: number;
+}
+
+/** The standard exercise: the nation's first campaign opponent, a surface battle on a clear day, as many ships. */
+function standardExercise(nation: Nation): IExerciseChoices {
+  const theater = (campaignData as ICampaignData).theaters.find((t) => (t.opponents as Partial<Record<Nation, Nation>>)[nation]);
+  const foe = (theater?.opponents as Partial<Record<Nation, Nation>> | undefined)?.[nation] ?? PLAYABLE_NATIONS.find((n) => n !== nation) ?? RANDOM;
+  return { enemyNation: foe, mode: BattleMode.Surface, weather: Weather.Clear, time: TimeOfDay.Day, count: SAME_COUNT };
+}
+
+/** 全てランダム: every choice drawn at sortie (the enemy count stays as set). */
+const ALL_RANDOM: Omit<IExerciseChoices, 'count'> = { enemyNation: RANDOM, mode: RANDOM, weather: RANDOM, time: RANDOM };
+
 function choiceLabel<T extends string>(c: Choice<T>, labels: Record<T, string>): string {
   return c === RANDOM ? 'ランダム' : labels[c];
 }
@@ -334,23 +353,20 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.nation = progress.nation;
     const saved = selectionFor(this.registry, this.nation);
     const enemy = saved?.enemyNation;
-    this.enemyNation = enemy && enemy !== this.nation ? enemy : RANDOM;
+    // Exercises start from a standard setup (the campaign's usual opponent, surface battle, clear day, as many
+    // ships as the fleet): all-random was too hard early on. 全てランダム is one tap away.
+    const standard = standardExercise(this.nation);
+    this.enemyNation = enemy && enemy !== this.nation ? enemy : standard.enemyNation;
     this.enemyCount = saved?.enemyCount ?? SAME_COUNT;
     this.slotCount = fleetSlots(progress);
     this.rankIndex = rankOf(progress).index;
     this.L = builderLayout(this.slotCount, nextSlotRank(progress) !== null && IS_PORTRAIT);
     // Free battles default to random everything (#78) until the player picks something.
-    this.mode = saved?.mode ?? RANDOM;
-    this.weatherChoice = saved?.weather ?? RANDOM;
-    this.timeChoice = saved?.time ?? RANDOM;
+    this.mode = saved?.mode ?? standard.mode;
+    this.weatherChoice = saved?.weather ?? standard.weather;
+    this.timeChoice = saved?.time ?? standard.time;
     // Setting off (#108): every visit starts the exercise settings from random again; the fleet is still kept.
-    if (!audio.settings.keepExercise) {
-      this.enemyNation = RANDOM;
-      this.mode = RANDOM;
-      this.weatherChoice = RANDOM;
-      this.timeChoice = RANDOM;
-      this.enemyCount = SAME_COUNT;
-    }
+    if (!audio.settings.keepExercise) this.applyExercise(standard);
     this.ships = this.offeredShips();
     const used = new Set<string>();
     this.slots = Array.from({ length: this.slotCount }, (_, i) => {
@@ -841,6 +857,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const gap = p ? 10 : 6;
     const objs: Phaser.GameObjects.GameObject[] = [];
     let y = s.y + PANEL_HEADER_H + (p ? 4 : 0);
+    if (!this.area && !this.organizeOnly) y += this.addPresetButtons(x, y, w, objs);
 
     for (const g of this.settingGroups()) {
       if (g.stepper) {
@@ -893,6 +910,33 @@ export class FleetBuilderScene extends Phaser.Scene {
     for (const o of objs) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(1);
     this.settingsObjs = [...frame, ...objs];
     this.updateScrollBounds();
+  }
+
+  private applyExercise(c: Partial<IExerciseChoices>): void {
+    if (c.enemyNation !== undefined) this.enemyNation = c.enemyNation;
+    if (c.mode !== undefined) this.mode = c.mode;
+    if (c.weather !== undefined) this.weatherChoice = c.weather;
+    if (c.time !== undefined) this.timeChoice = c.time;
+    if (c.count !== undefined) this.enemyCount = c.count;
+  }
+
+  /** 全てランダム / 標準に戻す above the exercise settings. Returns the height used. */
+  private addPresetButtons(x: number, y: number, w: number, objs: Phaser.GameObjects.GameObject[]): number {
+    const p = IS_PORTRAIT;
+    const h = p ? 52 : 28;
+    const gap = p ? 10 : 6;
+    const bw = (w - gap) / 2;
+    const apply = (c: Partial<IExerciseChoices>) => this.onTap(() => {
+      this.applyExercise(c);
+      this.openGroup = null;
+      this.buildSettings();
+      this.refreshFooter();
+    });
+    objs.push(
+      new UIButton(this, x + bw / 2, y + h / 2, '全てランダム', apply(ALL_RANDOM), { variant: 'secondary', width: bw, height: h, fontSize: p ? 15 : 12 }),
+      new UIButton(this, x + bw + gap + bw / 2, y + h / 2, '標準に戻す', apply(standardExercise(this.nation)), { variant: 'secondary', width: bw, height: h, fontSize: p ? 15 : 12 }),
+    );
+    return h + gap;
   }
 
   /** A settings row with 同数 and − value + controls on the right; changes apply at once. */

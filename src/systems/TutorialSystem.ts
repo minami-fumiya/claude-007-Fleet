@@ -10,6 +10,12 @@ import { grantRankMerit, TUTORIAL_RANK } from './RankSystem';
  * skipped (no promotion) and restarted from the help screen.
  */
 
+/**
+ * Off until the end of the alpha (#90): every new feature would need the steps updated, and the guide must point at
+ * the exact buttons first. The logic and its tests stay so the tutorial can be finished then.
+ */
+export const TUTORIAL_ENABLED = false;
+
 /** What moves a step on: the player tapping 次へ, or doing the step's action. */
 export type TutorialEvent = 'next' | 'sortie' | 'battleEnd' | 'research' | 'build' | 'firstClear';
 
