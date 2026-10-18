@@ -99,6 +99,16 @@ describe('CustomizationSystem', () => {
     expect(describeModifiers({ gunPowerMul: 1.1, armorAdd: 6, planesAdd: 1 })).toEqual(['装甲 +6', '砲火力 ×1.10', '搭載機 +1']);
   });
 
+  it('applies the ASW multiplier to depth charges and combines the new fields', () => {
+    const m = combineModifiers({ depthChargeMul: 1.2, airPowerMul: 1.1 }, { depthChargeMul: 1.5 });
+    expect(m.depthChargeMul).toBeCloseTo(1.8);
+    expect(m.airPowerMul).toBeCloseTo(1.1);
+    const [g, d] = applyToWeapons([gun, dc], m);
+    expect(g).toEqual(gun);
+    expect(d.firePower).toBeCloseTo(180);
+    expect(d.reloadTime).toBe(dc.reloadTime);
+  });
+
   it('every upgrade in the catalog has a unique id and an effect', () => {
     expect(new Set(catalog.map((u) => u.id)).size).toBe(catalog.length);
     for (const u of catalog) expect(Object.keys(u.effects).length).toBeGreaterThan(0);

@@ -98,3 +98,19 @@ describe('submarineWantsDive', () => {
     expect(submarineWantsDive(400, 0.1, true)).toBe(false);
   });
 });
+
+describe('nation tactics', () => {
+  it('has a profile for every nation', () => {
+    for (const nation of Object.values(Nation)) expect(TACTICS[nation], nation).toBeDefined();
+  });
+
+  it('SU fights closer and longer than RM, which keeps the range open', () => {
+    const su = TACTICS[Nation.SU];
+    const rm = TACTICS[Nation.RM];
+    expect(su.preferredRangeFraction).toBeLessThan(rm.preferredRangeFraction);
+    expect(su.retreatHpFraction).toBeLessThan(rm.retreatHpFraction);
+    const hurt = { ...self, hpFraction: 0.3 };
+    expect(decide(hurt, [t(300)], su).mode).toBe(AIMode.Engage);
+    expect(decide(hurt, [t(300)], rm).mode).toBe(AIMode.Retreat);
+  });
+});

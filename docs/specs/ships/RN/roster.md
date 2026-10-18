@@ -4,17 +4,25 @@ Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP
 
 | id | 艦名 | 艦種 | HP | 装甲 | 速力 | 武装 |
 |---|---|---|---|---|---|---|
-| `hood` | フッド (Hood) | Battleship | 720 | 50 | 160 | 15in Mk.I 主砲, 4.5in Mk.I 両用砲 |
+| `hood` | フッド (Hood) | Battleship (巡洋戦艦) | 720 | 50 | 160 | 15in Mk.I 主砲, 4.5in Mk.I 両用砲 |
 | `king_george_v` | キング・ジョージ5世 (King George V) | Battleship | 735 | 60 | 140 | 14in Mk.VII 4 連装砲, 4.5in Mk.I 両用砲 |
 | `warspite` | ウォースパイト (Warspite) | Battleship | 690 | 56 | 128 | 15in Mk.I 主砲, 6in Mk.XXIII 砲 |
 | `rodney` | ロドニー (Rodney) | Battleship | 750 | 60 | 115 | 16in Mk.I 主砲, 6in Mk.XXIII 砲 |
+| `nelson` | ネルソン (Nelson) | Battleship | 750 | 60 | 115 | 16in Mk.I 主砲, 6in Mk.XXIII 砲 |
+| `queen_elizabeth` | クイーン・エリザベス (Queen Elizabeth) | Battleship | 690 | 56 | 128 | 15in Mk.I 主砲, 6in Mk.XXIII 砲 |
+| `renown` | レナウン (Renown) | Battleship (巡洋戦艦) | 640 | 46 | 165 | 15in Mk.I 主砲, 4.5in Mk.I 両用砲 |
 | `lion` | ライオン (Lion) | Battleship (架空) | 820 | 61 | 150 | 16in Mk.II 主砲, 4.5in Mk.I 両用砲 |
-| `belfast` | ベルファスト (Belfast) | Cruiser | 410 | 38 | 180 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
-| `southampton` | サウサンプトン (Southampton) | Cruiser | 385 | 36 | 178 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
+| `belfast` | ベルファスト (Belfast) | Cruiser (軽巡洋艦) | 410 | 38 | 180 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
+| `southampton` | サウサンプトン (Southampton) | Cruiser (軽巡洋艦) | 385 | 36 | 178 | 6in Mk.XXIII 砲, Mk.VIII 魚雷 |
+| `dorsetshire` | ドーセットシャー (Dorsetshire) | Cruiser (重巡洋艦) | 395 | 34 | 172 | 8in Mk.VIII 主砲, Mk.VIII 魚雷 |
+| `dido` | ダイドー (Dido) | Cruiser (軽巡洋艦) | 340 | 28 | 182 | 5.25in Mk.I 両用砲, Mk.VIII 魚雷 |
 | `cossack` | コサック (Cossack) | Destroyer | 225 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
 | `javelin` | ジャベリン (Javelin) | Destroyer | 215 | 14 | 245 | 4.7in Mk.XII 砲, Mk.VIII 魚雷, 爆雷投射機 |
+| `black_swan` | ブラック・スワン (Black Swan) | Destroyer (海防艦) | 205 | 11 | 180 | 4in Mk.XVI 連装高角砲, 爆雷投射機 |
 | `illustrious` | イラストリアス (Illustrious) | Carrier | 510 | 40 | 150 | 4.5in Mk.I 両用砲 |
 | `ark_royal` | アーク・ロイヤル (Ark Royal) | Carrier | 495 | 30 | 160 | 4.5in Mk.I 両用砲 |
+| `hermes` | ハーミーズ (Hermes) | Carrier (軽空母) | 460 | 22 | 145 | 5.5in Mk.I 砲 |
+| `avenger` | アヴェンジャー (Avenger) | Carrier (護衛空母) | 455 | 15 | 120 | 4in Mk.XVI 連装高角砲 |
 | `truant` | トルーアント (Truant) | Submarine | 150 | 6 | 150 | Mk.VIII 魚雷 (潜水艦) |
 | `upholder` | アップホルダー (Upholder) | Submarine | 135 | 5 | 140 | Mk.VIII 魚雷 (潜水艦) |
 
@@ -29,8 +37,12 @@ Source of truth: `src/data/ships/rn.json`. Stats use the game scale (Yamato = HP
 | `16in_mk1` | 16in Mk.I 主砲 | ShellAP | 110 | 600 | 1650 | 580 |
 | `16in_mk2` | 16in Mk.II 主砲 | ShellAP | 116 | 630 | 1450 | 600 |
 | `mk8_torpedo` | Mk.VIII 魚雷 | Torpedo | 165 | 330 | 4500 | 280 |
+| `8in_mk8` | 8in Mk.VIII 主砲 | ShellAP | 62 | 520 | 1200 | 560 |
+| `5_25in_mk1` | 5.25in Mk.I 両用砲 | ShellHE | 38 | 440 | 700 | 540 |
 | `4_7in_mk12` | 4.7in Mk.XII 砲 | ShellHE | 33 | 410 | 750 | 530 |
 | `depth_charge` | 爆雷投射機 | DepthCharge | 140 | 80 | 2200 | 0 |
+| `4in_mk16` | 4in Mk.XVI 連装高角砲 | ShellHE | 28 | 400 | 550 | 520 |
+| `5_5in_mk1` | 5.5in Mk.I 砲 | ShellHE | 40 | 430 | 900 | 540 |
 | `mk8_sub_torpedo` | Mk.VIII 魚雷 (潜水艦) | Torpedo | 125 | 370 | 8000 | 255 |
 
 ## Notes

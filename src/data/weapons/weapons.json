@@ -341,6 +341,366 @@
       "range": 630,
       "reloadTime": 1450,
       "projectileSpeed": 600
+    },
+    {
+      "id": "14cm_gun",
+      "name": "14cm 単装砲",
+      "type": "ShellHE",
+      "firePower": 40,
+      "range": 430,
+      "reloadTime": 850,
+      "projectileSpeed": 530
+    },
+    {
+      "id": "12cm_kaibokan",
+      "name": "12cm 単装高角砲 (海防艦)",
+      "type": "ShellHE",
+      "firePower": 34,
+      "range": 390,
+      "reloadTime": 700,
+      "projectileSpeed": 510
+    },
+    {
+      "id": "6in_47",
+      "name": "6in/47 Mk.16 砲",
+      "type": "ShellHE",
+      "firePower": 47,
+      "range": 470,
+      "reloadTime": 800,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "5in_38_twin",
+      "name": "5in/38 連装両用砲",
+      "type": "ShellHE",
+      "firePower": 33,
+      "range": 420,
+      "reloadTime": 550,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "3in_50",
+      "name": "3in/50 砲",
+      "type": "ShellHE",
+      "firePower": 26,
+      "range": 380,
+      "reloadTime": 600,
+      "projectileSpeed": 500
+    },
+    {
+      "id": "28cm_skc28",
+      "name": "28cm SK C/28 主砲",
+      "type": "ShellAP",
+      "firePower": 80,
+      "range": 530,
+      "reloadTime": 1250,
+      "projectileSpeed": 610
+    },
+    {
+      "id": "15cm_skc25",
+      "name": "15cm SK C/25 砲",
+      "type": "ShellHE",
+      "firePower": 46,
+      "range": 460,
+      "reloadTime": 900,
+      "projectileSpeed": 550
+    },
+    {
+      "id": "15cm_skc16",
+      "name": "15cm SK C/16 砲",
+      "type": "ShellHE",
+      "firePower": 44,
+      "range": 450,
+      "reloadTime": 950,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "15cm_tbk_c36",
+      "name": "15cm TbtsK C/36 砲",
+      "type": "ShellHE",
+      "firePower": 44,
+      "range": 440,
+      "reloadTime": 1050,
+      "projectileSpeed": 530
+    },
+    {
+      "id": "8in_mk8",
+      "name": "8in Mk.VIII 主砲",
+      "type": "ShellAP",
+      "firePower": 62,
+      "range": 520,
+      "reloadTime": 1200,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "5_25in_mk1",
+      "name": "5.25in Mk.I 両用砲",
+      "type": "ShellHE",
+      "firePower": 38,
+      "range": 440,
+      "reloadTime": 700,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "5_5in_mk1",
+      "name": "5.5in Mk.I 砲",
+      "type": "ShellHE",
+      "firePower": 40,
+      "range": 430,
+      "reloadTime": 900,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "4in_mk16",
+      "name": "4in Mk.XVI 連装高角砲",
+      "type": "ShellHE",
+      "firePower": 28,
+      "range": 400,
+      "reloadTime": 550,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "380mm_m1935",
+      "name": "38cm Mle1935 4 連装砲",
+      "type": "ShellAP",
+      "firePower": 110,
+      "range": 620,
+      "reloadTime": 1450,
+      "projectileSpeed": 610
+    },
+    {
+      "id": "330mm_m1931",
+      "name": "33cm Mle1931 4 連装砲",
+      "type": "ShellAP",
+      "firePower": 88,
+      "range": 560,
+      "reloadTime": 1150,
+      "projectileSpeed": 620
+    },
+    {
+      "id": "152mm_m1930",
+      "name": "15.2cm Mle1930 砲",
+      "type": "ShellHE",
+      "firePower": 46,
+      "range": 460,
+      "reloadTime": 900,
+      "projectileSpeed": 550
+    },
+    {
+      "id": "130mm_m1932",
+      "name": "13cm Mle1932 両用砲",
+      "type": "ShellHE",
+      "firePower": 36,
+      "range": 420,
+      "reloadTime": 800,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "203mm_m1924",
+      "name": "20.3cm Mle1924 主砲",
+      "type": "ShellAP",
+      "firePower": 63,
+      "range": 510,
+      "reloadTime": 1200,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "138mm_m1929",
+      "name": "13.86cm Mle1929 砲",
+      "type": "ShellHE",
+      "firePower": 40,
+      "range": 420,
+      "reloadTime": 950,
+      "projectileSpeed": 530
+    },
+    {
+      "id": "155mm_m1920",
+      "name": "15.5cm Mle1920 砲",
+      "type": "ShellHE",
+      "firePower": 45,
+      "range": 440,
+      "reloadTime": 1000,
+      "projectileSpeed": 540
+    },
+    {
+      "id": "550mm_torpedo",
+      "name": "55cm 23DT 魚雷",
+      "type": "Torpedo",
+      "firePower": 170,
+      "range": 330,
+      "reloadTime": 4500,
+      "projectileSpeed": 285
+    },
+    {
+      "id": "550mm_sub_torpedo",
+      "name": "55cm 魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 125,
+      "range": 370,
+      "reloadTime": 8000,
+      "projectileSpeed": 255
+    },
+    {
+      "id": "305mm_obukhov",
+      "name": "30.5cm 52 口径 3 連装砲",
+      "type": "ShellAP",
+      "firePower": 94,
+      "range": 570,
+      "reloadTime": 1050,
+      "projectileSpeed": 610
+    },
+    {
+      "id": "120mm_vickers",
+      "name": "12cm 50 口径砲",
+      "type": "ShellHE",
+      "firePower": 34,
+      "range": 400,
+      "reloadTime": 800,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "406mm_b37",
+      "name": "40.6cm B-37 3 連装砲",
+      "type": "ShellAP",
+      "firePower": 120,
+      "range": 640,
+      "reloadTime": 1450,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "152mm_b38",
+      "name": "15.2cm B-38 砲",
+      "type": "ShellHE",
+      "firePower": 46,
+      "range": 460,
+      "reloadTime": 950,
+      "projectileSpeed": 550
+    },
+    {
+      "id": "180mm_b1p",
+      "name": "18cm B-1-P 主砲",
+      "type": "ShellAP",
+      "firePower": 58,
+      "range": 530,
+      "reloadTime": 1000,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "130mm_b13",
+      "name": "13cm B-13 砲",
+      "type": "ShellHE",
+      "firePower": 38,
+      "range": 420,
+      "reloadTime": 900,
+      "projectileSpeed": 530
+    },
+    {
+      "id": "100mm_b34",
+      "name": "10cm B-34 両用砲",
+      "type": "ShellHE",
+      "firePower": 30,
+      "range": 410,
+      "reloadTime": 700,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "53_38_torpedo",
+      "name": "53-38 魚雷",
+      "type": "Torpedo",
+      "firePower": 165,
+      "range": 320,
+      "reloadTime": 4500,
+      "projectileSpeed": 285
+    },
+    {
+      "id": "53_38_sub_torpedo",
+      "name": "53-38 魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 125,
+      "range": 360,
+      "reloadTime": 8000,
+      "projectileSpeed": 250
+    },
+    {
+      "id": "381mm_m1934",
+      "name": "38.1cm 50 口径 3 連装砲",
+      "type": "ShellAP",
+      "firePower": 112,
+      "range": 620,
+      "reloadTime": 1500,
+      "projectileSpeed": 620
+    },
+    {
+      "id": "320mm_m1936",
+      "name": "32cm 44 口径砲",
+      "type": "ShellAP",
+      "firePower": 90,
+      "range": 560,
+      "reloadTime": 1300,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "152mm_m1934",
+      "name": "15.2cm 55 口径砲",
+      "type": "ShellHE",
+      "firePower": 46,
+      "range": 470,
+      "reloadTime": 900,
+      "projectileSpeed": 550
+    },
+    {
+      "id": "120mm_m1926",
+      "name": "12cm 50 口径連装砲",
+      "type": "ShellHE",
+      "firePower": 35,
+      "range": 410,
+      "reloadTime": 800,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "203mm_ansaldo",
+      "name": "20.3cm 連装砲",
+      "type": "ShellAP",
+      "firePower": 64,
+      "range": 520,
+      "reloadTime": 1200,
+      "projectileSpeed": 560
+    },
+    {
+      "id": "100mm_m1928",
+      "name": "10cm 47 口径連装高角砲",
+      "type": "ShellHE",
+      "firePower": 30,
+      "range": 400,
+      "reloadTime": 700,
+      "projectileSpeed": 520
+    },
+    {
+      "id": "135mm_m1938",
+      "name": "13.5cm 45 口径砲",
+      "type": "ShellHE",
+      "firePower": 38,
+      "range": 430,
+      "reloadTime": 850,
+      "projectileSpeed": 530
+    },
+    {
+      "id": "533mm_si270",
+      "name": "53.3cm SI 270 魚雷",
+      "type": "Torpedo",
+      "firePower": 165,
+      "range": 320,
+      "reloadTime": 4500,
+      "projectileSpeed": 285
+    },
+    {
+      "id": "533mm_sub_torpedo",
+      "name": "53.3cm 魚雷 (潜水艦)",
+      "type": "Torpedo",
+      "firePower": 125,
+      "range": 370,
+      "reloadTime": 8000,
+      "projectileSpeed": 255
     }
   ]
 }

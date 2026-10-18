@@ -521,7 +521,8 @@ export class BattleScene extends Phaser.Scene {
   /** Unlocked upgrades fitted to the ship, finished research and its captain's bonus. */
   private playerModifiers(shipData: IShipData, captain: ICaptain | null): IShipModifiers {
     // Scenarios are exhibitions: the save's upgrades, research and refits don't apply.
-    if (this.scenario) return captainModifiers(captain);
+    const captainCtx = { night: this.conditions.time === TimeOfDay.Night };
+    if (this.scenario) return captainModifiers(captain, captainCtx);
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
     const fitted = progress.upgrades[shipData.id] ?? [];
@@ -530,7 +531,7 @@ export class BattleScene extends Phaser.Scene {
       upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
       researchModifiers(TECH_TREE, progress.research),
       refitModifiers(REFIT_TABLE, shipData, stage),
-      captainModifiers(captain),
+      captainModifiers(captain, captainCtx),
     );
   }
 

@@ -21,12 +21,19 @@ export interface ITacticsProfile {
   torpedoEagerness: number;
 }
 
-/** IJN closes in for torpedo attacks, USN keeps a long-range gun duel, KM gangs up on damaged ships. */
+/**
+ * IJN closes in for torpedo attacks, USN keeps a long-range gun duel, KM gangs up on damaged ships.
+ * FR fights a fast gun battle on capital ships, SU charges in and fights to the last,
+ * RM keeps the range open and breaks off early to save its fleet ("fleet in being").
+ */
 export const TACTICS: Record<Nation, ITacticsProfile> = {
   [Nation.IJN]: { preferredRangeFraction: 0.5, retreatHpFraction: 0.15, focusWeakWeight: 0.4, distanceWeight: 1, capitalWeight: 0.3, torpedoEagerness: 1 },
   [Nation.USN]: { preferredRangeFraction: 0.85, retreatHpFraction: 0.3, focusWeakWeight: 0.3, distanceWeight: 1, capitalWeight: 0.5, torpedoEagerness: 0.3 },
   [Nation.KM]: { preferredRangeFraction: 0.7, retreatHpFraction: 0.2, focusWeakWeight: 1, distanceWeight: 0.8, capitalWeight: 0.2, torpedoEagerness: 0.6 },
   [Nation.RN]: { preferredRangeFraction: 0.7, retreatHpFraction: 0.25, focusWeakWeight: 0.5, distanceWeight: 1, capitalWeight: 0.4, torpedoEagerness: 0.5 },
+  [Nation.FR]: { preferredRangeFraction: 0.8, retreatHpFraction: 0.25, focusWeakWeight: 0.4, distanceWeight: 0.9, capitalWeight: 0.6, torpedoEagerness: 0.4 },
+  [Nation.SU]: { preferredRangeFraction: 0.55, retreatHpFraction: 0.1, focusWeakWeight: 0.6, distanceWeight: 1.2, capitalWeight: 0.3, torpedoEagerness: 0.7 },
+  [Nation.RM]: { preferredRangeFraction: 0.9, retreatHpFraction: 0.35, focusWeakWeight: 0.4, distanceWeight: 0.9, capitalWeight: 0.5, torpedoEagerness: 0.4 },
 };
 
 const CLASS_VALUE: Record<ShipClass, number> = {

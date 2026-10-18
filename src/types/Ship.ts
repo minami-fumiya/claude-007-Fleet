@@ -2,11 +2,37 @@ import { Nation } from './Nation';
 import { ShipClass } from './ShipClass';
 import { IAirWing } from './Aircraft';
 
+/**
+ * Finer ship type for display and unlocks (#16). Mechanics still run on the 5 `ShipClass` values:
+ * a battlecruiser fights as a Battleship, an escort as a Destroyer, a light carrier as a Carrier.
+ */
+export enum ShipSubtype {
+  BattleCruiser = 'BattleCruiser',
+  AviationBattleship = 'AviationBattleship',
+  HeavyCruiser = 'HeavyCruiser',
+  LightCruiser = 'LightCruiser',
+  LightCarrier = 'LightCarrier',
+  EscortCarrier = 'EscortCarrier',
+  Escort = 'Escort',
+}
+
+export const SUBTYPE_JA: Record<ShipSubtype, string> = {
+  [ShipSubtype.BattleCruiser]: '巡洋戦艦',
+  [ShipSubtype.AviationBattleship]: '航空戦艦',
+  [ShipSubtype.HeavyCruiser]: '重巡洋艦',
+  [ShipSubtype.LightCruiser]: '軽巡洋艦',
+  [ShipSubtype.LightCarrier]: '軽空母',
+  [ShipSubtype.EscortCarrier]: '護衛空母',
+  [ShipSubtype.Escort]: '海防艦',
+};
+
 export interface IShipData {
   id: string;
   name: string;
   nation: Nation;
   shipClass: ShipClass;
+  /** Display / unlock subtype (巡洋戦艦, 重巡, 軽空母 …); mechanics follow `shipClass` */
+  subtype?: ShipSubtype;
   hp: number;
   armor: number;
   speed: number;

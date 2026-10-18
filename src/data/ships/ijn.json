@@ -65,6 +65,7 @@
       "name": "金剛 (Kongo)",
       "nation": "IJN",
       "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
       "hp": 610,
       "armor": 45,
       "speed": 170,
@@ -74,6 +75,22 @@
       ],
       "spriteKey": "kongo",
       "description": "金剛型戦艦1番艦。英ヴィッカース社で建造された巡洋戦艦を改装した高速戦艦。1944年11月、米潜水艦の雷撃で沈没。"
+    },
+    {
+      "id": "ise",
+      "name": "伊勢 (Ise)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "AviationBattleship",
+      "hp": 650,
+      "armor": 52,
+      "speed": 130,
+      "weapons": [
+        "36cm_main_gun",
+        "14cm_gun"
+      ],
+      "spriteKey": "ise",
+      "description": "伊勢型戦艦1番艦。ミッドウェー海戦の後、後部の砲塔2基を撤去して飛行甲板を設けた航空戦艦に改装され、1944年10月のエンガノ岬沖海戦に参加した。"
     },
     {
       "id": "a150",
@@ -96,6 +113,7 @@
       "name": "高雄 (Takao)",
       "nation": "IJN",
       "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
       "hp": 400,
       "armor": 40,
       "speed": 180,
@@ -111,6 +129,7 @@
       "name": "愛宕 (Atago)",
       "nation": "IJN",
       "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
       "hp": 400,
       "armor": 40,
       "speed": 180,
@@ -126,6 +145,7 @@
       "name": "利根 (Tone)",
       "nation": "IJN",
       "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
       "hp": 385,
       "armor": 38,
       "speed": 178,
@@ -135,6 +155,54 @@
       ],
       "spriteKey": "tone",
       "description": "利根型重巡洋艦1番艦。主砲を前部に集中し、後部を水上偵察機の運用に充てた。1945年7月、呉付近で空襲を受け大破着底。"
+    },
+    {
+      "id": "myoko",
+      "name": "妙高 (Myoko)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 39,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "myoko",
+      "description": "妙高型重巡洋艦1番艦。20cm砲10門と魚雷を備え、スラバヤ沖海戦やレイテ沖海戦などで戦った。"
+    },
+    {
+      "id": "mogami",
+      "name": "最上 (Mogami)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 37,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "mogami",
+      "description": "最上型巡洋艦1番艦。15.5cm砲の軽巡洋艦として竣工し、のちに20cm砲へ換装された。1944年10月、スリガオ海峡の戦いで大破し沈没した。"
+    },
+    {
+      "id": "sendai",
+      "name": "川内 (Sendai)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 30,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "sendai",
+      "description": "川内型軽巡洋艦1番艦。水雷戦隊の旗艦として夜戦で活躍したが、1943年11月のブーゲンビル島沖海戦で撃沈された。"
     },
     {
       "id": "fubuki",
@@ -183,6 +251,22 @@
       ],
       "spriteKey": "yukikaze",
       "description": "陽炎型駆逐艦。数多くの激戦を生き抜いた「幸運艦」。戦後は中華民国に引き渡され「丹陽」となった。"
+    },
+    {
+      "id": "etorofu",
+      "name": "択捉 (Etorofu)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "description": "択捉型海防艦1番艦。船団護衛のために爆雷を多く積んだ小型の護衛艦で、終戦まで生き残った。"
     },
     {
       "id": "shokaku",
@@ -240,6 +324,64 @@
         "torpedoBombers": 5
       },
       "description": "戦艦から改造された航空母艦。多くの艦載機を搭載できた。1942年6月、ミッドウェー海戦で沈没。"
+    },
+    {
+      "id": "zuikaku",
+      "name": "瑞鶴 (Zuikaku)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 495,
+      "armor": 30,
+      "speed": 152,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "zuikaku",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 4
+      },
+      "description": "翔鶴型航空母艦2番艦。真珠湾攻撃から多くの海戦に参加した歴戦の空母。1944年10月、エンガノ岬沖海戦で沈没した。"
+    },
+    {
+      "id": "taiho",
+      "name": "大鳳 (Taiho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 555,
+      "armor": 40,
+      "speed": 150,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "taiho",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 3
+      },
+      "description": "装甲飛行甲板を持つ航空母艦。1944年6月のマリアナ沖海戦で米潜水艦アルバコアの魚雷を受け、漏れた燃料の気化ガスが爆発して沈没した。"
+    },
+    {
+      "id": "ryujo",
+      "name": "龍驤 (Ryujo)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 460,
+      "armor": 22,
+      "speed": 150,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "ryujo",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "description": "小型の航空母艦。1942年8月の第二次ソロモン海戦で米空母機の攻撃を受けて沈没した。"
     },
     {
       "id": "i19",

@@ -89,9 +89,10 @@ describe('progression balance (research + remodel)', () => {
   });
 
   it('special refits are a flavour, not a power spike: within ±25% of the class 改三', () => {
-    for (const id of Object.keys(REFIT_TABLE.ships ?? {})) {
+    for (const [id, stages] of Object.entries(REFIT_TABLE.ships ?? {})) {
       const ship = SURFACE.find((s) => s.id === id);
-      if (!ship) continue;
+      // Aviation conversions (伊勢・日向) trade gunfire for an air wing, which this gun duel can't weigh.
+      if (!ship || stages.some((st) => st.airWing)) continue;
       const special = maxed(ship);
       const plain = maxed(ship, CLASS_ONLY);
       const r = duelRatio(special.loadout, special.ship, plain.loadout, plain.ship);
