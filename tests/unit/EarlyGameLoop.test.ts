@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { emptySave, progressView, switchNation, withProgress, IProgress } from '@/utils/ProgressStore';
 import {
-  nextRegenMs, REGEN_CAP, REGEN_INTERVAL_MS, regenerate, resources, RESOURCE_KEYS, canAfford, regenFull,
+  nextRegenMs, REGEN_CAP, REGEN_INTERVAL_MS, REGEN_PER_TICK, regenerate, resources, RESOURCE_KEYS, canAfford, regenFull,
 } from '@/systems/ResourceSystem';
 import { paySortie, settleBattle, sortieBlockers } from '@/systems/ProgressionSystem';
 import { repairCost, startRepair, completeRepairs, SUNK_HP_FRACTION } from '@/systems/DockSystem';
@@ -26,9 +26,9 @@ const T0 = 1_700_000_000_000;
 const MIN = REGEN_INTERVAL_MS;
 
 describe('natural regeneration (#28)', () => {
-  it('+3 fuel / ammo / steel and +1 bauxite per minute', () => {
+  it('+3 fuel / ammo, +5 steel and +1 bauxite per minute', () => {
     const r = regenerate(resources(), T0, T0 + 5 * MIN + 30_000);
-    expect(r.resources).toEqual({ fuel: 15, ammo: 15, steel: 15, bauxite: 5 });
+    expect(r.resources).toEqual({ fuel: 15, ammo: 15, steel: 25, bauxite: 5 });
     // The partial minute carries over.
     expect(r.regenAt).toBe(T0 + 5 * MIN);
     expect(nextRegenMs(r.regenAt, T0 + 5 * MIN + 30_000)).toBe(30_000);
@@ -152,4 +152,23 @@ describe('a brand-new player can always progress', () => {
       }
     });
   }
+});
+
+describe('steel is not the lone bottleneck (#35)', () => {
+  const minutes = (amount: number, perTick: number): number => (perTick > 0 ? amount / perTick : 0);
+  const historical = registry.all().filter((s) => !s.fictional);
+
+  it('regenerating a historical ship\'s steel takes at most 1.5× its fuel or ammo', () => {
+    for (const ship of historical) {
+      const c = buildCost(ship);
+      const steel = minutes(c.steel, REGEN_PER_TICK.steel);
+      const other = Math.max(minutes(c.fuel, REGEN_PER_TICK.fuel), minutes(c.ammo, REGEN_PER_TICK.ammo));
+      expect(steel, ship.id).toBeLessThanOrEqual(other * 1.5);
+    }
+  });
+
+  it('a repair costs no more steel than fuel', () => {
+    const c = repairCost(800, 0.1);
+    expect(c.steel).toBeLessThanOrEqual(c.fuel);
+  });
 });

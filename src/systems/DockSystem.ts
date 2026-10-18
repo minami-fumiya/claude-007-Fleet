@@ -31,9 +31,10 @@ export function missingHp(maxHp: number, fraction: number): number {
   return Math.max(0, Math.round(maxHp * (1 - fraction)));
 }
 
+/** Fuel and steel for the missing HP; steel was lowered from 0.4 per HP because it ran out first (#35). */
 export function repairCost(maxHp: number, fraction: number): IResources {
   const missing = missingHp(maxHp, fraction);
-  return resources({ fuel: Math.ceil(missing * 0.2), steel: Math.ceil(missing * 0.4) });
+  return resources({ fuel: Math.ceil(missing * 0.25), steel: Math.ceil(missing * 0.25) });
 }
 
 export function repairTimeMs(maxHp: number, fraction: number): number {

@@ -55,10 +55,10 @@ export function sortieCost(ships: IShipData[]): IResources {
   return ships.reduce((sum, s) => addResources(sum, SORTIE_COST[s.shipClass] ?? {}), resources());
 }
 
-/** Spoils of a battle: per enemy sunk (half on a defeat) plus a victory bonus. */
+/** Spoils of a battle: per enemy sunk (half on a defeat) plus a victory bonus. Steel is the scarcest resource, so it pays most (#35). */
 export function battleReward(victory: boolean, enemiesSunk: number): IResources {
-  const perSunk = resources({ fuel: 40, ammo: 40, steel: 60, bauxite: 20 });
-  const bonus = victory ? resources({ fuel: 100, ammo: 100, steel: 120, bauxite: 50 }) : resources();
+  const perSunk = resources({ fuel: 40, ammo: 40, steel: 80, bauxite: 20 });
+  const bonus = victory ? resources({ fuel: 100, ammo: 100, steel: 160, bauxite: 50 }) : resources();
   return addResources(bonus, perSunk, Math.max(0, enemiesSunk) * (victory ? 1 : 0.5));
 }
 
@@ -73,8 +73,11 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
 // Natural regeneration (#28)
 // ---------------------------------------------------------------------------
 
-/** Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. */
-export const REGEN_PER_TICK: IResources = { fuel: 3, ammo: 3, steel: 3, bauxite: 1 };
+/**
+ * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Steel regenerates fastest: building,
+ * repairs, refits and research all spend more steel than anything else (#35).
+ */
+export const REGEN_PER_TICK: IResources = { fuel: 3, ammo: 3, steel: 5, bauxite: 1 };
 export const REGEN_INTERVAL_MS = 60_000;
 /** Regeneration stops at this amount; rewards can still take a resource above it. */
 export const REGEN_CAP = 1500;
