@@ -18,6 +18,8 @@ export function combineModifiers(...mods: Array<Partial<IShipModifiers>>): IShip
     out.torpedoPowerMul *= m.torpedoPowerMul ?? 1;
     out.visionMul *= m.visionMul ?? 1;
     out.aaMul *= m.aaMul ?? 1;
+    out.aswMul *= m.aswMul ?? 1;
+    out.airPowerMul *= m.airPowerMul ?? 1;
   }
   return out;
 }
@@ -57,6 +59,7 @@ export function applyToWeapons(loadout: IWeaponData[], m: IShipModifiers): IWeap
       return { ...w, firePower: w.firePower * m.gunPowerMul, reloadTime: Math.round(w.reloadTime * m.gunReloadMul) };
     }
     if (kind === WeaponKind.Torpedo) return { ...w, firePower: w.firePower * m.torpedoPowerMul };
+    if (kind === WeaponKind.DepthCharge && m.aswMul !== 1) return { ...w, firePower: w.firePower * m.aswMul };
     return w;
   });
 }

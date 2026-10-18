@@ -215,10 +215,12 @@ export class AirOpsSystem {
     }
     const vel = (target.ship.body as Phaser.Physics.Arcade.Body | null)?.velocity;
     const aim = interceptAngle(sq.x, sq.y, target.x, target.y, vel?.x ?? 0, vel?.y ?? 0, this.aerialTorpedo.projectileSpeed);
+    const mul = sq.carrier.airPowerMul;
+    const torpedo = mul === 1 ? this.aerialTorpedo : { ...this.aerialTorpedo, firePower: this.aerialTorpedo.firePower * mul };
     for (let i = 0; i < sq.planes; i++) {
       // Each pilot's drop is a little off as well as spread across the formation.
       const offset = (i - (sq.planes - 1) / 2) * AERIAL_TORPEDO_SPREAD + (Math.random() * 2 - 1) * AERIAL_TORPEDO_ERROR;
-      this.weapons.launchProjectile(sq.x, sq.y, aim + offset, this.aerialTorpedo);
+      this.weapons.launchProjectile(sq.x, sq.y, aim + offset, torpedo);
     }
     sq.state = SquadronState.Return;
   }
@@ -243,7 +245,7 @@ export class AirOpsSystem {
   private dropBombs(sq: Squadron, target: BaseShip): void {
     const hits = bombHits(sq.planes, BOMB_HIT_CHANCE);
     for (let i = 0; i < hits && target.isAlive; i++) {
-      const dmg = CombatSystem.calculateDamage(this.bomb, target.stats.shipClass, target.stats.armor);
+      const dmg = CombatSystem.calculateDamage(this.bomb, target.stats.shipClass, target.stats.armor) * sq.carrier.airPowerMul;
       CombatSystem.applyDamage(target, dmg);
       this.onBombHit(target, this.bomb, dmg);
     }

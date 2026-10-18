@@ -17,6 +17,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   /** From upgrades: radar widens vision, extra guns strengthen AA */
   visionMul = 1;
   aaMul = 1;
+  /** Strike damage of this carrier's air wing (captain 航空) */
+  airPowerMul = 1;
   /** Ship data id (for saving damage after the battle) */
   dataId = '';
   /** Shore installation: never moves, can't be hit by torpedoes */

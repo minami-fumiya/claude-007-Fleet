@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { awardXp, battleXp, captainModifiers, levelForXp, MAX_LEVEL, withProgress, xpForLevel } from '@/systems/CaptainSystem';
+import { awardXp, battleXp, captainModifiers, levelForXp, MAX_LEVEL, SKILL_LABEL, withProgress, xpForLevel } from '@/systems/CaptainSystem';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { Nation } from '@/types/Nation';
 import { NO_MODIFIERS } from '@/types/Modifiers';
@@ -59,10 +59,39 @@ describe('captainModifiers', () => {
     expect(eng.hpMul).toBeGreaterThan(1);
   });
 
-  it('has three captains per nation, one of each skill', () => {
+  it('maps the new specialities to their modifiers', () => {
+    const lv5 = (skill: CaptainSkill) => captainModifiers(withProgress(data(skill), xpForLevel(5)));
+    expect(lv5(CaptainSkill.Aviation).airPowerMul).toBeCloseTo(1.2);
+    expect(lv5(CaptainSkill.Aviation).aaMul).toBeGreaterThan(1);
+    expect(lv5(CaptainSkill.ASW).aswMul).toBeCloseTo(1.25);
+    expect(lv5(CaptainSkill.Recon).visionMul).toBeCloseTo(1.2);
+    expect(lv5(CaptainSkill.Damecon).hpMul).toBeCloseTo(1.1);
+    expect(lv5(CaptainSkill.Damecon).armorAdd).toBe(2);
+    // Each speciality leaves unrelated stats alone.
+    expect(lv5(CaptainSkill.Recon).gunPowerMul).toBe(1);
+    expect(lv5(CaptainSkill.ASW).torpedoPowerMul).toBe(1);
+  });
+
+  it('gives the night-battle speciality its bonus only at night', () => {
+    const c = withProgress(data(CaptainSkill.Night), xpForLevel(4));
+    expect(captainModifiers(c)).toEqual(NO_MODIFIERS);
+    expect(captainModifiers(c, { night: false })).toEqual(NO_MODIFIERS);
+    const night = captainModifiers(c, { night: true });
+    expect(night.visionMul).toBeCloseTo(1.2);
+    expect(night.gunPowerMul).toBeGreaterThan(1);
+    expect(night.torpedoPowerMul).toBeGreaterThan(1);
+  });
+
+  it('labels every skill', () => {
+    for (const skill of Object.values(CaptainSkill)) expect(SKILL_LABEL[skill], skill).toMatch(/^.{2}$/);
+  });
+
+  it('has eight captains per nation, one of each skill, with unique ids', () => {
+    const all = captains.captains as ICaptainData[];
+    expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
     for (const nation of Object.values(Nation)) {
-      const mine = (captains.captains as ICaptainData[]).filter((c) => c.nation === nation);
-      expect(mine.map((c) => c.skill).sort()).toEqual([CaptainSkill.Engineering, CaptainSkill.Gunnery, CaptainSkill.Torpedo]);
+      const mine = all.filter((c) => c.nation === nation);
+      expect(mine.map((c) => c.skill).sort(), nation).toEqual(Object.values(CaptainSkill).sort());
     }
   });
 });

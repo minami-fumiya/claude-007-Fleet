@@ -55,6 +55,16 @@ describe('CustomizationSystem', () => {
     expect(d).toBe(dc);
   });
 
+  it('applies the ASW multiplier to depth charges and combines the new fields', () => {
+    const m = combineModifiers({ aswMul: 1.2, airPowerMul: 1.1 }, { aswMul: 1.5 });
+    expect(m.aswMul).toBeCloseTo(1.8);
+    expect(m.airPowerMul).toBeCloseTo(1.1);
+    const [g, d] = applyToWeapons([gun, dc], m);
+    expect(g).toEqual(gun);
+    expect(d.firePower).toBeCloseTo(180);
+    expect(d.reloadTime).toBe(dc.reloadTime);
+  });
+
   it('every upgrade in the catalog has a unique id and an effect', () => {
     expect(new Set(catalog.map((u) => u.id)).size).toBe(catalog.length);
     for (const u of catalog) expect(Object.keys(u.effects).length).toBeGreaterThan(0);

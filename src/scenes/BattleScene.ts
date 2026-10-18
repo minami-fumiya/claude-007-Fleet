@@ -507,6 +507,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.map.islands.length > 0) ship.avoid = (px, py, h) => avoidHeading(this.map, px, py, h);
     ship.visionMul = mods.visionMul;
     ship.aaMul = mods.aaMul;
+    ship.airPowerMul = mods.airPowerMul;
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
     (ship.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
     return ship;
@@ -522,7 +523,8 @@ export class BattleScene extends Phaser.Scene {
   /** Unlocked upgrades fitted to the ship, finished research and its captain's bonus. */
   private playerModifiers(shipData: IShipData, captain: ICaptain | null): IShipModifiers {
     // Scenarios are exhibitions: the save's upgrades, research and refits don't apply.
-    if (this.scenario) return captainModifiers(captain);
+    const captainCtx = { night: this.conditions.time === TimeOfDay.Night };
+    if (this.scenario) return captainModifiers(captain, captainCtx);
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
     const fitted = progress.upgrades[shipData.id] ?? [];
@@ -530,7 +532,7 @@ export class BattleScene extends Phaser.Scene {
       upgradeModifiers(fitted, catalog),
       researchModifiers(techTree.tech as ITechNode[], progress.research),
       refitModifiers(REFITS, shipData.shipClass, progress.refits[shipData.id] ?? 0),
-      captainModifiers(captain),
+      captainModifiers(captain, captainCtx),
     );
   }
 

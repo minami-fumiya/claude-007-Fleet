@@ -253,6 +253,8 @@ export class CustomizationScene extends Phaser.Scene {
     const extras: string[] = [];
     if (mods.visionMul !== 1) extras.push(`視界 ×${mods.visionMul.toFixed(2)}`);
     if (mods.aaMul !== 1) extras.push(`対空 ×${mods.aaMul.toFixed(2)}`);
+    if (mods.aswMul !== 1) extras.push(`対潜 ×${mods.aswMul.toFixed(2)}`);
+    if (mods.airPowerMul !== 1) extras.push(`航空攻撃 ×${mods.airPowerMul.toFixed(2)}`);
     if (extras.length > 0) lines[5] = `${lines[5]}     ${extras.join('  ')}`;
     this.statsText.forEach((t, i) => t.setText(lines[i] ?? '').setColor(lines[i]?.includes('→') ? Css.text : Css.muted));
     this.shipName.setText(refitName(this.refitTable, ship.name, ship.shipClass, stage));

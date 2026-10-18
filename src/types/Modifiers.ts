@@ -8,6 +8,10 @@ export interface IShipModifiers {
   torpedoPowerMul: number;
   visionMul: number;
   aaMul: number;
+  /** Depth charge firePower */
+  aswMul: number;
+  /** Damage of this carrier's bombs and aerial torpedoes */
+  airPowerMul: number;
 }
 
 export const NO_MODIFIERS: IShipModifiers = {
@@ -19,6 +23,8 @@ export const NO_MODIFIERS: IShipModifiers = {
   torpedoPowerMul: 1,
   visionMul: 1,
   aaMul: 1,
+  aswMul: 1,
+  airPowerMul: 1,
 };
 
 /** Equipment fitted in a ship's upgrade slot (src/data/upgrades.json). */
