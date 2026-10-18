@@ -23,3 +23,7 @@ game did before volume settings. The old `ww2fleet.audio.muted` flag is read onc
 ## Help
 Three tabs: 操作 (same table as the title screen's 操作方法, per input style), 艦種 (role of each class),
 作戦目標 (win condition of every objective, plus "losing the flagship always loses").
+
+## Fleet Builder defaults (#108)
+`keepExercise` (default on): the exercise opponent, battle type, weather, time and enemy count are kept between
+visits. Off (毎回ランダム): every visit starts them from random again; the fleet itself is always kept.

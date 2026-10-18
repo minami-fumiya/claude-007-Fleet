@@ -6,7 +6,7 @@ import {
 import { paySortie, settleBattle, sortieBlockers } from '@/systems/ProgressionSystem';
 import { repairCost, startRepair, completeRepairs, SUNK_HP_FRACTION } from '@/systems/DockSystem';
 import { buildCost, buildShip, grantShip, ownedIds, ownedShips, rewardShipFor, starterShip } from '@/systems/ShipyardSystem';
-import { fleetSlots, RANKS, rankOf } from '@/systems/RankSystem';
+import { addMerit, fleetSlots, meritFor, rankOf } from '@/systems/RankSystem';
 import { areasOf, enemyShips, isFreeArea, recordClear } from '@/systems/CampaignSystem';
 import { addResources } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -89,7 +89,8 @@ function clear(p: IProgress, a: ICampaignArea, roster: IShipData[]): IProgress {
   const settled = settleBattle(p, { victory: true, enemiesSunk: a.enemy.ships.length, planesLost: 0, ships: [] }).progress;
   const rec = recordClear(settled.campaign, a.id);
   let next = { ...settled, campaign: rec.cleared, resources: addResources(settled.resources, a.reward) };
-  const ship = rewardShipFor(a.rewardShip, roster, ownedIds(next, roster));
+  next = addMerit(next, meritFor({ victory: true, campaign: true, firstClear: rec.firstClear, enemiesSunk: a.enemy.ships.length })).progress;
+  const ship = rewardShipFor(a.rewardShip, roster, ownedIds(next, roster), a.id);
   if (ship) next = grantShip(next, roster, ship.id);
   return next;
 }
@@ -134,9 +135,9 @@ describe('a brand-new player can always progress', () => {
       const ex = settleBattle(p, { victory: true, enemiesSunk: 1, planesLost: 0, ships: [] }, { exercise: true });
       expect(ex.reward.fuel).toBeGreaterThan(0);
 
-      // 4) Clearing the first area: promotion to two slots and a second ship.
+      // 4) Clearing the first area: merit for 少尉, two slots, and a second ship.
       p = clear(p, first, roster);
-      expect(rankOf(p).name).toBe(RANKS[1].name);
+      expect(rankOf(p).name).toBe('少尉');
       expect(fleetSlots(p)).toBe(2);
       expect(ownedShips(p, roster)).toHaveLength(2);
       // The next area (two enemies) is affordable with two ships.

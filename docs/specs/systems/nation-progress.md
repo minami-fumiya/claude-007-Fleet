@@ -14,7 +14,7 @@ ISave {
   record: IServiceRecord                 // shared by every nation (medals too); settings stay in their own key
 }
 INationProgress { resources, regenAt, damage, docks, research, ships /* owned ids */, upgrades, refits,
-                  proficiency, captainXp, campaign /* cleared areas; rank is derived */ }
+                  proficiency, captainXp, campaign /* cleared areas */, merit, rankFloor, docksOwned }
 ```
 - Scenes use an `IProgress` **view** = current nation's slot + `nation` + shared `record`. `loadProgress()` returns it
   (with regeneration applied, saved straight away when it changed); `saveProgress(view)` writes it back into the
@@ -63,26 +63,48 @@ The Fleet Builder lists only the current nation's owned ships (fictional ones st
 | Battleship | 1.2 | 1.5 | 1.8 | 0.1 |
 e.g. 雪風 110/110/230/0, 高雄 320/360/720/40, 大和 960/1200/2030/80.
 
-## Admiral rank (#30 / #25)
-| Rank | Areas cleared | Fleet (and captain) slots | Ship grade buildable |
-|---|---|---|---|
-| 少佐 | 0 | 1 | 0 |
-| 中佐 | 1 | 2 | ≤ 1 |
-| 大佐 | 2 | 3 | ≤ 2 |
-| 少将 | 4 | 4 | ≤ 3 |
-| 中将 | 7 | 5 | ≤ 4 |
-| 大将 | 10 | 6 | 5 |
-Grade = number of HP marks (250, 400, 520, 700, 780) the ship exceeds; fictional ships are grade 5. So destroyers and
-submarines are grade 0, most cruisers 1–2, carriers 2–3, battleships 3–5 (大和 5). `fleetSlots(progress)` gives the slot
-count; the Fleet Builder shows that many slots (two columns beyond three) and the home port shows the next promotion.
+## Admiral rank (#30 / #25 / #36)
+Rank comes from **merit (戦功)**, not from the number of cleared areas. Merit: first clear of an area +100, repeat
+campaign victory +15, exercise victory +5, plus +1 per enemy sunk (max +10); defeats earn nothing (`meritFor`).
+
+| # | Rank | Merit | Slots | Exam | Unlocks |
+|---|---|---|---|---|---|
+| 0 | 士官候補生 | 0 | 1 | | grade 0 ships |
+| 1 | 准尉 | 30 | 1 | | |
+| 2 | 少尉 | 80 | 2 | | grade 1, 梯形陣, 2nd dock |
+| 3 | 中尉 | 150 | 2 | | |
+| 4 | 大尉 | 250 | 3 | | grade 2, 単横陣 |
+| 5 | 准佐 | 350 | 3 | | |
+| 6 | 少佐 | 500 | 4 | | 3rd dock |
+| 7 | 中佐 | 650 | 4 | | grade 3, 警戒陣 |
+| 8 | 大佐 | 850 | 5 | | 4th dock |
+| 9 | 准将 | 1000 | 5 | a theater's final area | grade 4 |
+| 10 | 少将 | 1300 | 6 | | |
+| 11 | 中将 | 1650 | 6 | | grade 5 |
+| 12 | 大将 | 2050 | 7 | | |
+| 13 | 元帥 | 2500 | 8 | every final area of the nation's theaters | |
+
+Ranks are climbed in order: a missing exam stops the climb at 大佐 / 大将. Finishing the tutorial (#90) raises merit to
+少尉's 80. Saves from before #36 (v4 → v5) get 100 merit per cleared area and a `rankFloor` that keeps their old slots
+and buildable grade (old 少佐 → 少尉, 中佐 → 少尉, 大佐 → 大尉, 少将 → 中佐, 中将 → 准将, 大将 → 中将).
+Grade = number of HP marks (250, 400, 520, 700, 780) the ship exceeds; fictional ships are grade 5.
+
+## Docks (#38)
+A new admiral has 1 dock. The 2nd / 3rd / 4th cost fuel 200 · steel 300 / fuel 500 · steel 800 / fuel 1,000 · steel
+1,500 and need 少尉 / 少佐 / 大佐 (`nextDock`, `buildDock`). Old saves keep 2.
+
+## Reward-only ships (#39)
+`src/data/reward-ships.json` maps nation → area → ship. Those ships can't be built (`buildState` = `reward`, the
+shipyard names the area); the area's first clear grants them. Other first clears grant the cheapest buildable ship
+of the area's reward class.
 
 ## Enemy fleet sizes (#25)
 Campaign areas grow along each theater: 太平洋 1·2·3·4·6·7, 大西洋 1·2·3·5·8, 地中海 1·2·3·5·7. Free battle: opponent
-size 同数 / +1 / +2; each enemy mirrors the class of the player's ship in that position (extras mirror the smallest),
+size 同数 or 1–20 ships; each enemy mirrors the class of the player's ship in that position (extras mirror the smallest),
 picking the enemy ship of that class closest in HP; ASW = submarines, carrier battle leads with a carrier.
 
 ## Early loop (tested in `EarlyGameLoop.test.ts`)
 New nation: 1 destroyer, 0 resources → the free first area (1 enemy) or a free 演習 is always available. Worst case
 (sunk, 大破, broke): an exercise still works and regeneration pays the repair (≈ 26 min for a destroyer at 10%).
-First clear → 中佐 (2 slots) + a second ship + 300–400 of each resource, enough to build another destroyer and pay the
+First clear → 少尉 (2 slots, 100 merit) + a second ship + 300–400 of each resource, enough to build another destroyer and pay the
 second area's sortie.

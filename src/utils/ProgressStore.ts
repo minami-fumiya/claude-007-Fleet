@@ -45,8 +45,14 @@ export interface INationProgress {
   proficiency: Record<string, number>;
   /** Captain id → total XP */
   captainXp: Record<string, number>;
-  /** Cleared campaign area ids (the admiral's rank is derived from these) */
+  /** Cleared campaign area ids (rank exams and first-clear rewards) */
   campaign: string[];
+  /** Merit (戦功): the admiral's rank comes from it (#36) */
+  merit: number;
+  /** Lowest rank index held whatever the merit (saves from before #36 keep their slots) */
+  rankFloor: number;
+  /** Repair docks built (#38): 1 at the start, up to DockSystem.MAX_DOCKS */
+  docksOwned: number;
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
 }
@@ -59,6 +65,17 @@ export interface ISave {
   nations: Partial<Record<Nation, INationProgress>>;
   /** Career totals and medals, shared by every nation */
   record: IServiceRecord;
+  /** First-play tutorial (#90), shared by every nation */
+  tutorial: ITutorialState;
+}
+
+export interface ITutorialState {
+  /** Index of the current step (TutorialSystem.TUTORIAL_STEPS) */
+  step: number;
+  /** Finished or skipped: no more guidance */
+  done: boolean;
+  /** The finishing reward (and supply) was already paid: a replay from ヘルプ pays nothing */
+  rewarded?: boolean;
 }
 
 /** What scenes work with: the current nation's progress plus the shared record. */
@@ -71,11 +88,12 @@ export function emptyNationProgress(ships: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
+    merit: 0, rankFloor: 0, docksOwned: 1,
   };
 }
 
 export function emptySave(): ISave {
-  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord() };
+  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false } };
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +189,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     captainXp: numbers(data.captainXp),
     campaign: strings(data.campaign),
     presets: (Array.isArray(data.presets) ? data.presets : []).slice(0, PRESET_COUNT).map(parsePreset),
+    merit: isNum(data.merit) ? Math.max(0, data.merit) : 0,
+    rankFloor: isNum(data.rankFloor) ? Math.max(0, Math.round(data.rankFloor)) : 0,
+    docksOwned: isNum(data.docksOwned) ? Math.max(1, Math.round(data.docksOwned)) : 1,
   };
 }
 
@@ -205,6 +226,7 @@ export function migrateV1(data: Record<string, unknown>): ISave {
     current: Nation.IJN,
     nations: { [Nation.IJN]: { ...ijn, ships: legacyIjnFleet() } },
     record: parseRecord(data.record),
+    tutorial: { step: 0, done: true },
   };
 }
 
@@ -220,7 +242,14 @@ function parseLatest(data: Record<string, unknown>): ISave {
     current: isNation(data.current) ? data.current : emptySave().current,
     nations,
     record: parseRecord(data.record),
+    tutorial: parseTutorial(data.tutorial),
   };
+}
+
+/** A stored save without tutorial state is an existing player's: the tutorial counts as done. */
+function parseTutorial(v: unknown): ITutorialState {
+  if (!isObject(v)) return { step: 0, done: true };
+  return { step: isNum(v.step) ? Math.max(0, Math.round(v.step)) : 0, done: v.done === true, ...(v.rewarded === true ? { rewarded: true } : {}) };
 }
 
 /** True for a per-nation save (v2 or later); anything else is read as a v1 save. */

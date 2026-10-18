@@ -9,7 +9,8 @@ type GameWindow = Window & { game?: { scene: unknown } };
 
 /** A mid-game Japanese save: several ships, some research, cleared areas, a damaged ship. */
 const SAVE = {
-  version: 4,
+  version: 5,
+  tutorial: { step: 0, done: true },
   current: 'IJN',
   record: { sorties: 5 },
   nations: {
@@ -26,6 +27,9 @@ const SAVE = {
       captainXp: {},
       campaign: ['p1', 'p2', 'p3'],
       presets: [],
+      merit: 300,
+      rankFloor: 0,
+      docksOwned: 2,
     },
   },
 };
@@ -35,14 +39,15 @@ const SCREENS = [
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
 ];
 
-async function boot(page: Page, layout: string): Promise<string[]> {
+async function boot(page: Page, layout: string, save: object = SAVE): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/?layout=${layout}`);
   await page.waitForFunction(() => (window as GameWindow).game !== undefined, null, { timeout: 60_000 });
-  await page.evaluate((save) => {
-    localStorage.setItem('ww2fleet.progress.v2', JSON.stringify({ ...save, nations: { IJN: { ...save.nations.IJN, regenAt: Date.now() } } }));
-  }, SAVE);
+  await page.evaluate((s) => {
+    const data = s as typeof SAVE;
+    localStorage.setItem('ww2fleet.progress.v2', JSON.stringify({ ...data, nations: { IJN: { ...data.nations.IJN, regenAt: Date.now() } } }));
+  }, save);
   await page.reload();
   await page.waitForFunction(() => {
     const g = (window as unknown as { game?: Phaser.Game }).game;
@@ -135,6 +140,43 @@ test.describe('screens', () => {
     expect(paused).toBe(0);
     await page.waitForTimeout(1500);
     await page.screenshot({ path: info.outputPath('battle.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('編成 from the menu moves on to 作戦 or 演習 instead of a sortie (#109)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    await open(page, 'FleetBuilderScene', { organize: true });
+    await page.screenshot({ path: info.outputPath('organize.png') });
+    const organize = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { organizeOnly: boolean; startBtn: { list: Array<{ text?: string }> } };
+      return { organize: s.organizeOnly, label: s.startBtn.list.map((o) => o.text).filter(Boolean).join('') };
+    });
+    expect(organize).toEqual({ organize: true, label: '作戦へ  ›' });
+    expect(errors).toEqual([]);
+  });
+
+  test('a new save starts the tutorial; a sortie moves it to the battle step (#90)', async ({ page }, info) => {
+    const fresh = { ...SAVE, tutorial: { step: 0, done: false }, nations: { IJN: { ...SAVE.nations.IJN, merit: 0, ships: ['fubuki'], campaign: [] } } };
+    const errors = await boot(page, info.project.metadata.layout as string, fresh);
+    await open(page, 'HomeScene');
+    await page.screenshot({ path: info.outputPath('tutorial-home.png') });
+    const game = (): Promise<unknown> => page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.get('tutorial.seen'));
+    expect(await game()).toBe(0);
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
+        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
+      };
+      s.openPicker(0);
+      s.pickShip(s.ships[0]);
+      s.startBattle();
+    });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    await page.waitForTimeout(1000);
+    // The battle step's sheet is open and the battle waits for it.
+    expect(await game()).toBe(2);
+    expect(await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { paused: boolean }).paused)).toBe(true);
+    await page.screenshot({ path: info.outputPath('tutorial-battle.png') });
     expect(errors).toEqual([]);
   });
 });

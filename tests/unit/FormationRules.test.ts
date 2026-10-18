@@ -54,9 +54,12 @@ describe('FormationRules (#59)', () => {
   it('the first three formations are open from the start, the new ones come with rank', () => {
     expect([Formation.LineAhead, Formation.DoubleLine, Formation.Circle].every((f) => formationUnlocked(f, 0))).toBe(true);
     expect(formationUnlocked(Formation.Echelon, 0)).toBe(false);
-    expect(formationUnlocked(Formation.Echelon, 1)).toBe(true);
-    expect(formationUnlocked(Formation.Vanguard, 2)).toBe(false);
-    expect(formationUnlocked(Formation.Vanguard, 3)).toBe(true);
+    // Rank indices of the 14-rank table (#36): 少尉 2, 大尉 4, 中佐 7.
+    expect(formationUnlocked(Formation.Echelon, 2)).toBe(true);
+    expect(formationUnlocked(Formation.LineAbreast, 3)).toBe(false);
+    expect(formationUnlocked(Formation.LineAbreast, 4)).toBe(true);
+    expect(formationUnlocked(Formation.Vanguard, 6)).toBe(false);
+    expect(formationUnlocked(Formation.Vanguard, 7)).toBe(true);
     expect(usableFormation(Formation.Vanguard, 0)).toBe(Formation.LineAhead);
     expect(usableFormation(Formation.Circle, 0)).toBe(Formation.Circle);
     expect(usableFormation(undefined, 5)).toBe(Formation.LineAhead);

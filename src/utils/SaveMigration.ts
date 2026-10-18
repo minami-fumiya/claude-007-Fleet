@@ -47,6 +47,17 @@ export const MIGRATIONS: MigrationStep[] = [
     }
     return { ...nation, upgrades: out };
   }),
+  // v4 → v5 (#36 / #38 / #90): rank from merit (戦功) instead of cleared areas, docks bought one by one, a tutorial.
+  // Each nation keeps its old slots and buildable grade (rankFloor), gets 100 merit per area already cleared and
+  // keeps the two docks it had; the tutorial counts as done for an existing player.
+  (data) => ({
+    ...mapNations(data, (nation) => {
+      const clears = new Set(Array.isArray(nation.campaign) ? nation.campaign : []).size;
+      const oldRank = [0, 1, 2, 4, 7, 10].filter((min) => clears >= min).length - 1;
+      return { ...nation, merit: clears * 100, rankFloor: [2, 2, 4, 7, 9, 11][Math.max(0, oldRank)], docksOwned: 2 };
+    }),
+    tutorial: { step: 0, done: true },
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */
