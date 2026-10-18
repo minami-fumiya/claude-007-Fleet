@@ -50,3 +50,29 @@ Midway in AUTO now takes ~60–180 s; surface 3-vs-3 battles ~40 s.
 ## Known gaps
 - Carriers' gun DPS is near zero by design (their weapon is the air wing, not modelled here).
 - Submarines are judged by ASW battles instead (see `submarine.md`).
+
+## Sprint 12 pass — new ships and nations (#16 #17)
+New ships keep the same invariants (`tests/unit/Balance.test.ts` now loads all 7 nation files; invariant 3 runs over
+every `Nation`). Fictional ships: the battleship tests cover fictional *battleships* only (5 with Sovetsky Soyuz);
+fictional carriers (71号計画空母, Aquila) get their own check that they stay inside the carrier hull band.
+
+Nation flagships (best historical battleship by HP × DPS): Yamato, Iowa, Tirpitz, Rodney, Richelieu,
+Oktyabrskaya Revolutsiya, Roma. Duel ratios (row's time-to-kill on column ÷ column's on row, < 1 = row wins):
+
+| | IJN | USN | KM | RN | FR | SU | RM |
+|---|---|---|---|---|---|---|---|
+| IJN | – | 0.83 | 0.89 | 0.73 | 0.86 | 0.76 | 0.84 |
+| USN | 1.21 | – | 1.07 | 0.94 | 1.06 | 0.96 | 1.04 |
+| KM | 1.13 | 0.94 | – | 0.85 | 0.97 | 0.86 | 0.96 |
+| RN | 1.38 | 1.07 | 1.18 | – | 1.15 | 0.97 | 1.12 |
+| FR | 1.16 | 0.95 | 1.03 | 0.87 | – | 0.86 | 0.98 |
+| SU | 1.32 | 1.04 | 1.17 | 1.03 | 1.16 | – | 1.14 |
+| RM | 1.19 | 0.96 | 1.04 | 0.89 | 1.02 | 0.88 | – |
+
+| Decision | Why |
+|---|---|
+| Gangut-class 30.5cm: firePower 94, reload 1050 ms (12 guns → fast salvos) | The USSR's only historical battleships must still duel Yamato within 1.4 |
+| Light / escort carriers HP 455–470 | Carriers must out-hull every cruiser (max 450) and stay under the weakest battleship (610) |
+| Escorts (海防艦 / DE / sloop) are Destroyers with 200–205 HP and a fast-firing HA gun | Destroyer HP floor (> submarines' 175) and ≥ 20 DPS against destroyers |
+| Zara gets 10cm HA guns (no torpedoes historically) | 20.3cm AP alone gave 14 DPS against destroyers |
+| Panzerschiffe (Deutschland, Graf Spee) are Cruisers (重巡洋艦) with 28cm SK C/28 | 28cm guns, cruiser hull (HP 425–430) |
