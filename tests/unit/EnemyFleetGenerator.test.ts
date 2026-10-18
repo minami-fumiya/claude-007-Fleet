@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ENEMY_FLEET_SIZE, generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { ENEMY_FLEET_SIZE, enemyFleetSize, generateEnemyFleet, MAX_ENEMY_FLEET_SIZE } from '@/systems/EnemyFleetGenerator';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { BattleMode } from '@/types/Battle';
 import { IShipData } from '@/types/Ship';
@@ -53,6 +53,39 @@ describe('generateEnemyFleet', () => {
 
   it('returns an empty fleet for a nation without ships', () => {
     expect(generateEnemyFleet(new ShipRegistry([]), Nation.RN, BattleMode.Surface)).toEqual([]);
+  });
+});
+
+describe('fleet size', () => {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])('builds %i ships, flagship class first', (n) => {
+    for (const mode of [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW]) {
+      const fleet = generateEnemyFleet(registry, Nation.USN, mode, first, n);
+      expect(fleet, mode).toHaveLength(n);
+    }
+    expect(generateEnemyFleet(registry, Nation.USN, BattleMode.Surface, first, n)[0].shipClass).toBe(ShipClass.Battleship);
+    expect(generateEnemyFleet(registry, Nation.USN, BattleMode.CarrierStrike, first, n)[0].shipClass).toBe(ShipClass.Carrier);
+  });
+
+  it('keeps the default 3-ship fleet', () => {
+    expect(generateEnemyFleet(registry, Nation.IJN, BattleMode.Surface, first, 3)).toEqual(generateEnemyFleet(registry, Nation.IJN, BattleMode.Surface, first));
+  });
+
+  it('prefers ships not already in the fleet', () => {
+    for (const nation of [Nation.IJN, Nation.USN, Nation.KM, Nation.RN]) {
+      const fleet = generateEnemyFleet(registry, nation, BattleMode.Surface, first, 8);
+      const ids = fleet.map((s) => s.id);
+      const destroyers = registry.byNation(nation).filter((s) => s.shipClass === ShipClass.Destroyer && !s.fictional).length;
+      const ddInFleet = fleet.filter((s) => s.shipClass === ShipClass.Destroyer).map((s) => s.id);
+      expect(new Set(ddInFleet).size, nation).toBe(Math.min(destroyers, ddInFleet.length));
+      expect(ids).toHaveLength(8);
+    }
+  });
+
+  it('clamps the requested size to 1..8', () => {
+    expect(enemyFleetSize(0)).toBe(1);
+    expect(enemyFleetSize(12)).toBe(MAX_ENEMY_FLEET_SIZE);
+    expect(enemyFleetSize(Number.NaN)).toBe(ENEMY_FLEET_SIZE);
+    expect(generateEnemyFleet(registry, Nation.KM, BattleMode.Surface, first, 20)).toHaveLength(8);
   });
 });
 

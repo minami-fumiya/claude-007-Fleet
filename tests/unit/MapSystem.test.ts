@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { avoidHeading, clearAhead, clearSpawn, currentAt, inShoal, onIsland, resolveMap } from '@/systems/MapSystem';
 import { IMapData } from '@/types/Map';
+import { BATTLE_WORLD, enemySpawnPoints, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import archipelago from '@/data/maps/archipelago.json';
 import strait from '@/data/maps/strait.json';
 import atoll from '@/data/maps/atoll.json';
@@ -51,12 +52,28 @@ describe('MapSystem', () => {
     expect(clearSpawn(m, 100, 100)).toEqual({ x: 100, y: 100 });
   });
 
+  it('keeps spawns apart from ships already placed', () => {
+    const taken: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < 8; i++) taken.push(clearSpawn(m, 1000, 500, 60, taken, 110));
+    for (const p of taken) expect(onIsland(m, p.x, p.y, 60)).toBe(false);
+    for (let i = 0; i < taken.length; i++) {
+      for (let j = i + 1; j < taken.length; j++) expect(Math.hypot(taken[i].x - taken[j].x, taken[i].y - taken[j].y)).toBeGreaterThanOrEqual(110);
+    }
+  });
+
   it.each([archipelago, strait, atoll, convoy, openSea] as IMapData[])('$id keeps the spawn areas at sea', (data) => {
-    for (const [w, h] of [[2400, 1440], [1440, 2240]]) {
-      const r = resolveMap(data, w, h);
-      // Player fleet spawns near the bottom centre, enemies near the top.
-      expect(onIsland(r, w / 2, h - 260, 60), `${data.id} player`).toBe(false);
-      for (const x of [w * 0.25, w * 0.5, w * 0.75]) expect(onIsland(r, x, 240, 40), `${data.id} enemy`).toBe(false);
+    const { w, h } = BATTLE_WORLD;
+    const r = resolveMap(data, w, h);
+    // Player fleet starts south of the middle (escorts astern), enemies in a line north of it.
+    const p = playerStart();
+    for (let k = 0; k <= 7; k++) expect(onIsland(r, p.x, p.y + k * 90, 60), `${data.id} player ${k}`).toBe(false);
+    // The enemy line shifts north / south as a whole to get off land; the gap to the player stays sensible.
+    for (const n of [1, 3, 8]) {
+      const line = lineAtSea(r, enemySpawnPoints(n));
+      for (const e of line) expect(onIsland(r, e.x, e.y, 60), `${data.id} enemy ${n}`).toBe(false);
+      const gap = p.y - line[0].y;
+      expect(gap, `${data.id} gap`).toBeGreaterThan(900);
+      expect(gap, `${data.id} gap`).toBeLessThan(2000);
     }
   });
 });

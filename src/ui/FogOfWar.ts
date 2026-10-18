@@ -45,6 +45,9 @@ export class FogOfWar {
     this.cone.clear();
     this.cone.fillStyle(0xffffff, 1);
     for (const s of sources) {
+      // Only cut out what can show on screen: in the big world most sources are far off camera.
+      const reach = s.kind === 'circle' ? s.radius : s.range;
+      if (s.x + reach < view.x || s.x - reach > view.right || s.y + reach < view.y || s.y - reach > view.bottom) continue;
       if (s.kind === 'circle') {
         this.brush.setPosition(s.x - view.x, s.y - view.y).setScale((s.radius * 2) / BRUSH_SIZE);
         this.rt.erase(this.brush);

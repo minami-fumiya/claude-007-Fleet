@@ -16,6 +16,8 @@ const BACK_LABEL: Record<string, string> = {
 };
 /** Landscape: 7 lines (campaign, reward, cost, medals, 3 captains) must still fit in 720 px. */
 const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
+/** Landscape: more than 3 captains (fleets of up to 8) go in two columns so the card still fits. */
+const REPORT_COLS_FROM = 4;
 const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
 
 export class ResultsScene extends Phaser.Scene {
@@ -35,7 +37,8 @@ export class ResultsScene extends Phaser.Scene {
     // Captain XP lines push the buttons down and grow the card.
     const reports = data?.captainReports ?? [];
     const rewardLines = [data?.campaign ?? '', data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : ''].filter((l) => l);
-    const lineCount = reports.length + rewardLines.length;
+    const reportCols = !IS_PORTRAIT && reports.length >= REPORT_COLS_FROM ? 2 : 1;
+    const lineCount = Math.ceil(reports.length / reportCols) + rewardLines.length;
     const reportH = lineCount > 0 ? 18 + lineCount * REPORT_LINE_H : 0;
     const cardH = CARD_H + reportH;
     const x = (CANVAS_W - CARD_W) / 2;
@@ -74,13 +77,16 @@ export class ResultsScene extends Phaser.Scene {
         .text(CANVAS_W / 2, y + 300 + STAT.h + 22 + i * REPORT_LINE_H, line, textStyle(14, Css.cyan, { fontStyle: 'bold' }))
         .setOrigin(0.5, 0);
     });
+    const colW = (CARD_W - 40) / reportCols;
     reports.forEach((r, j) => {
-      const i = j + rewardLines.length;
+      const i = Math.floor(j / reportCols) + rewardLines.length;
       const ry = y + 300 + STAT.h + 22 + i * REPORT_LINE_H;
-      const up = r.leveledUp ? '  ▲ LEVEL UP' : '';
-      this.add
-        .text(CANVAS_W / 2, ry, `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(14, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
+      const cx = reportCols === 1 ? CANVAS_W / 2 : x + 20 + colW * (j % reportCols) + colW / 2;
+      const up = r.leveledUp ? (reportCols === 1 ? '  ▲ LEVEL UP' : '  ▲') : '';
+      const t = this.add
+        .text(cx, ry, `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
         .setOrigin(0.5, 0);
+      if (t.width > colW - 8) t.setScale((colW - 8) / t.width);
     });
 
     new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, '再出撃', () => (data?.retry ? this.scene.start(SceneKeys.BATTLE, data.retry) : this.scene.start(SceneKeys.FLEET_BUILDER)), {

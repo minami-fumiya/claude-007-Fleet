@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { forceShips, inZone, placeAt, setupFor } from '@/systems/ScenarioSystem';
+import { BATTLE_WORLD } from '@/systems/BattleLayout';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IScenario } from '@/types/Scenario';
 import { IShipData } from '@/types/Ship';
@@ -57,8 +58,8 @@ describe('ScenarioSystem', () => {
   it.each(SCENARIOS)('$id: ships and zones start at sea in both layouts', (sc) => {
     const data = MAPS.get(sc.map);
     expect(data, sc.map).toBeDefined();
-    // BattleScene's landscape and portrait worlds
-    for (const [w, h] of [[2400, 1440], [1440, 2240]]) {
+    // BattleScene's world (the same square in both orientations)
+    for (const [w, h] of [[BATTLE_WORLD.w, BATTLE_WORLD.h]]) {
       const map = resolveMap(data!, w, h);
       for (const f of [sc.forces.A, sc.forces.B]) {
         for (const p of f.positions) expect(onIsland(map, p.x * w, p.y * h, 40), `${sc.id} ${p.x},${p.y}`).toBe(false);

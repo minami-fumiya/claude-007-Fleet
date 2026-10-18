@@ -64,15 +64,27 @@ export function avoidHeading(map: IResolvedMap, x: number, y: number, headingDeg
   return headingDeg;
 }
 
-/** Moves a spawn point out of any island (searching outward in a spiral). */
-export function clearSpawn(map: IResolvedMap, x: number, y: number, margin = 60): { x: number; y: number } {
-  if (!onIsland(map, x, y, margin)) return { x, y };
-  for (let ring = 1; ring <= 12; ring++) {
+/**
+ * Moves a spawn point out of any island (searching outward in a spiral), and away from ships already
+ * placed: every point in `taken` must be at least `gap` px from the result.
+ */
+export function clearSpawn(
+  map: IResolvedMap,
+  x: number,
+  y: number,
+  margin = 60,
+  taken: ReadonlyArray<{ x: number; y: number }> = [],
+  gap = 0,
+): { x: number; y: number } {
+  const free = (px: number, py: number): boolean =>
+    !onIsland(map, px, py, margin) && taken.every((t) => Math.hypot(px - t.x, py - t.y) >= gap);
+  if (free(x, y)) return { x, y };
+  for (let ring = 1; ring <= 16; ring++) {
     for (let k = 0; k < 12; k++) {
       const a = (k / 12) * Math.PI * 2;
       const px = x + Math.cos(a) * ring * 40;
       const py = y + Math.sin(a) * ring * 40;
-      if (!onIsland(map, px, py, margin)) return { x: px, y: py };
+      if (free(px, py)) return { x: px, y: py };
     }
   }
   return { x, y };

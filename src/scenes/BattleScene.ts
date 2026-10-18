@@ -24,6 +24,7 @@ import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
 import { IResolvedMap } from '@/types/Map';
+import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
@@ -89,18 +90,12 @@ const AUTO_CARRIER_STANDOFF = 850;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
 /** Torpedo / dive buttons sit above the bottom-right corner. */
 const ACTION_BUTTON = IS_PORTRAIT ? { w: 172, h: 64, gap: 14, bottom: 120 } : { w: 150, h: 46, gap: 10, bottom: 90 };
-/** The sea is about twice the screen in each direction; the camera follows the flagship. */
-const WORLD = IS_PORTRAIT ? { w: 1440, h: 2240 } : { w: 2400, h: 1440 };
+/** The sea is a 3200 px square in both orientations; the camera follows the flagship. */
+const WORLD = BATTLE_WORLD;
 const WORLD_BOUNDS = { width: WORLD.w, height: WORLD.h };
 const CAMERA_LERP = 0.12;
-// Player fleet starts near the bottom (room behind for escorts in line-ahead), enemies near the top.
-const FLAGSHIP_SPAWN = { x: WORLD.w / 2, y: WORLD.h - 260 };
-const ENEMY_TOP = 220;
-const ENEMY_SPAWN_POSITIONS = [
-  { x: WORLD.w * 0.25, y: ENEMY_TOP + 40 },
-  { x: WORLD.w * 0.75, y: ENEMY_TOP + 40 },
-  { x: WORLD.w / 2, y: ENEMY_TOP },
-];
+/** Ships spawn at least this far apart (line-ahead spacing is 90 px). */
+const SPAWN_GAP = 80;
 /** Screen area where enemies count as visible; outside it they get an edge marker. Excludes the HUD strip. */
 const VIEW_INSET = { left: 26, right: CANVAS_W - 26, top: IS_PORTRAIT ? 244 : 96, bottom: CANVAS_H - 26 };
 
@@ -109,8 +104,7 @@ const SUBMERGED_ALPHA = 0.45;
 /** One sonar sweep (an expanding ring around each hunter) takes this long. */
 const SONAR_PING_MS = 2200;
 
-/** Convoy route: merchant ships enter on the west edge and escape off the east edge. */
-const CONVOY_START_X = 140;
+/** Convoy route: merchant ships enter on the west edge (CONVOY_START_X) and escape off the east edge. */
 const CONVOY_EXIT_MARGIN = 90;
 /** Enemy AI prefers convoy ships over warships by this much. */
 const CONVOY_PRIORITY = 0.6;
@@ -176,6 +170,8 @@ export class BattleScene extends Phaser.Scene {
   private objectiveText: Phaser.GameObjects.Text | null = null;
   /** Captains in command of player ships this battle */
   private captains = new Map<BaseShip, ICaptain>();
+  /** Where ships have spawned this battle, so later ones keep clear of them */
+  private spawnedAt: IPoint[] = [];
 
   private explosion!: Explosion;
   private splash!: WaterSplash;
@@ -238,6 +234,7 @@ export class BattleScene extends Phaser.Scene {
     this.objectiveText = null;
     this.scenarioTargets = [];
     this.captains = new Map();
+    this.spawnedAt = [];
     this.diveBtn = null;
     this.diveText = null;
     this.airText = null;
@@ -249,7 +246,7 @@ export class BattleScene extends Phaser.Scene {
     this.islands = drawMap(this, this.map);
     this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
     this.battleStartedAt = this.time.now;
-    this.aimTarget = { x: FLAGSHIP_SPAWN.x, y: FLAGSHIP_SPAWN.y - 300 };
+    this.aimTarget = { x: playerStart().x, y: playerStart().y - 300 };
     this.isTouch = this.sys.game.device.input.touch;
     this.autoMode = false;
     this.lockedTarget = null;
@@ -497,7 +494,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {
-    const { x, y } = avoidLand ? clearSpawn(this.map, wantX, wantY) : { x: wantX, y: wantY };
+    const { x, y } = avoidLand ? clearSpawn(this.map, wantX, wantY, 60, this.spawnedAt, SPAWN_GAP) : { x: wantX, y: wantY };
+    if (avoidLand) this.spawnedAt.push({ x, y });
     const loadout = applyToWeapons(this.loadoutOf(shipData), mods);
     const stats = applyToStats(this.shipDataToStats(shipData, primaryWeapon(loadout)), mods);
     const ship = new BaseShip(this, x, y, shipData.spriteKey, stats);
@@ -549,7 +547,7 @@ export class BattleScene extends Phaser.Scene {
   private flagshipSpawn(): { x: number; y: number } {
     const placed = this.scenarioSetup?.player.positions[0];
     if (placed) return placeAt(placed, WORLD.w, WORLD.h);
-    return this.objective === Objective.Convoy ? { x: CONVOY_START_X + 160, y: WORLD.h / 2 + 260 } : FLAGSHIP_SPAWN;
+    return this.objective === Objective.Convoy ? convoyEscortStart(WORLD) : playerStart(WORLD);
   }
 
   private spawnPlayerFleet(fleet: IFleet, formation: Formation): void {
@@ -565,12 +563,12 @@ export class BattleScene extends Phaser.Scene {
     this.playerRecon.register(this.flagship);
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
-    const offsets = FormationSystem.getOffsets(formation);
     const profile = TACTICS[fleet.nation];
     const escortSlots = fleet.slots.filter((s, i) => i !== fleet.flagshipIndex && s.shipData !== null);
+    const offsets = FormationSystem.getOffsets(formation, escortSlots.length);
     escortSlots.forEach((slot, i) => {
       const escortData = slot.shipData as IShipData;
-      const offset = offsets[Math.min(i, offsets.length - 1)];
+      const offset = offsets[i];
       const placed = this.scenarioSetup?.player.positions[i + 1];
       const spawnPos = placed ? placeAt(placed, WORLD.w, WORLD.h) : FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
       const captain = this.captainFor(slot.slotIndex);
@@ -586,9 +584,12 @@ export class BattleScene extends Phaser.Scene {
 
   private spawnEnemyFleet(fleet: IFleet): void {
     const profile = TACTICS[fleet.nation];
-    FleetSystem.getShips(fleet).forEach((shipData, i) => {
-        const placed = this.scenarioSetup?.enemy.positions[i];
-      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : ENEMY_SPAWN_POSITIONS[i] ?? { x: WORLD.w / 2, y: ENEMY_TOP };
+    const ships = FleetSystem.getShips(fleet);
+    // A line abreast north of the middle, moved off any island as a whole.
+    const line = lineAtSea(this.map, enemySpawnPoints(ships.length, WORLD));
+    ships.forEach((shipData, i) => {
+      const placed = this.scenarioSetup?.enemy.positions[i];
+      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : line[i];
       const enemy = this.spawnShip(shipData, pos.x, pos.y);
       enemy.setTint(0xdd4444);
       enemy.setAngle(placed ? placed.angle : 180);
@@ -596,6 +597,8 @@ export class BattleScene extends Phaser.Scene {
       this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
       this.enemyRecon.register(enemy);
       const ai = new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS);
+      // Searching ships sweep towards the middle in their own lane instead of all meeting at one point.
+      ai.patrol = { x: enemy.x, y: WORLD.h / 2 };
       const side = this.scenarioSetup?.side;
       if (side?.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
       if ((side?.targets ?? []).includes(shipData.id)) this.scenarioTargets.push(enemy);

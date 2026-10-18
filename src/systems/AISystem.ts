@@ -93,6 +93,8 @@ export class AISystem {
   private current: IShipView | null = null;
   /** When set the ship makes for this point (escape / breakthrough) and only fires on the way */
   goal: { x: number; y: number } | null = null;
+  /** Where the ship searches when nothing is visible (default: the middle of the sea) */
+  patrol: { x: number; y: number } | null = null;
 
   constructor(
     private readonly weapons: WeaponSystem,
@@ -121,8 +123,8 @@ export class AISystem {
       return;
     }
     if (!target) {
-      // Nothing visible: patrol towards the middle of the sea.
-      const centre = { x: this.bounds.width / 2, y: this.bounds.height / 2 };
+      // Nothing visible: patrol towards the patrol point (the middle of the sea by default).
+      const centre = this.patrol ?? { x: this.bounds.width / 2, y: this.bounds.height / 2 };
       ship.steer(engageSteer(ship, centre, 200, this.bounds, EDGE_MARGIN), dtSec, turnRate);
       const body = ship.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(PATROL_THROTTLE);
