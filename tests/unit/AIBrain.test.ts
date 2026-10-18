@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { AIMode, chooseTarget, FLAGSHIP_PRIORITY, decide, IAISelf, IAITarget, isEngageable, scoreTarget, submarineWantsDive, TACTICS } from '@/systems/AIBrain';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
+import { ShipSubtype } from '@/types/Ship';
 
 const self: IAISelf = { x: 0, y: 0, hpFraction: 1, maxRange: 500, hasDepthCharges: false };
 const t = (x: number, over: Partial<IAITarget> = {}): IAITarget => ({
@@ -156,5 +157,13 @@ describe('AIBrain fire distribution (#34)', () => {
   it('the crowd penalty lowers a target score per other attacker', () => {
     const a = t(300);
     expect(scoreTarget(self, { ...a, attackers: 2 }, USN)).toBeCloseTo(scoreTarget(self, a, USN) - 2 * USN.crowdPenalty);
+  });
+});
+
+describe('AIBrain cruiser value (#37)', () => {
+  it('values a heavy cruiser above a light one at the same range', () => {
+    const heavy = t(300, { subtype: ShipSubtype.HeavyCruiser });
+    const light = t(300, { subtype: ShipSubtype.LightCruiser });
+    expect(scoreTarget(self, heavy, USN)).toBeGreaterThan(scoreTarget(self, light, USN));
   });
 });

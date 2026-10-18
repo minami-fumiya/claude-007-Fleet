@@ -91,6 +91,7 @@ const MODIFIER_LABEL: Record<keyof IShipModifiers, string> = {
   depthChargeMul: '爆雷',
   nightAimMul: '夜間照準誤差',
   nightVisionMul: '夜間視界',
+  evadeAdd: '回避',
 };
 
 /** Short labels for every modifier that differs from "no change", e.g. ['砲火力 ×1.10', '装甲 +6']. */
@@ -99,7 +100,8 @@ export function describeModifiers(m: Partial<IShipModifiers>): string[] {
   for (const key of Object.keys(NO_MODIFIERS) as Array<keyof IShipModifiers>) {
     const v = m[key];
     if (v === undefined || Math.abs(v - NO_MODIFIERS[key]) < 1e-9) continue;
-    out.push(ADDITIVE_MODIFIERS.includes(key) ? `${MODIFIER_LABEL[key]} ${v > 0 ? '+' : ''}${v}` : `${MODIFIER_LABEL[key]} ×${v.toFixed(2)}`);
+    if (key === 'evadeAdd') out.push(`${MODIFIER_LABEL[key]} ${v > 0 ? '+' : ''}${Math.round(v * 100)}%`);
+    else out.push(ADDITIVE_MODIFIERS.includes(key) ? `${MODIFIER_LABEL[key]} ${v > 0 ? '+' : ''}${v}` : `${MODIFIER_LABEL[key]} ×${v.toFixed(2)}`);
   }
   return out;
 }

@@ -24,4 +24,4 @@ historically accurate warships across Pacific, Atlantic, and Mediterranean theat
 - WASD movement, mouse aim, left-click to fire
 - Ships have HP, armor, speed, and weapon loadouts
 - Damage formula: `max(1, firePower * multiplier - armor * reduction)`
-- Formations affect fleet AI behavior (line, circle, double-line)
+- Six formations (単縦陣・複縦陣・輪形陣・梯形陣・単横陣・警戒陣) place the escorts and trade firepower for anti-air, anti-submarine work, evasion or screening the flagship (`systems/formations.md`)

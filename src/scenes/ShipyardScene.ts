@@ -4,11 +4,11 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, gradeRankName, ownedIds, shipGrade } from '@/systems/ShipyardSystem';
+import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCost, buildShip, buildState, buildStateLabel, gradeRankName, ownedIds, shipGrade } from '@/systems/ShipyardSystem';
 import { availableShips, canResearch, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { rankOf } from '@/systems/RankSystem';
-import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
+import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { ITechNode } from '@/types/Progression';
@@ -109,7 +109,9 @@ export class ShipyardScene extends Phaser.Scene {
     const info = L.info;
     add(drawPanel(this.add.graphics(), info.x, info.y, info.w, info.h, { radius: 16, fillAlpha: 0.55 }));
     const rank = rankOf(progress);
-    const techId = BUILD_TECH[this.shipClass];
+    // Cruisers: light first, then heavy (#37) — show whichever is still missing.
+    const techs = this.shipClass === ShipClass.Cruiser ? [BUILD_TECH[ShipClass.Cruiser], HEAVY_CRUISER_TECH] : [BUILD_TECH[this.shipClass]];
+    const techId = techs.find((t) => t && !progress.research.includes(t)) ?? techs[techs.length - 1];
     const node = techId ? TREE.find((n) => n.id === techId) : undefined;
     const rankLine = `階級 ${rank.name}: 格 ${rank.index} の艦まで建造可`;
     add(this.add.text(info.x + 16, info.y + info.h / 2, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
@@ -177,7 +179,7 @@ export class ShipyardScene extends Phaser.Scene {
       frame,
       name,
       stateText,
-      this.add.text(pad, 10 + lineH + 4, `${CLASS_JA[ship.shipClass]} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
+      this.add.text(pad, 10 + lineH + 4, `${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
       this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
       this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : `建造 ${formatResources(buildCost(ship))}`, textStyle(11, owned ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
