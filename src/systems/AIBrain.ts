@@ -19,21 +19,24 @@ export interface ITacticsProfile {
   capitalWeight: number;
   /** 0..1, passed to the weapon selector: how early torpedoes are launched */
   torpedoEagerness: number;
+  /** Score lost per other ship of the same side already attacking a target (#34): high = spreads its fire */
+  crowdPenalty: number;
 }
 
 /**
  * IJN closes in for torpedo attacks, USN keeps a long-range gun duel, KM gangs up on damaged ships.
  * FR fights a fast gun battle on capital ships, SU charges in and fights to the last,
  * RM keeps the range open and breaks off early to save its fleet ("fleet in being").
+ * KM's low crowd penalty keeps its wolf-pack focus; the others spread their fire over the player's fleet (#34).
  */
 export const TACTICS: Record<Nation, ITacticsProfile> = {
-  [Nation.IJN]: { preferredRangeFraction: 0.5, retreatHpFraction: 0.15, focusWeakWeight: 0.4, distanceWeight: 1, capitalWeight: 0.3, torpedoEagerness: 1 },
-  [Nation.USN]: { preferredRangeFraction: 0.85, retreatHpFraction: 0.3, focusWeakWeight: 0.3, distanceWeight: 1, capitalWeight: 0.5, torpedoEagerness: 0.3 },
-  [Nation.KM]: { preferredRangeFraction: 0.7, retreatHpFraction: 0.2, focusWeakWeight: 1, distanceWeight: 0.8, capitalWeight: 0.2, torpedoEagerness: 0.6 },
-  [Nation.RN]: { preferredRangeFraction: 0.7, retreatHpFraction: 0.25, focusWeakWeight: 0.5, distanceWeight: 1, capitalWeight: 0.4, torpedoEagerness: 0.5 },
-  [Nation.FR]: { preferredRangeFraction: 0.8, retreatHpFraction: 0.25, focusWeakWeight: 0.4, distanceWeight: 0.9, capitalWeight: 0.6, torpedoEagerness: 0.4 },
-  [Nation.SU]: { preferredRangeFraction: 0.55, retreatHpFraction: 0.1, focusWeakWeight: 0.6, distanceWeight: 1.2, capitalWeight: 0.3, torpedoEagerness: 0.7 },
-  [Nation.RM]: { preferredRangeFraction: 0.9, retreatHpFraction: 0.35, focusWeakWeight: 0.4, distanceWeight: 0.9, capitalWeight: 0.5, torpedoEagerness: 0.4 },
+  [Nation.IJN]: { preferredRangeFraction: 0.5, retreatHpFraction: 0.15, focusWeakWeight: 0.4, distanceWeight: 1, capitalWeight: 0.3, torpedoEagerness: 1, crowdPenalty: 0.15 },
+  [Nation.USN]: { preferredRangeFraction: 0.85, retreatHpFraction: 0.3, focusWeakWeight: 0.3, distanceWeight: 1, capitalWeight: 0.5, torpedoEagerness: 0.3, crowdPenalty: 0.2 },
+  [Nation.KM]: { preferredRangeFraction: 0.7, retreatHpFraction: 0.2, focusWeakWeight: 1, distanceWeight: 0.8, capitalWeight: 0.2, torpedoEagerness: 0.6, crowdPenalty: 0.05 },
+  [Nation.RN]: { preferredRangeFraction: 0.7, retreatHpFraction: 0.25, focusWeakWeight: 0.5, distanceWeight: 1, capitalWeight: 0.4, torpedoEagerness: 0.5, crowdPenalty: 0.15 },
+  [Nation.FR]: { preferredRangeFraction: 0.8, retreatHpFraction: 0.25, focusWeakWeight: 0.4, distanceWeight: 0.9, capitalWeight: 0.6, torpedoEagerness: 0.4, crowdPenalty: 0.2 },
+  [Nation.SU]: { preferredRangeFraction: 0.55, retreatHpFraction: 0.1, focusWeakWeight: 0.6, distanceWeight: 1.2, capitalWeight: 0.3, torpedoEagerness: 0.7, crowdPenalty: 0.12 },
+  [Nation.RM]: { preferredRangeFraction: 0.9, retreatHpFraction: 0.35, focusWeakWeight: 0.4, distanceWeight: 0.9, capitalWeight: 0.5, torpedoEagerness: 0.4, crowdPenalty: 0.2 },
 };
 
 const CLASS_VALUE: Record<ShipClass, number> = {
@@ -48,6 +51,8 @@ const CLASS_VALUE: Record<ShipClass, number> = {
 const SWITCH_MARGIN = 0.15;
 /** Retreating ships hold this multiple of their preferred range. */
 const RETREAT_RANGE_FACTOR = 1.6;
+/** Enemy AI looks past the player's flagship a little, so its escorts draw their share of the fire (#34). */
+export const FLAGSHIP_PRIORITY = -0.15;
 /** Bonus for hunters going after a submarine they have on sonar. */
 const ASW_PRIORITY = 0.6;
 
@@ -70,8 +75,10 @@ export interface IAITarget {
   submerged: boolean;
   /** Visible to this side (always true unless submerged and off sonar) */
   detected: boolean;
-  /** Extra score, e.g. convoy ships the enemy is ordered to sink */
+  /** Extra score, e.g. convoy ships the enemy is ordered to sink (negative for the player's flagship, #34) */
   priority?: number;
+  /** Other ships of the attacking side already targeting this one (not counting the one deciding) */
+  attackers?: number;
 }
 
 export enum AIMode {
@@ -101,6 +108,7 @@ export function scoreTarget(self: IAISelf, target: IAITarget, profile: ITacticsP
   const weak = 1 - Math.min(1, Math.max(0, target.hpFraction));
   let score = profile.distanceWeight * near + profile.focusWeakWeight * weak + profile.capitalWeight * CLASS_VALUE[target.shipClass];
   if (target.submerged) score += ASW_PRIORITY;
+  score -= profile.crowdPenalty * Math.max(0, target.attackers ?? 0);
   return score + (target.priority ?? 0);
 }
 

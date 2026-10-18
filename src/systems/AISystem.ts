@@ -101,6 +101,11 @@ export class AISystem {
   /** Where the ship searches when nothing is visible (default: the middle of the sea) */
   patrol: { x: number; y: number } | null = null;
 
+  /** The ship this AI is attacking (null when it has no target). */
+  get targetShip(): BaseShip | null {
+    return this.current?.ship ?? null;
+  }
+
   constructor(
     private readonly weapons: WeaponSystem,
     private readonly profile: ITacticsProfile,
@@ -113,13 +118,21 @@ export class AISystem {
     return submarineWantsDive(nearestDistance(ship, foes), ship.sub.air, ship.sub.submerged);
   }
 
-  update(ship: BaseShip, foes: IShipView[], time: number, delta: number): void {
+  /**
+   * `attackers` counts how many ships of this side currently target each foe (this ship's own pick included); the
+   * AI avoids piling onto a ship the others already attack (#34). The caller updates it after each decision.
+   */
+  update(ship: BaseShip, foes: IShipView[], time: number, delta: number, attackers?: Map<BaseShip, number>): void {
     if (!ship.isAlive) return;
     const dtSec = delta / 1000;
     const turnRate = TURN_RATE_DEG[ship.stats.shipClass];
+    const own = this.current?.ship ?? null;
+    const candidates = attackers
+      ? foes.map((f) => ({ ...f, attackers: Math.max(0, (attackers.get(f.ship) ?? 0) - (f.ship === own ? 1 : 0)) }))
+      : foes;
     // Views are rebuilt every frame; keep tracking the same ship.
-    const current = this.current ? foes.find((f) => f.ship === this.current!.ship) ?? null : null;
-    const decision = decide(aiSelf(ship), foes, this.profile, current);
+    const current = own ? candidates.find((f) => f.ship === own) ?? null : null;
+    const decision = decide(aiSelf(ship), candidates, this.profile, current);
     this.current = decision.target;
 
     const target = decision.target;

@@ -8,7 +8,7 @@ import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
 import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
-import { chooseTarget, TACTICS } from '@/systems/AIBrain';
+import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
 import { AircraftType } from '@/types/Aircraft';
 import { FleetSystem } from '@/systems/FleetSystem';
@@ -347,7 +347,10 @@ export class BattleScene extends Phaser.Scene {
     this.playerRecon.update(time, delta, aaGuns(this.enemies));
     this.enemyRecon.update(time, delta, aaGuns(this.playerSide()));
     this.updateDetection();
-    const playerView = this.playerSide().map((s) => ({ ...shipView(s, this.seenByEnemy.has(s)), priority: s.isConvoy ? CONVOY_PRIORITY : 0 }));
+    const playerView = this.playerSide().map((s) => ({
+      ...shipView(s, this.seenByEnemy.has(s)),
+      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY : 0,
+    }));
     const enemyView = this.enemies.map((s) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : 0 }));
 
     if (!this.isTouch) {
@@ -368,9 +371,20 @@ export class BattleScene extends Phaser.Scene {
     this.enemyWeapons.update(time, delta);
     this.updateAir(time, delta, playerView, enemyView);
 
+    // Who the enemy is attacking, kept current as each ship decides so they spread their fire (#34).
+    const attackers = new Map<BaseShip, number>();
+    const count = (s: BaseShip | null, n: number): void => {
+      if (s) attackers.set(s, (attackers.get(s) ?? 0) + n);
+    };
+    this.enemies.forEach((e, i) => e.isAlive && count(this.aiSystems[i].targetShip, 1));
     for (let i = 0; i < this.enemies.length; i++) {
       const enemy = this.enemies[i];
-      if (enemy.isAlive) this.aiSystems[i].update(enemy, playerView, time, delta);
+      if (!enemy.isAlive) continue;
+      const ai = this.aiSystems[i];
+      const before = ai.targetShip;
+      ai.update(enemy, playerView, time, delta, attackers);
+      count(before, -1);
+      count(ai.targetShip, 1);
     }
 
     for (let i = 0; i < this.escorts.length; i++) {
