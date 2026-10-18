@@ -37,6 +37,7 @@ import { IBattleInitData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -346,6 +347,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     audio.music('menu');
     this.shipRegistry = DataLoader.getRegistry(this);
     const progress = loadProgress();

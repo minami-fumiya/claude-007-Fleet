@@ -20,6 +20,12 @@ export const FIRST_VERSION = 2;
  * MIGRATIONS[i] migrates version FIRST_VERSION + i → FIRST_VERSION + i + 1. Append new steps at the end; never
  * reorder or edit a released one.
  */
+/** Screens with first-visit help when it was added (0.0.14); a player from before then has seen them all. */
+export const EXISTING_PLAYER_HELP: readonly string[] = [
+  'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene', 'ShipyardScene',
+  'CustomizationScene', 'EncyclopediaScene', 'RecordScene',
+];
+
 export const MIGRATIONS: MigrationStep[] = [
   // v2 → v3 (#37): cruiser research split into light and heavy; whoever could build cruisers keeps both.
   (data) => mapNations(data, (nation) => {
@@ -68,6 +74,9 @@ export const MIGRATIONS: MigrationStep[] = [
     captainSkills: {},
     captainStats: {},
   })),
+  // v6 → v7 (#61 / #88): the screens an existing player already knows skip their first-visit help; every nation
+  // works from its first base ('' = the nation's first).
+  (data) => mapNations({ ...data, seenHelp: [...EXISTING_PLAYER_HELP] }, (nation) => ({ ...nation, base: '' })),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

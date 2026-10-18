@@ -5,7 +5,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCost, buildShip, buildState, buildStateLabel, gradeRankName, ownedIds, shipGrade } from '@/systems/ShipyardSystem';
+import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildShip, buildState, buildStateLabel, gradeRankName, ownedIds, shipGrade } from '@/systems/ShipyardSystem';
 import { availableShips, canResearch, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
@@ -19,6 +19,8 @@ import { ResourceBar } from '@/ui/components/ResourceBar';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import techTree from '@/data/tech-tree.json';
 import campaignData from '@/data/campaign.json';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { baseOfProgress, researchMultiplier, scaleCost } from '@/systems/BaseSystem';
 
 const TREE = techTree.tech as ITechNode[];
 const TECH_NAMES: Record<string, string> = Object.fromEntries(TREE.map((n) => [n.id, n.name]));
@@ -52,6 +54,8 @@ export class ShipyardScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     this.guide = new TutorialGuide(this);
     this.tabs = [];
     this.layer = [];
@@ -121,9 +125,10 @@ export class ShipyardScene extends Phaser.Scene {
     const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで建造可`;
     add(this.add.text(info.x + 16, info.y + info.h / 2, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     if (node && !progress.research.includes(node.id)) {
-      const ready = canResearch(node, progress.research, progress.resources);
+      const costMul = researchMultiplier(baseOfProgress(progress));
+      const ready = canResearch(node, progress.research, progress.resources, costMul);
       const pre = prerequisitesMet(node, progress.research);
-      const label = pre ? `${node.name}を研究  ${formatResources(node.cost)}` : `${node.name}: 前提 ${node.requires.map((r) => TECH_NAMES[r] ?? r).join('・')}`;
+      const label = pre ? `${node.name}を研究  ${formatResources(scaleCost(node.cost, costMul))}` : `${node.name}: 前提 ${node.requires.map((r) => TECH_NAMES[r] ?? r).join('・')}`;
       const bw = IS_PORTRAIT ? 400 : 440;
       add(new UIButton(this, info.x + info.w - 10 - bw / 2, info.y + info.h / 2, label, () => this.research(node), {
         variant: ready ? 'gold' : 'secondary', width: bw, height: info.h - 12, fontSize: 12,
@@ -187,7 +192,7 @@ export class ShipyardScene extends Phaser.Scene {
       this.add.text(pad, 10 + lineH + 4, `${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
       this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
       // Reward-only ships (#39) show where they come from instead of a build cost.
-      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCost(ship))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
     const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(owned || ready ? 1 : 0.5);
     icon.setScale(Math.min(1, (IS_PORTRAIT ? 100 : 80) / Math.max(1, icon.height)));
@@ -220,7 +225,7 @@ export class ShipyardScene extends Phaser.Scene {
 
   private research(node: ITechNode): void {
     const progress = loadProgress();
-    const result = research(node, progress.research, progress.resources);
+    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
     if (!result) return;
     saveProgress({ ...progress, research: result.done, resources: result.resources });
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();

@@ -18,6 +18,7 @@ import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -73,6 +74,8 @@ export class CustomizationScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
     const selection = selectionFor(this.registry, loadProgress().nation);

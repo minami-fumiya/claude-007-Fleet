@@ -18,6 +18,9 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
+import { baseBonusLines, baseLockText, baseOfProgress, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -42,17 +45,8 @@ const L = IS_PORTRAIT
       rowH: 62,
     };
 
-const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary'; data?: object }> = [
-  { label: '作戦', caption: '', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
-  { label: '演習', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
-  // Straight to the fleet (#77): fleet only, then on to 作戦 or 演習 (#109). The fleet is kept between visits.
-  { label: '編成', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'secondary', data: { organize: true } },
-  { label: '史実', caption: '', scene: SceneKeys.SCENARIO, variant: 'primary' },
-  { label: '工廠', caption: '', scene: SceneKeys.ARSENAL, variant: 'secondary' },
-  { label: '改装', caption: '', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
-  { label: '図鑑', caption: '', scene: SceneKeys.ENCYCLOPEDIA, variant: 'secondary' },
-  { label: '戦績', caption: '', scene: SceneKeys.RECORD, variant: 'secondary' },
-];
+/** Registry key: the menu tab last opened (#61), kept while the game runs. */
+const HOME_TAB_KEY = 'home.tab';
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 5 : 4;
 /** Progress bar offset below a dock row's ship name; portrait text is taller, so the bar sits lower. */
 const DOCK_METER_Y = IS_PORTRAIT ? 36 : 18;
@@ -76,6 +70,7 @@ export class HomeScene extends Phaser.Scene {
   private dockMeters: Array<{ g: Phaser.GameObjects.Graphics; t: Phaser.GameObjects.Text; x: number; y: number; w: number; ship: IShipData; total: number; endsAt: number }> = [];
   private regenText!: Phaser.GameObjects.Text;
   private overlay: Phaser.GameObjects.GameObject[] = [];
+  private menuObjs: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: SceneKeys.HOME });
@@ -89,6 +84,7 @@ export class HomeScene extends Phaser.Scene {
     this.dynamic = [];
     this.dockMeters = [];
     this.overlay = [];
+    this.menuObjs = [];
     addBackdrop(this, 'menu');
     const save = loadSave();
     const started = isStarted(save, save.current);
@@ -105,7 +101,11 @@ export class HomeScene extends Phaser.Scene {
     new UIButton(this, CANVAS_W - 26 - corner.w * 1.5, corner.y, 'ヘルプ', () => this.scene.start(SceneKeys.HELP), {
       variant: 'secondary', width: corner.w, height: corner.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, `${NATION_INFO[save.current].jaShort} 鎮守府 — 艦隊司令部`, displayStyle(24)).setOrigin(0.5);
+    // The base in use (#88) names the screen; before a nation is picked it is just 鎮守府.
+    const base = started ? baseOfProgress(loadProgress()) : undefined;
+    const title = this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, `${NATION_INFO[save.current].jaShort} ${base?.name ?? '鎮守府'}`, displayStyle(24)).setOrigin(0.5);
+    const room = IS_PORTRAIT ? CANVAS_W - 32 : CANVAS_W - 2 * 300;
+    if (title.width > room) title.setScale(room / title.width);
 
     this.bar = new ResourceBar(this, L.resources.x, L.resources.y, L.resources.w, L.resourceCols);
     this.buildAdmiral(save.current);
@@ -115,6 +115,7 @@ export class HomeScene extends Phaser.Scene {
     this.refresh();
     // A brand-new save has no nation yet: pick one first (#27).
     if (!started) this.openNationPicker(false);
+    else showScreenHelp(this);
   }
 
   /** Nation switch button, rank and next promotion (#30), natural regeneration (#28). */
@@ -187,6 +188,53 @@ export class HomeScene extends Phaser.Scene {
     }
   }
 
+  /** The nation's bases (#88): bonuses, which are open, and moving (free). */
+  private openBasePicker(): void {
+    if (this.overlay.length > 0) return;
+    const progress = loadProgress();
+    const bases = nationBases(progress.nation);
+    const current = baseOfProgress(progress);
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
+      this.overlay.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const rowH = IS_PORTRAIT ? 96 : 64;
+    const gap = IS_PORTRAIT ? 12 : 8;
+    const w = IS_PORTRAIT ? CANVAS_W - 64 : 680;
+    const head = IS_PORTRAIT ? 170 : 120;
+    const h = head + bases.length * (rowH + gap) + rowH + 20;
+    const x = (CANVAS_W - w) / 2;
+    const y = Math.max(20, (CANVAS_H - h) / 2);
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
+    add(this.add.text(x + 28, y + 22, '軍港', eyebrowStyle(11)));
+    add(this.add.text(x + 28, y + (IS_PORTRAIT ? 52 : 42), '拠点を移す', displayStyle(22)));
+    add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '軍港ごとに建造・研究・修理の得意分野があります。移動は無料で、昇進すると選べる軍港が増えます。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
+    let ry = y + head;
+    for (const b of bases) {
+      const open = isBaseOpen(b, progress);
+      const here = b.id === current?.id;
+      const detail = open ? baseBonusLines(b).join('・') : baseLockText(b);
+      add(new UIButton(this, x + w / 2, ry + rowH / 2, b.name, () => this.moveBase(b.id), {
+        variant: here ? 'gold' : open ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: IS_PORTRAIT ? 17 : 16,
+        caption: here ? `在籍中 · ${detail}` : detail,
+      })).setEnabled(open && !here);
+      ry += rowH + gap;
+    }
+    add(new UIButton(this, x + w / 2, ry + rowH / 2 - 4, '閉じる', () => this.closeNationPicker(), {
+      variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: rowH - 16, fontSize: 15,
+    }));
+  }
+
+  private moveBase(id: string): void {
+    const progress = loadProgress();
+    const moved = moveBase(progress.nation, progress, id);
+    if (!moved) return;
+    saveProgress(moved);
+    this.scene.restart();
+  }
+
   private closeNationPicker(): void {
     for (const o of this.overlay) o.destroy();
     this.overlay = [];
@@ -221,27 +269,50 @@ export class HomeScene extends Phaser.Scene {
     }
   }
 
+  /** Four tabs (#61) over the screens of the chosen one. */
   private buildMenu(): void {
+    for (const o of this.menuObjs) o.destroy();
+    this.menuObjs = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      this.menuObjs.push(o);
+      return o;
+    };
     const m = L.menu;
-    const gap = 14;
-    const cols = L.menuCols;
-    const rows = Math.ceil(MENU.length / cols);
-    const cw = (m.w - gap * (cols - 1)) / cols;
-    const ch = (m.h - gap * (rows - 1)) / rows;
-    MENU.forEach((item, i) => {
-      const r = { w: cw, h: ch, x: m.x + (i % cols) * (cw + gap), y: m.y + Math.floor(i / cols) * (ch + gap) };
-      new UIButton(this, r.x + r.w / 2, r.y + r.h / 2, item.label, () => {
-        // Free battles are not campaign sorties.
-        if (item.scene === SceneKeys.FLEET_BUILDER) this.registry.remove(CAMPAIGN_AREA_KEY);
-        this.scene.start(item.scene, { returnTo: SceneKeys.HOME, ...item.data });
-      }, {
-        variant: item.variant,
-        width: r.w,
-        height: r.h,
-        fontSize: IS_PORTRAIT ? 20 : 26,
-        caption: item.caption,
-      });
+    const gap = IS_PORTRAIT ? 10 : 12;
+    const active = homeTab(this.registry.get(HOME_TAB_KEY) ?? DEFAULT_HOME_TAB);
+    const tabH = IS_PORTRAIT ? 56 : 48;
+    const tw = (m.w - 8 * (HOME_MENU.length - 1)) / HOME_MENU.length;
+    HOME_MENU.forEach((t, i) => {
+      add(new UIButton(this, m.x + i * (tw + 8) + tw / 2, m.y + tabH / 2, t.label, () => {
+        this.registry.set(HOME_TAB_KEY, t.id);
+        this.buildMenu();
+      }, { variant: t.id === active.id ? 'primary' : 'secondary', width: tw, height: tabH, fontSize: IS_PORTRAIT ? 17 : 16 }));
     });
+    const top = m.y + tabH + gap;
+    const items = active.items;
+    // Portrait: one row across; landscape: a column down the left side.
+    const cols = IS_PORTRAIT ? items.length : 1;
+    const rows = Math.ceil(items.length / cols);
+    const slots = IS_PORTRAIT ? cols : Math.max(rows, 4);
+    const cw = IS_PORTRAIT ? (m.w - gap * (cols - 1)) / cols : m.w;
+    const ch = IS_PORTRAIT ? m.y + m.h - top : (m.y + m.h - top - gap * (slots - 1)) / slots;
+    items.forEach((item, i) => {
+      const x = m.x + (i % cols) * (cw + gap);
+      const y = top + Math.floor(i / cols) * (ch + gap);
+      add(new UIButton(this, x + cw / 2, y + ch / 2, item.label, () => this.openMenuItem(item), {
+        variant: item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26, caption: item.caption,
+      }));
+    });
+  }
+
+  private openMenuItem(item: IHomeMenuItem): void {
+    if (item.action === 'base') {
+      this.openBasePicker();
+      return;
+    }
+    // Free battles are not campaign sorties.
+    if (item.scene === SceneKeys.FLEET_BUILDER) this.registry.remove(CAMPAIGN_AREA_KEY);
+    this.scene.start(item.scene, { returnTo: SceneKeys.HOME, ...item.data });
   }
 
   private refresh(): void {
@@ -260,6 +331,7 @@ export class HomeScene extends Phaser.Scene {
       return o;
     };
 
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress));
     // Docks (#38): one at the start, more built as the rank allows.
     const docks = dockCount(progress);
     for (let i = 0; i < docks; i++) {
@@ -274,7 +346,7 @@ export class HomeScene extends Phaser.Scene {
         const ship = this.registryShips.byId(job.shipId);
         if (ship) {
           add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id));
+          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul);
           const meterX = d.x + pad + 110;
           const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
           const g = add(this.add.graphics());
@@ -325,7 +397,7 @@ export class HomeScene extends Phaser.Scene {
       const f = hpFraction(progress, ship.id);
       const cost = repairCost(ship.hp, f);
       add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
       const btn = add(
         new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 14, '入渠', () => this.dock(ship), {
           variant: 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 52 : 34, fontSize: 14,
@@ -350,7 +422,7 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const f = hpFraction(progress, ship.id);
     const paid = pay(progress.resources, repairCost(ship.hp, f));
-    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now()) : null;
+    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress))) : null;
     if (!paid || !docked) return;
     saveProgress({ ...progress, ...docked, resources: paid });
     this.refresh();

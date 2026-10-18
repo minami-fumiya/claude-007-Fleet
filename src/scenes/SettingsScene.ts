@@ -112,6 +112,8 @@ export class SettingsScene extends Phaser.Scene {
     const buttons: Array<[string, () => void, 'primary' | 'secondary' | 'danger']> = [
       ['セーブコードをコピー', () => this.exportSave(), 'primary'],
       ['セーブコードを読み込む', () => this.importSave(), 'secondary'],
+      // First-visit help (#61) shows again on every screen.
+      ['画面の説明をもう一度表示', () => this.resetHelp(), 'secondary'],
       [this.resetArmed ? 'もう一度押すとリセット' : '進行データをリセット', () => this.resetSave(), this.resetArmed ? 'danger' : 'secondary'],
     ];
     const cols = 1;
@@ -175,6 +177,11 @@ export class SettingsScene extends Phaser.Scene {
     this.status = text;
     this.statusCss = css;
     this.refresh();
+  }
+
+  private resetHelp(): void {
+    saveSave({ ...loadSave(), seenHelp: [] });
+    this.say('各画面の説明を、次に開いた時にもう一度表示します。');
   }
 
   private exportSave(): void {

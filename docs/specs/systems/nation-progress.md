@@ -98,6 +98,18 @@ A new admiral has 1 dock. The 2nd / 3rd / 4th cost fuel 200 · steel 300 / fuel 
 shipyard names the area); the area's first clear grants them. Other first clears grant the cheapest buildable ship
 of the area's reward class.
 
+## Bases / 軍港 (#88, save v7)
+- `src/data/bases.json`: four bases per nation. `INationProgress.base` holds the one in use ('' or unknown/locked = the nation's first, `BaseSystem.currentBase`).
+- Unlock by rank: start / 少尉 (2) / 少佐 (6) / 大佐 (8). Moving is free (鎮守府 → 艦隊 → 軍港); the home title shows the base name.
+- Bonuses (multipliers): first base repair time ×0.8; destroyer + submarine build ×0.8; cruiser build ×0.85 + research ×0.9; battleship + carrier build ×0.85.
+  Applied in `buildCostAt` (ShipyardSystem), `canResearch` / `research` (`costMul`), `repairTimeMs` / `startRepair` (`timeMul`).
+- Later (#88): docks and ships per base, fuel by distance to the sortie area.
+
+## Home menu and first-visit help (#61, save v7)
+- `src/systems/HomeMenu.ts`: 出撃 (作戦・演習・史実) / 艦隊 (編成・改装・艦長・軍港) / 工廠 (研究・建造) / 記録 (図鑑・戦績・ヘルプ・設定). The last tab is kept in the registry (`home.tab`).
+- `src/data/screen-help.json` + `ScreenHelpSheet`: a screen explains itself the first time it opens; `ISave.seenHelp` lists those shown.
+  The v6 → v7 migration marks every screen that had help in 0.0.14 as seen (`EXISTING_PLAYER_HELP`), so only new screens explain themselves to existing players. 設定 → 「画面の説明をもう一度表示」 clears the list.
+
 ## Enemy fleet sizes (#25)
 Campaign areas grow along each theater: 太平洋 1·2·3·4·6·7, 大西洋 1·2·3·5·8, 地中海 1·2·3·5·7. Free battle: opponent
 size 同数 or 1–20 ships; each enemy mirrors the class of the player's ship in that position (extras mirror the smallest),

@@ -13,6 +13,7 @@ import { IBattleInitData } from '@/types/Scene';
 import { Formation } from '@/types/Formation';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -38,6 +39,8 @@ export class ScenarioScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     audio.music('menu');
     this.scenarios = DataLoader.getScenarios(this);
     this.selected = 0;

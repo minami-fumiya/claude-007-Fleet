@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.11.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.13.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -213,6 +213,30 @@ test.describe('screens', () => {
       }
       await page.screenshot({ path: info.outputPath(`encyclopedia-${tab}.png`) });
     }
+    expect(errors).toEqual([]);
+  });
+
+  test('home: menu tabs, the base picker and first-visit help (#61 #88)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: [] });
+    await open(page, 'HomeScene');
+    // A screen not seen yet explains itself once.
+    expect(await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
+      return s.children.list.some((o) => (o as Phaser.GameObjects.Text).text === 'はじめての画面');
+    })).toBe(true);
+    await page.screenshot({ path: info.outputPath('home-help.png') });
+    for (const tab of ['sortie', 'fleet', 'arsenal', 'record']) {
+      await page.evaluate((t) => {
+        const g = (window as unknown as { game: Phaser.Game }).game;
+        g.registry.set('home.tab', t);
+        (g.scene.getScene('HomeScene') as unknown as { buildMenu(): void }).buildMenu();
+      }, tab);
+      expect(await overflowingTexts(page, 'HomeScene'), `${tab} (${layout})`).toEqual([]);
+    }
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openBasePicker(): void }).openBasePicker());
+    expect(await overflowingTexts(page, 'HomeScene'), `bases (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('home-bases.png') });
     expect(errors).toEqual([]);
   });
 });
