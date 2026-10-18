@@ -19,6 +19,7 @@ import ijnShips from '@/data/ships/ijn.json';
 import { FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
+import { addBackup, BACKUP_KEY, BackupReason, ISaveBackup, parseBackups, rawVersion } from './SaveBackup';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -259,14 +260,19 @@ export function isV2(data: Record<string, unknown>): boolean {
 
 /** Parses a stored save of any version, migrating it to the latest and ignoring anything malformed. */
 export function parseSave(raw: string | null): ISave {
-  if (!raw) return emptySave();
+  return parseSaveChecked(raw).save;
+}
+
+/** Like parseSave; `ok` is false when there was stored text that could not be read (a fresh save came back). */
+export function parseSaveChecked(raw: string | null): { save: ISave; ok: boolean } {
+  if (!raw) return { save: emptySave(), ok: true };
   try {
     const data: unknown = JSON.parse(raw);
-    if (!isObject(data)) return emptySave();
+    if (!isObject(data)) return { save: emptySave(), ok: false };
     const v2 = isV2(data) ? data : (migrateV1(data) as unknown as Record<string, unknown>);
-    return parseLatest(runMigrations(v2));
+    return { save: parseLatest(runMigrations(v2)), ok: true };
   } catch {
-    return emptySave();
+    return { save: emptySave(), ok: false };
   }
 }
 
@@ -293,19 +299,58 @@ function read(key: string): string | null {
   }
 }
 
+function write(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+  } catch {
+    // Storage full or blocked.
+  }
+}
+
+/** Keeps a copy of a raw stored save (see SaveBackup). */
+function backup(raw: string, reason: BackupReason): void {
+  const entry: ISaveBackup = { at: Date.now(), version: rawVersion(raw), reason, raw };
+  write(BACKUP_KEY, JSON.stringify(addBackup(parseBackups(read(BACKUP_KEY)), entry)));
+}
+
+/**
+ * Reads the stored save. A save from an older release is backed up before it is migrated, and one that can't be
+ * read at all is backed up before a fresh save takes its place, so no release loses progress for good (設定 →
+ * バックアップから復元).
+ */
 export function loadSave(): ISave {
   if (memory) return memory;
-  memory = parseSave(read(STORAGE_KEY) ?? read(LEGACY_STORAGE_KEY));
+  const raw = read(STORAGE_KEY) ?? read(LEGACY_STORAGE_KEY);
+  const { save, ok } = parseSaveChecked(raw);
+  if (raw && !ok) backup(raw, 'broken');
+  else if (raw && rawVersion(raw) < SAVE_VERSION) backup(raw, 'migration');
+  memory = save;
   return memory;
+}
+
+/** Backs up the stored save (before an import or reset replaces it). */
+export function backupStoredSave(reason: BackupReason): void {
+  const raw = read(STORAGE_KEY);
+  if (raw) backup(raw, reason);
+}
+
+export function listBackups(): ISaveBackup[] {
+  return parseBackups(read(BACKUP_KEY));
+}
+
+/** Restores a backup (the current save is backed up first). Returns false when the backup can't be read. */
+export function restoreBackup(b: ISaveBackup): boolean {
+  const { save, ok } = parseSaveChecked(b.raw);
+  if (!ok) return false;
+  backupStoredSave('restore');
+  saveSave(save);
+  return true;
 }
 
 export function saveSave(save: ISave): void {
   memory = save;
-  try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
-  } catch {
-    // Storage full or blocked: keep the in-memory copy for this session.
-  }
+  // Storage full or blocked: the in-memory copy still lasts this session.
+  write(STORAGE_KEY, JSON.stringify(save));
 }
 
 /**
