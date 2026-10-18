@@ -4,12 +4,15 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
-import { loadProgress } from '@/utils/ProgressStore';
+import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost } from '@/systems/ProgressionSystem';
+import { eventEffects, eventLabel } from '@/systems/EventSystem';
+import { activeEvent } from '@/utils/GameClock';
 import { areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
-import { formatResources } from '@/systems/ResourceSystem';
+import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { ICampaignArea, ICampaignData, Objective, ITheater } from '@/types/Campaign';
@@ -52,6 +55,8 @@ export class CampaignMapScene extends Phaser.Scene {
   private tabs: UIButton[] = [];
   private mapLayer: Phaser.GameObjects.GameObject[] = [];
   private detailLayer: Phaser.GameObjects.GameObject[] = [];
+  /** Result of the last sweep, shown above the buttons */
+  private status = '';
 
   constructor() {
     super({ key: SceneKeys.CAMPAIGN });
@@ -66,6 +71,7 @@ export class CampaignMapScene extends Phaser.Scene {
     this.tabs = [];
     this.mapLayer = [];
     this.detailLayer = [];
+    this.status = '';
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
@@ -143,11 +149,7 @@ export class CampaignMapScene extends Phaser.Scene {
       const label = this.add.text(x, y, done ? '✓' : String(i + 1), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
       const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5, 0);
       const hit = this.add.zone(x, y, NODE_R * 3, NODE_R * 3).setInteractive({ useHandCursor: true });
-      hit.on('pointerup', () => {
-        this.selected = a;
-        this.drawMap();
-        this.drawDetail();
-      });
+      hit.on('pointerup', () => this.selectArea(a.id));
       this.mapLayer.push(node, label, name, hit);
       if (open && !done) {
         const pulse = this.add.circle(x, y, NODE_R).setStrokeStyle(2, Colors.cyan, 0.8);
@@ -155,6 +157,15 @@ export class CampaignMapScene extends Phaser.Scene {
         this.mapLayer.push(pulse);
       }
     });
+  }
+
+  selectArea(id: string): void {
+    const a = DATA.areas.find((x) => x.id === id);
+    if (!a) return;
+    this.selected = a;
+    this.status = '';
+    this.drawMap();
+    this.drawDetail();
   }
 
   private drawDetail(): void {
@@ -201,12 +212,39 @@ export class CampaignMapScene extends Phaser.Scene {
       const t = add(this.add.text(x, y + (IS_PORTRAIT ? 26 : 18), v, textStyle(13, strong ? Css.gold : Css.text, { ...wrap, lineSpacing: 4 })));
       y = t.y + t.height + (IS_PORTRAIT ? 14 : 10);
     }
+    // 掃討 (#57): an area won without losses can be swept, skipping the battle.
+    const sweepable = canSweep(progress, a);
+    const sweepNote = sweepable
+      ? `掃討: ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      : isCleared(a, cleared) ? '掃討: 1 隻も失わずに勝利すると使えます' : '';
+    if (this.status || sweepNote) {
+      add(this.add.text(x, d.y + d.h - (IS_PORTRAIT ? 112 : 88), this.status || sweepNote, textStyle(12, this.status ? Css.success : Css.muted, wrap)).setOrigin(0, 1));
+    }
+    const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
+    const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
     const btn = add(
-      new UIButton(this, d.x + d.w / 2, d.y + d.h - (IS_PORTRAIT ? 56 : 46), open ? '出撃準備  ›' : '前の海域を攻略してください', () => this.prepare(a), {
-        variant: open ? 'gold' : 'secondary', width: d.w - 48, height: IS_PORTRAIT ? 76 : 60, fontSize: open ? 20 : 14,
+      new UIButton(this, d.x + 24 + bw / 2, by, open ? '出撃準備  ›' : '前の海域を攻略してください', () => this.prepare(a), {
+        variant: open ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open ? 20 : 14,
       }),
     );
     btn.setEnabled(open);
+    if (sweepable) {
+      add(new UIButton(this, d.x + d.w - 24 - bw / 2, by, '掃討', () => this.sweep(a), {
+        variant: 'primary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: 20,
+      })).setEnabled(canAfford(progress.resources, sweepCost(a, enemy)));
+    }
+  }
+
+  private sweep(a: ICampaignArea): void {
+    const registry = DataLoader.getRegistry(this);
+    const progress = loadProgress();
+    const enemy = enemyShips(a, registry, enemyNationFor(DATA, a, progress.nation));
+    const event = activeEvent();
+    const r = sweepArea(progress, a, enemy, Date.now(), eventEffects(event));
+    if (!r) return;
+    saveProgress(r.progress);
+    this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${event ? `  (${eventLabel(event)})` : ''}`;
+    this.drawDetail();
   }
 
   private prepare(a: ICampaignArea): void {

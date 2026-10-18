@@ -5,6 +5,10 @@ import { ICampaignArea } from '@/types/Campaign';
 import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, pay, resources, sortieCost } from './ResourceSystem';
 import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } from './DockSystem';
 import { isFreeArea } from './CampaignSystem';
+import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
+import { addMerit, IRank, meritFor } from './RankSystem';
+import { withQuestEvents } from './QuestSystem';
+import { ShipClass } from '@/types/ShipClass';
 
 /**
  * Ties battles to the home base (pure): paying for a sortie and settling the outcome.
@@ -83,8 +87,9 @@ export function paySortie(progress: IProgress, ships: IShipData[], opts: ISortie
  * Applies a battle's outcome: rewards, aircraft replacement cost and each ship's damage.
  * An exercise pays half the reward and keeps neither damage nor aircraft losses.
  */
-export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean } = {}): ISettlement {
-  const full = battleReward(outcome.victory, outcome.enemiesSunk);
+export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean; event?: IEventEffects; theater?: string } = {}): ISettlement {
+  // A running event (#89) raises the reward: 2x in its theater, more steel.
+  const full = applyEventReward(battleReward(outcome.victory, outcome.enemiesSunk), opts.event ?? NO_EVENT, opts.theater);
   const reward = opts.exercise ? addResources(resources(), full, EXERCISE_REWARD_SCALE) : full;
   const aircraftCost = opts.exercise ? resources() : resources({ bauxite: Math.max(0, outcome.planesLost) * BAUXITE_PER_PLANE });
   let next: IProgress = {
@@ -103,4 +108,46 @@ export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts:
 export function startingHp(progress: IProgress, shipId: string, exercise = false): number {
   if (exercise) return 1;
   return Math.max(SUNK_HP_FRACTION, hpFraction(progress, shipId));
+}
+
+/** A sweep pays this share of a won battle's resource reward (#57). */
+export const SWEEP_REWARD_SCALE = 0.8;
+
+/** True when `area` may be swept: cleared, and once won without losing a ship (#57). */
+export function canSweep(progress: Pick<IProgress, 'campaign' | 'perfect'>, area: ICampaignArea): boolean {
+  return progress.campaign.includes(area.id) && progress.perfect.includes(area.id);
+}
+
+/** What a sweep costs: a sortie by a fleet the size of the enemy's (nothing in a theater's free first area). */
+export function sweepCost(area: ICampaignArea, enemy: IShipData[]): IResources {
+  return isFreeArea(area) ? resources() : sortieCost(enemy);
+}
+
+export interface ISweepResult {
+  progress: IProgress;
+  reward: IResources;
+  cost: IResources;
+  merit: number;
+  promotedTo: IRank | null;
+}
+
+/**
+ * 掃討 (#57): skips the battle of an area already won without losses. Costs a sortie, pays 80% of a won battle's
+ * reward (events apply), counts as a win for merit and 任務. No damage, no proficiency, never a first clear.
+ */
+export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShipData[], now: number, event: IEventEffects = NO_EVENT): ISweepResult | null {
+  if (!canSweep(progress, area)) return null;
+  const cost = sweepCost(area, enemy);
+  const paid = pay(progress.resources, cost);
+  if (!paid) return null;
+  const won = applyEventReward(battleReward(true, enemy.length), event, area.theater);
+  const reward = addResources(resources(), won, SWEEP_REWARD_SCALE);
+  const merit = meritFor({ victory: true, campaign: true, firstClear: false, enemiesSunk: enemy.length });
+  const promoted = addMerit({ ...progress, resources: addResources(paid, reward) }, merit);
+  const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
+  const next = withQuestEvents(promoted.progress, [
+    ['sortie', 1], ['win', 1], ['sink', enemy.length], ['sweep', 1],
+    ['sinkCarrier', of(ShipClass.Carrier)], ['sinkSubmarine', of(ShipClass.Submarine)], ['sinkBattleship', of(ShipClass.Battleship)],
+  ], now);
+  return { progress: next, reward, cost, merit, promotedTo: promoted.promotedTo };
 }

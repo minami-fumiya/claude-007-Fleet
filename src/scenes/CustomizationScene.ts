@@ -19,6 +19,7 @@ import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { withQuestEvents } from '@/systems/QuestSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -202,7 +203,7 @@ export class CustomizationScene extends Phaser.Scene {
     const stage = progress.refits[ship.id] ?? 0;
     const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
     if (!r) return;
-    saveProgress({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } });
+    saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } }, [['refit', 1]], Date.now()));
     this.refresh();
   }
 

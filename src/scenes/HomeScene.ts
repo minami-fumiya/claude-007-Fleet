@@ -11,7 +11,7 @@ import { nextRegenMs, REGEN_CAP, REGEN_PER_TICK, regenFull } from '@/systems/Res
 import { clearCount, fleetSlots, promotionText, rankOf } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
-import { canAfford, formatResources, pay } from '@/systems/ResourceSystem';
+import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IShipData } from '@/types/Ship';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -21,6 +21,9 @@ import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseBonusLines, baseLockText, baseOfProgress, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
+import { claimableCount, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
+import { eventLabel, nextEvent } from '@/systems/EventSystem';
+import { activeEffects, activeEvent } from '@/utils/GameClock';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -53,6 +56,12 @@ const DOCK_METER_Y = IS_PORTRAIT ? 36 : 18;
 /** Overlay (nation picker) draws above everything else on the screen. */
 const OVERLAY_DEPTH = 200;
 
+/** "1:02:03" */
+function longClock(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
 function clock(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -71,6 +80,8 @@ export class HomeScene extends Phaser.Scene {
   private regenText!: Phaser.GameObjects.Text;
   private overlay: Phaser.GameObjects.GameObject[] = [];
   private menuObjs: Phaser.GameObjects.GameObject[] = [];
+  private questKind: QuestKind = 'daily';
+  private eventText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: SceneKeys.HOME });
@@ -107,6 +118,8 @@ export class HomeScene extends Phaser.Scene {
     const room = IS_PORTRAIT ? CANVAS_W - 32 : CANVAS_W - 2 * 300;
     if (title.width > room) title.setScale(room / title.width);
 
+    // Limited-time event (#89): what runs now, or what comes next.
+    this.eventText = this.add.text(IS_PORTRAIT ? CANVAS_W / 2 : L.resources.x + L.resources.w / 2, IS_PORTRAIT ? 134 : 82, '', textStyle(12, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.resources.x, L.resources.y, L.resources.w, L.resourceCols);
     this.buildAdmiral(save.current);
     this.buildMenu();
@@ -148,6 +161,16 @@ export class HomeScene extends Phaser.Scene {
       ? `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}・上限 ${REGEN_CAP}`
       : `自然回復/分 燃料 +${r.fuel} 弾薬 +${r.ammo} 鋼材 +${r.steel} ボーキ +${r.bauxite}・上限 ${REGEN_CAP}`;
     this.regenText.setText(regenFull(progress.resources) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
+  }
+
+  private refreshEvent(now: number): void {
+    const event = activeEvent(now);
+    if (event) {
+      this.eventText.setText(`開催中: ${eventLabel(event)}  あと ${longClock(event.endsAt - now)}`).setColor(Css.gold);
+      return;
+    }
+    const next = nextEvent(now);
+    this.eventText.setText(next ? `次のイベント: ${eventLabel(next)}  ${longClock(next.startsAt - now)} 後` : '').setColor(Css.muted);
   }
 
   /** Lists every playable nation; picking one switches the base (a new nation starts with one destroyer). */
@@ -227,6 +250,69 @@ export class HomeScene extends Phaser.Scene {
     }));
   }
 
+  /** 任務 (#52): one kind at a time; finished ones are claimed here. */
+  private openQuests(kind: QuestKind = this.questKind): void {
+    this.closeNationPicker();
+    this.questKind = kind;
+    const now = Date.now();
+    const progress = loadProgress();
+    const state = refreshQuests(progress.quests, now);
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
+      this.overlay.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const list = QUESTS.filter((q) => q.kind === kind);
+    const rowH = IS_PORTRAIT ? 100 : 74;
+    const gap = IS_PORTRAIT ? 10 : 6;
+    const w = IS_PORTRAIT ? CANVAS_W - 48 : 760;
+    const head = IS_PORTRAIT ? 190 : 136;
+    const h = head + list.length * (rowH + gap) + (IS_PORTRAIT ? 86 : 62);
+    const x = (CANVAS_W - w) / 2;
+    const y = Math.max(16, (CANVAS_H - h) / 2);
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 28, y + 22, '任務', eyebrowStyle(11)));
+    const reset = kind === 'once' ? '1 回限り' : `更新まで ${longClock(nextReset(kind, now) - now)}`;
+    add(this.add.text(x + w - 28, y + 22, reset, textStyle(12, Css.muted)).setOrigin(1, 0));
+    const kinds: QuestKind[] = ['daily', 'weekly', 'once'];
+    const tw = (w - 56 - 16) / kinds.length;
+    const tabH = IS_PORTRAIT ? 56 : 44;
+    kinds.forEach((k, i) => {
+      const n = QUESTS.filter((q) => q.kind === k && isClaimable(state, q)).length;
+      add(new UIButton(this, x + 28 + i * (tw + 8) + tw / 2, y + (IS_PORTRAIT ? 80 : 64) + tabH / 2, n > 0 ? `${QUEST_KIND_LABEL[k]} (${n})` : QUEST_KIND_LABEL[k], () => this.openQuests(k), {
+        variant: k === kind ? 'primary' : 'secondary', width: tw, height: tabH, fontSize: IS_PORTRAIT ? 16 : 15,
+      }));
+    });
+    let ry = y + head;
+    const bw = IS_PORTRAIT ? 150 : 150;
+    for (const q of list) {
+      const done = state.claimed.includes(q.id);
+      const claimable = isClaimable(state, q);
+      add(addPanel(this, x + 28, ry, w - 56, rowH, { radius: 14, fillAlpha: 0.5, rim: claimable ? Colors.gold : undefined }));
+      add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 14 : 10), q.name, textStyle(IS_PORTRAIT ? 16 : 15, done ? Css.dim : Css.text, { fontStyle: 'bold' })));
+      add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 44 : 34), `${q.text}  ${questProgress(state, q)} / ${q.goal}`, textStyle(12, done ? Css.dim : Css.muted)));
+      add(this.add.text(x + 44, ry + rowH - (IS_PORTRAIT ? 12 : 8), formatResources(q.reward), textStyle(11, Css.gold)).setOrigin(0, 1));
+      add(new UIButton(this, x + w - 28 - 12 - bw / 2, ry + rowH / 2, done ? '受取済' : claimable ? '受け取る' : '未達成', () => this.claimQuest(q.id), {
+        variant: claimable ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
+      })).setEnabled(claimable);
+      ry += rowH + gap;
+    }
+    add(new UIButton(this, x + w / 2, ry + (IS_PORTRAIT ? 36 : 26), '閉じる', () => {
+      this.closeNationPicker();
+      this.buildMenu();
+    }, { variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: IS_PORTRAIT ? 60 : 44, fontSize: 15 }));
+  }
+
+  private claimQuest(id: string): void {
+    const progress = loadProgress();
+    const r = claimQuest(progress.quests, id, Date.now());
+    if (!r) return;
+    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward) });
+    this.refresh();
+    this.openQuests();
+  }
+
   private moveBase(id: string): void {
     const progress = loadProgress();
     const moved = moveBase(progress.nation, progress, id);
@@ -254,6 +340,7 @@ export class HomeScene extends Phaser.Scene {
     const save = loadSave();
     if (!isStarted(save, save.current)) return;
     this.refreshRegen(now);
+    this.refreshEvent(now);
     const progress = loadProgress();
     const done = completeRepairs(progress, now);
     if (done !== progress) {
@@ -296,11 +383,14 @@ export class HomeScene extends Phaser.Scene {
     const slots = IS_PORTRAIT ? cols : Math.max(rows, 4);
     const cw = IS_PORTRAIT ? (m.w - gap * (cols - 1)) / cols : m.w;
     const ch = IS_PORTRAIT ? m.y + m.h - top : (m.y + m.h - top - gap * (slots - 1)) / slots;
+    // 任務 (#52): rewards waiting show on the button.
+    const claimable = claimableCount(loadProgress().quests, Date.now());
     items.forEach((item, i) => {
       const x = m.x + (i % cols) * (cw + gap);
       const y = top + Math.floor(i / cols) * (ch + gap);
+      const ready = item.action === 'quests' && claimable > 0;
       add(new UIButton(this, x + cw / 2, y + ch / 2, item.label, () => this.openMenuItem(item), {
-        variant: item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26, caption: item.caption,
+        variant: ready ? 'gold' : item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26, caption: ready ? `達成 ${claimable}` : item.caption,
       }));
     });
   }
@@ -308,6 +398,10 @@ export class HomeScene extends Phaser.Scene {
   private openMenuItem(item: IHomeMenuItem): void {
     if (item.action === 'base') {
       this.openBasePicker();
+      return;
+    }
+    if (item.action === 'quests') {
+      this.openQuests();
       return;
     }
     // Free battles are not campaign sorties.
@@ -331,7 +425,9 @@ export class HomeScene extends Phaser.Scene {
       return o;
     };
 
-    const repairMul = repairTimeMultiplier(baseOfProgress(progress));
+    // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
+    const event = activeEffects();
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
     // Docks (#38): one at the start, more built as the rank allows.
     const docks = dockCount(progress);
     for (let i = 0; i < docks; i++) {
@@ -395,7 +491,7 @@ export class HomeScene extends Phaser.Scene {
     const maxRows = !IS_PORTRAIT ? MAX_DAMAGED_ROWS : damaged.length <= fit(0) ? fit(0) : fit(40);
     for (const ship of damaged.slice(0, maxRows)) {
       const f = hpFraction(progress, ship.id);
-      const cost = repairCost(ship.hp, f);
+      const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
       add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
       add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
       const btn = add(
@@ -421,10 +517,11 @@ export class HomeScene extends Phaser.Scene {
   private dock(ship: IShipData): void {
     const progress = loadProgress();
     const f = hpFraction(progress, ship.id);
-    const paid = pay(progress.resources, repairCost(ship.hp, f));
-    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress))) : null;
+    const event = activeEffects();
+    const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
+    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul) : null;
     if (!paid || !docked) return;
-    saveProgress({ ...progress, ...docked, resources: paid });
+    saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()));
     this.refresh();
   }
 
