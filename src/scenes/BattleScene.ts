@@ -49,14 +49,12 @@ import { Formation } from '@/types/Formation';
 import { IBattleInitData, IBattleResultData, ICaptainReport } from '@/types/Scene';
 import { ICaptain } from '@/types/Captain';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
-import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers } from '@/systems/CustomizationSystem';
+import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/CaptainSystem';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { settleBattle, startingHp } from '@/systems/ProgressionSystem';
-import { researchModifiers, unlockedUpgrades } from '@/systems/ResearchSystem';
+import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/ResearchSystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
-import { ITechNode } from '@/types/Progression';
-import techTree from '@/data/tech-tree.json';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
 import { recordClear, theaterProgress } from '@/systems/CampaignSystem';
@@ -66,12 +64,10 @@ import { addProficiency, evadeChance, proficiencyGain } from '@/systems/Proficie
 import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
-import refitsData from '@/data/refits.json';
 import { IScenario } from '@/types/Scenario';
 import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
-import { refitModifiers, refitName, RefitTable } from '@/systems/RefitSystem';
+import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 
-const REFITS = refitsData.classes as RefitTable;
 
 
 const SHIP_ROTATE_SPEED = 120;
@@ -505,7 +501,10 @@ export class BattleScene extends Phaser.Scene {
     ship.dataId = shipData.id;
     ship.envSpeedMul = this.conditions.speedMul;
     if (this.map.islands.length > 0) ship.avoid = (px, py, h) => avoidHeading(this.map, px, py, h);
-    ship.visionMul = mods.visionMul;
+    ship.mods = mods;
+    const night = this.conditions.time === TimeOfDay.Night;
+    ship.visionMul = mods.visionMul * (night ? mods.nightVisionMul : 1);
+    ship.aimErrorMul = night ? mods.nightAimMul : 1;
     ship.aaMul = mods.aaMul;
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
     (ship.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
@@ -526,12 +525,19 @@ export class BattleScene extends Phaser.Scene {
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
     const fitted = progress.upgrades[shipData.id] ?? [];
+    const stage = progress.refits[shipData.id] ?? 0;
     return combineModifiers(
-      upgradeModifiers(fitted, catalog),
-      researchModifiers(techTree.tech as ITechNode[], progress.research),
-      refitModifiers(REFITS, shipData.shipClass, progress.refits[shipData.id] ?? 0),
+      upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
+      researchModifiers(TECH_TREE, progress.research),
+      refitModifiers(REFIT_TABLE, shipData, stage),
       captainModifiers(captain),
     );
+  }
+
+  /** The player's ship as remodelled (special refits swap weapons or embark aircraft); scenarios use the original build. */
+  private rebuilt(shipData: IShipData): IShipData {
+    if (this.scenario) return shipData;
+    return refitShipData(REFIT_TABLE, shipData, loadProgress().refits[shipData.id] ?? 0);
   }
 
   /** Damage carried over from earlier battles, and the crew's proficiency. */
@@ -540,7 +546,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.scenario) return;
     const progress = loadProgress();
     ship.stats.proficiency = progress.proficiency[ship.dataId] ?? 0;
-    ship.stats.name = refitName(REFITS, ship.stats.name, ship.stats.shipClass, progress.refits[ship.dataId] ?? 0);
+    ship.stats.name = refitName(REFIT_TABLE, ship.stats.name, { id: ship.dataId, shipClass: ship.stats.shipClass }, progress.refits[ship.dataId] ?? 0);
     const f = startingHp(loadProgress(), ship.dataId);
     ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }
@@ -553,15 +559,16 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private spawnPlayerFleet(fleet: IFleet, formation: Formation): void {
-    const flagshipData = FleetSystem.getFlagship(fleet);
-    if (!flagshipData) return;
+    const flagshipBase = FleetSystem.getFlagship(fleet);
+    if (!flagshipBase) return;
+    const flagshipData = this.rebuilt(flagshipBase);
 
     const flagCaptain = this.captainFor(fleet.flagshipIndex);
     const spawn = this.flagshipSpawn();
     this.flagship = this.spawnShip(flagshipData, spawn.x, spawn.y, this.playerModifiers(flagshipData, flagCaptain));
     if (flagCaptain) this.captains.set(this.flagship, flagCaptain);
     this.applyStartingDamage(this.flagship);
-    this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData));
+    this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData, this.flagship.mods));
     this.playerRecon.register(this.flagship);
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
@@ -569,7 +576,7 @@ export class BattleScene extends Phaser.Scene {
     const profile = TACTICS[fleet.nation];
     const escortSlots = fleet.slots.filter((s, i) => i !== fleet.flagshipIndex && s.shipData !== null);
     escortSlots.forEach((slot, i) => {
-      const escortData = slot.shipData as IShipData;
+      const escortData = this.rebuilt(slot.shipData as IShipData);
       const offset = offsets[Math.min(i, offsets.length - 1)];
       const placed = this.scenarioSetup?.player.positions[i + 1];
       const spawnPos = placed ? placeAt(placed, WORLD.w, WORLD.h) : FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
@@ -577,7 +584,7 @@ export class BattleScene extends Phaser.Scene {
       const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain));
       if (captain) this.captains.set(escort, captain);
       this.applyStartingDamage(escort);
-      this.playerAir.register(escort, AirOpsSystem.wingFor(escortData));
+      this.playerAir.register(escort, AirOpsSystem.wingFor(escortData, escort.mods));
       this.playerRecon.register(escort);
       this.escorts.push(escort);
       this.escortAISystems.push(new EscortAISystem(this.playerWeapons, offset, profile));
@@ -645,7 +652,7 @@ export class BattleScene extends Phaser.Scene {
   private hunters(ships: BaseShip[]): ISonarHunter[] {
     return ships
       .filter((s) => s.isAlive && !s.submerged && !s.isConvoy && !s.isLand)
-      .map((s) => ({ x: s.x, y: s.y, sonarRange: sonarRange(s.stats.shipClass) }));
+      .map((s) => ({ x: s.x, y: s.y, sonarRange: sonarRange(s.stats.shipClass) * s.mods.sonarMul }));
   }
 
   /** Currents push every ship; shoal water slows it. */
@@ -723,7 +730,7 @@ export class BattleScene extends Phaser.Scene {
     if (!this.enemies.some((e) => e.isAlive && e.submerged)) return;
     const phase = (time % SONAR_PING_MS) / SONAR_PING_MS;
     for (const ship of this.friendlies()) {
-      const range = sonarRange(ship.stats.shipClass);
+      const range = sonarRange(ship.stats.shipClass) * ship.mods.sonarMul;
       if (!ship.isAlive || ship.submerged || range <= 0) continue;
       g.lineStyle(1.5, Colors.cyan, 0.35 * (1 - phase));
       g.strokeCircle(ship.x, ship.y, range * phase);

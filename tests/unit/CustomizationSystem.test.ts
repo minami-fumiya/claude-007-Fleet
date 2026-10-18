@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { applyToStats, applyToWeapons, combineModifiers, toggleUpgrade, upgradeModifiers, UPGRADE_SLOTS } from '@/systems/CustomizationSystem';
+import {
+  applyToAirWing,
+  applyToStats,
+  applyToWeapons,
+  combineModifiers,
+  describeModifiers,
+  MAX_UPGRADE_SLOTS,
+  toggleUpgrade,
+  upgradeModifiers,
+  upgradeSlots,
+  UPGRADE_SLOTS,
+} from '@/systems/CustomizationSystem';
 import { IUpgradeData, NO_MODIFIERS } from '@/types/Modifiers';
 import { IShipStats } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
@@ -53,6 +64,39 @@ describe('CustomizationSystem', () => {
     expect(t.firePower).toBeCloseTo(150);
     expect(t.reloadTime).toBe(1000);
     expect(d).toBe(dc);
+  });
+
+  it('adds planes and armor, multiplies the new aviation / ASW / night modifiers', () => {
+    const m = combineModifiers({ planesAdd: 1, sonarMul: 1.1, nightAimMul: 0.9 }, { planesAdd: 1, sonarMul: 1.2, nightAimMul: 0.9, rearmMul: 0.9 });
+    expect(m.planesAdd).toBe(2);
+    expect(m.sonarMul).toBeCloseTo(1.32);
+    expect(m.nightAimMul).toBeCloseTo(0.81);
+    expect(m.rearmMul).toBeCloseTo(0.9);
+    expect(m.airPowerMul).toBe(1);
+  });
+
+  it('grows upgrade slots with the remodel stage: 2 → 3 (改) → 4 (改二 / 改三)', () => {
+    expect([0, 1, 2, 3, 9].map(upgradeSlots)).toEqual([2, 3, 4, 4, 4]);
+    expect(upgradeSlots(-1)).toBe(UPGRADE_SLOTS);
+    expect(MAX_UPGRADE_SLOTS).toBe(4);
+    let fitted: string[] = [];
+    for (const id of ['boiler', 'radar', 'aa_guns', 'damage_control', 'heavy_shells']) fitted = toggleUpgrade(fitted, id, upgradeSlots(2));
+    expect(fitted).toEqual(['boiler', 'radar', 'aa_guns', 'damage_control']);
+    expect(upgradeModifiers(fitted, catalog).aaMul).toBe(1);
+    expect(upgradeModifiers(fitted, catalog, 4).aaMul).toBeCloseTo(1.4);
+    expect(upgradeModifiers(fitted, catalog, 4).hpMul).toBeCloseTo(1.1);
+  });
+
+  it('applies depth charge power and extra planes', () => {
+    const [d] = applyToWeapons([dc], { ...NO_MODIFIERS, depthChargeMul: 1.25 });
+    expect(d.firePower).toBeCloseTo(125);
+    expect(applyToAirWing({ fighters: 4, diveBombers: 5, torpedoBombers: 0 }, { ...NO_MODIFIERS, planesAdd: 1 })).toEqual({ fighters: 5, diveBombers: 6, torpedoBombers: 0 });
+    expect(applyToAirWing({ fighters: 1, diveBombers: 2, torpedoBombers: 3 }, NO_MODIFIERS)).toEqual({ fighters: 1, diveBombers: 2, torpedoBombers: 3 });
+  });
+
+  it('describes modifiers that change something', () => {
+    expect(describeModifiers(NO_MODIFIERS)).toEqual([]);
+    expect(describeModifiers({ gunPowerMul: 1.1, armorAdd: 6, planesAdd: 1 })).toEqual(['装甲 +6', '砲火力 ×1.10', '搭載機 +1']);
   });
 
   it('every upgrade in the catalog has a unique id and an effect', () => {
