@@ -179,7 +179,7 @@ export class ShipyardScene extends Phaser.Scene {
       stateText,
       this.add.text(pad, 10 + lineH + 4, `${CLASS_JA[ship.shipClass]} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
       this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
-      this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : `建造 ${formatResources(buildCost(ship))}`, textStyle(11, owned ? Css.gold : Css.dim)),
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : `建造 ${formatResources(buildCost(ship))}`, textStyle(11, owned ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
     const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(owned || ready ? 1 : 0.5);
     icon.setScale(Math.min(1, (IS_PORTRAIT ? 100 : 80) / Math.max(1, icon.height)));
@@ -188,6 +188,11 @@ export class ShipyardScene extends Phaser.Scene {
     makeClickable(card, r.w, r.h);
     card.on('pointerup', () => this.build(ship));
     return card;
+  }
+
+  private fitWidth(text: Phaser.GameObjects.Text, room: number): Phaser.GameObjects.Text {
+    if (text.width > room) text.setScale(room / text.width);
+    return text;
   }
 
   private turn(step: number): void {

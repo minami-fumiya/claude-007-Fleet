@@ -25,10 +25,10 @@ const L = IS_PORTRAIT
       resources: { x: 16, y: 150, w: CANVAS_W - 32 } as { x: number; y: number; w: number },
       resourceCols: 2,
       /** Nation switch button + rank / promotion / regeneration lines */
-      admiral: { x: 16, y: 274, w: CANVAS_W - 32, h: 64 } as IRect,
-      menu: { x: 16, y: 352, w: CANVAS_W - 32, h: 200 } as IRect,
+      admiral: { x: 16, y: 272, w: CANVAS_W - 32, h: 90 } as IRect,
+      menu: { x: 16, y: 374, w: CANVAS_W - 32, h: 196 } as IRect,
       menuCols: 4,
-      dock: { x: 16, y: 568, w: CANVAS_W - 32, h: CANVAS_H - 584 } as IRect,
+      dock: { x: 16, y: 584, w: CANVAS_W - 32, h: CANVAS_H - 600 } as IRect,
       rowH: 92,
     }
   : {
@@ -122,15 +122,21 @@ export class HomeScene extends Phaser.Scene {
       variant: 'primary', width: bw, height: IS_PORTRAIT ? 58 : 40, fontSize: 15,
     });
     const x = a.x + bw + 16;
-    const line1 = `${rank.name} (${rank.en})  ·  出撃枠 ${fleetSlots(progress)}  ·  ${promotionText(progress)}`;
-    this.add.text(x, a.y + (IS_PORTRAIT ? 4 : 2), line1, textStyle(12, Css.gold, { fontStyle: 'bold' }));
-    this.regenText = this.add.text(x, a.y + a.h - (IS_PORTRAIT ? 4 : 2), '', textStyle(11, Css.muted)).setOrigin(0, 1);
+    // Portrait: rank and next promotion on separate lines (one line would run off the narrow screen).
+    const rankLine = `${rank.name} (${rank.en})  ·  出撃枠 ${fleetSlots(progress)}`;
+    if (IS_PORTRAIT) {
+      this.add.text(x, a.y, rankLine, textStyle(12, Css.gold, { fontStyle: 'bold' }));
+      this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
+    } else {
+      this.add.text(x, a.y + 2, `${rankLine}  ·  ${promotionText(progress)}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
+    }
+    this.regenText = this.add.text(x, a.y + a.h - 2, '', textStyle(11, Css.muted)).setOrigin(0, 1);
   }
 
   private refreshRegen(now: number): void {
     const progress = loadProgress();
     this.bar.refresh(progress.resources);
-    const rate = `自然回復 +${REGEN_PER_TICK.fuel}/分 (ボーキ +${REGEN_PER_TICK.bauxite})・上限 ${REGEN_CAP}`;
+    const rate = IS_PORTRAIT ? `自然回復 +${REGEN_PER_TICK.fuel}/分・上限 ${REGEN_CAP}` : `自然回復 +${REGEN_PER_TICK.fuel}/分 (ボーキ +${REGEN_PER_TICK.bauxite})・上限 ${REGEN_CAP}`;
     this.regenText.setText(regenFull(progress.resources) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
   }
 
