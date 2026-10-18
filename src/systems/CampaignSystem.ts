@@ -1,4 +1,5 @@
-import { ICampaignArea, ICampaignData } from '@/types/Campaign';
+import { ICampaignArea, ICampaignData, ITheater } from '@/types/Campaign';
+import { Nation } from '@/types/Nation';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { BattleMode } from '@/types/Battle';
@@ -29,9 +30,41 @@ export function recordClear(cleared: string[], areaId: string): { cleared: strin
   return { cleared: [...cleared, areaId], firstClear: true };
 }
 
-/** The area's enemy ships (unknown ids are skipped). */
-export function enemyShips(area: ICampaignArea, registry: ShipRegistry): IShipData[] {
-  return area.enemy.ships.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
+/** Theaters the given nation can play, in data order. */
+export function theatersFor(data: ICampaignData, player: Nation): ITheater[] {
+  return data.theaters.filter((t) => t.opponents[player] !== undefined);
+}
+
+/** The nation the player fights in this area: the theater's opponent for them, else the area's own. */
+export function enemyNationFor(data: ICampaignData, area: ICampaignArea, player?: Nation): Nation {
+  const theater = data.theaters.find((t) => t.id === area.theater);
+  return (player && theater?.opponents[player]) ?? area.enemy.nation;
+}
+
+/**
+ * The area's enemy ships (unknown ids are skipped). When the player fights a different nation here than the one the
+ * area was written for, each ship is swapped for that nation's closest historical ship of the same class (by HP),
+ * using each replacement once while possible. A class the nation lacks (no carrier) falls back to a battleship.
+ */
+export function enemyShips(area: ICampaignArea, registry: ShipRegistry, nation: Nation = area.enemy.nation): IShipData[] {
+  const written = area.enemy.ships.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
+  if (nation === area.enemy.nation) return written;
+  const roster = registry.byNation(nation).filter((s) => !s.fictional);
+  if (roster.length === 0) return written;
+  const used = new Set<string>();
+  const fallback = [ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer];
+  return written.map((orig) => {
+    const classes = [orig.shipClass, ...fallback];
+    for (const cls of classes) {
+      const pool = roster.filter((s) => s.shipClass === cls);
+      if (pool.length === 0) continue;
+      const fresh = pool.filter((s) => !used.has(s.id));
+      const pick = (fresh.length > 0 ? fresh : pool).reduce((best, s) => (Math.abs(s.hp - orig.hp) < Math.abs(best.hp - orig.hp) ? s : best));
+      used.add(pick.id);
+      return pick;
+    }
+    return roster[0];
+  });
 }
 
 /** A fleet of nothing but submarines is fought as an ASW battle (for AI and visuals). */

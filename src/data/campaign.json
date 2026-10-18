@@ -1,8 +1,9 @@
 {
   "theaters": [
-    { "id": "pacific", "name": "太平洋", "en": "PACIFIC" },
-    { "id": "atlantic", "name": "大西洋", "en": "ATLANTIC" },
-    { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN" }
+    { "id": "pacific", "name": "太平洋", "en": "PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN"} },
+    { "id": "atlantic", "name": "大西洋", "en": "ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM"} },
+    { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN", "opponents": {"IJN": "RN", "RN": "RM", "RM": "RN", "FR": "RM", "KM": "RN"} },
+    { "id": "baltic", "name": "バルト海", "en": "BALTIC", "opponents": {"SU": "KM", "KM": "SU"} }
   ],
   "areas": [
     {
@@ -114,6 +115,41 @@
       "id": "m5", "theater": "mediterranean", "name": "東洋艦隊決戦", "description": "英東洋艦隊の主力戦艦部隊と雌雄を決せよ。",
       "x": 0.86, "y": 0.36, "requires": ["m4"],
       "enemy": { "nation": "RN", "ships": ["king_george_v", "warspite", "hood", "belfast", "southampton", "cossack", "javelin"] },
+      "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }, "rewardShip": "Battleship"
+    },
+    {
+      "id": "b1", "theater": "baltic", "name": "フィンランド湾哨戒", "description": "湾口を哨戒する敵駆逐艦を排除し、航路を確保せよ。",
+      "x": 0.14, "y": 0.6, "requires": [],
+      "enemy": { "nation": "KM", "ships": ["z1"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 300, "ammo": 300, "steel": 300, "bauxite": 100 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "b2", "theater": "baltic", "name": "バルト海船団護衛", "description": "Uボートと駆逐艦の襲撃から輸送船団を守り抜け。",
+      "x": 0.32, "y": 0.36, "requires": ["b1"],
+      "enemy": { "nation": "KM", "ships": ["u_boat_viic", "z1"] },
+      "objective": "Convoy", "map": "convoy-route", "weather": "Fog", "time": "Day",
+      "reward": { "fuel": 500, "ammo": 300, "steel": 400, "bauxite": 150 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "b3", "theater": "baltic", "name": "リガ湾夜戦", "description": "夜のリガ湾で敵巡洋艦戦隊を迎え撃て。",
+      "x": 0.5, "y": 0.66, "requires": ["b2"],
+      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "z1", "z23"] },
+      "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
+      "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
+    },
+    {
+      "id": "b4", "theater": "baltic", "name": "沿岸要塞砲撃", "description": "敵沿岸の砲台と港湾施設を艦砲射撃で破壊せよ。",
+      "x": 0.7, "y": 0.4, "requires": ["b3"],
+      "enemy": { "nation": "KM", "ships": ["emden", "z1", "z23", "z20"] },
+      "objective": "Bombard", "map": "atoll", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
+    },
+    {
+      "id": "b5", "theater": "baltic", "name": "バルト海決戦", "description": "敵主力艦隊を捕捉し、バルト海の制海権を握れ。",
+      "x": 0.86, "y": 0.62, "requires": ["b4"],
+      "enemy": { "nation": "KM", "ships": ["tirpitz", "scharnhorst", "prinz_eugen", "admiral_hipper", "z1", "z23", "z20"] },
       "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }, "rewardShip": "Battleship"
     }

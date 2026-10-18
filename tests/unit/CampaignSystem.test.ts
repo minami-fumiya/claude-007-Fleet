@@ -1,14 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { areaMode, areasOf, enemyShips, isCleared, isUnlocked, recordClear, theaterProgress } from '@/systems/CampaignSystem';
+import { areaMode, areasOf, enemyNationFor, enemyShips, isCleared, isUnlocked, recordClear, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
+import { PLAYABLE_NATIONS } from '@/config/NationInfo';
+import { Nation } from '@/types/Nation';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { ICampaignData } from '@/types/Campaign';
 import { IShipData } from '@/types/Ship';
 import { BattleMode } from '@/types/Battle';
+import { ShipClass } from '@/types/ShipClass';
 import campaign from '@/data/campaign.json';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
 import rn from '@/data/ships/rn.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
+import rm from '@/data/ships/rm.json';
 import openSea from '@/data/maps/open-sea.json';
 import archipelago from '@/data/maps/archipelago.json';
 import strait from '@/data/maps/strait.json';
@@ -16,7 +22,7 @@ import atoll from '@/data/maps/atoll.json';
 import convoy from '@/data/maps/convoy-route.json';
 
 const data = campaign as ICampaignData;
-const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[]);
+const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships, ...su.ships, ...rm.ships] as IShipData[]);
 const area = (id: string) => data.areas.find((a) => a.id === id)!;
 
 describe('CampaignSystem', () => {
@@ -67,3 +73,48 @@ describe('CampaignSystem', () => {
     expect(cleared.length).toBe(data.areas.length);
   });
 });
+
+describe('campaign by nation (#27)', () => {
+  it('gives every playable nation at least one theater, never against itself', () => {
+    for (const n of PLAYABLE_NATIONS) {
+      const ts = theatersFor(data, n);
+      expect(ts.length, n).toBeGreaterThan(0);
+      for (const t of ts) expect(t.opponents[n], `${n} in ${t.id}`).not.toBe(n);
+    }
+  });
+
+  it('swaps enemy ships for the opponent nation, class for class, never fictional', () => {
+    const p5 = data.areas.find((a) => a.id === 'p5')!;
+    expect(enemyNationFor(data, p5, Nation.USN)).toBe(Nation.IJN);
+    const written = enemyShips(p5, registry);
+    const swapped = enemyShips(p5, registry, Nation.IJN);
+    expect(swapped).toHaveLength(written.length);
+    swapped.forEach((s, i) => {
+      expect(s.nation).toBe(Nation.IJN);
+      expect(s.fictional).toBeFalsy();
+      expect(s.shipClass).toBe(written[i].shipClass);
+    });
+    // Same nation as written: unchanged.
+    expect(enemyShips(p5, registry, Nation.USN)).toEqual(written);
+  });
+
+  it('falls back to a battleship when the opponent has no historical carrier', () => {
+    const area = data.areas.find((a) => a.enemy.ships.some((id) => registry.byId(id)?.shipClass === ShipClass.Carrier))!;
+    const ships = enemyShips(area, registry, Nation.SU);
+    expect(ships.every((s) => s.nation === Nation.SU && !s.fictional)).toBe(true);
+    expect(ships.some((s) => s.shipClass === ShipClass.Carrier)).toBe(false);
+  });
+
+  it('builds a valid enemy fleet for every nation in every theater it plays', () => {
+    for (const n of PLAYABLE_NATIONS) {
+      for (const t of theatersFor(data, n)) {
+        for (const a of areasOf(data, t.id)) {
+          const ships = enemyShips(a, registry, enemyNationFor(data, a, n));
+          expect(ships.length, `${n} ${a.id}`).toBe(a.enemy.ships.length);
+          expect(ships.every((s) => s.nation === t.opponents[n]), `${n} ${a.id}`).toBe(true);
+        }
+      }
+    }
+  });
+});
+

@@ -46,6 +46,8 @@ export interface ITheater {
   id: string;
   name: string;
   en: string;
+  /** Who each playable nation fights here; a nation missing from this map can't play the theater. */
+  opponents: Partial<Record<Nation, Nation>>;
 }
 
 export interface ICampaignData {
