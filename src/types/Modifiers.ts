@@ -22,6 +22,8 @@ export interface IShipModifiers {
   nightAimMul: number;
   /** Night battle: vision at night */
   nightVisionMul: number;
+  /** Chance added to dodging a shell or torpedo (formations, #59) */
+  evadeAdd: number;
 }
 
 export const NO_MODIFIERS: IShipModifiers = {
@@ -40,10 +42,11 @@ export const NO_MODIFIERS: IShipModifiers = {
   depthChargeMul: 1,
   nightAimMul: 1,
   nightVisionMul: 1,
+  evadeAdd: 0,
 };
 
 /** Fields that are added when modifiers combine; every other field multiplies. */
-export const ADDITIVE_MODIFIERS: ReadonlyArray<keyof IShipModifiers> = ['armorAdd', 'planesAdd'];
+export const ADDITIVE_MODIFIERS: ReadonlyArray<keyof IShipModifiers> = ['armorAdd', 'planesAdd', 'evadeAdd'];
 
 /** Equipment fitted in a ship's upgrade slot (src/data/upgrades.json). */
 export interface IUpgradeData {

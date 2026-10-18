@@ -1,5 +1,6 @@
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
+import { ShipSubtype } from '@/types/Ship';
 
 /**
  * AI v2 decision making (pure, no Phaser): which enemy to shoot, at what range to fight and when
@@ -47,6 +48,12 @@ const CLASS_VALUE: Record<ShipClass, number> = {
   [ShipClass.Submarine]: 0.3,
 };
 
+/** Heavy cruisers are worth more to sink than light ones (#37); other subtypes use their class value. */
+const SUBTYPE_VALUE: Partial<Record<ShipSubtype, number>> = {
+  [ShipSubtype.HeavyCruiser]: 0.65,
+  [ShipSubtype.LightCruiser]: 0.5,
+};
+
 /** A new target must beat the current one by this much before the AI switches (no flip-flopping). */
 const SWITCH_MARGIN = 0.15;
 /** Retreating ships hold this multiple of their preferred range. */
@@ -72,6 +79,7 @@ export interface IAITarget {
   alive: boolean;
   hpFraction: number;
   shipClass: ShipClass;
+  subtype?: ShipSubtype;
   submerged: boolean;
   /** Visible to this side (always true unless submerged and off sonar) */
   detected: boolean;
@@ -106,7 +114,7 @@ export function scoreTarget(self: IAISelf, target: IAITarget, profile: ITacticsP
   const reach = Math.max(1, self.maxRange * 2);
   const near = 1 - Math.min(1, d / reach);
   const weak = 1 - Math.min(1, Math.max(0, target.hpFraction));
-  let score = profile.distanceWeight * near + profile.focusWeakWeight * weak + profile.capitalWeight * CLASS_VALUE[target.shipClass];
+  let score = profile.distanceWeight * near + profile.focusWeakWeight * weak + profile.capitalWeight * ((target.subtype && SUBTYPE_VALUE[target.subtype]) ?? CLASS_VALUE[target.shipClass]);
   if (target.submerged) score += ASW_PRIORITY;
   score -= profile.crowdPenalty * Math.max(0, target.attackers ?? 0);
   return score + (target.priority ?? 0);

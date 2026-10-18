@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, grantShip, isBuildTech, ownedIds, ownedShips, rewardShipFor,
+  BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, ownedIds, ownedShips, rewardShipFor,
   shipGrade, starterShip,
 } from '@/systems/ShipyardSystem';
 import { RANKS } from '@/systems/RankSystem';
 import { emptyProgress, IProgress } from '@/utils/ProgressStore';
 import { resources } from '@/systems/ResourceSystem';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
 import { ITechNode } from '@/types/Progression';
@@ -85,14 +85,30 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(buildState(p, IJN, byId('fubuki'))).toBe('owned');
     expect(buildState(p, IJN, byId('yukikaze'))).toBe('ready');
     expect(buildState(p, IJN, byId('takao'))).toBe('research');
-    expect(buildState({ ...p, research: ['build_cruiser'] }, IJN, byId('takao'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser'], campaign: withClears(1) }, IJN, byId('takao'))).toBe('ready');
+    // Heavy cruisers need their own research on top of the light-cruiser one (#37).
+    expect(buildState({ ...p, research: ['build_cruiser'], campaign: withClears(1) }, IJN, byId('takao'))).toBe('research');
+    expect(buildState({ ...p, research: ['build_cruiser'], campaign: withClears(1) }, IJN, byId('sendai'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'] }, IJN, byId('takao'))).toBe('rank');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], campaign: withClears(1) }, IJN, byId('takao'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], campaign: withClears(7) }, IJN, byId('yamato'))).toBe('rank');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], campaign: withClears(10) }, IJN, byId('yamato'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], campaign: withClears(10) }, IJN, byId('a150'))).toBe('fictional');
     expect(buildState({ ...p, resources: resources() }, IJN, byId('yukikaze'))).toBe('resources');
-    expect(buildStateLabel('research', byId('takao'), { build_cruiser: '巡洋艦建造' })).toBe('要研究: 巡洋艦建造');
+    expect(buildStateLabel('research', byId('sendai'), { build_cruiser: '軽巡洋艦建造' })).toBe('要研究: 軽巡洋艦建造');
+    expect(buildStateLabel('research', byId('takao'), { build_heavy_cruiser: '重巡洋艦建造' })).toBe('要研究: 重巡洋艦建造');
     expect(buildStateLabel('rank', byId('yamato'))).toBe('要階級: 大将');
+  });
+
+  it('the heavy-cruiser research exists, needs the light one, and light cruisers cost less to build (#37)', () => {
+    const tree = techTree.tech as Array<{ id: string; requires: string[] }>;
+    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_cruiser']);
+    expect(isBuildTech(HEAVY_CRUISER_TECH)).toBe(true);
+    expect(buildTechFor(byId('takao'))).toBe(HEAVY_CRUISER_TECH);
+    expect(buildTechFor(byId('sendai'))).toBe('build_cruiser');
+    expect(buildTechFor(byId('fubuki'))).toBeUndefined();
+    const light = byId('sendai');
+    const asHeavy = { ...light, subtype: ShipSubtype.HeavyCruiser };
+    expect(buildCost(light).steel).toBeLessThan(buildCost(asHeavy).steel);
   });
 
   it('building pays and adds the ship once', () => {

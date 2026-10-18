@@ -4,6 +4,8 @@ import { BaseShip } from '@/entities/ships/BaseShip';
 /**
  * Slots for up to 7 escorts (an 8-ship fleet). The first two keep the classic 3-ship shapes; larger
  * fleets extend them: line ahead grows astern, double line adds rows, the circle closes the ring.
+ * Echelon steps back to starboard, line abreast spreads out beside the flagship, and the vanguard puts
+ * the first three escorts ahead of the flagship with the rest astern (#59).
  */
 const FORMATION_CONFIGS: Record<Formation, IFormationConfig> = {
   [Formation.LineAhead]: {
@@ -43,6 +45,37 @@ const FORMATION_CONFIGS: Record<Formation, IFormationConfig> = {
       { forward: 60, right: -140 },
       { forward: 60, right: 140 },
       { forward: -280, right: 0 },
+    ],
+  },
+  [Formation.Echelon]: {
+    formation: Formation.Echelon,
+    name: '梯形陣 (Echelon)',
+    slotOffsets: [1, 2, 3, 4, 5, 6, 7].map((k) => ({ forward: -75 * k, right: 60 * k })),
+  },
+  [Formation.LineAbreast]: {
+    formation: Formation.LineAbreast,
+    name: '単横陣 (Line Abreast)',
+    slotOffsets: [
+      { forward: 0, right: -95 },
+      { forward: 0, right: 95 },
+      { forward: 0, right: -190 },
+      { forward: 0, right: 190 },
+      { forward: 0, right: -285 },
+      { forward: 0, right: 285 },
+      { forward: 0, right: -380 },
+    ],
+  },
+  [Formation.Vanguard]: {
+    formation: Formation.Vanguard,
+    name: '警戒陣 (Vanguard)',
+    slotOffsets: [
+      { forward: 170, right: -70 },
+      { forward: 170, right: 70 },
+      { forward: 270, right: 0 },
+      { forward: -100, right: -70 },
+      { forward: -100, right: 70 },
+      { forward: -200, right: 0 },
+      { forward: -290, right: 0 },
     ],
   },
 };

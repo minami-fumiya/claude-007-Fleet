@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { addResources, battleReward, canAfford, formatResources, pay, RESOURCE_CAP, resources, sortieCost } from '@/systems/ResourceSystem';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -25,6 +25,11 @@ describe('ResourceSystem', () => {
     expect(bb.fuel).toBeGreaterThan(dd.fuel);
     expect(sortieCost([ship(ShipClass.Carrier)]).bauxite).toBeGreaterThan(0);
     expect(sortieCost([ship(ShipClass.Battleship), ship(ShipClass.Destroyer)]).ammo).toBe(bb.ammo + dd.ammo);
+    // Light cruisers are cheaper to sortie than heavy ones (#37).
+    const heavy = sortieCost([{ ...ship(ShipClass.Cruiser), subtype: ShipSubtype.HeavyCruiser }]);
+    const light = sortieCost([{ ...ship(ShipClass.Cruiser), subtype: ShipSubtype.LightCruiser }]);
+    expect(light.fuel).toBeLessThan(heavy.fuel);
+    expect(light.ammo).toBeLessThan(heavy.ammo);
   });
 
   it('rewards victories and kills', () => {

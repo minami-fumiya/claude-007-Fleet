@@ -9,6 +9,7 @@ import { WeaponSystem } from '@/systems/WeaponSystem';
 import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
+import { FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
 import { AircraftType } from '@/types/Aircraft';
 import { FleetSystem } from '@/systems/FleetSystem';
@@ -153,6 +154,8 @@ export class BattleScene extends Phaser.Scene {
   private enemyNation: Nation = Nation.USN;
 
   private aiSystems: AISystem[] = [];
+  /** The player fleet's formation (its effects and flagship screening, #59) */
+  private formation: Formation = Formation.LineAhead;
   private escortAISystems: EscortAISystem[] = [];
 
   /** Player ships the enemy currently has on sonar (submerged boats only matter) */
@@ -283,6 +286,7 @@ export class BattleScene extends Phaser.Scene {
     this.scenarioSetup = scenario && sc ? setupFor(scenario, sc.side) : null;
     this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
     this.objective = this.scenarioSetup?.side.objective ?? this.battleData?.objective ?? Objective.Annihilate;
+    this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
     if (this.objective === Objective.Convoy) this.spawnConvoy();
@@ -349,7 +353,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateDetection();
     const playerView = this.playerSide().map((s) => ({
       ...shipView(s, this.seenByEnemy.has(s)),
-      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY : 0,
+      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY + FORMATION_RULES[this.formation].flagshipPriority : 0,
     }));
     const enemyView = this.enemies.map((s) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : 0 }));
 
@@ -537,11 +541,12 @@ export class BattleScene extends Phaser.Scene {
     return data ? withProgress(data, loadProgress().captainXp[data.id] ?? 0) : null;
   }
 
-  /** Unlocked upgrades fitted to the ship, finished research and its captain's bonus. */
-  private playerModifiers(shipData: IShipData, captain: ICaptain | null): IShipModifiers {
+  /** Unlocked upgrades fitted to the ship, finished research, its captain's bonus and the fleet's formation (#59). */
+  private playerModifiers(shipData: IShipData, captain: ICaptain | null, isFlagship: boolean): IShipModifiers {
     // Scenarios are exhibitions: the save's upgrades, research and refits don't apply.
     const captainCtx = { night: this.conditions.time === TimeOfDay.Night };
-    if (this.scenario) return captainModifiers(captain, captainCtx);
+    const formation = formationModifiers(this.formation, isFlagship);
+    if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx), formation);
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
     const fitted = progress.upgrades[shipData.id] ?? [];
@@ -551,6 +556,7 @@ export class BattleScene extends Phaser.Scene {
       researchModifiers(TECH_TREE, progress.research),
       refitModifiers(REFIT_TABLE, shipData, stage),
       captainModifiers(captain, captainCtx),
+      formation,
     );
   }
 
@@ -585,7 +591,7 @@ export class BattleScene extends Phaser.Scene {
 
     const flagCaptain = this.captainFor(fleet.flagshipIndex);
     const spawn = this.flagshipSpawn();
-    this.flagship = this.spawnShip(flagshipData, spawn.x, spawn.y, this.playerModifiers(flagshipData, flagCaptain));
+    this.flagship = this.spawnShip(flagshipData, spawn.x, spawn.y, this.playerModifiers(flagshipData, flagCaptain, true));
     if (flagCaptain) this.captains.set(this.flagship, flagCaptain);
     this.applyStartingDamage(this.flagship);
     this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData, this.flagship.mods));
@@ -601,7 +607,7 @@ export class BattleScene extends Phaser.Scene {
       const placed = this.scenarioSetup?.player.positions[i + 1];
       const spawnPos = placed ? placeAt(placed, WORLD.w, WORLD.h) : FormationSystem.getWorldPositionFromValues(spawn.x, spawn.y, 0, offset);
       const captain = this.captainFor(slot.slotIndex);
-      const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain));
+      const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain, false));
       if (captain) this.captains.set(escort, captain);
       this.applyStartingDamage(escort);
       this.playerAir.register(escort, AirOpsSystem.wingFor(escortData, escort.mods));
@@ -644,6 +650,7 @@ export class BattleScene extends Phaser.Scene {
       speed: shipData.speed,
       firePower: weapon?.firePower ?? 30,
       shipClass: shipData.shipClass,
+      subtype: shipData.subtype,
     };
   }
 
@@ -1043,7 +1050,7 @@ export class BattleScene extends Phaser.Scene {
     if (target.isLand && projectile instanceof Torpedo) return;
     // A practised crew dodges some shots: roll once per projectile and ship.
     if (projectile.missed.has(target)) return;
-    if (Math.random() < evadeChance(target.stats.proficiency ?? 0)) {
+    if (Math.random() < evadeChance(target.stats.proficiency ?? 0) + target.mods.evadeAdd) {
       projectile.missed.add(target);
       return;
     }
