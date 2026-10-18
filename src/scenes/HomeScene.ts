@@ -141,7 +141,11 @@ export class HomeScene extends Phaser.Scene {
   private refreshRegen(now: number): void {
     const progress = loadProgress();
     this.bar.refresh(progress.resources);
-    const rate = IS_PORTRAIT ? `自然回復 +${REGEN_PER_TICK.fuel}/分・上限 ${REGEN_CAP}` : `自然回復 +${REGEN_PER_TICK.fuel}/分 (ボーキ +${REGEN_PER_TICK.bauxite})・上限 ${REGEN_CAP}`;
+    // Each resource regenerates at its own rate (0.0.12: fuel fastest).
+    const r = REGEN_PER_TICK;
+    const rate = IS_PORTRAIT
+      ? `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}・上限 ${REGEN_CAP}`
+      : `自然回復/分 燃料 +${r.fuel} 弾薬 +${r.ammo} 鋼材 +${r.steel} ボーキ +${r.bauxite}・上限 ${REGEN_CAP}`;
     this.regenText.setText(regenFull(progress.resources) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
   }
 

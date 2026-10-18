@@ -8,7 +8,8 @@ import { repairCost, startRepair, completeRepairs, SUNK_HP_FRACTION } from '@/sy
 import { buildCost, buildShip, grantShip, ownedIds, ownedShips, rewardShipFor, starterShip } from '@/systems/ShipyardSystem';
 import { addMerit, fleetSlots, meritFor, rankOf } from '@/systems/RankSystem';
 import { areasOf, enemyShips, isFreeArea, recordClear } from '@/systems/CampaignSystem';
-import { addResources } from '@/systems/ResourceSystem';
+import { addResources, battleReward, resources, sortieCost } from '@/systems/ResourceSystem';
+import { IResources } from '@/types/Progression';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { IShipData } from '@/types/Ship';
@@ -26,9 +27,9 @@ const T0 = 1_700_000_000_000;
 const MIN = REGEN_INTERVAL_MS;
 
 describe('natural regeneration (#28)', () => {
-  it('+3 fuel / ammo, +5 steel and +1 bauxite per minute', () => {
+  it('+6 fuel, +4 ammo, +4 steel and +1 bauxite per minute', () => {
     const r = regenerate(resources(), T0, T0 + 5 * MIN + 30_000);
-    expect(r.resources).toEqual({ fuel: 15, ammo: 15, steel: 25, bauxite: 5 });
+    expect(r.resources).toEqual({ fuel: 30, ammo: 20, steel: 20, bauxite: 5 });
     // The partial minute carries over.
     expect(r.regenAt).toBe(T0 + 5 * MIN);
     expect(nextRegenMs(r.regenAt, T0 + 5 * MIN + 30_000)).toBe(30_000);
@@ -155,17 +156,34 @@ describe('a brand-new player can always progress', () => {
   }
 });
 
-describe('steel is not the lone bottleneck (#35)', () => {
-  const minutes = (amount: number, perTick: number): number => (perTick > 0 ? amount / perTick : 0);
-  const historical = registry.all().filter((s) => !s.fictional);
+describe('fuel, ammo and steel stay in balance (#35 / 0.0.12)', () => {
+  const byId = (id: string): IShipData => registry.byId(id)!;
+  // Typical fleets along a nation's growth: destroyers, then cruisers, then capital ships.
+  const fleets = [
+    ['fubuki', 'yukikaze'],
+    ['sendai', 'fubuki', 'yukikaze', 'shimakaze'],
+    ['nagato', 'takao', 'fubuki', 'yukikaze'],
+    ['nagato', 'mutsu', 'takao', 'tone', 'fubuki', 'yukikaze'],
+  ].map((ids) => ids.map(byId));
 
-  it('regenerating a historical ship\'s steel takes at most 1.5× its fuel or ammo', () => {
-    for (const ship of historical) {
-      const c = buildCost(ship);
-      const steel = minutes(c.steel, REGEN_PER_TICK.steel);
-      const other = Math.max(minutes(c.fuel, REGEN_PER_TICK.fuel), minutes(c.ammo, REGEN_PER_TICK.ammo));
-      expect(steel, ship.id).toBeLessThanOrEqual(other * 1.5);
+  it('a won battle (one sink per ship, 30% damage repaired) pays for itself in every resource', () => {
+    for (const fleet of fleets) {
+      const reward = battleReward(true, fleet.length);
+      const sortie = sortieCost(fleet);
+      const repair = fleet.reduce((sum, s) => addResources(sum, repairCost(s.hp, 0.7)), resources());
+      const net = addResources(addResources(reward, sortie, -1), repair, -1);
+      const raw = (k: keyof IResources): number => reward[k] - sortie[k] - repair[k];
+      for (const k of ['fuel', 'ammo', 'steel'] as const) expect(raw(k), `${fleet.map((s) => s.id)} ${k}`).toBeGreaterThan(0);
+      // Fuel and ammo no longer lag far behind steel.
+      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') * 0.6);
+      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') * 0.6);
+      expect(net.fuel).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  it('fuel regenerates fastest, then ammo and steel', () => {
+    expect(REGEN_PER_TICK.fuel).toBeGreaterThan(REGEN_PER_TICK.ammo);
+    expect(REGEN_PER_TICK.ammo).toBeGreaterThanOrEqual(REGEN_PER_TICK.steel);
   });
 
   it('a repair costs no more steel than fuel', () => {

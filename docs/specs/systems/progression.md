@@ -10,7 +10,7 @@ Implementation: `ResourceSystem.ts`, `DockSystem.ts`, `ResearchSystem.ts`, `Prog
 | | 燃料 fuel | 弾薬 ammo | 鋼材 steel | ボーキ bauxite |
 |---|---|---|---|---|
 | Start (new nation, Sprint 12) | 0 | 0 | 0 | 0 |
-| Natural regeneration per minute (up to 1500) | +3 | +3 | +5 | +1 |
+| Natural regeneration per minute (up to 1500) | +6 | +4 | +4 | +1 |
 Steel regenerates fastest because building, repairs, refits and research all spend most steel (#35).
 Cap 20000 each. Pre-Sprint-6 v1 saves without resources still migrate with 1500 / 1500 / 1500 / 800.
 Each nation has its own resources, docks and research (`nation-progress.md`).
@@ -27,7 +27,7 @@ The Fleet Builder shows the cost; the sortie is blocked (with the reason) when r
 演習 (free battle) and the first area of each theater are free; 演習 also allows docked ships (Sprint 12).
 
 ### Battle reward
-Per enemy sunk: fuel 40 / ammo 40 / steel 80 / bauxite 20 (halved on a defeat). Victory bonus: 100 / 100 / 160 / 50 (steel raised in #35).
+Per enemy sunk: fuel 70 / ammo 70 / steel 50 / bauxite 20 (halved on a defeat). Victory bonus: 160 / 150 / 120 / 50. Fuel pays most since 0.0.12: after #35 steel piled up while fuel ran out (balance test in `EarlyGameLoop.test.ts`).
 Each carrier aircraft shot down costs 6 bauxite to replace. Shown on the results screen.
 演習: half the reward, no aircraft cost, and no damage is kept (ships also start at full HP).
 

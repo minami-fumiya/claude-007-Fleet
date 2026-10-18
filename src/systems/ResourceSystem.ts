@@ -60,10 +60,13 @@ export function sortieCost(ships: IShipData[]): IResources {
   return ships.reduce((sum, s) => addResources(sum, (s.subtype && SUBTYPE_SORTIE_COST[s.subtype]) ?? SORTIE_COST[s.shipClass] ?? {}), resources());
 }
 
-/** Spoils of a battle: per enemy sunk (half on a defeat) plus a victory bonus. Steel is the scarcest resource, so it pays most (#35). */
+/**
+ * Spoils of a battle: per enemy sunk (half on a defeat) plus a victory bonus. Fuel pays most: sorties, repairs,
+ * research, building and docks all burn it. Steel used to pay double (#35) and piled up while fuel ran out (0.0.12).
+ */
 export function battleReward(victory: boolean, enemiesSunk: number): IResources {
-  const perSunk = resources({ fuel: 40, ammo: 40, steel: 80, bauxite: 20 });
-  const bonus = victory ? resources({ fuel: 100, ammo: 100, steel: 160, bauxite: 50 }) : resources();
+  const perSunk = resources({ fuel: 70, ammo: 70, steel: 50, bauxite: 20 });
+  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 120, bauxite: 50 }) : resources();
   return addResources(bonus, perSunk, Math.max(0, enemiesSunk) * (victory ? 1 : 0.5));
 }
 
@@ -79,10 +82,10 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
 // ---------------------------------------------------------------------------
 
 /**
- * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Steel regenerates fastest: building,
- * repairs, refits and research all spend more steel than anything else (#35).
+ * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Fuel regenerates fastest (every sortie
+ * and repair spends it), then ammo and steel (0.0.12: steel led after #35 and fuel became the bottleneck).
  */
-export const REGEN_PER_TICK: IResources = { fuel: 3, ammo: 3, steel: 5, bauxite: 1 };
+export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 4, bauxite: 1 };
 export const REGEN_INTERVAL_MS = 60_000;
 /** Regeneration stops at this amount; rewards can still take a resource above it. */
 export const REGEN_CAP = 1500;

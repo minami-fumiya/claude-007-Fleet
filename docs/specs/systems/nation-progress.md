@@ -34,7 +34,7 @@ INationProgress { resources, regenAt, damage, docks, research, ships /* owned id
 ## Natural regeneration (#28)
 | | fuel | ammo | steel | bauxite |
 |---|---|---|---|---|
-| per minute | +3 | +3 | +3 | +1 |
+| per minute | +6 | +4 | +4 | +1 |
 Up to 1500 each (`REGEN_CAP`); a resource at or above the cap is untouched (rewards may exceed it). Based on the stored
 epoch `regenAt` like dock timers, so it runs while the game is closed. The home port shows the next tick countdown.
 
