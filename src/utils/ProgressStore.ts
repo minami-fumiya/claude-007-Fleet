@@ -16,7 +16,7 @@ import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
 import { IServiceRecord } from '@/types/Record';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import ijnShips from '@/data/ships/ijn.json';
-import { FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
+import { EXISTING_PLAYER_HELP, FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
 import { ICaptainStats } from '@/systems/CaptainSystem';
@@ -62,6 +62,8 @@ export interface INationProgress {
   captainSkills: Record<string, string[]>;
   /** Captain id → what traits count (#45) */
   captainStats: Record<string, ICaptainStats>;
+  /** Home port in use (#88); '' or unknown = the nation's first (see BaseSystem.currentBase) */
+  base: string;
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
 }
@@ -76,6 +78,8 @@ export interface ISave {
   record: IServiceRecord;
   /** First-play tutorial (#90), shared by every nation */
   tutorial: ITutorialState;
+  /** Screens whose first-visit help was shown (#61) */
+  seenHelp: string[];
 }
 
 export interface ITutorialState {
@@ -97,12 +101,12 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
-    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {},
+    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '',
   };
 }
 
 export function emptySave(): ISave {
-  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false } };
+  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +210,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     captains: Array.isArray(data.captains) ? [...new Set(strings(data.captains))] : [],
     captainSkills: stringLists(data.captainSkills),
     captainStats: parseCaptainStats(data.captainStats),
+    base: typeof data.base === 'string' ? data.base : '',
   };
 }
 
@@ -258,6 +263,7 @@ export function migrateV1(data: Record<string, unknown>): ISave {
     nations: { [Nation.IJN]: { ...ijn, ships: legacyIjnFleet() } },
     record: parseRecord(data.record),
     tutorial: { step: 0, done: true },
+    seenHelp: [...EXISTING_PLAYER_HELP],
   };
 }
 
@@ -277,6 +283,8 @@ function parseLatest(data: Record<string, unknown>): ISave {
     nations,
     record: parseRecord(data.record),
     tutorial: parseTutorial(data.tutorial),
+    // A save without the list is an existing player's: the screens they know are not explained again.
+    seenHelp: Array.isArray(data.seenHelp) ? [...new Set(strings(data.seenHelp))] : [...EXISTING_PLAYER_HELP],
   };
 }
 

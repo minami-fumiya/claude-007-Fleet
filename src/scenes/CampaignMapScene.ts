@@ -16,6 +16,7 @@ import { ICampaignArea, ICampaignData, Objective, ITheater } from '@/types/Campa
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
 export const CAMPAIGN_AREA_KEY = 'campaign.area';
@@ -57,6 +58,8 @@ export class CampaignMapScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
     audio.music('menu');

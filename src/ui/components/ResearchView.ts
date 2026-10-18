@@ -12,7 +12,7 @@ import {
   TECH_BRANCHES,
 } from '@/systems/ResearchSystem';
 import { describeModifiers } from '@/systems/CustomizationSystem';
-import { canAfford, formatResources } from '@/systems/ResourceSystem';
+import { canAfford, formatResources, scaleCost } from '@/systems/ResourceSystem';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
@@ -60,7 +60,7 @@ export class ResearchView {
     private readonly scene: Phaser.Scene,
     private readonly area: IResearchViewArea,
     private readonly tree: ITechNode[],
-    private readonly state: () => { done: string[]; resources: IResources },
+    private readonly state: () => { done: string[]; resources: IResources; costMul?: number },
     private readonly onResearch: (node: ITechNode) => void,
   ) {
     const rows = Math.ceil(TECH_BRANCHES.length / TAB_COLS);
@@ -111,7 +111,7 @@ export class ResearchView {
       const name = this.scene.add.text(tx, 12, node.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
       const state = this.scene.add.text(w - 14, 14, '', eyebrowStyle(10, Css.cyan)).setOrigin(1, 0);
       const desc = this.scene.add.text(tx, name.y + name.height + 4, node.description, textStyle(11, Css.muted, { wordWrap: { width: tw, useAdvancedWrap: true } }));
-      const cost = this.scene.add.text(tx, h - 10, `費用  ${formatResources(node.cost)}`, textStyle(11, Css.dim)).setOrigin(0, 1);
+      const cost = this.scene.add.text(tx, h - 10, `費用  ${formatResources(scaleCost(node.cost, this.state().costMul ?? 1))}`, textStyle(11, Css.dim)).setOrigin(0, 1);
       const requires = this.scene.add
         .text(tx, cost.y - cost.height - 2, this.requiresText(node), textStyle(11, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } }))
         .setOrigin(0, 1);
@@ -137,7 +137,7 @@ export class ResearchView {
   }
 
   refresh(): void {
-    const { done, resources } = this.state();
+    const { done, resources, costMul = 1 } = this.state();
     TECH_BRANCHES.forEach((b, i) => {
       const p = branchProgress(this.tree, b.id, done);
       const tab = this.tabs[i];
@@ -147,9 +147,9 @@ export class ResearchView {
     this.summary.setText(this.summaryText(done));
     for (const c of this.cards) {
       const finished = done.includes(c.node.id);
-      const ready = canResearch(c.node, done, resources);
+      const ready = canResearch(c.node, done, resources, costMul);
       const met = prerequisitesMet(c.node, done);
-      const label = finished ? '研究済' : !met ? '前提未達' : canAfford(resources, c.node.cost) ? '研究可 ›' : '資源不足';
+      const label = finished ? '研究済' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
       c.state.setText(label).setColor(finished ? Css.gold : ready ? Css.cyan : met ? Css.muted : Css.danger);
       c.requires.setColor(finished || met ? Css.dim : Css.danger);
       c.frame.clear();

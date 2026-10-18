@@ -122,3 +122,14 @@ export function nextRegenMs(regenAt: number, now: number): number {
 export function regenFull(have: IResources): boolean {
   return RESOURCE_KEYS.every((k) => have[k] >= REGEN_CAP);
 }
+
+/** Cost scaled by `mul` (a base bonus, #88), rounded up to whole units. */
+export function scaleCost<T extends Partial<IResources>>(cost: T, mul: number): T {
+  if (mul === 1) return cost;
+  const out = { ...cost };
+  for (const k of RESOURCE_KEYS) {
+    const v = cost[k];
+    if (v !== undefined) out[k] = Math.ceil(v * mul) as T[typeof k];
+  }
+  return out;
+}
