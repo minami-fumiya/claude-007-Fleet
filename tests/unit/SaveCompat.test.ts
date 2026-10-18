@@ -4,6 +4,7 @@ import { join } from 'path';
 import { listBackups, loadSave, parseSaveChecked, resetProgressCache, SAVE_VERSION, STORAGE_KEY } from '@/utils/ProgressStore';
 import { addBackup, backupLabel, ISaveBackup, MAX_BACKUPS, parseBackups, rawVersion } from '@/utils/SaveBackup';
 import { fleetSlots } from '@/systems/RankSystem';
+import { nationCaptains } from '@/systems/CaptainRoster';
 import { Nation } from '@/types/Nation';
 
 /**
@@ -36,6 +37,10 @@ describe('every released save loads without losing progress', () => {
         expect(np!.campaign).toEqual(expect.arrayContaining((old.campaign as string[]) ?? []));
         expect(np!.research).toEqual(expect.arrayContaining((old.research as string[]) ?? []));
         expect(np!.captainXp).toEqual(expect.objectContaining((old.captainXp as Record<string, number>) ?? {}));
+        // Captains: every one the nation could assign before ownership (#44), and every learned skill.
+        const ownedBefore = Array.isArray(old.captains) ? (old.captains as string[]) : nationCaptains(nation).map((c) => c.id);
+        expect(np!.captains).toEqual(expect.arrayContaining(ownedBefore));
+        expect(np!.captainSkills).toEqual(expect.objectContaining((old.captainSkills as Record<string, string[]>) ?? {}));
         const res = old.resources as Record<string, number> | undefined;
         if (res) for (const k of ['fuel', 'ammo', 'steel', 'bauxite'] as const) expect(np!.resources[k], `${nation} ${k}`).toBeGreaterThanOrEqual(res[k] ?? 0);
         // Slots never shrink: saves from before merit ranks (v5) keep what the old six-rank table gave.
@@ -68,7 +73,8 @@ describe('save backups', () => {
   });
 
   it('a current save is not backed up on every load', () => {
-    localStorage.setItem(STORAGE_KEY, readFileSync(join(DIR, fixtures.find((f) => f.includes('0.0.12'))!), 'utf8'));
+    const newest = fixtures.map((f) => readFileSync(join(DIR, f), 'utf8')).find((raw) => rawVersion(raw) === SAVE_VERSION)!;
+    localStorage.setItem(STORAGE_KEY, newest);
     loadSave();
     expect(listBackups()).toEqual([]);
   });

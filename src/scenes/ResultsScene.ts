@@ -41,7 +41,7 @@ export class ResultsScene extends Phaser.Scene {
     const reports = data?.captainReports ?? [];
     // The campaign line ("海域攻略: … 初回報酬 …") is split at its reward so neither half runs off the card (#69).
     const campaignLines = (data?.campaign ?? '').split(/\s{2,}(?=初回報酬)/);
-    const rewardLines = [...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? ''].filter((l) => l);
+    const rewardLines = [...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? '', data?.recruits ?? ''].filter((l) => l);
     // Long lines wrap inside the card; their measured heights size the report area.
     const rewardTexts = rewardLines.map((line) =>
       this.add.text(CANVAS_W / 2, 0, line, textStyle(14, Css.cyan, { fontStyle: 'bold', align: 'center', wordWrap: { width: CARD_W - 56, useAdvancedWrap: true } })).setOrigin(0.5, 0),

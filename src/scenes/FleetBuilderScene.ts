@@ -383,7 +383,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     if (this.area) this.organizeOnly = false;
     this.keyBuffer = '';
     this.keyAt = 0;
-    this.captainIds = Array.from({ length: this.slotCount }, (_, i) => saved?.captainIds?.[i] ?? null);
+    this.captainIds = Array.from({ length: this.slotCount }, (_, i) => {
+      const id = saved?.captainIds?.[i] ?? null;
+      return id && progress.captains.includes(id) ? id : null;
+    });
     this.slotViews = [];
     this.shipCards = [];
     this.shipList = null;
@@ -1204,7 +1207,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       if (ship) used.add(ship.id);
       return ship;
     });
-    this.captainIds = placed.captainIds;
+    this.captainIds = placed.captainIds.map((id) => (id && progress.captains.includes(id) ? id : null));
     this.formation = usableFormation(preset.formation, this.rankIndex);
     this.refresh();
   }
@@ -1541,9 +1544,11 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Tap: next captain of this nation not commanding another slot, then none. */
   private cycleCaptain(slot: number): void {
     const taken = new Set(this.captainIds.filter((id, i) => id && i !== slot));
+    const owned = loadProgress().captains;
     const options: (string | null)[] = [
       null,
-      ...this.captainData.filter((c) => c.nation === this.nation && !taken.has(c.id)).map((c) => c.id),
+      // Only captains this nation has (#44).
+      ...this.captainData.filter((c) => c.nation === this.nation && !taken.has(c.id) && owned.includes(c.id)).map((c) => c.id),
     ];
     const at = options.indexOf(this.captainIds[slot]);
     this.captainIds[slot] = options[(at + 1) % options.length];

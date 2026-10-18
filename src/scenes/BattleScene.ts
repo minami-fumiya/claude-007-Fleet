@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CAPTAIN_DROP_CHANCE, recruitCaptain } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
@@ -54,7 +55,8 @@ import { IBattleInitData, IBattleResultData, ICaptainReport } from '@/types/Scen
 import { ICaptain } from '@/types/Captain';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
-import { awardXp, battleXp, captainModifiers, MAX_LEVEL, withProgress } from '@/systems/CaptainSystem';
+import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, MAX_LEVEL, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
+import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -583,7 +585,8 @@ export class BattleScene extends Phaser.Scene {
       upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
       researchModifiers(TECH_TREE, progress.research),
       refitModifiers(REFIT_TABLE, shipData, stage),
-      captainModifiers(captain, captainCtx),
+      // The captain's own speciality, learned skills and earned traits (#45).
+      captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined),
       formation,
     );
   }
@@ -1416,14 +1419,27 @@ export class BattleScene extends Phaser.Scene {
     if (this.captains.size === 0) return [];
     const progress = loadProgress();
     const captainXp = { ...progress.captainXp };
+    const captainStats = { ...progress.captainStats };
     const reports: ICaptainReport[] = [];
+    const night = this.conditions.time === TimeOfDay.Night;
+    const subsSunk = this.enemies.filter((e) => !e.isAlive && e.stats.shipClass === ShipClass.Submarine).length;
     for (const [ship, captain] of this.captains) {
       const gained = battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive });
       const award = awardXp(captain, gained);
       captainXp[captain.id] = award.captain.xp;
-      reports.push({ name: captain.name, level: award.captain.level, gained, leveledUp: award.leveledUp, maxed: captain.level >= MAX_LEVEL });
+      // What traits count (#45): the fleet's sinks, and coming home 大破.
+      const heavySurvival = ship.isAlive && ship.stats.maxHp > 0 && ship.stats.currentHp / ship.stats.maxHp <= 0.25;
+      const before = earnedTraits(captainStats[captain.id]).length;
+      captainStats[captain.id] = addBattleStats(captainStats[captain.id], { night, sunk: enemiesSunk, subsSunk, heavySurvival });
+      const traits = earnedTraits(captainStats[captain.id]);
+      const newTrait = traits.length > before ? traits[traits.length - 1] : undefined;
+      reports.push({
+        name: newTrait ? `${captain.name} (特性「${newTrait.name}」獲得)` : captain.name,
+        level: award.captain.level, gained, leveledUp: award.leveledUp, maxed: captain.level >= MAX_LEVEL,
+      });
     }
-    saveProgress({ ...progress, captainXp });
+    // Historical scenarios are exhibitions: nothing carries over.
+    if (!this.scenario) saveProgress({ ...progress, captainXp, captainStats });
     return reports;
   }
 
@@ -1553,6 +1569,16 @@ export class BattleScene extends Phaser.Scene {
     const promoted = addMerit(progress, merit);
     progress = promoted.progress;
     if (merit > 0) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
+    // New captains (#44): one per first clear, one per promotion, now and then after a win.
+    const recruits = [firstClear, promoted.promotedTo !== null, victory && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
+    const joined: string[] = [];
+    for (let i = 0; i < recruits; i++) {
+      const r = recruitCaptain(progress.nation, progress.captains);
+      if (!r.joined) break;
+      progress = { ...progress, captains: r.owned };
+      joined.push(`${r.joined.name} (${SKILL_LABEL[r.joined.skill]})`);
+    }
+    if (joined.length > 0) result.recruits = `新しい艦長: ${joined.join('・')}`;
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
     saveProgress(progress);
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
