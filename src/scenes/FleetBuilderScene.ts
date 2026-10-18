@@ -29,6 +29,7 @@ import { Formation } from '@/types/Formation';
 import { IBattleInitData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { ScrollList } from '@/ui/components/ScrollList';
 
 const MAX_SLOTS = 3;
 const PANEL_PAD = 14;
@@ -59,17 +60,28 @@ interface IBuilderLayout {
   footer: IRect;
 }
 
-/** Ships shown per page of the ship list; the panel is sized for one full page. */
-const PAGE_SIZE = 6;
+/** Nation toggles wrap after this many per row, so long Japanese names stay readable (#21). */
+const NATION_COLS = 4;
+const NATION_ROWS = Math.ceil(PLAYABLE_NATIONS.length / NATION_COLS);
+/** Gap between wrapped toggle rows */
+const TOGGLE_ROW_GAP = IS_PORTRAIT ? 12 : 6;
+/** With more nations than fit one row, the opponent toggles drop the 敵 prefix (the panel says 交戦相手). */
+const ENEMY_PREFIX = PLAYABLE_NATIONS.length > NATION_COLS ? '' : '敵 ';
+
 const P_SHIP_ITEM_H = 120;
 const P_TAB_H = 64;
+/** Portrait ship list viewport: five and a half rows, so the cut-off row hints that it scrolls (#20). */
+const P_LIST_VIEW_H = Math.round(5.5 * (P_SHIP_ITEM_H + 8));
 const P_SLOT_H = 150;
 const P_FLEET_H = 84 + 3 * P_SLOT_H + 2 * 10 + 14;
 const P_SHIPS_Y = HEADER_BAR_H + 12 + P_FLEET_H + 16;
-const P_SHIPS_H = 84 + P_TAB_H + 12 + PAGE_SIZE * P_SHIP_ITEM_H + (PAGE_SIZE - 1) * 8 + 14;
+const P_SHIPS_H = 84 + NATION_ROWS * P_TAB_H + (NATION_ROWS - 1) * (TOGGLE_ROW_GAP - 4) + 12 + P_LIST_VIEW_H + 14;
 const P_FORMATIONS_Y = P_SHIPS_Y + P_SHIPS_H + 18;
 const P_FORMATIONS_H = 84 + 180 + 14;
 const P_ENEMY_Y = P_FORMATIONS_Y + P_FORMATIONS_H + 18;
+const P_ENEMY_ROWS = NATION_ROWS + 3;
+/** Landscape: wrapped opponent rows take room from the formation cards above them. */
+const L_FORMATIONS_H = NATION_ROWS > 1 ? 256 : 296;
 
 /**
  * Landscape: ships | fleet | formations in three columns, everything on one screen.
@@ -85,7 +97,7 @@ const LAYOUT: IBuilderLayout = IS_PORTRAIT
       formations: { x: 16, y: P_FORMATIONS_Y, w: CANVAS_W - 32, h: P_FORMATIONS_H },
       formationFlow: 'row',
       formationCardH: 180,
-      enemy: { x: 16, y: P_ENEMY_Y, w: CANVAS_W - 32, h: 84 + 4 * 60 + 3 * 12 + 18 },
+      enemy: { x: 16, y: P_ENEMY_Y, w: CANVAS_W - 32, h: 84 + P_ENEMY_ROWS * 60 + (P_ENEMY_ROWS - 1) * 12 + 18 },
       enemyButtonH: 60,
       footer: { x: 16, y: CANVAS_H - FOOTER_BAR_H + 6, w: CANVAS_W - 32, h: FOOTER_BAR_H - 18 },
     }
@@ -95,11 +107,11 @@ const LAYOUT: IBuilderLayout = IS_PORTRAIT
       tabH: 36,
       fleet: { x: 444, y: 92, w: 412, h: 512 },
       slotH: 136,
-      formations: { x: 872, y: 92, w: 384, h: 296 },
+      formations: { x: 872, y: 92, w: 384, h: L_FORMATIONS_H },
       formationFlow: 'column',
-      formationCardH: 66,
-      enemy: { x: 872, y: 400, w: 384, h: 204 },
-      enemyButtonH: 32,
+      formationCardH: NATION_ROWS > 1 ? 56 : 66,
+      enemy: { x: 872, y: 92 + L_FORMATIONS_H + 12, w: 384, h: 604 - (92 + L_FORMATIONS_H + 12) },
+      enemyButtonH: NATION_ROWS > 1 ? 30 : 32,
       footer: { x: 24, y: 616, w: CANVAS_W - 48, h: 92 },
     };
 
@@ -177,9 +189,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private enemyNation: Nation = Nation.USN;
   private mode: BattleMode = BattleMode.Surface;
 
-  private page = 0;
-  private pageText!: Phaser.GameObjects.Text;
-  private pageButtons: UIButton[] = [];
+  private shipList!: ScrollList;
+  private shipCountText!: Phaser.GameObjects.Text;
   private nationTabs: UIButton[] = [];
   private enemyNationButtons: UIButton[] = [];
   private modeButtons: UIButton[] = [];
@@ -227,8 +238,6 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.slotViews = [];
     this.formationFrames = [];
     this.shipCards = [];
-    this.page = 0;
-    this.pageButtons = [];
     this.nationTabs = [];
     this.enemyNationButtons = [];
     this.modeButtons = [];
@@ -252,7 +261,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.buildPanelFrame(LAYOUT.formations, 'FORMATION', '陣形');
     this.buildPanelFrame(LAYOUT.enemy, 'OPPONENT', '交戦相手');
     this.buildNationTabs();
-    this.buildPager();
+    this.buildShipCount();
+    this.createShipList();
     this.buildShipList();
     this.buildSlotPanel();
     this.buildFormationPanel();
@@ -283,7 +293,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       startScroll = cam.scrollY;
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (!p.isDown) return;
+      // Drags that start on the ship list scroll the list; it passes back what it cannot use.
+      if (!p.isDown || this.shipList.ownsGesture()) return;
       const dy = p.y - startY;
       if (!this.dragging && Math.abs(dy) < DRAG_THRESHOLD) return;
       this.dragging = true;
@@ -295,7 +306,8 @@ export class FleetBuilderScene extends Phaser.Scene {
         this.dragging = false;
       });
     });
-    this.input.on('wheel', (_p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+    this.input.on('wheel', (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
+      if (this.shipList.contains(p)) return;
       cam.setScroll(0, cam.scrollY + dy);
     });
   }
@@ -328,13 +340,16 @@ export class FleetBuilderScene extends Phaser.Scene {
   private refreshHeader(): void {
     this.titleText.setText(`${NATION_INFO[this.nation].ja} — 艦隊を編成せよ`);
     this.nationChip?.destroy();
-    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, `NATION · ${NATION_INFO[this.nation].short}`, Colors.gold, Css.gold);
+    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, `NATION · ${NATION_INFO[this.nation].jaShort}`, Colors.gold, Css.gold);
     chip.setX(CANVAS_W - 20 - chip.getBounds().width);
     this.pin([chip], 60);
     this.nationChip = chip;
   }
 
-  /** A row of equal-width toggle buttons filling `w`, centred vertically on `cy`. */
+  /**
+   * Equal-width toggle buttons filling `w`, the first row centred vertically on `cy`. More than
+   * `maxCols` labels wrap onto further rows `h + TOGGLE_ROW_GAP` apart.
+   */
   private addToggleRow(
     x: number,
     cy: number,
@@ -342,12 +357,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     h: number,
     labels: string[],
     onSelect: (index: number) => void,
+    maxCols: number = labels.length,
   ): UIButton[] {
     const gap = 8;
-    const bw = Math.floor((w - gap * (labels.length - 1)) / labels.length);
+    const cols = Math.min(maxCols, labels.length);
+    const bw = Math.floor((w - gap * (cols - 1)) / cols);
     return labels.map(
       (label, i) =>
-        new UIButton(this, x + i * (bw + gap) + bw / 2, cy, label, this.onTap(() => onSelect(i)), {
+        new UIButton(this, x + (i % cols) * (bw + gap) + bw / 2, cy + Math.floor(i / cols) * (h + TOGGLE_ROW_GAP), label, this.onTap(() => onSelect(i)), {
           variant: 'secondary',
           width: bw,
           height: h,
@@ -362,7 +379,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private buildNationTabs(): void {
     const p = LAYOUT.ships;
-    const labels = PLAYABLE_NATIONS.map((n) => NATION_INFO[n].short);
+    const labels = PLAYABLE_NATIONS.map((n) => NATION_INFO[n].jaShort);
     this.nationTabs = this.addToggleRow(
       p.x + PANEL_PAD,
       p.y + PANEL_HEADER_H + LAYOUT.tabH / 2,
@@ -370,6 +387,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       LAYOUT.tabH - 4,
       labels,
       (i) => this.selectNation(PLAYABLE_NATIONS[i]),
+      NATION_COLS,
     );
     FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(this.nation));
   }
@@ -382,7 +400,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const ships = enemyShips(area, this.shipRegistry).map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
     const lines = [
       `作戦  ${area.name}`,
-      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[area.enemy.nation].short} ${ships}`,
+      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[area.enemy.nation].jaShort} ${ships}`,
       `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
     ];
     lines.forEach((line, i) => {
@@ -404,28 +422,31 @@ export class FleetBuilderScene extends Phaser.Scene {
     const h = LAYOUT.enemyButtonH;
     const x = p.x + PANEL_PAD;
     const w = p.w - PANEL_PAD * 2;
-    const rowGap = IS_PORTRAIT ? 12 : 6;
+    const rowGap = TOGGLE_ROW_GAP;
     const top = p.y + PANEL_HEADER_H + (IS_PORTRAIT ? 4 : 0);
+    const enemyRows = NATION_ROWS;
     this.enemyNationButtons = this.addToggleRow(
       x,
       top + h / 2,
       w,
       h,
-      PLAYABLE_NATIONS.map((n) => `敵 ${NATION_INFO[n].short}`),
+      PLAYABLE_NATIONS.map((n) => `${ENEMY_PREFIX}${NATION_INFO[n].jaShort}`),
       (i) => {
         this.enemyNation = PLAYABLE_NATIONS[i];
         this.refreshEnemyPanel();
       },
+      NATION_COLS,
     );
-    this.modeButtons = this.addToggleRow(x, top + h + rowGap + h / 2, w, h, BATTLE_MODES.map((m) => MODE_LABEL[m]), (i) => {
+    const rowY = (row: number): number => top + (enemyRows + row) * (h + rowGap) + h / 2;
+    this.modeButtons = this.addToggleRow(x, rowY(0), w, h, BATTLE_MODES.map((m) => MODE_LABEL[m]), (i) => {
       this.mode = BATTLE_MODES[i];
       this.refreshEnemyPanel();
     });
-    this.weatherButtons = this.addToggleRow(x, top + 2 * (h + rowGap) + h / 2, w, h, WEATHER_CHOICES.map((c) => (c === RANDOM ? 'ランダム' : WEATHER_LABEL[c])), (i) => {
+    this.weatherButtons = this.addToggleRow(x, rowY(1), w, h, WEATHER_CHOICES.map((c) => (c === RANDOM ? 'ランダム' : WEATHER_LABEL[c])), (i) => {
       this.weatherChoice = WEATHER_CHOICES[i];
       this.refreshEnemyPanel();
     });
-    this.timeButtons = this.addToggleRow(x, top + 3 * (h + rowGap) + h / 2, w, h, TIME_CHOICES.map((c) => (c === RANDOM ? 'ランダム' : TIME_LABEL[c])), (i) => {
+    this.timeButtons = this.addToggleRow(x, rowY(2), w, h, TIME_CHOICES.map((c) => (c === RANDOM ? 'ランダム' : TIME_LABEL[c])), (i) => {
       this.timeChoice = TIME_CHOICES[i];
       this.refreshEnemyPanel();
     });
@@ -447,50 +468,46 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.ships = availableShips(this.shipRegistry.byNation(nation), loadProgress().research);
     this.slots = [null, null, null];
     this.captainIds = [null, null, null];
-    this.page = 0;
     FleetBuilderScene.setToggle(this.nationTabs, PLAYABLE_NATIONS.indexOf(nation));
     this.rebuildShipList();
+    this.shipList.setOffset(0);
     this.refreshHeader();
     this.refresh();
   }
 
-  private get pageCount(): number {
-    return Math.max(1, Math.ceil(this.ships.length / PAGE_SIZE));
-  }
-
-  /** ‹ n / m › in the ship panel header. */
-  private buildPager(): void {
+  /** "12 隻" in the ship panel header, where the page buttons used to be. */
+  private buildShipCount(): void {
     const p = LAYOUT.ships;
-    const bw = IS_PORTRAIT ? 64 : 40;
-    const bh = IS_PORTRAIT ? 52 : 32;
-    const cy = p.y + (IS_PORTRAIT ? 42 : 32);
-    const right = p.x + p.w - PANEL_PAD - bw / 2;
-    const opts = { variant: 'secondary' as const, width: bw, height: bh, fontSize: 18 };
-    const next = new UIButton(this, right, cy, '›', this.onTap(() => this.turnPage(1)), opts);
-    this.pageText = this.add.text(right - bw / 2 - (IS_PORTRAIT ? 52 : 36), cy, '', textStyle(13, Css.muted, { fontStyle: 'bold' })).setOrigin(0.5);
-    const prev = new UIButton(this, right - bw - (IS_PORTRAIT ? 104 : 72), cy, '‹', this.onTap(() => this.turnPage(-1)), opts);
-    this.pageButtons = [prev, next];
-    this.refreshPager();
+    this.shipCountText = this.add
+      .text(p.x + p.w - PANEL_PAD - 8, p.y + (IS_PORTRAIT ? 42 : 32), '', textStyle(13, Css.muted, { fontStyle: 'bold' }))
+      .setOrigin(1, 0.5);
   }
 
-  private refreshPager(): void {
-    this.pageText.setText(`${this.page + 1} / ${this.pageCount}`);
-    this.pageButtons[0].setEnabled(this.page > 0);
-    this.pageButtons[1].setEnabled(this.page < this.pageCount - 1);
+  /** The masked, scrolling viewport under the nation tabs (#20). */
+  private createShipList(): void {
+    const p = LAYOUT.ships;
+    const top = this.shipListTop();
+    this.shipList = new ScrollList(this, {
+      x: p.x + PANEL_PAD,
+      y: top,
+      w: p.w - PANEL_PAD * 2 + 4,
+      h: p.y + p.h - (IS_PORTRAIT ? 14 : 10) - top,
+      // Portrait: drags past either end of the list carry on scrolling the page.
+      onOverscroll: IS_PORTRAIT ? (dy) => this.cameras.main.setScroll(0, this.cameras.main.scrollY + dy) : undefined,
+      screenClip: IS_PORTRAIT ? { top: HEADER_BAR_H, bottom: CANVAS_H - FOOTER_BAR_H } : undefined,
+    });
   }
 
-  private turnPage(step: number): void {
-    const page = Math.min(this.pageCount - 1, Math.max(0, this.page + step));
-    if (page === this.page) return;
-    this.page = page;
-    this.rebuildShipList();
+  private shipListTop(): number {
+    const p = LAYOUT.ships;
+    const tabsH = NATION_ROWS * LAYOUT.tabH + (NATION_ROWS - 1) * (TOGGLE_ROW_GAP - 4);
+    return p.y + PANEL_HEADER_H + tabsH + (IS_PORTRAIT ? 12 : 6);
   }
 
   private rebuildShipList(): void {
-    for (const card of this.shipCards) card.destroy();
+    this.shipList.clear();
     this.shipCards = [];
     this.buildShipList();
-    this.refreshPager();
   }
 
   /** Keeps objects in place while the portrait page scrolls underneath them. */
@@ -516,15 +533,14 @@ export class FleetBuilderScene extends Phaser.Scene {
   private buildShipList(): void {
     const p = LAYOUT.ships;
     const itemH = LAYOUT.shipItemH;
-    const startY = p.y + PANEL_HEADER_H + LAYOUT.tabH + (IS_PORTRAIT ? 12 : 6);
-    const x = p.x + PANEL_PAD;
-    const w = p.w - PANEL_PAD * 2;
+    // Rows leave a gutter on the right for the scrollbar.
+    const w = p.w - PANEL_PAD * 2 - 12;
     const statX = IS_PORTRAIT ? 100 : 74;
     const plusR = IS_PORTRAIT ? 26 : 17;
     const statSpacing = (w - statX - plusR * 2 - 30) / 3;
 
-    this.ships.slice(this.page * PAGE_SIZE, (this.page + 1) * PAGE_SIZE).forEach((ship, i) => {
-      const y = startY + i * (itemH + ITEM_GAP);
+    this.ships.forEach((ship, i) => {
+      const y = i * (itemH + ITEM_GAP);
       const bg = drawPanel(this.add.graphics(), 0, 0, w, itemH, { radius: 16, fill: Colors.panelHi, fillAlpha: 0.55 });
       const hover = this.add.graphics();
       drawPanel(hover, 0, 0, w, itemH, { radius: 16, fill: Colors.cyan, fillAlpha: 0.08, rimAlpha: 0.7 });
@@ -560,13 +576,14 @@ export class FleetBuilderScene extends Phaser.Scene {
       plus.strokeCircle(plusX, itemH / 2, plusR);
       const plusLabel = this.add.text(plusX, itemH / 2 - 1, '+', textStyle(22, Css.cyan, { fontStyle: 'bold' })).setOrigin(0.5);
 
-      const card = this.add.container(x, y, [bg, hover, icon, name, badge, meters, ...statLabels, plus, plusLabel]);
-      makeClickable(card, w, itemH);
+      const card = this.add.container(0, y, [bg, hover, icon, name, badge, meters, ...statLabels, plus, plusLabel]);
+      this.shipList.addItem(card, w, itemH, this.onTap(() => this.addShipToFleet(ship)));
       card.on('pointerover', () => hover.setVisible(true));
       card.on('pointerout', () => hover.setVisible(false));
-      card.on('pointerup', this.onTap(() => this.addShipToFleet(ship)));
       this.shipCards.push(card);
     });
+    this.shipList.setContentHeight(Math.max(0, this.ships.length * (itemH + ITEM_GAP) - ITEM_GAP));
+    this.shipCountText.setText(`${this.ships.length} 隻`);
   }
 
   private buildSlotPanel(): void {
