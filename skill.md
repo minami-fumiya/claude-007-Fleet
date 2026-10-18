@@ -225,3 +225,7 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   module-level constant; every panel below it moves with it.
 - New gameplay that only re-weights existing stats (formations) fits as `IShipModifiers` combined at spawn; one new
   additive field (`evadeAdd`) was enough for evasion. Test "no option dominates another" instead of fixed numbers.
+- `update(time)` gets the game-loop clock, `this.time.now` in `create()` the scene clock (stale right after a scene
+  start): never subtract one from the other. Take battle start times on the first `update` instead.
+- Data defaults leak features: an upgrade with no `requires` was usable from the start. Test "every catalog entry is
+  gated" rather than trusting the data.

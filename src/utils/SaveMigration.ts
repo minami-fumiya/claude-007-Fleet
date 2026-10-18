@@ -26,6 +26,27 @@ export const MIGRATIONS: MigrationStep[] = [
       ? { ...nation, research: [...research, 'build_heavy_cruiser'] }
       : nation;
   }),
+  // v3 → v4 (#72): upgrade slots now come with remodelling (none / 2 / 3 / 4 by stage), and every upgrade needs its
+  // research (強装薬 used to need none). Upgrades beyond the slots or not yet researched come off.
+  (data) => mapNations(data, (nation) => {
+    const slotsByStage = [0, 2, 3, 4];
+    const needs: Record<string, string> = {
+      fire_director: 'fire_control', heavy_shells: 'gunnery_1', torpedo_mod: 'torpedo_1', extra_armor: 'armor_1',
+      boiler: 'engine_1', damage_control: 'damage_control_1', radar: 'radar_1', aa_guns: 'aa_1',
+    };
+    const research = Array.isArray(nation.research) ? nation.research : [];
+    const researched = (id: unknown): boolean => typeof id !== 'string' || !needs[id] || research.includes(needs[id]);
+    const upgrades = nation.upgrades;
+    if (typeof upgrades !== 'object' || upgrades === null || Array.isArray(upgrades)) return nation;
+    const refits = (typeof nation.refits === 'object' && nation.refits !== null ? nation.refits : {}) as Record<string, unknown>;
+    const out: RawSave = {};
+    for (const [shipId, list] of Object.entries(upgrades as RawSave)) {
+      const stage = typeof refits[shipId] === 'number' ? (refits[shipId] as number) : 0;
+      const slots = slotsByStage[Math.max(0, Math.min(stage, slotsByStage.length - 1))];
+      out[shipId] = Array.isArray(list) ? list.filter(researched).slice(0, slots) : list;
+    }
+    return { ...nation, upgrades: out };
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

@@ -26,7 +26,7 @@ import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { proficiencyLabel } from '@/systems/ProficiencySystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
-import { filterAndSort, isHeavyCruiser, KIND_FILTERS, KindFilter, kindShort, ShipSort, SORT_LABEL } from '@/systems/ShipKind';
+import { filterAndSort, isHeavyCruiser, KIND_FILTERS, KindFilter, kindBreakdown, kindGroups, kindShort, ShipSort, SORT_LABEL } from '@/systems/ShipKind';
 import { FORMATION_ORDER, FORMATION_RULES, formationUnlocked, usableFormation } from '@/systems/FormationRules';
 import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, withPreset } from '@/systems/PresetSystem';
 import { kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
@@ -320,12 +320,12 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     addBackdrop(this, 'menu').setScrollFactor(0);
     this.buildHeader();
-    this.buildPanelFrame(this.L.ships, 'AVAILABLE SHIPS', '利用可能な艦');
+    this.buildPanelFrame(this.L.ships, '利用可能な艦');
     const rank = rankOf(progress);
-    this.buildPanelFrame(this.L.fleet, 'YOUR FLEET', `艦隊編成 — ${rank.name} · 出撃枠 ${this.slotCount}`);
+    this.buildPanelFrame(this.L.fleet, `艦隊編成 — ${rank.name} · 出撃枠 ${this.slotCount}`);
     this.buildRefitButton();
-    this.buildPanelFrame(this.L.formations, 'FORMATION', '陣形');
-    this.buildPanelFrame(this.L.enemy, 'OPPONENT', '交戦相手');
+    this.buildPanelFrame(this.L.formations, '陣形');
+    this.buildPanelFrame(this.L.enemy, '交戦相手');
     this.buildNationTabs();
     this.buildShipCount();
     this.buildListControls();
@@ -398,7 +398,6 @@ export class FleetBuilderScene extends Phaser.Scene {
           variant: 'secondary', width: 136, height: 44, fontSize: 15,
         });
     fixed.push(back);
-    fixed.push(this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'FLEET BUILDER', eyebrowStyle(12)).setOrigin(0.5));
     this.titleText = this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 56, '', displayStyle(24)).setOrigin(0.5);
     fixed.push(this.titleText);
     this.pin(fixed, 60);
@@ -408,7 +407,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   private refreshHeader(): void {
     this.titleText.setText(`${NATION_INFO[this.nation].ja} — 艦隊を編成せよ`);
     this.nationChip?.destroy();
-    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, `NATION · ${NATION_INFO[this.nation].jaShort}`, Colors.gold, Css.gold);
+    const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, NATION_INFO[this.nation].jaShort, Colors.gold, Css.gold);
     chip.setX(CANVAS_W - 20 - chip.getBounds().width);
     this.pin([chip], 60);
     this.nationChip = chip;
@@ -465,10 +464,13 @@ export class FleetBuilderScene extends Phaser.Scene {
     const x = p.x + PANEL_PAD + 8;
     let y = p.y + PANEL_HEADER_H + (IS_PORTRAIT ? 4 : 0);
     const enemyNation = enemyNationFor(campaignData as ICampaignData, area, this.nation);
-    const ships = enemyShips(area, this.shipRegistry, enemyNation).map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
+    const enemy = enemyShips(area, this.shipRegistry, enemyNation);
+    // Enemy kinds first, then each kind's ships (#68).
+    const lineup = kindGroups(enemy.map((s) => ({ ...s, name: shortName(s.name) }))).map((g) => `${g.kind} ${g.names.join('・')}`).join(' / ');
     const lines = [
       `作戦  ${area.name}`,
-      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[enemyNation].jaShort} ${ships}`,
+      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[enemyNation].jaShort} ${enemy.length} 隻 — ${kindBreakdown(enemy)}`,
+      lineup,
       `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
     ];
     lines.forEach((line, i) => {
@@ -615,10 +617,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
   }
 
-  private buildPanelFrame(p: { x: number; y: number; w: number; h: number }, eyebrow: string, title: string): void {
+  private buildPanelFrame(p: { x: number; y: number; w: number; h: number }, title: string): void {
     addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.55, glow: 0.6 });
-    this.add.text(p.x + 22, p.y + 18, eyebrow, eyebrowStyle(11));
-    this.add.text(p.x + 22, p.y + (IS_PORTRAIT ? 46 : 34), title, textStyle(15, Css.text, { fontStyle: 'bold' }));
+    // Japanese titles only (#70); the old English eyebrow line is gone, so the title sits higher.
+    this.add.text(p.x + 22, p.y + (IS_PORTRAIT ? 26 : 18), title, textStyle(IS_PORTRAIT ? 17 : 15, Css.text, { fontStyle: 'bold' }));
   }
 
   /** Rotates a bow-up ship sprite to lie bow-right and scales it to fit `maxLen`. */
@@ -711,7 +713,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const frame = this.add.graphics().setPosition(r.x, r.y);
       const hint = this.gridSlots ? '艦を追加' : IS_PORTRAIT ? '↓ 下の一覧から艦を追加' : '← 左の一覧から艦を追加';
       const emptyLabel = this.add.text(r.x + r.w / 2, r.y + r.h / 2 + 10, hint, textStyle(14, Css.dim)).setOrigin(0.5);
-      const role = i === 0 ? 'FLAGSHIP · 旗艦' : this.gridSlots ? `ESCORT ${i}` : `ESCORT ${i} · 護衛`;
+      const role = i === 0 ? '旗艦' : `護衛 ${i}`;
       this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : this.gridSlots ? 8 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
       this.slotViews.push({ frame, content: null, emptyLabel });
     }
@@ -867,7 +869,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const onStart = this.onTap(() => {
       if (this.canStart()) this.startBattle();
     });
-    const btn = { variant: 'gold' as const, fontSize: 22, caption: 'START BATTLE' };
+    const btn = { variant: 'gold' as const, fontSize: 24 };
 
     if (IS_PORTRAIT) {
       // Fixed bar: count + summary on one line, full-width deploy button below.
@@ -884,7 +886,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
 
     addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
-    this.add.text(f.x + 28, f.y + 22, 'FLEET SUMMARY', eyebrowStyle(10, Css.muted));
+    this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
     this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6 }));
     this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });

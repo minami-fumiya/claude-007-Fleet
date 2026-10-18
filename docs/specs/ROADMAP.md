@@ -22,6 +22,6 @@
 - Sprint 10: Fictional ships, more scenarios and a third theater, service record and medals (implemented)
 - Sprint 11: Polish — settings (volume), help, save export / import / reset (proposed and implemented)
 - Sprint 12: Playtest feedback (#15–#30) — nation bases, growth from one destroyer, 7 navies, research / refit expansion, square map (implemented)
-- Sprint 13: Playtest feedback round 2 (#32) → 0.0.8-alpha (steps 0–1, PR #62); step 2 → 0.0.9; display fixes and refit slots (#68–#70, #72) → 0.0.10; steps 3–7 → 0.0.11–0.0.15; historical scenarios (#71) → 0.0.16
-- Sprint 14+: Expansion — allied fleets, open-world free mode and steps 8+ (#63) → 0.0.17-alpha and later
+- Sprint 13: Playtest feedback rounds 2–3 (#32, #75) → 0.0.8–0.0.22-alpha (see docs/VERSIONS.md)
+- Later: Expansion — open-world free mode and the rest of #63 → 0.0.23-alpha and later; 3D battle view (#96) closes the alpha
 - Later: Multiplayer (TBD — needs a server)

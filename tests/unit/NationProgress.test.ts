@@ -59,7 +59,7 @@ describe('ProgressStore v2 (per-nation save, #27)', () => {
   it('migrates a v1 save into the IJN slot, owning the whole IJN roster', () => {
     const v1 = {
       captainXp: { c1: 50 }, upgrades: { yamato: ['boiler'] }, resources: { fuel: 900, ammo: 800, steel: 700, bauxite: 600 },
-      damage: { yamato: 0.4 }, docks: [{ shipId: 'yamato', endsAt: 99 }], research: ['gunnery_1', 'fictional_ships'],
+      damage: { yamato: 0.4 }, docks: [{ shipId: 'yamato', endsAt: 99 }], research: ['gunnery_1', 'engine_1', 'fictional_ships'],
       campaign: ['p1', 'p2', 'a1'], proficiency: { yamato: 40 }, refits: { yamato: 1 }, record: { sorties: 12, medals: ['first_victory'] },
     };
     const save = parseSave(JSON.stringify(v1));

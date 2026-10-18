@@ -16,7 +16,8 @@
       "effects": {
         "gunPowerMul": 1.12,
         "gunReloadMul": 1.05
-      }
+      },
+      "requires": "gunnery_1"
     },
     {
       "id": "torpedo_mod",
