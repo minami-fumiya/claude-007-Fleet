@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { FIRST_VERSION, LATEST_VERSION, MigrationStep, MIGRATIONS, RawSave, runMigrations, versionOf } from '@/utils/SaveMigration';
 import { emptySave, parseSave, SAVE_VERSION, switchNation } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
+import { fleetSlots, rankOf } from '@/systems/RankSystem';
 
 const T0 = 1_700_000_000_000;
 
@@ -108,5 +109,35 @@ describe('v3 → v4: upgrade slots come with remodelling (#72)', () => {
       nations: { IJN: { research: ['engine_1'], refits: { yamato: 3 }, upgrades: { yamato: ['heavy_shells', 'boiler'] } } },
     };
     expect(parseSave(JSON.stringify(v3)).nations[Nation.IJN]!.upgrades).toEqual({ yamato: ['boiler'] });
+  });
+});
+
+describe('v4 → v5: merit ranks, docks to build, tutorial (#36 / #38 / #90)', () => {
+  const v4 = (campaign: string[]) => ({
+    version: 4, current: 'IJN', record: {},
+    nations: { IJN: { ships: ['fubuki', 'yamato'], campaign, docks: [], resources: { fuel: 10, ammo: 10, steel: 10, bauxite: 10 } } },
+  });
+
+  it('keeps every old slot count, merit 100 per cleared area, two docks, tutorial done', () => {
+    // Old table: clears → slots 0:1, 1:2, 2:3, 4:4, 7:5, 10:6.
+    for (const [clears, slots] of [[0, 1], [1, 2], [2, 3], [4, 4], [7, 5], [10, 6]]) {
+      const save = parseSave(JSON.stringify(v4(Array.from({ length: clears }, (_, i) => `x${i}`))));
+      const np = save.nations[Nation.IJN]!;
+      expect(fleetSlots({ ...np, nation: 'IJN' })).toBeGreaterThanOrEqual(slots);
+      expect(np.merit).toBe(clears * 100);
+      expect(np.docksOwned).toBe(2);
+      expect(np.ships).toEqual(['fubuki', 'yamato']);
+      expect(save.tutorial.done).toBe(true);
+    }
+  });
+
+  it('an old save at 0 clears counts as having finished the tutorial: 少尉', () => {
+    const np = parseSave(JSON.stringify(v4([]))).nations[Nation.IJN]!;
+    expect(rankOf({ ...np, nation: 'IJN' }).name).toBe('少尉');
+  });
+
+  it('a brand-new save starts the tutorial with one dock and no merit', () => {
+    const save = parseSave(null);
+    expect(save.tutorial).toEqual({ step: 0, done: false });
   });
 });

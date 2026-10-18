@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
@@ -7,7 +8,7 @@ import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCost, buildShip, buildState, buildStateLabel, gradeRankName, ownedIds, shipGrade } from '@/systems/ShipyardSystem';
 import { availableShips, canResearch, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { formatResources } from '@/systems/ResourceSystem';
-import { rankOf } from '@/systems/RankSystem';
+import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
 import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
@@ -17,9 +18,12 @@ import { addBackdrop, drawPanel, makeClickable, UIButton } from '@/ui/components
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import techTree from '@/data/tech-tree.json';
+import campaignData from '@/data/campaign.json';
 
 const TREE = techTree.tech as ITechNode[];
 const TECH_NAMES: Record<string, string> = Object.fromEntries(TREE.map((n) => [n.id, n.name]));
+/** Campaign area names, for where a reward-only ship comes from (#39). */
+const AREA_NAMES: Record<string, string> = Object.fromEntries(campaignData.areas.map((a) => [a.id, a.name]));
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -35,6 +39,7 @@ const PAGE_SIZE = ROWS * L.cols;
  * research (shown here, researchable in place) and a ship's grade needs the admiral's rank (#30).
  */
 export class ShipyardScene extends Phaser.Scene {
+  private guide!: TutorialGuide;
   private bar!: ResourceBar;
   private shipClass: ShipClass = ShipClass.Destroyer;
   private page = 0;
@@ -47,6 +52,7 @@ export class ShipyardScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.guide = new TutorialGuide(this);
     this.tabs = [];
     this.layer = [];
     this.page = 0;
@@ -112,7 +118,7 @@ export class ShipyardScene extends Phaser.Scene {
     const techs = this.shipClass === ShipClass.Cruiser ? [BUILD_TECH[ShipClass.Cruiser], HEAVY_CRUISER_TECH] : [BUILD_TECH[this.shipClass]];
     const techId = techs.find((t) => t && !progress.research.includes(t)) ?? techs[techs.length - 1];
     const node = techId ? TREE.find((n) => n.id === techId) : undefined;
-    const rankLine = `階級 ${rank.name}: 格 ${rank.index} の艦まで建造可`;
+    const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで建造可`;
     add(this.add.text(info.x + 16, info.y + info.h / 2, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     if (node && !progress.research.includes(node.id)) {
       const ready = canResearch(node, progress.research, progress.resources);
@@ -169,7 +175,7 @@ export class ShipyardScene extends Phaser.Scene {
     const grade = shipGrade(ship);
     const pad = 16;
     const name = this.add.text(pad, 10, ship.name, textStyle(15, owned || ready ? Css.text : Css.muted, { fontStyle: 'bold' }));
-    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
+    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(ship.name.replace(/\s*\(.*\)\s*$/, ''));
     if (name.width > room) name.setScale(room / name.width);
@@ -180,7 +186,8 @@ export class ShipyardScene extends Phaser.Scene {
       stateText,
       this.add.text(pad, 10 + lineH + 4, `${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
       this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
-      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : `建造 ${formatResources(buildCost(ship))}`, textStyle(11, owned ? Css.gold : Css.dim)), r.w - pad * 2),
+      // Reward-only ships (#39) show where they come from instead of a build cost.
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCost(ship))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
     const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(owned || ready ? 1 : 0.5);
     icon.setScale(Math.min(1, (IS_PORTRAIT ? 100 : 80) / Math.max(1, icon.height)));
@@ -208,6 +215,7 @@ export class ShipyardScene extends Phaser.Scene {
     saveProgress(next);
     this.status = `${ship.name.replace(/\s*\(.*\)\s*$/, '')} が艦隊に加わりました`;
     this.refresh();
+    if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
   }
 
   private research(node: ITechNode): void {
@@ -215,6 +223,7 @@ export class ShipyardScene extends Phaser.Scene {
     const result = research(node, progress.research, progress.resources);
     if (!result) return;
     saveProgress({ ...progress, research: result.done, resources: result.resources });
+    if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.status = `${node.name}を研究しました`;
     this.refresh();
   }

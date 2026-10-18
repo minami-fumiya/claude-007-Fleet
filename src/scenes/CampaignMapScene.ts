@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
@@ -56,6 +57,8 @@ export class CampaignMapScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-play tutorial (#90): drawn above the screen, so it can be made first.
+    new TutorialGuide(this);
     audio.music('menu');
     this.tabs = [];
     this.mapLayer = [];
@@ -172,7 +175,7 @@ export class CampaignMapScene extends Phaser.Scene {
     // First-clear ship for the nation being played (#18).
     const progress = loadProgress();
     const roster = registry.byNation(progress.nation);
-    const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(a.rewardShip, roster, ownedIds(progress, roster));
+    const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(a.rewardShip, roster, ownedIds(progress, roster), a.id);
     const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
       ['目標', OBJECTIVE_LABEL[a.objective]],

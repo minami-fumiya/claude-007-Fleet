@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -9,7 +10,7 @@ import { Nation } from '@/types/Nation';
 import { nextRegenMs, REGEN_CAP, REGEN_PER_TICK, regenFull } from '@/systems/ResourceSystem';
 import { clearCount, fleetSlots, promotionText, rankOf } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
-import { completeRepairs, DOCK_COUNT, FAST_REPAIR_COST, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
+import { buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { canAfford, formatResources, pay } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IShipData } from '@/types/Ship';
@@ -41,11 +42,11 @@ const L = IS_PORTRAIT
       rowH: 62,
     };
 
-const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary' }> = [
+const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary'; data?: object }> = [
   { label: '作戦', caption: '', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
   { label: '演習', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
-  // Straight to the fleet (#77): the same builder as 演習, which keeps the fleet between visits.
-  { label: '編成', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'secondary' },
+  // Straight to the fleet (#77): fleet only, then on to 作戦 or 演習 (#109). The fleet is kept between visits.
+  { label: '編成', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'secondary', data: { organize: true } },
   { label: '史実', caption: '', scene: SceneKeys.SCENARIO, variant: 'primary' },
   { label: '工廠', caption: '', scene: SceneKeys.ARSENAL, variant: 'secondary' },
   { label: '改装', caption: '', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
@@ -81,6 +82,8 @@ export class HomeScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-play tutorial (#90): drawn above the screen, so it can be made first.
+    new TutorialGuide(this);
     audio.music('menu');
     this.registryShips = DataLoader.getRegistry(this);
     this.dynamic = [];
@@ -138,7 +141,11 @@ export class HomeScene extends Phaser.Scene {
   private refreshRegen(now: number): void {
     const progress = loadProgress();
     this.bar.refresh(progress.resources);
-    const rate = IS_PORTRAIT ? `自然回復 +${REGEN_PER_TICK.fuel}/分・上限 ${REGEN_CAP}` : `自然回復 +${REGEN_PER_TICK.fuel}/分 (ボーキ +${REGEN_PER_TICK.bauxite})・上限 ${REGEN_CAP}`;
+    // Each resource regenerates at its own rate (0.0.12: fuel fastest).
+    const r = REGEN_PER_TICK;
+    const rate = IS_PORTRAIT
+      ? `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}・上限 ${REGEN_CAP}`
+      : `自然回復/分 燃料 +${r.fuel} 弾薬 +${r.ammo} 鋼材 +${r.steel} ボーキ +${r.bauxite}・上限 ${REGEN_CAP}`;
     this.regenText.setText(regenFull(progress.resources) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
   }
 
@@ -226,7 +233,7 @@ export class HomeScene extends Phaser.Scene {
       new UIButton(this, r.x + r.w / 2, r.y + r.h / 2, item.label, () => {
         // Free battles are not campaign sorties.
         if (item.scene === SceneKeys.FLEET_BUILDER) this.registry.remove(CAMPAIGN_AREA_KEY);
-        this.scene.start(item.scene, { returnTo: SceneKeys.HOME });
+        this.scene.start(item.scene, { returnTo: SceneKeys.HOME, ...item.data });
       }, {
         variant: item.variant,
         width: r.w,
@@ -253,12 +260,16 @@ export class HomeScene extends Phaser.Scene {
       return o;
     };
 
-    // Docks
-    for (let i = 0; i < DOCK_COUNT; i++) {
+    // Docks (#38): one at the start, more built as the rank allows.
+    const docks = dockCount(progress);
+    for (let i = 0; i < docks; i++) {
       const job = progress.docks[i];
       add(this.add.text(d.x + pad, y, `第${i + 1}ドック`, eyebrowStyle(10, Css.gold)));
       if (!job) {
         add(this.add.text(d.x + pad + 110, y, '空き', textStyle(13, Css.dim)));
+        // Empty docks take a short row so four still fit with the damaged list.
+        y += IS_PORTRAIT ? 48 : 36;
+        continue;
       } else {
         const ship = this.registryShips.byId(job.shipId);
         if (ship) {
@@ -286,6 +297,17 @@ export class HomeScene extends Phaser.Scene {
       }
       y += IS_PORTRAIT ? 100 : 52;
     }
+    const next = nextDock(progress);
+    if (next) {
+      const label = `第${docks + 1}ドック増設  ${formatResources(next.cost)}`;
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 14 : 8), next.state === 'rank' ? `第${docks + 1}ドック: ${next.rankName}に昇進すると増設できます` : label, textStyle(12, next.state === 'rank' ? Css.dim : Css.muted)).setOrigin(0, 0.5));
+      if (next.state !== 'rank') {
+        add(new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 14 : 8), '増設', () => this.buildDock(), {
+          variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 30, fontSize: 13,
+        })).setEnabled(next.state === 'ready');
+      }
+      y += IS_PORTRAIT ? 48 : 30;
+    }
     add(this.add.text(d.x + pad, y, `高速修理: ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
     y += IS_PORTRAIT ? 40 : 28;
 
@@ -295,7 +317,7 @@ export class HomeScene extends Phaser.Scene {
       .filter((s): s is IShipData => s !== undefined && !isDocked(progress, s.id));
     add(this.add.text(d.x + pad, y, damaged.length > 0 ? '損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
     y += IS_PORTRAIT ? 36 : 26;
-    const dockFree = progress.docks.length < DOCK_COUNT;
+    const dockFree = progress.docks.length < docks;
     // Portrait: only as many rows as fit above the panel's bottom edge, leaving room for 他 n 隻.
     const fit = (reserve: number): number => Math.max(1, Math.min(MAX_DAMAGED_ROWS, Math.floor((d.y + d.h - y - reserve) / L.rowH)));
     const maxRows = !IS_PORTRAIT ? MAX_DAMAGED_ROWS : damaged.length <= fit(0) ? fit(0) : fit(40);
@@ -315,6 +337,13 @@ export class HomeScene extends Phaser.Scene {
     if (damaged.length > maxRows) {
       add(this.add.text(d.x + pad, y, `他 ${damaged.length - maxRows} 隻`, textStyle(12, Css.dim)));
     }
+  }
+
+  private buildDock(): void {
+    const built = buildDock(loadProgress());
+    if (!built) return;
+    saveProgress(built);
+    this.refresh();
   }
 
   private dock(ship: IShipData): void {

@@ -1,4 +1,4 @@
-/** Player settings (pure): sound volumes and mute, and touch controls, kept apart from game progress. */
+/** Player settings (pure): sound volumes and mute, touch controls and Fleet Builder defaults, kept apart from game progress. */
 
 export interface ISettings {
   /** 0..100 */
@@ -8,9 +8,11 @@ export interface ISettings {
   muted: boolean;
   /** Show the virtual movement stick on touch screens (#46); hidden, the flagship moves by sea taps and AUTO */
   joystick: boolean;
+  /** Fleet Builder: keep the last exercise settings (opponent, mode, weather, time, enemy count) between visits (#108); off = start from random each time */
+  keepExercise: boolean;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -36,6 +38,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       sfx: typeof d.sfx === 'number' ? clampVolume(d.sfx) : DEFAULT_SETTINGS.sfx,
       muted: typeof d.muted === 'boolean' ? d.muted : legacyMuted,
       joystick: typeof d.joystick === 'boolean' ? d.joystick : DEFAULT_SETTINGS.joystick,
+      keepExercise: typeof d.keepExercise === 'boolean' ? d.keepExercise : DEFAULT_SETTINGS.keepExercise,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

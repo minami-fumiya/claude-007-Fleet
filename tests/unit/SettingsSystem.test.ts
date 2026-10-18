@@ -19,7 +19,8 @@ describe('SettingsSystem', () => {
   it('parses stored settings tolerantly and keeps the old mute flag', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings(null, true).muted).toBe(true);
-    expect(parseSettings('{"bgm":140,"sfx":"x"}')).toEqual({ bgm: 100, sfx: DEFAULT_SETTINGS.sfx, muted: false, joystick: true });
+    expect(parseSettings('{"bgm":140,"sfx":"x"}')).toEqual({ bgm: 100, sfx: DEFAULT_SETTINGS.sfx, muted: false, joystick: true, keepExercise: true });
+    expect(parseSettings('{"keepExercise":false}').keepExercise).toBe(false);
     expect(parseSettings('not json', true)).toEqual({ ...DEFAULT_SETTINGS, muted: true });
   });
 

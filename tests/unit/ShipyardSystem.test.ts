@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, ownedIds, ownedShips, rewardShipFor,
-  shipGrade, starterShip,
+  BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
+  REWARD_SHIPS, rewardShipFor, shipGrade, starterShip,
 } from '@/systems/ShipyardSystem';
 import { RANKS } from '@/systems/RankSystem';
 import { emptyProgress, IProgress } from '@/utils/ProgressStore';
@@ -15,6 +15,10 @@ import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
 import rn from '@/data/ships/rn.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
+import rm from '@/data/ships/rm.json';
+import campaignData from '@/data/campaign.json';
 
 const ROSTERS: Array<[Nation, IShipData[]]> = [
   [Nation.IJN, ijn.ships as IShipData[]],
@@ -86,17 +90,18 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(buildState(p, IJN, byId('yukikaze'))).toBe('ready');
     expect(buildState(p, IJN, byId('takao'))).toBe('research');
     // Heavy cruisers need their own research on top of the light-cruiser one (#37).
-    expect(buildState({ ...p, research: ['build_cruiser'], campaign: withClears(1) }, IJN, byId('takao'))).toBe('research');
-    expect(buildState({ ...p, research: ['build_cruiser'], campaign: withClears(1) }, IJN, byId('sendai'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('takao'))).toBe('research');
+    expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('sendai'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'] }, IJN, byId('takao'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], campaign: withClears(1) }, IJN, byId('takao'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], campaign: withClears(7) }, IJN, byId('yamato'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], campaign: withClears(10) }, IJN, byId('yamato'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], campaign: withClears(10) }, IJN, byId('a150'))).toBe('fictional');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], merit: 100 }, IJN, byId('takao'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 6 }, IJN, byId('nagato'))).toBe('rank');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 7 }, IJN, byId('nagato'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 11 }, IJN, byId('a150'))).toBe('fictional');
     expect(buildState({ ...p, resources: resources() }, IJN, byId('yukikaze'))).toBe('resources');
     expect(buildStateLabel('research', byId('sendai'), { build_cruiser: '軽巡洋艦建造' })).toBe('要研究: 軽巡洋艦建造');
     expect(buildStateLabel('research', byId('takao'), { build_heavy_cruiser: '重巡洋艦建造' })).toBe('要研究: 重巡洋艦建造');
-    expect(buildStateLabel('rank', byId('yamato'))).toBe('要階級: 大将');
+    expect(buildStateLabel('rank', byId('nagato'))).toBe('要階級: 中佐');
+    expect(buildStateLabel('rank', byId('a150'))).toBe('要階級: 中将');
   });
 
   it('the heavy-cruiser research exists, needs the light one, and light cruisers cost less to build (#37)', () => {
@@ -133,5 +138,41 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(rewardShipFor(ShipClass.Destroyer, IJN, IJN.map((s) => s.id))).toBeUndefined();
     // Never a fictional design.
     expect(rewardShipFor(ShipClass.Battleship, IJN, IJN.filter((s) => !s.fictional && s.id !== 'kongo').map((s) => s.id))?.id).toBe('kongo');
+  });
+});
+
+describe('reward-only ships (#39)', () => {
+  const all = [ijn, usn, km, rn, fr, su, rm].flatMap((d) => d.ships as IShipData[]);
+
+  it('every reward ship exists in its nation, historical, in an area that nation plays', () => {
+    for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
+      const theaters = campaignData.theaters.filter((t) => (t.opponents as Record<string, string | undefined>)[nation]).map((t) => t.id);
+      for (const [area, shipId] of Object.entries(byArea ?? {})) {
+        const ship = all.find((x) => x.id === shipId);
+        expect(ship?.nation, `${nation} ${shipId}`).toBe(nation);
+        expect(ship?.fictional ?? false).toBe(false);
+        expect(theaters).toContain(campaignData.areas.find((a) => a.id === area)?.theater);
+      }
+    }
+  });
+
+  it('cannot be built; the shipyard names the area instead', () => {
+    const p = player({ resources: rich, research: ['build_cruiser', 'build_battleship'], rankFloor: 13 });
+    expect(isRewardOnly(byId('yamato'))).toBe(true);
+    expect(buildState(p, IJN, byId('yamato'))).toBe('reward');
+    expect(buildShip(p, IJN, byId('yamato'))).toBeNull();
+    expect(buildState(p, IJN, byId('nagato'))).toBe('ready');
+    expect(buildStateLabel('reward', byId('yamato'), {}, { p6: '坊ノ岬沖' })).toBe('作戦報酬: 坊ノ岬沖');
+    // An owned reward ship stays owned.
+    expect(buildState({ ...p, ships: [...p.ships, 'yamato'] }, IJN, byId('yamato'))).toBe('owned');
+  });
+
+  it("the area's first clear grants its reward ship; other areas never hand one out", () => {
+    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], 'p6')?.id).toBe('yamato');
+    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki', 'yamato'], 'p6')?.id).not.toBe('yamato');
+    for (const area of ['p1', 'p4', 'p5']) {
+      const ship = rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], area);
+      expect(ship && isRewardOnly(ship)).toBe(false);
+    }
   });
 });

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -21,7 +22,7 @@ import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
-import { fleetSlots, nextRank, RANKS, rankOf } from '@/systems/RankSystem';
+import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { proficiencyLabel } from '@/systems/ProficiencySystem';
 import { IShipData } from '@/types/Ship';
@@ -81,15 +82,16 @@ const P_TAB_H = 48;
 const P_FILTER_H = 52;
 /** Portrait slot cards stay in one column; the tallest card when the fleet is small (#33). */
 const P_SLOT_MAX_H = 168;
-/** Below this height a portrait card drops its main-armament line. */
+/** Below this height a portrait card drops its main-armament line; below the tiny one everything shrinks. */
 const P_SLOT_FULL_H = 150;
+const P_SLOT_TINY_H = 120;
 const P_PRESET_H = 56;
 const P_HINT_H = 64;
 const L_FLEET_H = 512;
 
 /**
  * Landscape: ships | fleet | settings in three columns, everything on one screen.
- * Portrait: the fleet fills the first screen (its cards shrink to fit up to 6 slots, so swapping ships and the
+ * Portrait: the fleet fills the first screen (its cards shrink to fit up to 8 slots, so swapping ships and the
  * sortie need no scrolling, #77); the settings follow below it.
  */
 function builderLayout(slotCount: number, promotionHint: boolean): IBuilderLayout {
@@ -232,6 +234,10 @@ interface ISettingGroup {
 }
 
 interface IStepper {
+  /** Opens the 1-20 list (#108) */
+  pick: () => void;
+  /** Line under the row (how to type the number) */
+  hint?: string;
   same: boolean;
   toggleSame: () => void;
   step: (delta: number) => void;
@@ -305,9 +311,19 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Settings panel objects (rebuilt when a value changes or a group opens) and the open group */
   private settingsObjs: Phaser.GameObjects.GameObject[] = [];
   private openGroup: string | null = null;
+  /** Opened from the home menu's 編成 (#109) */
+  private organizeOnly = false;
+  /** Digits typed for the enemy count (#108) and when the last one came */
+  private keyBuffer = '';
+  private keyAt = 0;
 
   constructor() {
     super({ key: SceneKeys.FLEET_BUILDER });
+  }
+
+  /** `organize`: opened from the home menu's 編成 (#109): fleet only, then 作戦へ / 演習へ instead of a sortie. */
+  init(data?: { organize?: boolean }): void {
+    this.organizeOnly = data?.organize === true;
   }
 
   create(): void {
@@ -322,11 +338,19 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.enemyCount = saved?.enemyCount ?? SAME_COUNT;
     this.slotCount = fleetSlots(progress);
     this.rankIndex = rankOf(progress).index;
-    this.L = builderLayout(this.slotCount, nextRank(progress) !== null && IS_PORTRAIT);
+    this.L = builderLayout(this.slotCount, nextSlotRank(progress) !== null && IS_PORTRAIT);
     // Free battles default to random everything (#78) until the player picks something.
     this.mode = saved?.mode ?? RANDOM;
     this.weatherChoice = saved?.weather ?? RANDOM;
     this.timeChoice = saved?.time ?? RANDOM;
+    // Setting off (#108): every visit starts the exercise settings from random again; the fleet is still kept.
+    if (!audio.settings.keepExercise) {
+      this.enemyNation = RANDOM;
+      this.mode = RANDOM;
+      this.weatherChoice = RANDOM;
+      this.timeChoice = RANDOM;
+      this.enemyCount = SAME_COUNT;
+    }
     this.ships = this.offeredShips();
     const used = new Set<string>();
     this.slots = Array.from({ length: this.slotCount }, (_, i) => {
@@ -340,6 +364,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.captainData = DataLoader.getCaptains(this);
     const areaId = this.registry.get(CAMPAIGN_AREA_KEY) as string | undefined;
     this.area = (campaignData as ICampaignData).areas.find((a) => a.id === areaId) ?? null;
+    if (this.area) this.organizeOnly = false;
+    this.keyBuffer = '';
+    this.keyAt = 0;
     this.captainIds = Array.from({ length: this.slotCount }, (_, i) => saved?.captainIds?.[i] ?? null);
     this.slotViews = [];
     this.shipCards = [];
@@ -384,7 +411,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.buildFooter();
     this.refresh();
     if (IS_PORTRAIT) this.setupScrolling();
+    this.setupCountKeys();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.saveSelection());
+    new TutorialGuide(this);
   }
 
   /** Wraps a tap handler so it does nothing at the end of a scroll drag. */
@@ -766,7 +795,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         };
       }),
     }];
-    if (this.area) return groups;
+    if (this.area || this.organizeOnly) return groups;
     const foes: Array<Choice<Nation>> = [RANDOM, ...PLAYABLE_NATIONS.filter((n) => n !== this.nation)];
     const radio = <T>(choices: T[], current: T, label: (c: T) => string, set: (c: T) => void): IOption[] =>
       choices.map((c) => ({ label: label(c), selected: c === current, enabled: true, pick: () => set(c) }));
@@ -786,6 +815,8 @@ export class FleetBuilderScene extends Phaser.Scene {
         options: [],
         // − / + from the current number; leaving 同数 starts from the fleet's size.
         stepper: {
+          pick: () => this.openCountPicker(),
+          hint: !IS_PORTRAIT ? '数字をタップで一覧 · PC は数字キーで入力、↑↓ で増減' : '数字をタップすると一覧から選べます',
           same: this.enemyCount === SAME_COUNT,
           toggleSame: () => { this.enemyCount = this.enemyCount === SAME_COUNT ? fleetSize : SAME_COUNT; },
           step: (delta) => { this.enemyCount = exerciseEnemyCount(count + delta); },
@@ -815,6 +846,11 @@ export class FleetBuilderScene extends Phaser.Scene {
       if (g.stepper) {
         objs.push(this.addStepperRow(x, y, w, rowH, g.title, g.value, g.stepper));
         y += rowH + gap;
+        if (g.stepper.hint) {
+          const hint = this.add.text(x + 8, y - (p ? 2 : 3), g.stepper.hint, textStyle(p ? 12 : 10, Css.dim));
+          objs.push(hint);
+          y += hint.height + gap;
+        }
         continue;
       }
       const open = this.openGroup === g.key;
@@ -852,7 +888,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     if (this.area) y = this.buildCampaignBriefing(this.area, x, y + gap, w, objs);
     if (p) this.L.settings.h = y - s.y + 14;
-    const frame = this.buildPanelFrame(this.L.settings, this.area ? '出撃設定 — 作戦' : '出撃設定 — 演習');
+    const frame = this.buildPanelFrame(this.L.settings, this.organizeOnly ? '陣形' : this.area ? '出撃設定 — 作戦' : '出撃設定 — 演習');
     // The frame is drawn last (its height depends on the rows), so the rows are lifted above it.
     for (const o of objs) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(1);
     this.settingsObjs = [...frame, ...objs];
@@ -877,12 +913,82 @@ export class FleetBuilderScene extends Phaser.Scene {
     let right = w - (p ? 10 : 6);
     const plus = new UIButton(this, right - stepW / 2, h / 2, '+', apply(() => st.step(1)), { variant: 'secondary', width: stepW, height: bh, fontSize: font + 4 }).setEnabled(st.canInc);
     right -= stepW;
-    const value = this.add.text(right - valueW / 2, h / 2, valueText, textStyle(p ? 17 : 14, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
+    // The number opens the 1-20 list (#108).
+    const valueBg = drawPanel(this.add.graphics(), right - valueW + 4, (h - bh) / 2, valueW - 8, bh, { radius: p ? 12 : 8, fill: Colors.panelHi, fillAlpha: 0.8, rimAlpha: 0.5 });
+    const value = this.add.text(right - valueW / 2, h / 2, `${valueText} ▾`, textStyle(p ? 17 : 13, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
+    if (value.width > valueW - 14) value.setScale((valueW - 14) / value.width);
+    const valueHit = this.add.zone(right - valueW + 4, (h - bh) / 2, valueW - 8, bh).setOrigin(0, 0).setInteractive({ cursor: 'pointer' });
+    valueHit.on('pointerup', this.onTap(st.pick));
     right -= valueW;
     const minus = new UIButton(this, right - stepW / 2, h / 2, '−', apply(() => st.step(-1)), { variant: 'secondary', width: stepW, height: bh, fontSize: font + 4 }).setEnabled(st.canDec);
     right -= stepW + (p ? 12 : 8);
     const same = new UIButton(this, right - sameW / 2, h / 2, '同数', apply(st.toggleSame), { variant: st.same ? 'primary' : 'secondary', width: sameW, height: bh, fontSize: font });
-    return this.add.container(x, y, [frame, title, same, minus, value, plus]);
+    return this.add.container(x, y, [frame, title, same, minus, valueBg, value, valueHit, plus]);
+  }
+
+  /** The enemy-count list (#108): 同数 and 1-20 in a grid; picking one closes it. */
+  private openCountPicker(): void {
+    this.closeDetail();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      this.detail.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive()).on('pointerup', () => this.closeDetail());
+    const p = IS_PORTRAIT;
+    const cols = p ? 4 : 7;
+    const bh = p ? 64 : 44;
+    const gap = 10;
+    const w = p ? CANVAS_W - 64 : 640;
+    const rows = Math.ceil((MAX_EXERCISE_ENEMIES + 1) / cols);
+    const h = 90 + rows * (bh + gap) + 20;
+    const d = { x: (CANVAS_W - w) / 2, y: (CANVAS_H - h) / 2, w, h };
+    add(addPanel(this, d.x, d.y, d.w, d.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.zone(d.x, d.y, d.w, d.h).setOrigin(0, 0).setInteractive());
+    add(this.add.text(d.x + 24, d.y + 26, '敵の数', displayStyle(p ? 22 : 20)));
+    add(new UIButton(this, d.x + d.w - 80, d.y + 40, '閉じる', () => this.closeDetail(), { variant: 'secondary', width: 120, height: p ? 52 : 40, fontSize: 14 }));
+    const bw = (d.w - 48 - gap * (cols - 1)) / cols;
+    [SAME_COUNT, ...Array.from({ length: MAX_EXERCISE_ENEMIES }, (_, i) => i + 1)].forEach((n, i) => {
+      const bx = d.x + 24 + (i % cols) * (bw + gap) + bw / 2;
+      const by = d.y + 90 + Math.floor(i / cols) * (bh + gap) + bh / 2;
+      add(new UIButton(this, bx, by, n === SAME_COUNT ? '同数' : `${n} 隻`, () => this.setEnemyCount(n), {
+        variant: n === this.enemyCount ? 'primary' : 'secondary', width: bw, height: bh, fontSize: p ? 16 : 13,
+      }));
+    });
+  }
+
+  private setEnemyCount(n: number): void {
+    this.enemyCount = n === SAME_COUNT ? SAME_COUNT : exerciseEnemyCount(n);
+    this.closeDetail();
+    this.buildSettings();
+    this.refreshFooter();
+  }
+
+  /** PC (#108): digits type the enemy count ("1" then "5" within a second = 15), ↑ / ↓ step it. */
+  private setupCountKeys(): void {
+    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+      if (this.area || this.organizeOnly || this.picker.length > 0) return;
+      const fleetSize = Math.max(1, this.fleetShips().length);
+      const current = this.enemyCount === SAME_COUNT ? fleetSize : this.enemyCount;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        this.enemyCount = exerciseEnemyCount(current + (e.key === 'ArrowUp' ? 1 : -1));
+      } else if (/^[0-9]$/.test(e.key)) {
+        const now = this.time.now;
+        const joined = now - this.keyAt < 1000 ? this.keyBuffer + e.key : e.key;
+        // A number past the limit starts over from this digit.
+        this.keyBuffer = Number(joined) > MAX_EXERCISE_ENEMIES ? e.key : joined;
+        this.keyAt = now;
+        const n = Number(this.keyBuffer);
+        if (n < 1) return;
+        this.enemyCount = exerciseEnemyCount(n);
+      } else {
+        return;
+      }
+      this.closeDetail();
+      this.buildSettings();
+      this.refreshFooter();
+    });
   }
 
   /** A radio option: ring (filled when selected) and label; disabled options are dimmed and inert. */
@@ -985,9 +1091,9 @@ export class FleetBuilderScene extends Phaser.Scene {
       this.slotViews.push({ frame, content: null, emptyLabel });
     }
     // How to get more slots (#30): under the cards in portrait, in the unused room in landscape.
-    const next = nextRank(loadProgress());
+    const next = nextSlotRank(loadProgress());
     if (!next) return;
-    const text = `${next.rank.name}に昇進すると出撃枠 ${next.rank.slots}\n(作戦 あと ${next.clearsNeeded} 海域攻略)`;
+    const text = `${next.rank.name}に昇進すると出撃枠 ${next.rank.slots}\n(${needText(next)})`;
     const last = this.slotRect(this.slotCount - 1);
     if (IS_PORTRAIT) {
       this.add.text(last.x + last.w / 2, last.y + last.h + CARD_GAP + P_HINT_H / 2, text, textStyle(13, Css.dim, { align: 'center' })).setOrigin(0.5);
@@ -1066,6 +1172,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     });
     const btn = { variant: 'gold' as const, fontSize: 24 };
 
+    if (this.organizeOnly) {
+      this.buildOrganizeFooter();
+      return;
+    }
+
     if (IS_PORTRAIT) {
       // Fixed bar: count + summary on one line, full-width deploy button below.
       const bar = this.add
@@ -1085,6 +1196,33 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
     this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6 }));
     this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
+  }
+
+  /** 編成 from the home menu (#109): 作戦へ / 演習へ instead of 出撃. The fleet is kept either way (#77). */
+  private buildOrganizeFooter(): void {
+    const f = this.L.footer;
+    const toCampaign = this.onTap(() => this.scene.start(SceneKeys.CAMPAIGN));
+    const toExercise = this.onTap(() => {
+      this.registry.remove(CAMPAIGN_AREA_KEY);
+      this.scene.start(SceneKeys.FLEET_BUILDER, { organize: false });
+    });
+    if (IS_PORTRAIT) {
+      const bar = this.add.rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
+      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+      this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted)).setOrigin(1, 0);
+      const bw = (f.w - 32 - 12) / 2;
+      this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 46, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 76, fontSize: 22 });
+      const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 46, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 76, fontSize: 22 });
+      this.pin([bar, panel, this.countText, this.summaryText, this.startBtn, ex], 60);
+      return;
+    }
+    addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+    this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
+    this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
+    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6 }));
+    this.startBtn = new UIButton(this, f.x + f.w - 172 - 300 - 16, f.y + f.h / 2, '作戦へ  ›', toCampaign, { variant: 'gold', width: 300, height: 60, fontSize: 22 });
+    new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '演習へ  ›', toExercise, { variant: 'primary', width: 300, height: 60, fontSize: 22 });
   }
 
   // -------------------------------------------------------------------------
@@ -1162,15 +1300,17 @@ export class FleetBuilderScene extends Phaser.Scene {
   private wideSlotParts(ship: IShipData, i: number, w: number, h: number): Phaser.GameObjects.GameObject[] {
     const p = IS_PORTRAIT;
     const full = !p || h >= P_SLOT_FULL_H;
+    // Portrait with 7-8 slots (#36): the cards get short, so everything moves up and the buttons shrink.
+    const tiny = p && h < P_SLOT_TINY_H;
     const nameX = p ? 124 : 100;
     const kc = kindColor(ship);
-    const rowY = p ? (full ? 52 : 40) : 44;
+    const rowY = p ? (full ? 52 : tiny ? 24 : 40) : 44;
     const badge = addChip(this, nameX, rowY, kindShort(ship), kc.color, kc.css);
     const nameLeft = nameX + chipWidth(badge) + 8;
-    const name = this.add.text(nameLeft, rowY, ship.name, textStyle(p ? 18 : 16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
+    const name = this.add.text(nameLeft, rowY, ship.name, textStyle(p && !tiny ? 18 : 16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
     // Leave room for the remove button on the right.
     fitName(name, ship.name, w - nameLeft - (p ? 84 : 64));
-    const status = this.add.text(nameX, rowY + (p ? 18 : 16), this.slotStatus(ship), textStyle(13, this.isDamaged(ship) ? Css.danger : Css.muted));
+    const status = this.add.text(nameX, rowY + (tiny ? 13 : p ? 18 : 16), this.slotStatus(ship), textStyle(tiny ? 12 : 13, this.isDamaged(ship) ? Css.danger : Css.muted));
     const texts = [status];
     if (full) texts.push(this.add.text(nameX, status.y + status.height + 4, `主兵装  ${this.mainArmament(ship)}`, textStyle(12, Css.muted)));
     const room = w - nameX - 16;
@@ -1178,8 +1318,8 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     const captain = this.captainOf(i);
     const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}` : '艦長を任命  ›';
-    const btnH = p ? (full ? 40 : 36) : 24;
-    const btnY = h - (p ? (full ? 26 : 22) : 18);
+    const btnH = p ? (full ? 40 : tiny ? 30 : 36) : 24;
+    const btnY = h - (p ? (full ? 26 : tiny ? 19 : 22) : 18);
     const detailW = p ? 110 : 64;
     const captainW = Math.min(p ? 320 : 220, w - nameX - detailW - 24);
     const captainBtn = new UIButton(this, nameX + captainW / 2, btnY, captainLabel, this.onTap(() => this.cycleCaptain(i)), {
@@ -1188,10 +1328,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     const detailBtn = new UIButton(this, nameX + captainW + 10 + detailW / 2, btnY, '詳細  ›', this.onTap(() => this.openDetail(ship, i)), {
       variant: 'secondary', width: detailW, height: btnH, fontSize: 11,
     });
-    const remove = new UIButton(this, p ? w - 44 : w - 34, p ? 40 : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
-      variant: 'secondary', width: p ? 60 : 40, height: p ? 48 : 36, fontSize: 15,
+    const remove = new UIButton(this, p ? w - 44 : w - 34, p ? (tiny ? 28 : 40) : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
+      variant: 'secondary', width: p ? 60 : 40, height: p ? (tiny ? 38 : 48) : 36, fontSize: 15,
     });
-    const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
+    const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, tiny ? 80 : 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
     return [icon, badge, name, ...texts, captainBtn, detailBtn, remove];
   }
 
@@ -1298,6 +1438,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.countText.setText(`${ships.length} / ${this.slotCount} 隻`);
     if (ships.length === 0) {
       this.summaryText.setText(IS_PORTRAIT ? '艦を選ぶと出撃できます' : '艦を 1 隻以上選ぶと出撃できます');
+    } else if (this.organizeOnly) {
+      const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
+      const formation = FORMATION_RULES[this.formation].ja;
+      this.summaryText.setText(IS_PORTRAIT ? `${formation} · 総耐久 ${totalHp}` : `総耐久 ${totalHp}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n編成を終えたら、作戦か演習へ進みます`).setColor(Css.muted);
     } else {
       const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const minSpeed = Math.min(...ships.map((s) => s.speed));
@@ -1315,7 +1459,8 @@ export class FleetBuilderScene extends Phaser.Scene {
         )
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
-    this.startBtn.setEnabled(this.canStart());
+    // In organize mode the buttons only move on, so they stay enabled.
+    if (!this.organizeOnly) this.startBtn.setEnabled(this.canStart());
   }
 
   /** 演習 (no campaign area) is free and may use docked ships (#15); the first area of a theater is free (#28). */
@@ -1437,6 +1582,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       objective: area?.objective ?? Objective.Annihilate,
     };
 
+    emitTutorial('sortie', this.registry);
     this.scene.start(SceneKeys.BATTLE, initData);
   }
 }

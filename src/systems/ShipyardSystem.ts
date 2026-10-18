@@ -4,8 +4,9 @@ import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH } from './ResearchSystem';
-import { RANKS, rankOf } from './RankSystem';
+import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
 import { isHeavyCruiser, isLightCruiser } from './ShipKind';
+import rewardShipData from '@/data/reward-ships.json';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -33,7 +34,7 @@ export function isBuildTech(id: string): boolean {
   return id === HEAVY_CRUISER_TECH || Object.values(BUILD_TECH).includes(id);
 }
 
-/** A ship's grade is how many of these HP marks it exceeds (0..5); it must not exceed the admiral's rank index. */
+/** A ship's grade is how many of these HP marks it exceeds (0..5); each grade needs a rank (RankSystem.GRADE_RANK). */
 export const GRADE_HP = [250, 400, 520, 700, 780];
 export const MAX_GRADE = GRADE_HP.length;
 
@@ -45,7 +46,12 @@ export function shipGrade(ship: IShipData): number {
 
 /** Rank needed to build a ship (its name, for messages). */
 export function gradeRankName(grade: number): string {
-  return RANKS[Math.min(RANKS.length - 1, Math.max(0, grade))].name;
+  return rankForGrade(grade).name;
+}
+
+/** Whether a rank may build ships of `grade`. */
+export function gradeAllowed(grade: number, rankIndex: number): boolean {
+  return rankIndex >= GRADE_RANK[Math.min(GRADE_RANK.length - 1, Math.max(0, grade))];
 }
 
 /** Resources per point of HP, by class. Steel also pays for armour (5 HP-equivalents per point). */
@@ -103,23 +109,44 @@ export function grantShip(progress: IProgress, roster: IShipData[], id: string):
   return owned.includes(id) ? { ...progress, ships: owned } : { ...progress, ships: [...owned, id] };
 }
 
-export type BuildState = 'owned' | 'research' | 'fictional' | 'rank' | 'resources' | 'ready';
+/**
+ * Reward-only ships (報酬限定艦, #39): nation → campaign area → ship. These can't be built; the area's first clear
+ * grants them (each nation's famous ships, from its theaters' last areas).
+ */
+export const REWARD_SHIPS = rewardShipData as Partial<Record<string, Record<string, string>>>;
+
+/** The area whose first clear grants this reward-only ship, or undefined for a ship that can be built. */
+export function rewardAreaOf(ship: Pick<IShipData, 'id' | 'nation'>): string | undefined {
+  const byArea = REWARD_SHIPS[ship.nation] ?? {};
+  return Object.keys(byArea).find((area) => byArea[area] === ship.id);
+}
+
+export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
+  return rewardAreaOf(ship) !== undefined;
+}
+
+export type BuildState = 'owned' | 'reward' | 'research' | 'fictional' | 'rank' | 'resources' | 'ready';
 
 /** Why a ship can or can't be built right now; `techNames` maps research ids to their display names. */
 export function buildState(progress: IProgress, roster: IShipData[], ship: IShipData): BuildState {
   if (isOwned(progress, roster, ship.id)) return 'owned';
+  if (isRewardOnly(ship)) return 'reward';
   const tech = buildTechFor(ship);
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
-  if (shipGrade(ship) > rankOf(progress).index) return 'rank';
+  if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
   if (!canAfford(progress.resources, buildCost(ship))) return 'resources';
   return 'ready';
 }
 
-/** Short label for a build state, e.g. "要研究: 巡洋艦建造" / "要階級: 少将". */
-export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}): string {
+/** Short label for a build state, e.g. "要研究: 巡洋艦建造" / "要階級: 少将" / "作戦報酬: 坊ノ岬沖". */
+export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}): string {
   switch (state) {
     case 'owned': return '保有';
+    case 'reward': {
+      const area = rewardAreaOf(ship) ?? '';
+      return `作戦報酬: ${areaNames[area] ?? area}`;
+    }
     case 'research': {
       const id = buildTechFor(ship) ?? '';
       return `要研究: ${techNames[id] ?? id}`;
@@ -139,12 +166,16 @@ export function buildShip(progress: IProgress, roster: IShipData[], ship: IShipD
 }
 
 /**
- * The ship a campaign area's first clear grants this nation: the cheapest historical ship of the area's
- * `rewardShip` class it does not own yet, else its cheapest unowned historical ship of any class.
+ * The ship a campaign area's first clear grants this nation: its reward-only ship for that area (#39) when it does
+ * not own it yet, else the cheapest buildable historical ship of the area's `rewardShip` class it does not own,
+ * else its cheapest unowned buildable historical ship of any class.
  */
-export function rewardShipFor(rewardClass: ShipClass | undefined, roster: IShipData[], owned: string[]): IShipData | undefined {
+export function rewardShipFor(rewardClass: ShipClass | undefined, roster: IShipData[], owned: string[], areaId?: string): IShipData | undefined {
+  const special = areaId && roster[0] ? REWARD_SHIPS[roster[0].nation]?.[areaId] : undefined;
+  const reward = special ? roster.find((s) => s.id === special && !owned.includes(s.id)) : undefined;
+  if (reward) return reward;
   if (!rewardClass) return undefined;
-  const candidates = roster.filter((s) => !s.fictional && !owned.includes(s.id));
+  const candidates = roster.filter((s) => !s.fictional && !owned.includes(s.id) && !isRewardOnly(s));
   const total = (s: IShipData): number => RESOURCE_KEYS.reduce((sum, key) => sum + buildCost(s)[key], 0);
   const cheapest = (list: IShipData[]): IShipData | undefined => [...list].sort((a, b) => total(a) - total(b))[0];
   return cheapest(candidates.filter((s) => s.shipClass === rewardClass)) ?? cheapest(candidates);

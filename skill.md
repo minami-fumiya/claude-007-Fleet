@@ -244,3 +244,14 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
   builder handles the layout, open state and portrait height, and adding a setting is one entry.
 - Playwright e2e: drive scenes through `window.game` (dev only). Starting a scene that is running restarts it, so
   stop only the *other* scenes first — stopping and starting the same key in one tick leaves it stopped.
+
+### 0.0.12 — Ranks, docks, reward ships, tutorial (#36 #38 #39 #90 #108 #109)
+- Replacing what a value is derived from (rank from cleared areas → from merit) needs a save floor: the migration
+  gives `rankFloor` so no old save loses slots or buildable ships, and tests walk every old rank through it.
+- Promotion exams (an area that must be cleared) stop the climb at that rank; merit alone can't skip them.
+- Reward-only content that differs per nation lives in its own data file keyed by nation → area, not on the shared
+  area record (areas are shared by several nations).
+- Tutorial steps that only explain must not block the ones that wait for an action: an action event passes over
+  the explain-only steps before it, so closing a sheet and just playing still advances.
+- An overlay text measured before its panel is drawn ends up under the panel at the same depth — lift it.
+- A one-shot reward the player can replay (tutorial from ヘルプ) needs a `rewarded` flag in the save.
