@@ -41,6 +41,13 @@ describe('AirWingSystem', () => {
     expect(ready.rearming).toEqual([]);
   });
 
+  it('re-arms faster with a shorter re-arm time (aviation research)', () => {
+    const fast = createAirWing({ fighters: 4, diveBombers: 5, torpedoBombers: 2 }, REARM_MS * 0.8);
+    const { state } = launch(fast, AircraftType.DiveBomber);
+    const landed = land(state, AircraftType.DiveBomber, 3, 3, 0);
+    expect(tickAirWing(landed, REARM_MS * 0.8).ready[AircraftType.DiveBomber]).toBe(5);
+  });
+
   it('loses a whole squadron', () => {
     const { state } = launch(wing(), AircraftType.Fighter);
     const s = lose(state, AircraftType.Fighter, 3);

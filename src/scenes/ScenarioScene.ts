@@ -58,14 +58,15 @@ export class ScenarioScene extends Phaser.Scene {
       const r = { x: L.list.x + col * (CARD_W + GAP), y: L.list.y + row * (L.cardH + GAP), w: CARD_W, h: L.cardH };
       const frame = this.add.graphics();
       this.cardFrames.push(frame);
-      const card = this.add.container(r.x, r.y, [
-        frame,
-        this.add.text(18, 14, sc.date, eyebrowStyle(10, Css.gold)),
-        this.add.text(18, IS_PORTRAIT ? 40 : 36, sc.name, displayStyle(20)),
-        IS_PORTRAIT
-          ? this.add.text(r.w - 16, 14, `${NATION_INFO[sc.forces.A.nation].short} vs ${NATION_INFO[sc.forces.B.nation].short}`, textStyle(12, Css.muted)).setOrigin(1, 0)
-          : this.add.text(18, r.h - 30, `${NATION_INFO[sc.forces.A.nation].short} vs ${NATION_INFO[sc.forces.B.nation].short}`, textStyle(12, Css.muted)),
-      ]);
+      const date = this.add.text(18, 14, sc.date, eyebrowStyle(10, Css.gold));
+      const sides = `${NATION_INFO[sc.forces.A.nation].jaShort} vs ${NATION_INFO[sc.forces.B.nation].jaShort}`;
+      const vs = IS_PORTRAIT
+        ? this.add.text(r.w - 16, 14, sides, textStyle(12, Css.muted)).setOrigin(1, 0)
+        : this.add.text(18, r.h - 30, sides, textStyle(12, Css.muted));
+      // Portrait: long country names (e.g. イタリア vs フランス) shrink rather than run into the date.
+      const room = r.w - 16 - (date.x + date.width + 12);
+      if (IS_PORTRAIT && vs.width > room) vs.setScale(room / vs.width);
+      const card = this.add.container(r.x, r.y, [frame, date, this.add.text(18, IS_PORTRAIT ? 40 : 36, sc.name, displayStyle(20)), vs]);
       makeClickable(card, r.w, r.h);
       card.on('pointerup', () => {
         this.selected = i;

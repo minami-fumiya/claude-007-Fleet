@@ -4,12 +4,13 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
-import { CLASS_JA, CLASS_ORDER, filterEntries, summarizeWeapons } from '@/systems/EncyclopediaSystem';
+import { CLASS_JA, CLASS_ORDER, filterEntries, kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { ScrollList } from '@/ui/components/ScrollList';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -19,12 +20,20 @@ const L = IS_PORTRAIT
 
 const PAD = 14;
 const FILTERS: Array<ShipClass | null> = [null, ...CLASS_ORDER];
+/** Nation tabs wrap after this many per row, so long Japanese names stay readable (#21). */
+const NATION_COLS = 4;
+const NATION_ROWS = Math.ceil(PLAYABLE_NATIONS.length / NATION_COLS);
+const TAB_GAP = 8;
+const ROW_GAP = 6;
+/** Height of the "n隻" line under the scrolling list */
+const COUNT_H = IS_PORTRAIT ? 34 : 26;
 
 /** 艦艇図鑑: every ship in the game with its stats, armament and a short history. */
 export class EncyclopediaScene extends Phaser.Scene {
   private nation: Nation = Nation.IJN;
   private shipClass: ShipClass | null = null;
-  private page = 0;
+  private list!: ScrollList;
+  private countText!: Phaser.GameObjects.Text;
   private selectedId = '';
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private maxStat = { hp: 1, armor: 1, speed: 1 };
@@ -36,7 +45,6 @@ export class EncyclopediaScene extends Phaser.Scene {
   create(): void {
     audio.music('menu');
     this.dynamic = [];
-    this.page = 0;
     const all = DataLoader.getRegistry(this).all();
     this.maxStat = {
       hp: Math.max(...all.map((s) => s.hp)),
@@ -52,6 +60,11 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '艦艇図鑑', displayStyle(24)).setOrigin(0.5);
     addPanel(this, L.list.x, L.list.y, L.list.w, L.list.h, { radius: 24, fillAlpha: 0.5 });
     addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
+    const { x, y, w, h } = L.list;
+    const top = y + PAD + (NATION_ROWS + 1) * (L.tabH + TAB_GAP) + 4;
+    // The list scrolls (#20); its right edge leaves a gutter for the scrollbar.
+    this.list = new ScrollList(this, { x: x + PAD, y: top, w: w - PAD * 2 + 4, h: y + h - PAD - COUNT_H - top });
+    this.countText = this.add.text(x + w / 2, y + h - PAD - COUNT_H / 2 + 2, '', textStyle(12, Css.muted)).setOrigin(0.5);
     this.refresh();
   }
 
@@ -81,38 +94,45 @@ export class EncyclopediaScene extends Phaser.Scene {
     const tab = (row: number, labels: string[], active: number, onPick: (i: number) => void, fontSize: number): void => {
       const bw = (inner - 6 * (labels.length - 1)) / labels.length;
       labels.forEach((label, i) => {
+        if (!label) return;
         this.track(
-          new UIButton(this, x + PAD + i * (bw + 6) + bw / 2, y + PAD + row * (L.tabH + 8) + L.tabH / 2, label, () => onPick(i), {
+          new UIButton(this, x + PAD + i * (bw + 6) + bw / 2, y + PAD + row * (L.tabH + TAB_GAP) + L.tabH / 2, label, () => onPick(i), {
             variant: i === active ? 'primary' : 'secondary', width: bw, height: L.tabH, fontSize,
           }),
         );
       });
     };
-    tab(0, PLAYABLE_NATIONS.map((n) => NATION_INFO[n].short), PLAYABLE_NATIONS.indexOf(this.nation), (i) => {
-      this.nation = PLAYABLE_NATIONS[i];
-      this.page = 0;
-      this.refresh();
-    }, 14);
-    tab(1, FILTERS.map((c) => (c === null ? '全' : CLASS_JA[c].slice(0, 2))), FILTERS.indexOf(this.shipClass), (i) => {
+    const nationLabels = PLAYABLE_NATIONS.map((n) => NATION_INFO[n].jaShort);
+    for (let row = 0; row < NATION_ROWS; row++) {
+      const start = row * NATION_COLS;
+      const labels = nationLabels.slice(start, start + NATION_COLS);
+      // Wrapped rows keep the first row's tab width.
+      while (NATION_ROWS > 1 && labels.length < NATION_COLS) labels.push('');
+      tab(row, labels, PLAYABLE_NATIONS.indexOf(this.nation) - start, (i) => {
+        if (!PLAYABLE_NATIONS[start + i]) return;
+        this.nation = PLAYABLE_NATIONS[start + i];
+        this.list.setOffset(0);
+        this.refresh();
+      }, 14);
+    }
+    tab(NATION_ROWS, FILTERS.map((c) => (c === null ? '全' : CLASS_JA[c].slice(0, 2))), FILTERS.indexOf(this.shipClass), (i) => {
       this.shipClass = FILTERS[i];
-      this.page = 0;
+      this.list.setOffset(0);
       this.refresh();
     }, 12);
   }
 
   private buildList(entries: IShipData[]): void {
-    const { x, y, w, h } = L.list;
-    const top = y + PAD + 2 * (L.tabH + 8) + 4;
-    const pagerH = L.tabH;
-    const rows = Math.floor((y + h - PAD - pagerH - 8 - top) / (L.rowH + 6));
-    const perPage = rows * L.cols;
-    const pages = Math.max(1, Math.ceil(entries.length / perPage));
-    this.page = Math.min(this.page, pages - 1);
-    const colW = (w - PAD * 2 - 8 * (L.cols - 1)) / L.cols;
+    this.list.clear();
+    const cols = L.cols;
+    const rows = Math.ceil(entries.length / cols);
+    // Rows leave a gutter on the right for the scrollbar.
+    const colW = (L.list.w - PAD * 2 - 12 - 8 * (cols - 1)) / cols;
 
-    entries.slice(this.page * perPage, (this.page + 1) * perPage).forEach((ship, i) => {
-      const col = Math.floor(i / rows);
-      const row = i % rows;
+    entries.forEach((ship, i) => {
+      // Left to right, then down, so both columns scroll through the list in reading order.
+      const col = i % cols;
+      const row = Math.floor(i / cols);
       const on = ship.id === this.selectedId;
       const frame = drawPanel(this.add.graphics(), 0, 0, colW, L.rowH, {
         radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.45, rimAlpha: on ? 0.85 : 0.15, glow: on ? 1 : 0,
@@ -120,24 +140,18 @@ export class EncyclopediaScene extends Phaser.Scene {
       const icon = this.add.image(26, L.rowH / 2, ship.spriteKey).setAngle(90);
       icon.setScale(Math.min(1, 40 / Math.max(1, icon.height)));
       const name = this.add.text(52, L.rowH / 2, ship.name.replace(/\s*\(.*\)\s*$/, ''), textStyle(IS_PORTRAIT ? 16 : 14, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
-      const cls = this.add.text(colW - 12, L.rowH / 2, `${ship.fictional ? '架空  ' : ''}${CLASS_JA[ship.shipClass]}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.dim)).setOrigin(1, 0.5);
-      const card = this.track(this.add.container(x + PAD + col * (colW + 8), top + row * (L.rowH + 6), [frame, icon, name, cls]));
-      makeClickable(card, colW, L.rowH);
-      card.on('pointerup', () => {
+      const cls = this.add.text(colW - 12, L.rowH / 2, `${ship.fictional ? '架空  ' : ''}${kindLabel(ship)}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.dim)).setOrigin(1, 0.5);
+      // Long names (オクチャブリスカヤ・レボリューツィヤ …) shrink to stay clear of the type label.
+      const room = colW - 52 - cls.width - 12;
+      if (name.width > room) name.setScale(room / name.width);
+      const card = this.add.container(col * (colW + 8), row * (L.rowH + ROW_GAP), [frame, icon, name, cls]);
+      this.list.addItem(card, colW, L.rowH, () => {
         this.selectedId = ship.id;
         this.refresh();
       });
     });
-
-    const py = y + h - PAD - pagerH / 2;
-    const bw = IS_PORTRAIT ? 96 : 64;
-    this.track(this.add.text(x + w / 2, py, `${this.page + 1} / ${pages}  ·  ${entries.length}隻`, textStyle(12, Css.muted)).setOrigin(0.5));
-    if (this.page > 0) {
-      this.track(new UIButton(this, x + PAD + bw / 2, py, '‹', () => { this.page--; this.refresh(); }, { variant: 'secondary', width: bw, height: pagerH, fontSize: 18 }));
-    }
-    if (this.page < pages - 1) {
-      this.track(new UIButton(this, x + w - PAD - bw / 2, py, '›', () => { this.page++; this.refresh(); }, { variant: 'secondary', width: bw, height: pagerH, fontSize: 18 }));
-    }
+    this.list.setContentHeight(Math.max(0, rows * (L.rowH + ROW_GAP) - ROW_GAP));
+    this.countText.setText(`${entries.length}隻`);
   }
 
   private buildDetail(ship: IShipData): void {
@@ -145,7 +159,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     const x = d.x + 26;
     const w = d.w - 52;
     const wrap = { wordWrap: { width: w, useAdvancedWrap: true } };
-    const kind = ship.fictional ? `${CLASS_JA[ship.shipClass]}  ·  架空艦` : CLASS_JA[ship.shipClass];
+    const kind = ship.fictional ? `${kindLabel(ship)}  ·  架空艦` : kindLabel(ship);
     this.track(this.add.text(x, d.y + 20, `${NATION_INFO[ship.nation].ja}  ·  ${kind}`, eyebrowStyle(10, ship.fictional ? Css.gold : Css.cyan)));
     const title = this.track(this.add.text(x, d.y + 42, ship.name, displayStyle(IS_PORTRAIT ? 24 : 26)));
     let y = title.y + title.height + 18;

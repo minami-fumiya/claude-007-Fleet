@@ -69,7 +69,7 @@ export function fireAt(
   for (const w of usable) {
     const lead = interceptAngle(ship.x, ship.y, target.x, target.y, vel?.x ?? 0, vel?.y ?? 0, w.projectileSpeed);
     const error = aimError > 0 && weaponKind(w) === WeaponKind.Torpedo ? Math.max(aimError, AI_TORPEDO_AIM_ERROR) : aimError;
-    const angle = lead + (Math.random() * 2 - 1) * error * aimErrorMul(ship.stats.proficiency ?? 0);
+    const angle = lead + (Math.random() * 2 - 1) * error * aimErrorMul(ship.stats.proficiency ?? 0) * ship.aimErrorMul;
     weapons.fireWeapon(ship, w, angle, time);
   }
 }

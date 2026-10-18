@@ -7,6 +7,7 @@ export const SceneKeys = {
   RESULTS: 'ResultsScene',
   CUSTOMIZATION: 'CustomizationScene',
   ARSENAL: 'ArsenalScene',
+  SHIPYARD: 'ShipyardScene',
   CAMPAIGN: 'CampaignMapScene',
   SCENARIO: 'ScenarioScene',
   ENCYCLOPEDIA: 'EncyclopediaScene',

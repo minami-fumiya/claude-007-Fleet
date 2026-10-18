@@ -23,18 +23,21 @@ export interface IAirWingState {
   aloft: Counts;
   rearming: IRearming[];
   lost: number;
+  /** Re-arm time of this wing (aviation research / refits shorten it); REARM_MS when absent */
+  rearmMs?: number;
 }
 
 function counts(f = 0, d = 0, t = 0): Counts {
   return { [AircraftType.Fighter]: f, [AircraftType.DiveBomber]: d, [AircraftType.TorpedoBomber]: t };
 }
 
-export function createAirWing(wing: IAirWing): IAirWingState {
+export function createAirWing(wing: IAirWing, rearmMs: number = REARM_MS): IAirWingState {
   return {
     ready: counts(wing.fighters, wing.diveBombers, wing.torpedoBombers),
     aloft: counts(),
     rearming: [],
     lost: 0,
+    rearmMs,
   };
 }
 
@@ -61,7 +64,7 @@ export function launch(state: IAirWingState, type: CarrierAircraft, max = SQUADR
 /** A squadron came back: `survivors` land and start re-arming; the rest of those launched were lost. */
 export function land(state: IAirWingState, type: CarrierAircraft, launched: number, survivors: number, now: number): IAirWingState {
   const back = Math.max(0, Math.min(launched, survivors));
-  const rearming = back > 0 ? [...state.rearming, { type, count: back, readyAt: now + REARM_MS }] : state.rearming;
+  const rearming = back > 0 ? [...state.rearming, { type, count: back, readyAt: now + (state.rearmMs ?? REARM_MS) }] : state.rearming;
   return {
     ...state,
     aloft: { ...state.aloft, [type]: Math.max(0, state.aloft[type] - launched) },

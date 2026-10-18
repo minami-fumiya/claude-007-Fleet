@@ -4,7 +4,9 @@ import { Squadron, SquadronState } from '@/entities/aircraft/Squadron';
 import { AircraftType, CarrierAircraft } from '@/types/Aircraft';
 import { IWeaponData } from '@/types/Weapon';
 import { IShipData } from '@/types/Ship';
-import { createAirWing, IAirWingState, land, launch, lose, tickAirWing } from './AirWingSystem';
+import { createAirWing, IAirWingState, land, launch, lose, REARM_MS, tickAirWing } from './AirWingSystem';
+import { applyToAirWing } from './CustomizationSystem';
+import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { aaFire, aaStrength, applyAttrition, bombHits, dogfightRate, IAAGun } from './AirCombat';
 import { CombatSystem } from './CombatSystem';
 import { WeaponSystem } from './WeaponSystem';
@@ -34,6 +36,12 @@ export interface IAirContext {
   foeSquadrons: Squadron[];
   /** Enemy AA guns (surfaced live ships) */
   foeGuns: IAAGun[];
+}
+
+/** A carrier's bombs / aerial torpedoes with its aviation bonus. */
+function airPowered(weapon: IWeaponData, carrier: BaseShip): IWeaponData {
+  const mul = carrier.mods.airPowerMul;
+  return mul === 1 ? weapon : { ...weapon, firePower: weapon.firePower * mul };
 }
 
 export function aaGuns(ships: BaseShip[]): IAAGun[] {
@@ -67,8 +75,9 @@ export class AirOpsSystem {
     if (wing) this.wings.set(carrier, wing);
   }
 
-  static wingFor(data: IShipData): IAirWingState | null {
-    return data.airWing ? createAirWing(data.airWing) : null;
+  /** The ship's air wing with aviation modifiers (extra planes, faster re-arming) applied. */
+  static wingFor(data: IShipData, mods: IShipModifiers = NO_MODIFIERS): IAirWingState | null {
+    return data.airWing ? createAirWing(applyToAirWing(data.airWing, mods), Math.round(REARM_MS * mods.rearmMul)) : null;
   }
 
   wing(carrier: BaseShip): IAirWingState | undefined {
@@ -218,7 +227,7 @@ export class AirOpsSystem {
     for (let i = 0; i < sq.planes; i++) {
       // Each pilot's drop is a little off as well as spread across the formation.
       const offset = (i - (sq.planes - 1) / 2) * AERIAL_TORPEDO_SPREAD + (Math.random() * 2 - 1) * AERIAL_TORPEDO_ERROR;
-      this.weapons.launchProjectile(sq.x, sq.y, aim + offset, this.aerialTorpedo);
+      this.weapons.launchProjectile(sq.x, sq.y, aim + offset, airPowered(this.aerialTorpedo, carrier));
     }
     sq.state = SquadronState.Return;
   }
@@ -242,8 +251,9 @@ export class AirOpsSystem {
 
   private dropBombs(sq: Squadron, target: BaseShip): void {
     const hits = bombHits(sq.planes, BOMB_HIT_CHANCE);
+    const bomb = airPowered(this.bomb, sq.carrier);
     for (let i = 0; i < hits && target.isAlive; i++) {
-      const dmg = CombatSystem.calculateDamage(this.bomb, target.stats.shipClass, target.stats.armor);
+      const dmg = CombatSystem.calculateDamage(bomb, target.stats.shipClass, target.stats.armor);
       CombatSystem.applyDamage(target, dmg);
       this.onBombHit(target, this.bomb, dmg);
     }

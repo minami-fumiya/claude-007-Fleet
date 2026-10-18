@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { channelGain, DEFAULT_SETTINGS, parseSettings, stepVolume } from '@/systems/SettingsSystem';
 import { decodeSave, encodeSave, SAVE_PREFIX } from '@/systems/SaveCodec';
-import { emptyProgress } from '@/utils/ProgressStore';
+import { emptyProgress, emptySave, withProgress } from '@/utils/ProgressStore';
+import { Nation } from '@/types/Nation';
 
 describe('SettingsSystem', () => {
   it('steps and clamps volumes', () => {
@@ -24,8 +25,8 @@ describe('SettingsSystem', () => {
 });
 
 describe('SaveCodec', () => {
-  it('round-trips progress, including Japanese text and whitespace from pasting', () => {
-    const p = { ...emptyProgress(), campaign: ['p1', 'a2'], research: ['gunnery_1'], captainXp: { 山本: 120 } };
+  it('round-trips the whole save, including Japanese text and whitespace from pasting', () => {
+    const p = withProgress(emptySave(), { ...emptyProgress(), campaign: ['p1', 'a2'], research: ['gunnery_1'], captainXp: { 山本: 120 } });
     const code = encodeSave(p);
     expect(code.startsWith(SAVE_PREFIX)).toBe(true);
     const spaced = code.slice(0, 20) + '\n  ' + code.slice(20);
@@ -37,6 +38,9 @@ describe('SaveCodec', () => {
     expect(decodeSave('hello')).toBeNull();
     expect(decodeSave(SAVE_PREFIX + '!!!')).toBeNull();
     expect(decodeSave(SAVE_PREFIX + btoa('[1,2]'))).toBeNull();
-    expect(decodeSave(SAVE_PREFIX + btoa('{"campaign":"x"}'))).toEqual(emptyProgress());
+    // An old (v1) code is migrated like a v1 save: everything into the IJN slot.
+    const v1 = decodeSave(SAVE_PREFIX + btoa('{"campaign":"x"}'))!;
+    expect(v1.current).toBe(Nation.IJN);
+    expect(v1.nations[Nation.IJN]?.campaign).toEqual([]);
   });
 });

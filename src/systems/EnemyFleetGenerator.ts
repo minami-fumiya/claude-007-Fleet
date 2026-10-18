@@ -89,3 +89,38 @@ export function generateEnemyFleet(
     return chosen;
   });
 }
+
+/** Opponent size choices for a free battle (#25): same number as the player, one more, two more. */
+export const EXERCISE_EXTRA_CHOICES = [0, 1, 2] as const;
+
+/**
+ * Free-battle (演習) opponent sized to the player's fleet (#25): one enemy per player ship plus `extra`. Each mirrors
+ * the class of the player's ship in that position (extras mirror the player's smallest ship) and is the enemy ship of
+ * that class closest in HP, so a lone destroyer meets a destroyer. ASW battles field submarines and a carrier
+ * battle puts a carrier in front, as before.
+ */
+export function exerciseEnemyFleet(
+  registry: ShipRegistry,
+  nation: Nation,
+  mode: BattleMode,
+  playerShips: IShipData[],
+  extra: number,
+  rng: () => number = Math.random,
+): IShipData[] {
+  const roster = registry.byNation(nation).filter((s) => !s.fictional);
+  if (roster.length === 0 || playerShips.length === 0) return [];
+  const smallest = playerShips.reduce((a, b) => (b.hp < a.hp ? b : a));
+  const size = playerShips.length + Math.max(0, Math.floor(extra));
+  return Array.from({ length: size }, (_, i) => {
+    const model = playerShips[i] ?? smallest;
+    const wanted =
+      mode === BattleMode.ASW ? ShipClass.Submarine : mode === BattleMode.CarrierStrike && i === 0 ? ShipClass.Carrier : model.shipClass;
+    let pool = roster.filter((s) => s.shipClass === wanted);
+    if (pool.length === 0) pool = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
+    if (pool.length === 0) pool = roster;
+    // The closest in HP, with a random pick among those within 10% of it.
+    const gap = (s: IShipData): number => Math.abs(s.hp - model.hp);
+    const best = Math.min(...pool.map(gap));
+    return pick(pool.filter((s) => gap(s) <= best + model.hp * 0.1), rng);
+  });
+}

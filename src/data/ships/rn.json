@@ -5,6 +5,7 @@
       "name": "フッド (Hood)",
       "nation": "RN",
       "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
       "hp": 720,
       "armor": 50,
       "speed": 160,
@@ -61,6 +62,52 @@
       "description": "ネルソン級戦艦2番艦。16インチ砲を艦の前部に集中配置した独特の艦形。ビスマルク撃沈に大きく貢献した。"
     },
     {
+      "id": "nelson",
+      "name": "ネルソン (Nelson)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 750,
+      "armor": 60,
+      "speed": 115,
+      "weapons": [
+        "16in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "nelson",
+      "description": "ネルソン級戦艦1番艦。主砲3基をすべて艦橋より前に集めた独特の艦形を持つ。ノルマンディー上陸作戦などを艦砲射撃で支援した。"
+    },
+    {
+      "id": "queen_elizabeth",
+      "name": "クイーン・エリザベス (Queen Elizabeth)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 690,
+      "armor": 56,
+      "speed": 128,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "queen_elizabeth",
+      "description": "クイーン・エリザベス級戦艦1番艦。重油専焼の高速戦艦の先駆け。1941年12月、アレクサンドリア港でイタリアの人間魚雷に大破着底させられた。"
+    },
+    {
+      "id": "renown",
+      "name": "レナウン (Renown)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 640,
+      "armor": 46,
+      "speed": 165,
+      "weapons": [
+        "15in_mk1",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "renown",
+      "description": "レナウン級巡洋戦艦1番艦。1940年4月、ノルウェー沖でシャルンホルストとグナイゼナウの2隻と交戦した。"
+    },
+    {
       "id": "lion",
       "name": "ライオン (Lion)",
       "nation": "RN",
@@ -81,6 +128,7 @@
       "name": "ベルファスト (Belfast)",
       "nation": "RN",
       "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
       "hp": 410,
       "armor": 38,
       "speed": 180,
@@ -96,6 +144,7 @@
       "name": "サウサンプトン (Southampton)",
       "nation": "RN",
       "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
       "hp": 385,
       "armor": 36,
       "speed": 178,
@@ -105,6 +154,38 @@
       ],
       "spriteKey": "southampton",
       "description": "タウン級軽巡洋艦1番艦。1941年1月、地中海でドイツ空軍の急降下爆撃を受けて沈没した。"
+    },
+    {
+      "id": "dorsetshire",
+      "name": "ドーセットシャー (Dorsetshire)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dorsetshire",
+      "description": "カウンティ級重巡洋艦。1941年5月、魚雷でビスマルクにとどめを刺した。1942年4月、インド洋で日本の空母機に撃沈された。"
+    },
+    {
+      "id": "dido",
+      "name": "ダイドー (Dido)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 182,
+      "weapons": [
+        "5_25in_mk1",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dido",
+      "description": "ダイドー級軽巡洋艦1番艦。両用砲を主砲とした防空巡洋艦で、地中海の船団護衛で活躍した。"
     },
     {
       "id": "cossack",
@@ -137,6 +218,22 @@
       ],
       "spriteKey": "javelin",
       "description": "J級駆逐艦。大戦を通じて地中海などで行動し、終戦まで生き残った。"
+    },
+    {
+      "id": "black_swan",
+      "name": "ブラック・スワン (Black Swan)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 205,
+      "armor": 11,
+      "speed": 180,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "black_swan",
+      "description": "ブラック・スワン級スループ1番艦。対空・対潜に優れた護衛艦で、同級はウォーカー大佐の部隊でUボート狩りに活躍した。"
     },
     {
       "id": "illustrious",
@@ -175,6 +272,46 @@
         "torpedoBombers": 5
       },
       "description": "航空母艦。搭載するソードフィッシュの雷撃でビスマルクの舵を損傷させた。1941年11月、U-81の雷撃で沈没。"
+    },
+    {
+      "id": "hermes",
+      "name": "ハーミーズ (Hermes)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 460,
+      "armor": 22,
+      "speed": 145,
+      "weapons": [
+        "5_5in_mk1"
+      ],
+      "spriteKey": "hermes",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "description": "世界で初めて空母として設計・起工された艦。1942年4月、セイロン沖で日本の空母機の攻撃を受けて沈没した。"
+    },
+    {
+      "id": "avenger",
+      "name": "アヴェンジャー (Avenger)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "4in_mk16"
+      ],
+      "spriteKey": "avenger",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "description": "米国製の商船を改造した護衛空母。1942年9月にPQ18船団を護衛したが、同年11月にUボートの雷撃で沈没した。"
     },
     {
       "id": "truant",

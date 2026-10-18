@@ -1,35 +1,32 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
+import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { canResearch, prerequisitesMet, research, techTier } from '@/systems/ResearchSystem';
-import { canAfford, formatResources } from '@/systems/ResourceSystem';
+import { research, TECH_TREE } from '@/systems/ResearchSystem';
 import { ITechNode } from '@/types/Progression';
-import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { displayStyle, eyebrowStyle } from '@/ui/theme';
+import { addBackdrop, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
-import techTree from '@/data/tech-tree.json';
-
-const TREE = techTree.tech as ITechNode[];
+import { ResearchView } from '@/ui/components/ResearchView';
+import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 
 const L = IS_PORTRAIT
-  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, cols: 2, top: 290, cardW: (CANVAS_W - 32 - 12) / 2, cardH: 150, gapX: 12, gapY: 12, left: 16 }
-  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, cols: 3, top: 170, cardW: (CANVAS_W - 48 - 24) / 3, cardH: 108, gapX: 12, gapY: 10, left: 24 };
+  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, view: { x: 16, y: 282, w: CANVAS_W - 32, h: CANVAS_H - 282 - 24 } }
+  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, view: { x: 24, y: 160, w: CANVAS_W - 48, h: CANVAS_H - 160 - 20 } };
 
 /**
- * 工廠: research projects grouped by tier (prerequisite depth). Tap an available project to pay for it;
- * finished research strengthens every ship and unlocks refit upgrades.
+ * 工廠: the research tree by branch (砲術 … 建造, levels I–V). Tap an available project to pay for it;
+ * finished research strengthens every ship, unlocks refit upgrades and ship construction.
  */
 export class ArsenalScene extends Phaser.Scene {
   private bar!: ResourceBar;
-  private cards: Array<{ node: ITechNode; frame: Phaser.GameObjects.Graphics; state: Phaser.GameObjects.Text; w: number; h: number }> = [];
+  private view!: ResearchView;
 
   constructor() {
     super({ key: SceneKeys.ARSENAL });
   }
 
   create(): void {
-    this.cards = [];
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
@@ -38,31 +35,18 @@ export class ArsenalScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'ARSENAL', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '工廠 — 技術研究', displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, IS_PORTRAIT ? 2 : 4);
-
-    // Order by tier so prerequisites come first.
-    const ordered = [...TREE].sort((a, b) => techTier(TREE, a.id) - techTier(TREE, b.id));
-    ordered.forEach((node, i) => {
-      const col = i % L.cols;
-      const row = Math.floor(i / L.cols);
-      const x = L.left + col * (L.cardW + L.gapX);
-      const y = L.top + row * (L.cardH + L.gapY);
-      const frame = this.add.graphics();
-      const tier = techTier(TREE, node.id);
-      const parts: Phaser.GameObjects.GameObject[] = [
-        frame,
-        this.add.text(16, 12, `TIER ${tier + 1}`, eyebrowStyle(9, Css.muted)),
-        this.add.text(16, IS_PORTRAIT ? 36 : 30, node.name, textStyle(15, Css.text, { fontStyle: 'bold' })),
-        this.add.text(16, IS_PORTRAIT ? 70 : 56, node.description, textStyle(11, Css.muted, { wordWrap: { width: L.cardW - 32, useAdvancedWrap: true } })),
-        this.add.text(16, L.cardH - (IS_PORTRAIT ? 30 : 22), formatResources(node.cost), textStyle(11, Css.dim)),
-      ];
-      const state = this.add.text(L.cardW - 16, 12, '', eyebrowStyle(10, Css.cyan)).setOrigin(1, 0);
-      parts.push(state);
-      const card = this.add.container(x, y, parts);
-      makeClickable(card, L.cardW, L.cardH);
-      card.on('pointerup', () => this.research(node));
-      this.cards.push({ node, frame, state, w: L.cardW, h: L.cardH });
-    });
-    this.refresh();
+    addArsenalTabs(this, 'research');
+    this.view = new ResearchView(
+      this,
+      L.view,
+      TECH_TREE,
+      () => {
+        const p = loadProgress();
+        return { done: p.research, resources: p.resources };
+      },
+      (node) => this.research(node),
+    );
+    this.bar.refresh(loadProgress().resources);
   }
 
   private research(node: ITechNode): void {
@@ -70,32 +54,7 @@ export class ArsenalScene extends Phaser.Scene {
     const result = research(node, progress.research, progress.resources);
     if (!result) return;
     saveProgress({ ...progress, research: result.done, resources: result.resources });
-    this.refresh();
-  }
-
-  private refresh(): void {
-    const progress = loadProgress();
-    this.bar.refresh(progress.resources);
-    for (const c of this.cards) {
-      const done = progress.research.includes(c.node.id);
-      const ready = canResearch(c.node, progress.research, progress.resources);
-      const label = done
-        ? '研究済'
-        : !prerequisitesMet(c.node, progress.research)
-          ? '前提未達'
-          : canAfford(progress.resources, c.node.cost)
-            ? '研究可 ›'
-            : '資源不足';
-      c.state.setText(label).setColor(done ? Css.gold : ready ? Css.cyan : Css.dim);
-      c.frame.clear();
-      drawPanel(c.frame, 0, 0, c.w, c.h, {
-        radius: 16,
-        fill: done ? Colors.panelHi : Colors.panel,
-        fillAlpha: done ? 0.9 : ready ? 0.7 : 0.4,
-        rim: done ? Colors.gold : Colors.cyan,
-        rimAlpha: done ? 0.7 : ready ? 0.6 : 0.15,
-        glow: ready ? 0.6 : 0,
-      });
-    }
+    this.bar.refresh(result.resources);
+    this.view.refresh();
   }
 }

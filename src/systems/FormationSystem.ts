@@ -64,6 +64,11 @@ export class FormationSystem {
     return out;
   }
 
+  /** Offset of escort `index` (0-based) in a fleet with at least `index + 1` escorts. */
+  static getOffset(formation: Formation, index: number): IFormationSlotOffset {
+    return FormationSystem.getOffsets(formation, index + 1)[index];
+  }
+
   /** Returns world-space position for a formation slot given raw values (testable without Phaser). */
   static getWorldPositionFromValues(
     fx: number,

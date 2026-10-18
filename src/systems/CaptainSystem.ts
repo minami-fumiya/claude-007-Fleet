@@ -52,8 +52,14 @@ export function awardXp(captain: ICaptain, gained: number): IXpAward {
   return { captain: next, gained, leveledUp: next.level > captain.level };
 }
 
+/** Battle conditions some specialities depend on. */
+export interface ICaptainContext {
+  /** Night battle: the 夜戦 speciality only pays off in the dark */
+  night?: boolean;
+}
+
 /** The captain's bonus as ship modifiers. */
-export function captainModifiers(captain: ICaptain | null | undefined): IShipModifiers {
+export function captainModifiers(captain: ICaptain | null | undefined, ctx: ICaptainContext = {}): IShipModifiers {
   if (!captain) return NO_MODIFIERS;
   const lv = captain.level;
   switch (captain.skill) {
@@ -63,6 +69,18 @@ export function captainModifiers(captain: ICaptain | null | undefined): IShipMod
       return { ...NO_MODIFIERS, torpedoPowerMul: 1 + 0.04 * lv };
     case CaptainSkill.Engineering:
       return { ...NO_MODIFIERS, speedMul: 1 + 0.02 * lv, hpMul: 1 + 0.01 * lv };
+    case CaptainSkill.Aviation:
+      return { ...NO_MODIFIERS, airPowerMul: 1 + 0.04 * lv, aaMul: 1 + 0.03 * lv };
+    case CaptainSkill.ASW:
+      return { ...NO_MODIFIERS, depthChargeMul: 1 + 0.05 * lv, visionMul: 1 + 0.01 * lv };
+    case CaptainSkill.Night:
+      return ctx.night
+        ? { ...NO_MODIFIERS, visionMul: 1 + 0.05 * lv, gunPowerMul: 1 + 0.02 * lv, torpedoPowerMul: 1 + 0.03 * lv }
+        : NO_MODIFIERS;
+    case CaptainSkill.Recon:
+      return { ...NO_MODIFIERS, visionMul: 1 + 0.04 * lv };
+    case CaptainSkill.Damecon:
+      return { ...NO_MODIFIERS, hpMul: 1 + 0.02 * lv, armorAdd: Math.floor(lv / 2) };
     default:
       return NO_MODIFIERS;
   }
@@ -72,4 +90,9 @@ export const SKILL_LABEL: Record<CaptainSkill, string> = {
   [CaptainSkill.Gunnery]: '砲術',
   [CaptainSkill.Torpedo]: '水雷',
   [CaptainSkill.Engineering]: '機関',
+  [CaptainSkill.Aviation]: '航空',
+  [CaptainSkill.ASW]: '対潜',
+  [CaptainSkill.Night]: '夜戦',
+  [CaptainSkill.Recon]: '索敵',
+  [CaptainSkill.Damecon]: '応急',
 };

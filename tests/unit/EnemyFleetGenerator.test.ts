@@ -9,8 +9,11 @@ import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
 import rn from '@/data/ships/rn.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
+import rm from '@/data/ships/rm.json';
 
-const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships] as IShipData[]);
+const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships, ...su.ships, ...rm.ships] as IShipData[]);
 const first = (): number => 0;
 const last = (): number => 0.999;
 
@@ -19,7 +22,7 @@ function ship(id: string, shipClass: ShipClass): IShipData {
 }
 
 describe('generateEnemyFleet', () => {
-  it.each([Nation.IJN, Nation.USN, Nation.KM, Nation.RN])('builds a battleship-led surface group for %s', (nation) => {
+  it.each(Object.values(Nation))('builds a battleship-led surface group for %s', (nation) => {
     const fleet = generateEnemyFleet(registry, nation, BattleMode.Surface, first);
     expect(fleet).toHaveLength(ENEMY_FLEET_SIZE);
     expect(fleet.map((s) => s.shipClass)).toEqual([ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer]);
@@ -89,9 +92,16 @@ describe('fleet size', () => {
   });
 });
 
+describe('nations without a historical carrier', () => {
+  it.each([Nation.SU, Nation.RM])('%s leads a carrier strike with a battleship instead', (nation) => {
+    const fleet = generateEnemyFleet(registry, nation, BattleMode.CarrierStrike, first);
+    expect(fleet[0].shipClass).toBe(ShipClass.Battleship);
+  });
+});
+
 describe('fictional ships', () => {
   it('never appear in generated enemy fleets', () => {
-    for (const nation of [Nation.IJN, Nation.USN, Nation.KM, Nation.RN]) {
+    for (const nation of Object.values(Nation)) {
       for (const mode of [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW]) {
         for (const rng of [first, last, () => 0.5]) {
           expect(generateEnemyFleet(registry, nation, mode, rng).some((s) => s.fictional), `${nation} ${mode}`).toBe(false);

@@ -4,7 +4,7 @@ import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { ISelection, SELECTION_KEY } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { applyToStats, applyToWeapons, combineModifiers, toggleUpgrade, upgradeModifiers, UPGRADE_SLOTS } from '@/systems/CustomizationSystem';
+import { applyToStats, applyToWeapons, combineModifiers, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IUpgradeData } from '@/types/Modifiers';
@@ -12,9 +12,9 @@ import { IWeaponData } from '@/types/Weapon';
 import { ITechNode } from '@/types/Progression';
 import { unlockedUpgrades } from '@/systems/ResearchSystem';
 import techTree from '@/data/tech-tree.json';
-import refitsData from '@/data/refits.json';
-import { canRefit, nextStage, refit, refitModifiers, refitName, RefitTable } from '@/systems/RefitSystem';
+import { canRefit, currentStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { formatResources } from '@/systems/ResourceSystem';
+import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
@@ -22,7 +22,7 @@ interface IRect { x: number; y: number; w: number; h: number }
 
 /** Landscape: tabs on top, stats on the left, upgrade cards in a 2-column grid. Portrait: stacked. */
 /** Space at the bottom of the status panel for the remodel line and button. */
-const REFIT_H = IS_PORTRAIT ? 120 : 104;
+const REFIT_H = IS_PORTRAIT ? 140 : 124;
 
 const L = IS_PORTRAIT
   ? {
@@ -39,14 +39,14 @@ const L = IS_PORTRAIT
     };
 
 /**
- * 改装: fit up to UPGRADE_SLOTS upgrades to each ship of the current fleet. Fitted upgrades are
- * saved with the player's progress and applied at battle start.
+ * 改装: fit upgrades to each ship of the current fleet (2 slots, 3 after 改, 4 after 改二) and remodel it.
+ * Fitted upgrades are saved with the player's progress and applied at battle start.
  */
 export class CustomizationScene extends Phaser.Scene {
   private ships: IShipData[] = [];
   private refitText!: Phaser.GameObjects.Text;
   private refitBtn!: UIButton;
-  private readonly refitTable = refitsData.classes as RefitTable;
+  private readonly refitTable = REFIT_TABLE;
   private readonly tech = techTree.tech as ITechNode[];
   private selected = 0;
   private catalog: IUpgradeData[] = [];
@@ -56,6 +56,8 @@ export class CustomizationScene extends Phaser.Scene {
   private statsText: Phaser.GameObjects.Text[] = [];
   private slotText!: Phaser.GameObjects.Text;
   private shipName!: Phaser.GameObjects.Text;
+  private specialText!: Phaser.GameObjects.Text;
+  private extrasText!: Phaser.GameObjects.Text;
 
   /** Scene the back button returns to (the Fleet Builder or the home port) */
   private returnTo: string = SceneKeys.FLEET_BUILDER;
@@ -72,8 +74,10 @@ export class CustomizationScene extends Phaser.Scene {
   create(): void {
     const selection = this.registry.get(SELECTION_KEY) as ISelection | undefined;
     const registry = DataLoader.getRegistry(this);
+    // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.
+    const owned = ownedShips(loadProgress(), registry.byNation(loadProgress().nation));
     this.ships = (selection?.slotIds ?? [])
-      .map((id) => (id ? registry.byId(id) : undefined))
+      .map((id) => owned.find((s) => s.id === id))
       .filter((s): s is IShipData => s !== undefined);
     this.catalog = DataLoader.getUpgrades(this);
     this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));
@@ -126,12 +130,19 @@ export class CustomizationScene extends Phaser.Scene {
     this.add.text(p.x + 22, p.y + 18, 'SHIP STATUS', eyebrowStyle(11));
     this.shipName = this.add.text(p.x + 22, p.y + (IS_PORTRAIT ? 46 : 36), '', textStyle(17, Css.text, { fontStyle: 'bold' }));
     this.slotText = this.add.text(p.x + p.w - 22, p.y + 18, '', eyebrowStyle(11, Css.gold)).setOrigin(1, 0);
-    const rows = 6;
-    const top = p.y + (IS_PORTRAIT ? 96 : 84);
-    const rowH = (p.h - (top - p.y) - REFIT_H) / rows;
-    for (let i = 0; i < rows; i++) {
-      this.statsText.push(this.add.text(p.x + 22, top + i * rowH, '', textStyle(14, Css.muted)));
+    this.specialText = this.add.text(p.x + 22, this.shipName.y + this.shipName.height + 2, '', textStyle(11, Css.gold));
+    // Six stat lines (two columns in portrait), then the other bonuses (vision, AA, aviation, ASW, night), wrapped.
+    const cols = IS_PORTRAIT ? 2 : 1;
+    const statRows = Math.ceil(6 / cols);
+    const top = p.y + (IS_PORTRAIT ? 104 : 92);
+    const extrasH = IS_PORTRAIT ? 66 : 48;
+    const rowH = (p.h - (top - p.y) - REFIT_H - extrasH) / statRows;
+    const colW = (p.w - 44) / cols;
+    for (let i = 0; i < 6; i++) {
+      const x = p.x + 22 + (i % cols) * colW;
+      this.statsText.push(this.add.text(x, top + Math.floor(i / cols) * rowH, '', textStyle(14, Css.muted)));
     }
+    this.extrasText = this.add.text(p.x + 22, top + statRows * rowH, '', textStyle(11, Css.cyan, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
     const ry = p.y + p.h - REFIT_H + 8;
     this.add.text(p.x + 22, ry, 'REMODEL · 改造', eyebrowStyle(10, Css.gold));
     this.refitText = this.add.text(p.x + 22, ry + (IS_PORTRAIT ? 26 : 20), '', textStyle(12, Css.muted, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
@@ -166,11 +177,16 @@ export class CustomizationScene extends Phaser.Scene {
     return loadProgress().upgrades[this.ships[this.selected].id] ?? [];
   }
 
+  /** Upgrade slots of the selected ship (they grow with its remodel stage). */
+  private slots(): number {
+    return upgradeSlots(loadProgress().refits[this.ships[this.selected].id] ?? 0);
+  }
+
   private toggle(upgradeId: string): void {
     if (!this.unlocked.has(upgradeId)) return;
     const ship = this.ships[this.selected];
     const progress = loadProgress();
-    const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId);
+    const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId, this.slots());
     saveProgress({ ...progress, upgrades: { ...progress.upgrades, [ship.id]: next } });
     this.refresh();
   }
@@ -179,7 +195,7 @@ export class CustomizationScene extends Phaser.Scene {
     const ship = this.ships[this.selected];
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
-    const r = refit(this.refitTable, ship.shipClass, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
+    const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
     if (!r) return;
     saveProgress({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } });
     this.refresh();
@@ -188,10 +204,11 @@ export class CustomizationScene extends Phaser.Scene {
   private refresh(): void {
     this.tabs.forEach((t, i) => t.setVariant(i === this.selected ? 'primary' : 'secondary'));
     const fitted = this.fitted();
+    const slots = this.slots();
     this.catalog.forEach((u, i) => {
       const r = this.cardRect(i);
       const on = fitted.includes(u.id);
-      const full = !on && fitted.length >= UPGRADE_SLOTS;
+      const full = !on && fitted.length >= slots;
       this.cardFrames[i].clear();
       drawPanel(this.cardFrames[i], 0, 0, r.w, r.h, {
         radius: 16,
@@ -207,14 +224,16 @@ export class CustomizationScene extends Phaser.Scene {
         .setColor(on ? Css.gold : locked ? Css.dim : Css.cyan)
         .setFontSize(locked ? 12 : 18);
     });
-    this.refreshStats(fitted);
+    this.refreshStats(fitted, slots);
   }
 
-  private refreshStats(fitted: string[]): void {
+  private loadout(weaponIds: string[]): IWeaponData[] {
+    return weaponIds.map((id) => DataLoader.getWeaponById(this, id)).filter((w): w is IWeaponData => w !== undefined);
+  }
+
+  private refreshStats(fitted: string[], slots: number): void {
     const ship = this.ships[this.selected];
-    const loadout = ship.weapons
-      .map((id) => DataLoader.getWeaponById(this, id))
-      .filter((w): w is IWeaponData => w !== undefined);
+    const loadout = this.loadout(ship.weapons);
     const base: IShipStats = {
       name: ship.name,
       maxHp: ship.hp,
@@ -226,9 +245,10 @@ export class CustomizationScene extends Phaser.Scene {
     };
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
-    const mods = combineModifiers(upgradeModifiers(fitted, this.catalog), refitModifiers(this.refitTable, ship.shipClass, stage));
+    const mods = combineModifiers(upgradeModifiers(fitted, this.catalog, slots), refitModifiers(this.refitTable, ship, stage));
     const after = applyToStats(base, mods);
-    const weaponsAfter = applyToWeapons(loadout, mods);
+    // Special refits may swap weapons (e.g. secondaries replaced by AA guns).
+    const weaponsAfter = applyToWeapons(this.loadout(refitShipData(this.refitTable, ship, stage).weapons), mods);
     const gunBefore = primaryWeapon(loadout.filter((w) => weaponKind(w) === WeaponKind.Gun));
     const gunAfter = primaryWeapon(weaponsAfter.filter((w) => weaponKind(w) === WeaponKind.Gun));
     const torpBefore = loadout.find((w) => weaponKind(w) === WeaponKind.Torpedo);
@@ -250,21 +270,27 @@ export class CustomizationScene extends Phaser.Scene {
       line('砲装填 (ms)', gunBefore?.reloadTime, gunAfter?.reloadTime, true),
       line('魚雷火力', torpBefore?.firePower, torpAfter?.firePower),
     ];
-    const extras: string[] = [];
-    if (mods.visionMul !== 1) extras.push(`視界 ×${mods.visionMul.toFixed(2)}`);
-    if (mods.aaMul !== 1) extras.push(`対空 ×${mods.aaMul.toFixed(2)}`);
-    if (extras.length > 0) lines[5] = `${lines[5]}     ${extras.join('  ')}`;
+    const extras = describeModifiers({ visionMul: mods.visionMul, aaMul: mods.aaMul, airPowerMul: mods.airPowerMul, planesAdd: mods.planesAdd, rearmMul: mods.rearmMul, sonarMul: mods.sonarMul, depthChargeMul: mods.depthChargeMul, nightAimMul: mods.nightAimMul, nightVisionMul: mods.nightVisionMul });
+    const afterIds = refitShipData(this.refitTable, ship, stage).weapons;
+    const removed = loadout.filter((w) => !afterIds.includes(w.id)).map((w) => w.name);
+    const added = this.loadout(afterIds.filter((id) => !ship.weapons.includes(id))).map((w) => w.name);
+    if (removed.length > 0 || added.length > 0) extras.push(`兵装 ${removed.join('・') || '—'} → ${added.join('・') || '撤去'}`);
+    this.extrasText.setText(extras.join('  '));
     this.statsText.forEach((t, i) => t.setText(lines[i] ?? '').setColor(lines[i]?.includes('→') ? Css.text : Css.muted));
-    this.shipName.setText(refitName(this.refitTable, ship.name, ship.shipClass, stage));
-    const next = nextStage(this.refitTable, ship.shipClass, stage);
+    this.shipName.setText(refitName(this.refitTable, ship.name, ship, stage));
+    const reached = currentStage(this.refitTable, ship, stage);
+    this.specialText.setText(reached?.special && reached.label ? `特別改装: ${reached.label}` : '');
+    const next = nextStage(this.refitTable, ship, stage);
     const prof = progress.proficiency[ship.id] ?? 0;
     if (!next) {
       this.refitText.setText('改造完了 (最終段階)');
       this.refitBtn.setLabel('改造完了').setEnabled(false);
     } else {
-      this.refitText.setText(`次: ${next.suffix}  ·  熟練 ${prof} / ${next.minProficiency}  ·  ${formatResources(next.cost)}`);
-      this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(canRefit(this.refitTable, ship.shipClass, stage, prof, progress.resources));
+      const special = next.special && next.label ? `【特別改装】${next.label}\n` : '';
+      const slotsNext = upgradeSlots(stage + 1) > slots ? `  ·  装備枠 ${upgradeSlots(stage + 1)}` : '';
+      this.refitText.setText(`${special}次: ${next.suffix}  ·  熟練 ${prof} / ${next.minProficiency}${slotsNext}  ·  ${formatResources(next.cost)}`);
+      this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(canRefit(this.refitTable, ship, stage, prof, progress.resources));
     }
-    this.slotText.setText(`装備 ${fitted.length} / ${UPGRADE_SLOTS}`);
+    this.slotText.setText(`装備 ${fitted.length} / ${slots}`);
   }
 }

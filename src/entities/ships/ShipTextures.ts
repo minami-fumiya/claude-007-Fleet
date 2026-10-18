@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
+import { Nation } from '@/types/Nation';
 
 /**
  * Procedural top-down ship sprites, one per ship in the data files. Bow points up (angle 0 = north),
  * matching how BattleScene moves ships. Colours are light so `setTint()` (enemy red) reads clearly.
  */
 
-type Draw = (g: Phaser.GameObjects.Graphics, w: number, h: number, shade: number) => void;
+type Draw = (g: Phaser.GameObjects.Graphics, w: number, h: number, shade: number, nation: Nation) => void;
 
 const OUTLINE = 0x5d6b80;
 const DECK = 0xa9b6c8;
@@ -15,10 +16,25 @@ const TURRET = 0x66738a;
 const STRUCTURE = 0x8692a8;
 const FUNNEL = 0x4a5568;
 
-function hullColor(shade: number): number {
+/**
+ * Hull paint per navy, light enough that the enemy red tint still reads: [base, darker sister-ship shade].
+ * IJN grey, USN haze blue, KM pale grey, RN light grey, FR warm grey, SU green-grey, RM pale sand.
+ */
+const NATION_HULL: Record<Nation, [number, number]> = {
+  [Nation.IJN]: [0xc5d0df, 0xa9b6c8],
+  [Nation.USN]: [0xbccde6, 0x9fb3d0],
+  [Nation.KM]: [0xd3d8de, 0xb4bcc6],
+  [Nation.RN]: [0xcbd3da, 0xaab4be],
+  [Nation.FR]: [0xd6d1c8, 0xb8b1a5],
+  [Nation.SU]: [0xc3d1c6, 0xa4b5a8],
+  [Nation.RM]: [0xdcd5c4, 0xbfb6a0],
+};
+
+function hullColor(shade: number, nation: Nation = Nation.IJN): number {
   // shade in [0, 1): small per-ship variation so sister ships are distinguishable
-  const base = Phaser.Display.Color.ValueToColor(0xc5d0df);
-  const dark = Phaser.Display.Color.ValueToColor(0xa9b6c8);
+  const [b, d] = NATION_HULL[nation] ?? NATION_HULL[Nation.IJN];
+  const base = Phaser.Display.Color.ValueToColor(b);
+  const dark = Phaser.Display.Color.ValueToColor(d);
   const mixed = Phaser.Display.Color.Interpolate.ColorWithColor(base, dark, 100, Math.round(shade * 100));
   return Phaser.Display.Color.GetColor(mixed.r, mixed.g, mixed.b);
 }
@@ -53,8 +69,8 @@ function turret(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number,
   g.fillCircle(x - r * 0.3, y - r * 0.3, r * 0.4);
 }
 
-const drawBattleship: Draw = (g, w, h, shade) => {
-  hull(g, w, h, hullColor(shade));
+const drawBattleship: Draw = (g, w, h, shade, nation) => {
+  hull(g, w, h, hullColor(shade, nation));
   g.fillStyle(DECK, 1);
   g.fillRect(w / 2 - 2, h * 0.12, 4, h * 0.8);
   turret(g, w / 2, h * 0.25, 4.5, 3, -1);
@@ -72,8 +88,8 @@ const drawBattleship: Draw = (g, w, h, shade) => {
   }
 };
 
-const drawCruiser: Draw = (g, w, h, shade) => {
-  hull(g, w, h, hullColor(shade), 0.95);
+const drawCruiser: Draw = (g, w, h, shade, nation) => {
+  hull(g, w, h, hullColor(shade, nation), 0.95);
   turret(g, w / 2, h * 0.22, 3.2, 2, -1);
   turret(g, w / 2, h * 0.32, 3.2, 2, -1);
   turret(g, w / 2, h * 0.74, 3.2, 2, 1);
@@ -84,8 +100,8 @@ const drawCruiser: Draw = (g, w, h, shade) => {
   g.fillEllipse(w / 2, h * 0.6, 5, 8);
 };
 
-const drawDestroyer: Draw = (g, w, h, shade) => {
-  hull(g, w, h, hullColor(shade), 0.9);
+const drawDestroyer: Draw = (g, w, h, shade, nation) => {
+  hull(g, w, h, hullColor(shade, nation), 0.9);
   turret(g, w / 2, h * 0.22, 2.6, 1, -1);
   turret(g, w / 2, h * 0.82, 2.6, 1, 1);
   g.fillStyle(STRUCTURE, 1);
@@ -98,8 +114,8 @@ const drawDestroyer: Draw = (g, w, h, shade) => {
   g.lineBetween(w / 2 - 2.5, h * 0.66, w / 2 + 2.5, h * 0.72);
 };
 
-const drawCarrier: Draw = (g, w, h, shade) => {
-  hull(g, w, h, hullColor(shade), 0.75);
+const drawCarrier: Draw = (g, w, h, shade, nation) => {
+  hull(g, w, h, hullColor(shade, nation), 0.75);
   // Flight deck overhangs the hull
   const deck = [
     [w / 2, 2],
@@ -125,9 +141,9 @@ const drawCarrier: Draw = (g, w, h, shade) => {
   g.fillRect(w - 6, h * 0.5, 3, 4);
 };
 
-const drawSubmarine: Draw = (g, w, h, shade) => {
+const drawSubmarine: Draw = (g, w, h, shade, nation) => {
   // Cigar-shaped pressure hull with a rounded stern
-  g.fillStyle(hullColor(shade), 1);
+  g.fillStyle(hullColor(shade, nation), 1);
   g.fillEllipse(w / 2, h / 2, w - 1, h - 2);
   g.lineStyle(1, OUTLINE, 1);
   g.strokeEllipse(w / 2, h / 2, w - 1, h - 2);
@@ -151,17 +167,29 @@ const CLASS_SPRITES: Record<ShipClass, { w: number; h: number; draw: Draw }> = {
   [ShipClass.Submarine]: { w: 10, h: 40, draw: drawSubmarine },
 };
 
+/** Smaller hulls for the light subtypes (light / escort carriers, escorts); others keep the class size. */
+const SUBTYPE_SCALE: Partial<Record<ShipSubtype, number>> = {
+  [ShipSubtype.LightCarrier]: 0.88,
+  [ShipSubtype.EscortCarrier]: 0.8,
+  [ShipSubtype.Escort]: 0.86,
+};
+
 export function generateShipTextures(scene: Phaser.Scene, ships: IShipData[]): void {
-  const perClassIndex = new Map<ShipClass, number>();
+  const perClassIndex = new Map<string, number>();
   for (const ship of ships) {
     const spec = CLASS_SPRITES[ship.shipClass] ?? CLASS_SPRITES[ShipClass.Cruiser];
-    const index = perClassIndex.get(ship.shipClass) ?? 0;
-    perClassIndex.set(ship.shipClass, index + 1);
+    // Sister-ship shading counts per nation and class, so every navy starts from its base colour.
+    const key = `${ship.nation}:${ship.shipClass}`;
+    const index = perClassIndex.get(key) ?? 0;
+    perClassIndex.set(key, index + 1);
 
     if (scene.textures.exists(ship.spriteKey)) scene.textures.remove(ship.spriteKey);
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
-    spec.draw(g, spec.w, spec.h, Math.min(0.9, index * 0.45));
-    g.generateTexture(ship.spriteKey, spec.w, spec.h);
+    const k = (ship.subtype && SUBTYPE_SCALE[ship.subtype]) || 1;
+    const w = Math.round(spec.w * k);
+    const h = Math.round(spec.h * k);
+    spec.draw(g, w, h, Math.min(0.9, (index % 3) * 0.45), ship.nation);
+    g.generateTexture(ship.spriteKey, w, h);
     g.destroy();
   }
 }

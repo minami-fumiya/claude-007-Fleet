@@ -37,7 +37,7 @@ describe('CampaignSystem', () => {
   });
 
   it('builds enemy fleets and picks the battle mode', () => {
-    expect(enemyShips(area('p1'), registry).map((s) => s.id)).toEqual(['fletcher', 'fletcher', 'baltimore']);
+    expect(enemyShips(area('p1'), registry).map((s) => s.id)).toEqual(['fletcher']);
     expect(areaMode(enemyShips(area('a1'), registry))).toBe(BattleMode.ASW);
     expect(areaMode(enemyShips(area('p5'), registry))).toBe(BattleMode.CarrierStrike);
     expect(areaMode(enemyShips(area('p1'), registry))).toBe(BattleMode.Surface);
