@@ -37,6 +37,11 @@ export function shipView(ship: BaseShip, detected: boolean): IShipView {
 
 /** Carriers fight with their aircraft, so they hold position as if their reach were this long. */
 const CARRIER_STANDOFF_RANGE = 1000;
+/**
+ * Carriers keep this far from their target whatever the nation's tactics (the player's AUTO uses the
+ * same): an IJN profile used to bring them to half range, inside the enemy cruisers' guns (#23).
+ */
+export const CARRIER_STANDOFF = 850;
 
 export function aiSelf(ship: BaseShip): IAISelf {
   const gunRange = maxSurfaceRange(ship.loadout);
@@ -136,7 +141,8 @@ export class AISystem {
       fireAt(this.weapons, ship, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
       return;
     }
-    const steer = engageSteer(ship, target, decision.preferredRange, this.bounds, EDGE_MARGIN);
+    const range = ship.stats.shipClass === ShipClass.Carrier ? Math.max(decision.preferredRange, CARRIER_STANDOFF) : decision.preferredRange;
+    const steer = engageSteer(ship, target, range, this.bounds, EDGE_MARGIN);
     // Hunting a submerged boat: always drive straight over it.
     if (decision.mode === AIMode.Hunt) steer.throttle = 1;
     ship.steer(steer, dtSec, turnRate);

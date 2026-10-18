@@ -8,10 +8,10 @@
   "time": "Day",
   "forces": {
     "A": { "nation": "IJN", "ships": ["akagi", "kaga", "tone"], "positions": [{ "x": 0.5, "y": 0.14, "angle": 180 }, { "x": 0.38, "y": 0.1, "angle": 180 }, { "x": 0.6, "y": 0.2, "angle": 180 }] },
-    "B": { "nation": "USN", "ships": ["enterprise", "essex", "fletcher"], "positions": [{ "x": 0.5, "y": 0.86, "angle": 0 }, { "x": 0.62, "y": 0.9, "angle": 0 }, { "x": 0.42, "y": 0.8, "angle": 0 }] }
+    "B": { "nation": "USN", "ships": ["enterprise", "yorktown", "independence", "atlanta"], "positions": [{ "x": 0.5, "y": 0.86, "angle": 0 }, { "x": 0.62, "y": 0.9, "angle": 0 }, { "x": 0.38, "y": 0.9, "angle": 0 }, { "x": 0.5, "y": 0.79, "angle": 0 }] }
   },
   "sides": [
     { "force": "B", "label": "米海軍で戦う", "objective": "SinkTargets", "targets": ["akagi", "kaga"], "timeLimitSec": 360, "brief": "制限時間内に空母 赤城・加賀を撃沈せよ。" },
-    { "force": "A", "label": "帝国海軍で戦う", "objective": "SinkTargets", "targets": ["enterprise", "essex"], "timeLimitSec": 360, "brief": "史実を覆し、米空母2隻を先に撃沈せよ。" }
+    { "force": "A", "label": "帝国海軍で戦う", "objective": "SinkTargets", "targets": ["enterprise", "yorktown"], "timeLimitSec": 360, "brief": "史実を覆し、米空母2隻を先に撃沈せよ。" }
   ]
 }

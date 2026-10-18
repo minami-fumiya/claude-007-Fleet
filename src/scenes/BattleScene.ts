@@ -6,7 +6,7 @@ import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
 import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
-import { AISystem, aiSelf, AUTO_AIM_ERROR, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
+import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, TACTICS } from '@/systems/AIBrain';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
@@ -83,7 +83,6 @@ const WAYPOINT_ARRIVE_RADIUS = 24;
 /** AUTO mode holds the target at this fraction of the main gun's range. */
 const AUTO_RANGE_FRACTION = 0.75;
 const AUTO_EDGE_MARGIN = 70;
-const AUTO_CARRIER_STANDOFF = 850;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
 /** Torpedo / dive buttons sit above the bottom-right corner. */
 const ACTION_BUTTON = IS_PORTRAIT ? { w: 172, h: 64, gap: 14, bottom: 120 } : { w: 150, h: 46, gap: 10, bottom: 90 };
@@ -103,6 +102,10 @@ const SONAR_PING_MS = 2200;
 
 /** Convoy route: merchant ships enter on the west edge (CONVOY_START_X) and escape off the east edge. */
 const CONVOY_EXIT_MARGIN = 90;
+/** AUTO strikes in a sink-the-targets scenario hold for the targets unless a foe comes this close to the carrier. */
+const STRIKE_HOLD_THREAT = 700;
+/** Player escorts and air strikes prefer the scenario's target ships by this much. */
+const OBJECTIVE_PRIORITY = 0.5;
 /** Enemy AI prefers convoy ships over warships by this much. */
 const CONVOY_PRIORITY = 0.6;
 
@@ -148,6 +151,7 @@ export class BattleScene extends Phaser.Scene {
   private conditions: IBattleConditions = battleConditions(Weather.Clear, TimeOfDay.Day);
   private airText: Phaser.GameObjects.Text | null = null;
   private strikeBtn: UIButton | null = null;
+  private strikeReady = false;
   private enemyNation: Nation = Nation.USN;
 
   private aiSystems: AISystem[] = [];
@@ -238,6 +242,7 @@ export class BattleScene extends Phaser.Scene {
     this.diveText = null;
     this.airText = null;
     this.strikeBtn = null;
+    this.strikeReady = false;
     this.wantDive = false;
 
     addOceanWorld(this, WORLD.w, WORLD.h);
@@ -345,7 +350,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemyRecon.update(time, delta, aaGuns(this.playerSide()));
     this.updateDetection();
     const playerView = this.playerSide().map((s) => ({ ...shipView(s, this.seenByEnemy.has(s)), priority: s.isConvoy ? CONVOY_PRIORITY : 0 }));
-    const enemyView = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
+    const enemyView = this.enemies.map((s) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : 0 }));
 
     if (!this.isTouch) {
       // Re-project the cursor every frame: the camera moves even when the mouse doesn't.
@@ -827,9 +832,17 @@ export class BattleScene extends Phaser.Scene {
       { foes: enemyView, foeSquadrons: this.enemyAir.squadrons, foeGuns: aaGuns(this.enemies) },
       playerAuto,
       (carrier, foes) => {
+        // Only a target the player locked overrides the choice (AUTO's nearest ship is often just an escort).
         if (carrier === this.flagship) {
-          const locked = foes.find((f) => f.ship === this.currentTarget());
+          const locked = foes.find((f) => f.ship === this.lockedTarget);
           if (locked) return locked;
+        }
+        // With target ships to sink, strikes wait for them unless something gets close to the carrier.
+        if (this.scenarioTargets.length > 0) {
+          const wanted = foes.filter((f) => this.scenarioTargets.includes(f.ship));
+          const threats = foes.filter((f) => Phaser.Math.Distance.Between(carrier.x, carrier.y, f.x, f.y) <= STRIKE_HOLD_THREAT);
+          if (wanted.length === 0 && threats.length === 0) return null;
+          return pick(this.playerNation)(carrier, wanted.length > 0 ? wanted : threats);
         }
         return pick(this.playerNation)(carrier, foes);
       },
@@ -860,7 +873,15 @@ export class BattleScene extends Phaser.Scene {
     const rearming = wing.rearming.reduce((n, x) => n + x.count, 0);
     const extra = rearming > 0 ? `  ·  再装備 ${rearming}` : '';
     this.airText.setText(`戦 ${r[AircraftType.Fighter]}  爆 ${r[AircraftType.DiveBomber]}  攻 ${r[AircraftType.TorpedoBomber]}${extra}`);
-    this.strikeBtn.setEnabled(r[AircraftType.DiveBomber] + r[AircraftType.TorpedoBomber] > 0);
+    const bombers = r[AircraftType.DiveBomber] + r[AircraftType.TorpedoBomber];
+    this.strikeBtn.setEnabled(bombers > 0);
+    // Light the button up when a strike can actually go: bombers ready and an enemy in strike range.
+    const view = this.enemies.map((s) => shipView(s, this.seenByPlayer.has(s)));
+    const canStrike = bombers > 0 && !this.playerAir.strikeAloft(this.flagship) && this.playerAir.strikeTargets(this.flagship, view).length > 0;
+    if (canStrike !== this.strikeReady) {
+      this.strikeReady = canStrike;
+      this.strikeBtn.setVariant(canStrike ? 'gold' : 'secondary');
+    }
   }
 
   /** A depth charge went off: area damage to every ship of the target side in the blast. */
@@ -1100,7 +1121,7 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.autoMode && target) {
       // A carrier fights with its aircraft and keeps well clear of the enemy's guns.
-      const range = this.playerAir.hasCarrier(this.flagship) ? AUTO_CARRIER_STANDOFF : this.playerWeapon.range * AUTO_RANGE_FRACTION;
+      const range = this.playerAir.hasCarrier(this.flagship) ? CARRIER_STANDOFF : this.playerWeapon.range * AUTO_RANGE_FRACTION;
       this.flagship.steer(engageSteer(this.flagship, target, range, WORLD_BOUNDS, AUTO_EDGE_MARGIN), dtSec, SHIP_ROTATE_SPEED);
       return;
     }
