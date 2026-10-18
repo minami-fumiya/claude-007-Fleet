@@ -7,6 +7,8 @@
  * ProgressStore.migrateV1 and then run through the same steps.
  */
 
+import { nationCaptains } from '@/systems/CaptainRoster';
+
 export type RawSave = Record<string, unknown>;
 /** Turns a raw save of version `n` into version `n + 1` (the version field is set by the runner). */
 export type MigrationStep = (data: RawSave) => RawSave;
@@ -58,15 +60,23 @@ export const MIGRATIONS: MigrationStep[] = [
     }),
     tutorial: { step: 0, done: true },
   }),
+  // v5 → v6 (#44 / #45): captains are owned per nation; learned skills and trait stats start empty. Every nation
+  // keeps all its captains (before this, all of them could be assigned).
+  (data) => mapNations(data, (nation, key) => ({
+    ...nation,
+    captains: nationCaptains(key).map((c) => c.id),
+    captainSkills: {},
+    captainStats: {},
+  })),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */
-function mapNations(data: RawSave, fn: (nation: RawSave) => RawSave): RawSave {
+function mapNations(data: RawSave, fn: (nation: RawSave, key: string) => RawSave): RawSave {
   const nations = data.nations;
   if (typeof nations !== 'object' || nations === null || Array.isArray(nations)) return data;
   const out: RawSave = {};
   for (const [key, value] of Object.entries(nations as RawSave)) {
-    out[key] = typeof value === 'object' && value !== null && !Array.isArray(value) ? fn(value as RawSave) : value;
+    out[key] = typeof value === 'object' && value !== null && !Array.isArray(value) ? fn(value as RawSave, key) : value;
   }
   return { ...data, nations: out };
 }
