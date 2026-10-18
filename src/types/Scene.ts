@@ -50,6 +50,8 @@ export interface IBattleResultData {
   medals?: string[];
   /** Merit line, e.g. "戦功 +115  ·  昇進: 少尉 → 中尉" (#36) */
   merit?: string;
+  /** Captains who joined, e.g. "新しい艦長: 坂井 悟 (砲術)" (#44) */
+  recruits?: string;
   /** Scene the "back" button returns to (default: the home port) */
   returnScene?: string;
   /** Battle setup RETRY replays directly (scenarios); absent = back to the Fleet Builder */

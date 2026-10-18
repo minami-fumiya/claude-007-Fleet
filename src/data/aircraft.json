@@ -1,0 +1,32 @@
+{
+  "aircraft": [
+    { "id": "ijn_fighter", "nation": "IJN", "type": "Fighter", "name": "零式艦上戦闘機", "description": "長い航続距離と軽快な運動性で開戦初期の空を制した艦上戦闘機。防弾は弱い。" },
+    { "id": "ijn_dive", "nation": "IJN", "type": "DiveBomber", "name": "九九式艦上爆撃機", "description": "急降下で爆弾を投下する艦上爆撃機。真珠湾・インド洋で戦果を挙げた。" },
+    { "id": "ijn_torpedo", "nation": "IJN", "type": "TorpedoBomber", "name": "九七式艦上攻撃機", "description": "魚雷と水平爆撃をこなす艦上攻撃機。低空で魚雷を放つ。" },
+    { "id": "ijn_recon", "nation": "IJN", "type": "Recon", "name": "零式水上偵察機", "description": "戦艦・巡洋艦が射出する水上偵察機。敵艦隊を見つけて触接する。" },
+    { "id": "usn_fighter", "nation": "USN", "type": "Fighter", "name": "F6F ヘルキャット", "description": "頑丈な機体と大馬力で零戦を圧倒した米海軍の主力艦上戦闘機。" },
+    { "id": "usn_dive", "nation": "USN", "type": "DiveBomber", "name": "SBD ドーントレス", "description": "ミッドウェーで日本の空母 4 隻を沈めた急降下爆撃機。" },
+    { "id": "usn_torpedo", "nation": "USN", "type": "TorpedoBomber", "name": "TBF アヴェンジャー", "description": "大型の機体に魚雷を積む艦上攻撃機。大和・武蔵の撃沈に加わった。" },
+    { "id": "usn_recon", "nation": "USN", "type": "Recon", "name": "OS2U キングフィッシャー", "description": "戦艦・巡洋艦に積まれた観測・偵察用の水上機。" },
+    { "id": "km_fighter", "nation": "KM", "type": "Fighter", "name": "Bf109T", "description": "空母グラーフ・ツェッペリン用に改造された Bf109 の艦上型。" },
+    { "id": "km_dive", "nation": "KM", "type": "DiveBomber", "name": "Ju87C", "description": "急降下爆撃機スツーカの艦上型。主翼を折りたためる。" },
+    { "id": "km_torpedo", "nation": "KM", "type": "TorpedoBomber", "name": "Fi167", "description": "空母搭載用に作られた複葉の雷撃・偵察機。" },
+    { "id": "km_recon", "nation": "KM", "type": "Recon", "name": "Ar196", "description": "ビスマルクなど大型艦に積まれた水上偵察機。" },
+    { "id": "rn_fighter", "nation": "RN", "type": "Fighter", "name": "シーファイア", "description": "スピットファイアの艦上型。速いが着艦は難しかった。" },
+    { "id": "rn_dive", "nation": "RN", "type": "DiveBomber", "name": "スクア", "description": "英海軍初の実用急降下爆撃機。ケーニヒスベルクを撃沈した。" },
+    { "id": "rn_torpedo", "nation": "RN", "type": "TorpedoBomber", "name": "ソードフィッシュ", "description": "旧式の複葉機ながら、タラント空襲やビスマルク追撃で活躍した雷撃機。" },
+    { "id": "rn_recon", "nation": "RN", "type": "Recon", "name": "ウォーラス", "description": "戦艦・巡洋艦から射出された水陸両用の偵察機。" },
+    { "id": "fr_fighter", "nation": "FR", "type": "Fighter", "name": "D.376", "description": "空母ベアルン向けに計画されたドヴォワチーヌの艦上戦闘機。" },
+    { "id": "fr_dive", "nation": "FR", "type": "DiveBomber", "name": "LN.401", "description": "フランス海軍の急降下爆撃機。1940 年の戦いで使われた。" },
+    { "id": "fr_torpedo", "nation": "FR", "type": "TorpedoBomber", "name": "Levasseur PL.7", "description": "ベアルンに積まれた複葉の雷撃機。" },
+    { "id": "fr_recon", "nation": "FR", "type": "Recon", "name": "Loire 130", "description": "フランス艦艇の標準的な水上偵察機。" },
+    { "id": "su_fighter", "nation": "SU", "type": "Fighter", "name": "I-16 艦上型 (計画)", "description": "71 号計画空母に積む予定だった艦上戦闘機 (架空)。" },
+    { "id": "su_dive", "nation": "SU", "type": "DiveBomber", "name": "Ar-2 艦上型 (計画)", "description": "急降下爆撃機の艦上化案 (架空)。" },
+    { "id": "su_torpedo", "nation": "SU", "type": "TorpedoBomber", "name": "Il-4T 艦上型 (計画)", "description": "雷撃機の艦上化案 (架空)。" },
+    { "id": "su_recon", "nation": "SU", "type": "Recon", "name": "KOR-1", "description": "ソ連の艦載水上偵察機。" },
+    { "id": "rm_fighter", "nation": "RM", "type": "Fighter", "name": "Re.2001 OR", "description": "空母アクィラ用に改造された艦上戦闘機。" },
+    { "id": "rm_dive", "nation": "RM", "type": "DiveBomber", "name": "Re.2001 G (急降下型)", "description": "アクィラ向けに検討された爆撃型 (架空)。" },
+    { "id": "rm_torpedo", "nation": "RM", "type": "TorpedoBomber", "name": "SM.79 艦上型 (計画)", "description": "名雷撃機 SM.79 の艦上化案 (架空)。" },
+    { "id": "rm_recon", "nation": "RM", "type": "Recon", "name": "Ro.43", "description": "イタリア艦艇に積まれた複葉の水上偵察機。" }
+  ]
+}

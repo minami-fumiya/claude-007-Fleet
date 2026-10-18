@@ -19,6 +19,8 @@ import ijnShips from '@/data/ships/ijn.json';
 import { FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
+import { ICaptainStats } from '@/systems/CaptainSystem';
+import { nationCaptains, starterCaptain } from '@/systems/CaptainRoster';
 import { addBackup, BACKUP_KEY, BackupReason, ISaveBackup, parseBackups, rawVersion } from './SaveBackup';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
@@ -54,6 +56,12 @@ export interface INationProgress {
   rankFloor: number;
   /** Repair docks built (#38): 1 at the start, up to DockSystem.MAX_DOCKS */
   docksOwned: number;
+  /** Captain ids this nation has (#44); only these can be assigned */
+  captains: string[];
+  /** Captain id → learned skills (#45), on top of the captain's own speciality */
+  captainSkills: Record<string, string[]>;
+  /** Captain id → what traits count (#45) */
+  captainStats: Record<string, ICaptainStats>;
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
 }
@@ -85,11 +93,11 @@ export interface IProgress extends INationProgress {
   record: IServiceRecord;
 }
 
-export function emptyNationProgress(ships: string[] = []): INationProgress {
+export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
-    merit: 0, rankFloor: 0, docksOwned: 1,
+    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {},
   };
 }
 
@@ -137,7 +145,8 @@ export function withProgress(save: ISave, progress: IProgress): ISave {
  */
 export function switchNation(save: ISave, nation: Nation, starterId: string | undefined, now: number): ISave {
   if (isStarted(save, nation)) return { ...save, current: nation };
-  const slot: INationProgress = { ...emptyNationProgress(starterId ? [starterId] : []), regenAt: now };
+  const captain = starterCaptain(nation);
+  const slot: INationProgress = { ...emptyNationProgress(starterId ? [starterId] : [], captain ? [captain.id] : []), regenAt: now };
   return { ...save, current: nation, nations: { ...save.nations, [nation]: slot } };
 }
 
@@ -193,7 +202,28 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     merit: isNum(data.merit) ? Math.max(0, data.merit) : 0,
     rankFloor: isNum(data.rankFloor) ? Math.max(0, Math.round(data.rankFloor)) : 0,
     docksOwned: isNum(data.docksOwned) ? Math.max(1, Math.round(data.docksOwned)) : 1,
+    // A save without the list keeps every captain (filled in per nation by the caller).
+    captains: Array.isArray(data.captains) ? [...new Set(strings(data.captains))] : [],
+    captainSkills: stringLists(data.captainSkills),
+    captainStats: parseCaptainStats(data.captainStats),
   };
+}
+
+function stringLists(src: unknown): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (isObject(src)) for (const [id, list] of Object.entries(src)) if (Array.isArray(list)) out[id] = strings(list);
+  return out;
+}
+
+function parseCaptainStats(src: unknown): Record<string, ICaptainStats> {
+  const out: Record<string, ICaptainStats> = {};
+  if (!isObject(src)) return out;
+  for (const [id, v] of Object.entries(src)) {
+    if (!isObject(v)) continue;
+    const n = (x: unknown): number => (isNum(x) ? Math.max(0, x) : 0);
+    out[id] = { nightSinks: n(v.nightSinks), subSinks: n(v.subSinks), heavySurvivals: n(v.heavySurvivals) };
+  }
+  return out;
 }
 
 const FORMATIONS = new Set<string>(Object.values(Formation));
@@ -235,7 +265,10 @@ function parseLatest(data: Record<string, unknown>): ISave {
   const nations: Partial<Record<Nation, INationProgress>> = {};
   if (isObject(data.nations)) {
     for (const [key, value] of Object.entries(data.nations)) {
-      if (isNation(key) && isObject(value)) nations[key] = parseNation(value, STARTING_RESOURCES);
+      if (!isNation(key) || !isObject(value)) continue;
+      const np = parseNation(value, STARTING_RESOURCES);
+      // Never fewer captains than the nation could use before #44.
+      nations[key] = Array.isArray(value.captains) ? np : { ...np, captains: nationCaptains(key).map((c) => c.id) };
     }
   }
   return {

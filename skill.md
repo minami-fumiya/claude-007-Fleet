@@ -264,3 +264,10 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Preview deployments have their own localStorage: "my save is gone" may be a different URL, not a bug.
 - A feature that has to be rewritten whenever others change (the tutorial) is better postponed until the rest is
   stable than shipped half-right.
+
+### 0.0.13 — Captains and the encyclopedia (#43 #44 #45 #91)
+- Introducing ownership of something everyone had (captains): the migration gives old saves the whole roster, and
+  the parser fills in the whole roster too when the field is missing, so no path loses an assigned captain.
+- Layer new bonuses (learned skills, traits) on top of the old one with `combineModifiers` and test that with none
+  of them the result equals the old single bonus exactly — old saves keep the same strength.
+- The E2E text-overflow check pays off on every new detail page: long section headings in portrait were caught there.
