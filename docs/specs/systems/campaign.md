@@ -43,3 +43,18 @@ landscape (2400×1440) and portrait (1440×2240) worlds. Tiled was not used (no 
 - Islands are solid (static circle bodies); ships collide, AI / AUTO / waypoint steering looks 170 px ahead and turns
   to the nearest clear heading. The joystick stays direct.
 - Shoals halve speed. Currents displace ships every frame (px/s).
+
+## Theaters by nation (Sprint 12, #17 / #27)
+Each theater lists `opponents` (player nation → enemy nation). The strategic map only shows the theaters the current
+nation can play. Areas are written for one enemy nation; when the player fights another nation there, `enemyShips`
+swaps each ship for that nation's closest historical ship of the same class by HP, falling back to a battleship
+when the class is missing (e.g. no Soviet or Italian carrier).
+
+| Theater | Opponents (player → enemy) |
+|---|---|
+| 太平洋 | 日本 → 米国, 米国 → 日本 |
+| 大西洋 | 英国 → ドイツ, ドイツ → 英国, 米国 → ドイツ, フランス → ドイツ |
+| 地中海 | 日本 → 英国, 英国 → イタリア, イタリア → 英国, フランス → イタリア, ドイツ → 英国 |
+| バルト海 (new) | ソ連 → ドイツ, ドイツ → ソ連 — フィンランド湾哨戒 → バルト海船団護衛 → リガ湾夜戦 → 沿岸要塞砲撃 → バルト海決戦 |
+
+Clearing every area of バルト海 awards the バルト海制覇章.

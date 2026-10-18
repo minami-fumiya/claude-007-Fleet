@@ -4,13 +4,13 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress } from '@/utils/ProgressStore';
-import { areasOf, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress } from '@/systems/CampaignSystem';
+import { areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { CLASS_JA } from '@/systems/EncyclopediaSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
-import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
+import { ICampaignArea, ICampaignData, Objective, ITheater } from '@/types/Campaign';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
@@ -43,6 +43,8 @@ const NODE_R = IS_PORTRAIT ? 26 : 22;
  */
 export class CampaignMapScene extends Phaser.Scene {
   private theater = DATA.theaters[0].id;
+  /** Theaters the nation being played can fight in (#27) */
+  private theaters: ITheater[] = [];
   private selected: ICampaignArea | null = null;
   private tabs: UIButton[] = [];
   private mapLayer: Phaser.GameObjects.GameObject[] = [];
@@ -65,9 +67,11 @@ export class CampaignMapScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'CAMPAIGN', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '作戦 — 戦略地図', displayStyle(24)).setOrigin(0.5);
 
+    this.theaters = theatersFor(DATA, loadProgress().nation);
+    if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
     const w = CANVAS_W - L.map.x * 2;
-    const bw = (w - 8) / DATA.theaters.length;
-    this.tabs = DATA.theaters.map(
+    const bw = (w - 8 * (this.theaters.length - 1)) / Math.max(1, this.theaters.length);
+    this.tabs = this.theaters.map(
       (t, i) =>
         new UIButton(this, L.map.x + i * (bw + 8) + bw / 2, L.tabsY, '', () => this.selectTheater(t.id), {
           variant: 'secondary', width: bw, height: IS_PORTRAIT ? 54 : 38, fontSize: 15,
@@ -81,7 +85,7 @@ export class CampaignMapScene extends Phaser.Scene {
   private selectTheater(id: string): void {
     this.theater = id;
     const cleared = loadProgress().campaign;
-    DATA.theaters.forEach((t, i) => {
+    this.theaters.forEach((t, i) => {
       const pct = Math.round(theaterProgress(DATA, t.id, cleared) * 100);
       this.tabs[i].setLabel(`${t.name}  ${pct}%`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
@@ -158,7 +162,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const x = d.x + 24;
     const wrap = { wordWrap: { width: d.w - 48, useAdvancedWrap: true } };
     const registry = DataLoader.getRegistry(this);
-    const enemy = enemyShips(a, registry);
+    const enemy = enemyShips(a, registry, enemyNationFor(DATA, a, loadProgress().nation));
     const ships = enemy.map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
     const map = DataLoader.getMap(this, a.map);
     // First-clear ship for the nation being played (#18).

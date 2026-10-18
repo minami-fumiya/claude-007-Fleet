@@ -50,6 +50,7 @@ export const MEDALS: IMedalRule[] = [
   { id: 'big_gun', name: '大火力章', description: '1 回の戦闘で 3000 ダメージを与える', earned: (r) => r.bestDamage >= 3000 },
   { id: 'pacific', name: '太平洋制覇章', description: '太平洋戦域の全海域を攻略する', earned: (_r, c) => c.clearedTheaters.includes('pacific') },
   { id: 'atlantic', name: '大西洋制覇章', description: '大西洋戦域の全海域を攻略する', earned: (_r, c) => c.clearedTheaters.includes('atlantic') },
+  { id: 'baltic', name: 'バルト海制覇章', description: 'バルト海戦域の全海域を攻略する', earned: (_r, c) => c.clearedTheaters.includes('baltic') },
   { id: 'mediterranean', name: '地中海制覇章', description: '地中海戦域 (インド洋を含む) の全海域を攻略する', earned: (_r, c) => c.clearedTheaters.includes('mediterranean') },
 ];
 

@@ -9,7 +9,7 @@ import { EXERCISE_EXTRA_CHOICES, exerciseEnemyFleet } from '@/systems/EnemyFleet
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
-import { areaMode, enemyShips } from '@/systems/CampaignSystem';
+import { areaMode, enemyNationFor, enemyShips } from '@/systems/CampaignSystem';
 import { CAMPAIGN_AREA_KEY, OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
 import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
@@ -413,10 +413,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     const p = LAYOUT.enemy;
     const x = p.x + PANEL_PAD + 8;
     let y = p.y + PANEL_HEADER_H + (IS_PORTRAIT ? 4 : 0);
-    const ships = enemyShips(area, this.shipRegistry).map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
+    const enemyNation = enemyNationFor(campaignData as ICampaignData, area, this.nation);
+    const ships = enemyShips(area, this.shipRegistry, enemyNation).map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
     const lines = [
       `作戦  ${area.name}`,
-      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[area.enemy.nation].jaShort} ${ships}`,
+      `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[enemyNation].jaShort} ${ships}`,
       `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
     ];
     lines.forEach((line, i) => {
@@ -980,12 +981,12 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     const area = this.area;
     const enemyShipsList = area
-      ? enemyShips(area, this.shipRegistry)
+      ? enemyShips(area, this.shipRegistry, enemyNationFor(campaignData as ICampaignData, area, this.nation))
       : exerciseEnemyFleet(this.shipRegistry, this.enemyNation, this.mode, ships, this.extra);
     const enemyFleet = FleetSystem.createFleet(
       'enemy-fleet',
       'Enemy Fleet',
-      area ? area.enemy.nation : this.enemyNation,
+      area ? enemyNationFor(campaignData as ICampaignData, area, this.nation) : this.enemyNation,
       enemyShipsList,
       0,
     );
