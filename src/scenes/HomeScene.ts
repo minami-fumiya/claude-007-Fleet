@@ -43,6 +43,8 @@ const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gol
   { label: '戦績', caption: 'RECORD', scene: SceneKeys.RECORD, variant: 'secondary' },
 ];
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 6 : 5;
+/** Progress bar offset below a dock row's ship name; portrait text is taller, so the bar sits lower. */
+const DOCK_METER_Y = IS_PORTRAIT ? 36 : 18;
 
 function clock(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
@@ -163,18 +165,24 @@ export class HomeScene extends Phaser.Scene {
           const meterX = d.x + pad + 110;
           const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
           const g = add(this.add.graphics());
-          const t = add(this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5));
-          this.dockMeters.push({ g, t, x: meterX, y: y + 18, w: meterW, ship, total, endsAt: job.endsAt });
+          // Portrait: the 高速修理 button takes the right end of the row, so the remaining time
+          // goes on its own line under the progress bar (#22). Landscape keeps it right of the bar.
+          const t = add(
+            IS_PORTRAIT
+              ? this.add.text(meterX, y + DOCK_METER_Y + 14, '', textStyle(12, Css.muted))
+              : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
+          );
+          this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
           const affordable = canAfford(progress.resources, FAST_REPAIR_COST);
           const btn = add(
-            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 10, '高速修理', () => this.fastRepair(ship.id), {
+            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), '高速修理', () => this.fastRepair(ship.id), {
               variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
             }),
           );
           btn.setEnabled(affordable);
         }
       }
-      y += IS_PORTRAIT ? 70 : 52;
+      y += IS_PORTRAIT ? 100 : 52;
     }
     add(this.add.text(d.x + pad, y, `高速修理: ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
     y += IS_PORTRAIT ? 40 : 28;
@@ -186,7 +194,10 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(d.x + pad, y, damaged.length > 0 ? 'DAMAGED · 損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
     y += IS_PORTRAIT ? 36 : 26;
     const dockFree = progress.docks.length < DOCK_COUNT;
-    for (const ship of damaged.slice(0, MAX_DAMAGED_ROWS)) {
+    // Portrait: only as many rows as fit above the panel's bottom edge, leaving room for 他 n 隻.
+    const fit = (reserve: number): number => Math.max(1, Math.min(MAX_DAMAGED_ROWS, Math.floor((d.y + d.h - y - reserve) / L.rowH)));
+    const maxRows = !IS_PORTRAIT ? MAX_DAMAGED_ROWS : damaged.length <= fit(0) ? fit(0) : fit(40);
+    for (const ship of damaged.slice(0, maxRows)) {
       const f = hpFraction(progress, ship.id);
       const cost = repairCost(ship.hp, f);
       add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
@@ -199,8 +210,8 @@ export class HomeScene extends Phaser.Scene {
       btn.setEnabled(dockFree && canAfford(progress.resources, cost));
       y += L.rowH;
     }
-    if (damaged.length > MAX_DAMAGED_ROWS) {
-      add(this.add.text(d.x + pad, y, `他 ${damaged.length - MAX_DAMAGED_ROWS} 隻`, textStyle(12, Css.dim)));
+    if (damaged.length > maxRows) {
+      add(this.add.text(d.x + pad, y, `他 ${damaged.length - maxRows} 隻`, textStyle(12, Css.dim)));
     }
   }
 
