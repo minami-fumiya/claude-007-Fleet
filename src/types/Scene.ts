@@ -26,6 +26,8 @@ export interface ICaptainReport {
   level: number;
   gained: number;
   leveledUp: boolean;
+  /** Already at the top level before this battle: the results show no XP gain */
+  maxed?: boolean;
 }
 
 export interface IBattleResultData {

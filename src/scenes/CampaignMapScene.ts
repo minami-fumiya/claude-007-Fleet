@@ -7,6 +7,7 @@ import { loadProgress } from '@/utils/ProgressStore';
 import { areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
+import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
 import { formatResources } from '@/systems/ResourceSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
@@ -33,7 +34,7 @@ export const OBJECTIVE_LABEL: Record<Objective, string> = {
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { tabsY: 172, map: { x: 16, y: 216, w: CANVAS_W - 32, h: 520 } as IRect, detail: { x: 16, y: 752, w: CANVAS_W - 32, h: CANVAS_H - 768 } as IRect }
+  ? { tabsY: 172, map: { x: 16, y: 216, w: CANVAS_W - 32, h: 440 } as IRect, detail: { x: 16, y: 672, w: CANVAS_W - 32, h: CANVAS_H - 688 } as IRect }
   : { tabsY: 120, map: { x: 24, y: 160, w: 780, h: 540 } as IRect, detail: { x: 820, y: 160, w: 436, h: 540 } as IRect };
 const NODE_R = IS_PORTRAIT ? 26 : 22;
 
@@ -64,7 +65,6 @@ export class CampaignMapScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'CAMPAIGN', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '作戦 — 戦略地図', displayStyle(24)).setOrigin(0.5);
 
     this.theaters = theatersFor(DATA, loadProgress().nation);
@@ -162,8 +162,12 @@ export class CampaignMapScene extends Phaser.Scene {
     const x = d.x + 24;
     const wrap = { wordWrap: { width: d.w - 48, useAdvancedWrap: true } };
     const registry = DataLoader.getRegistry(this);
-    const enemy = enemyShips(a, registry, enemyNationFor(DATA, a, loadProgress().nation));
-    const ships = enemy.map((s) => s.name.replace(/\s*\(.*\)\s*$/, '')).join('・');
+    const enemyNation = enemyNationFor(DATA, a, loadProgress().nation);
+    const enemy = enemyShips(a, registry, enemyNation);
+    // Kinds first, then the names under each kind (#68).
+    const lineup = kindGroups(enemy.map((s) => ({ ...s, name: s.name.replace(/\s*\(.*\)\s*$/, '') })))
+      .map((g) => `${g.kind}  ${g.names.join('・')}`)
+      .join('\n');
     const map = DataLoader.getMap(this, a.map);
     // First-clear ship for the nation being played (#18).
     const progress = loadProgress();
@@ -172,7 +176,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
       ['目標', OBJECTIVE_LABEL[a.objective]],
-      ['敵', `${NATION_INFO[a.enemy.nation].ja} ${enemy.length} 隻  ${ships}`],
+      ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}\n${lineup}`],
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       ['初回報酬', reward],
     ];
@@ -180,13 +184,15 @@ export class CampaignMapScene extends Phaser.Scene {
       this.detailLayer.push(o);
       return o;
     };
-    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? 'CLEARED · 攻略済' : open ? 'OPERATION' : 'LOCKED · 未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
+    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? '攻略済' : open ? '作戦' : '未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
     const title = add(this.add.text(x, d.y + 44, a.name, displayStyle(24)));
     const desc = add(this.add.text(x, title.y + title.height + 10, a.description, textStyle(13, Css.muted, wrap)));
     let y = desc.y + desc.height + 18;
     for (const [k, v] of lines) {
       add(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));
-      const t = add(this.add.text(x, y + (IS_PORTRAIT ? 26 : 18), v, textStyle(13, Css.text, wrap)));
+      // Battleships, carriers or heavy cruisers in the enemy fleet show in gold.
+      const strong = k === '敵' && hasCapitalShips(enemy);
+      const t = add(this.add.text(x, y + (IS_PORTRAIT ? 26 : 18), v, textStyle(13, strong ? Css.gold : Css.text, { ...wrap, lineSpacing: 4 })));
       y = t.y + t.height + (IS_PORTRAIT ? 14 : 10);
     }
     const btn = add(

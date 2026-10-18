@@ -52,7 +52,7 @@ import { IBattleInitData, IBattleResultData, ICaptainReport } from '@/types/Scen
 import { ICaptain } from '@/types/Captain';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
-import { awardXp, battleXp, captainModifiers, withProgress } from '@/systems/CaptainSystem';
+import { awardXp, battleXp, captainModifiers, MAX_LEVEL, withProgress } from '@/systems/CaptainSystem';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -207,7 +207,8 @@ export class BattleScene extends Phaser.Scene {
   private sonarRings!: Phaser.GameObjects.Graphics;
   /** Screen-space arrows pointing at enemies outside the camera view */
   private edgeMarkers!: Phaser.GameObjects.Graphics;
-  private battleStartedAt = 0;
+  /** Game-loop time of the first battle frame (-1 until then); the HUD clock and results count from it */
+  private battleStartedAt = -1;
 
   private aimAngle = 0;
   private gameOver = false;
@@ -250,7 +251,9 @@ export class BattleScene extends Phaser.Scene {
     this.map = resolveMap(DataLoader.getMap(this, this.battleData?.mapKey || 'open-sea'), WORLD.w, WORLD.h);
     this.islands = drawMap(this, this.map);
     this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
-    this.battleStartedAt = this.time.now;
+    // Set on the first update with the game-loop time: the scene clock in create() can be stale, which once made the
+    // battle clock start at the time the page had been open (e.g. 14 minutes).
+    this.battleStartedAt = -1;
     this.aimTarget = { x: playerStart().x, y: playerStart().y - 300 };
     this.isTouch = this.sys.game.device.input.touch;
     this.autoMode = false;
@@ -338,6 +341,7 @@ export class BattleScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (this.gameOver) return;
+    if (this.battleStartedAt < 0) this.battleStartedAt = time;
 
     // Flagship may have been destroyed by a physics overlap callback in the previous frame.
     // Guard here before accessing .body in handleMovement to prevent a null-body crash.
@@ -1018,7 +1022,7 @@ export class BattleScene extends Phaser.Scene {
   private setAutoMode(on: boolean): void {
     this.autoMode = on;
     if (on) this.waypoint = null;
-    this.autoBtn.setLabel(on ? 'AUTO  ON' : 'AUTO  OFF').setVariant(on ? 'primary' : 'secondary');
+    this.autoBtn.setLabel(on ? '自動  ON' : '自動  OFF').setVariant(on ? 'primary' : 'secondary');
   }
 
   private setupOverlaps(): void {
@@ -1180,7 +1184,7 @@ export class BattleScene extends Phaser.Scene {
       fontSize: 15,
     }).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
 
-    this.autoBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2, b.y, 'AUTO  OFF', () => this.setAutoMode(!this.autoMode), {
+    this.autoBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2, b.y, '自動  OFF', () => this.setAutoMode(!this.autoMode), {
       variant: 'secondary',
       width: b.w,
       height: b.h,
@@ -1324,7 +1328,7 @@ export class BattleScene extends Phaser.Scene {
       targetsAlive: this.scenarioTargets.filter((t) => t.isAlive).length,
       flagshipInZone: zone ? inZone(this.flagship.x, this.flagship.y, zone, WORLD.w, WORLD.h) : false,
       enemyInZone: zone ? this.scenarioTargets.some((t) => t.isAlive && inZone(t.x, t.y, zone, WORLD.w, WORLD.h)) : false,
-      elapsedSec: (this.time.now - this.battleStartedAt) / 1000,
+      elapsedSec: this.elapsedSec(),
       timeLimitSec: this.scenarioSetup?.side.timeLimitSec ?? 0,
     };
   }
@@ -1347,10 +1351,15 @@ export class BattleScene extends Phaser.Scene {
       const gained = battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive });
       const award = awardXp(captain, gained);
       captainXp[captain.id] = award.captain.xp;
-      reports.push({ name: captain.name, level: award.captain.level, gained, leveledUp: award.leveledUp });
+      reports.push({ name: captain.name, level: award.captain.level, gained, leveledUp: award.leveledUp, maxed: captain.level >= MAX_LEVEL });
     }
     saveProgress({ ...progress, captainXp });
     return reports;
+  }
+
+  /** Seconds since the first battle frame, on the game-loop clock the HUD uses. */
+  private elapsedSec(): number {
+    return this.battleStartedAt < 0 ? 0 : (this.game.loop.time - this.battleStartedAt) / 1000;
   }
 
   private triggerGameOver(victory: boolean): void {
@@ -1366,7 +1375,7 @@ export class BattleScene extends Phaser.Scene {
       enemiesTotal: this.enemies.length,
       survivors: fleet.filter((s) => s.isAlive).length,
       fleetSize: fleet.length,
-      durationSec: (this.time.now - this.battleStartedAt) / 1000,
+      durationSec: this.elapsedSec(),
       captainReports: this.awardCaptains(victory, enemiesSunk),
     };
     const settlement = settleBattle(loadProgress(), {

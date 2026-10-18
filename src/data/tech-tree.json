@@ -1,6 +1,6 @@
 {
   "tech": [
-    {"id": "gunnery_1", "name": "砲術研究 I", "description": "全艦の砲火力 +5%", "branch": "gunnery", "level": 1, "cost": {"ammo": 300, "steel": 200}, "requires": [], "effects": {"gunPowerMul": 1.05}},
+    {"id": "gunnery_1", "name": "砲術研究 I", "description": "全艦の砲火力 +5%・強装薬を解放", "branch": "gunnery", "level": 1, "cost": {"ammo": 300, "steel": 200}, "requires": [], "effects": {"gunPowerMul": 1.05}},
     {"id": "gunnery_2", "name": "砲術研究 II", "description": "全艦の砲装填 -6%", "branch": "gunnery", "level": 2, "cost": {"ammo": 600, "steel": 500}, "requires": ["gunnery_1"], "effects": {"gunReloadMul": 0.94}},
     {"id": "fire_control", "name": "射撃管制", "description": "射撃指揮装置を解放・砲火力 +3%", "branch": "gunnery", "level": 2, "cost": {"ammo": 500, "steel": 600, "bauxite": 100}, "requires": ["gunnery_1"], "effects": {"gunPowerMul": 1.03}},
     {"id": "gunnery_3", "name": "砲術研究 III", "description": "全艦の砲火力 +3%", "branch": "gunnery", "level": 3, "cost": {"ammo": 900, "steel": 700}, "requires": ["gunnery_2"], "effects": {"gunPowerMul": 1.03}},

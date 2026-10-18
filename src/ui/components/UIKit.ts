@@ -371,6 +371,8 @@ export class UIButton extends Phaser.GameObjects.Container {
         .setOrigin(0.5)
         .setAlpha(0.75);
       this.add(this.caption);
+      // Captions get the same shrink-to-fit as labels, so a long one never spills out of the button (#69).
+      if (this.caption.width > w - 12) this.caption.setScale((w - 12) / this.caption.width);
       // Stack label + caption around the centre using their real (scaled) heights.
       const total = this.label.height * 0.8 + this.caption.height * 0.8;
       this.label.setY(-total / 2 + (this.label.height * 0.8) / 2);

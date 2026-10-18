@@ -28,7 +28,6 @@ export class RecordScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? 40 : 0), IS_PORTRAIT ? 28 : 26, 'SERVICE RECORD', eyebrowStyle(12)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '戦績', displayStyle(24)).setOrigin(0.5);
 
     const record = loadProgress().record;
@@ -39,7 +38,7 @@ export class RecordScene extends Phaser.Scene {
   private buildStats(r: IServiceRecord): void {
     const p = L.stats;
     addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.55, glow: 0.5 });
-    this.add.text(p.x + 22, p.y + 18, 'TOTALS', eyebrowStyle(11));
+    this.add.text(p.x + 22, p.y + 18, '通算', eyebrowStyle(11));
     const winRate = r.sorties > 0 ? `${Math.round((r.victories / r.sorties) * 100)}%` : '—';
     const cards: Array<[string, string, string]> = [
       ['出撃', String(r.sorties), Css.text],
@@ -79,7 +78,7 @@ export class RecordScene extends Phaser.Scene {
   private buildMedals(earned: string[]): void {
     const p = L.medals;
     addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
-    this.add.text(p.x + 22, p.y + 18, `MEDALS  ·  ${earned.length} / ${MEDALS.length}`, eyebrowStyle(11));
+    this.add.text(p.x + 22, p.y + 18, `勲章  ·  ${earned.length} / ${MEDALS.length}`, eyebrowStyle(11));
     const gap = 10;
     const cw = (p.w - 44 - gap * (L.medalCols - 1)) / L.medalCols;
     const rows = Math.ceil(MEDALS.length / L.medalCols);

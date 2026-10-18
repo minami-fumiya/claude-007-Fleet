@@ -42,13 +42,13 @@ const L = IS_PORTRAIT
     };
 
 const MENU: Array<{ label: string; caption: string; scene: string; variant: 'gold' | 'primary' | 'secondary' }> = [
-  { label: '作戦', caption: 'CAMPAIGN', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
-  { label: '演習', caption: 'FREE BATTLE', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
-  { label: '史実', caption: 'SCENARIO', scene: SceneKeys.SCENARIO, variant: 'primary' },
-  { label: '工廠', caption: 'ARSENAL', scene: SceneKeys.ARSENAL, variant: 'secondary' },
-  { label: '改装', caption: 'REFIT', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
-  { label: '図鑑', caption: 'ENCYCLOPEDIA', scene: SceneKeys.ENCYCLOPEDIA, variant: 'secondary' },
-  { label: '戦績', caption: 'RECORD', scene: SceneKeys.RECORD, variant: 'secondary' },
+  { label: '作戦', caption: '', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
+  { label: '演習', caption: '', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
+  { label: '史実', caption: '', scene: SceneKeys.SCENARIO, variant: 'primary' },
+  { label: '工廠', caption: '', scene: SceneKeys.ARSENAL, variant: 'secondary' },
+  { label: '改装', caption: '', scene: SceneKeys.CUSTOMIZATION, variant: 'secondary' },
+  { label: '図鑑', caption: '', scene: SceneKeys.ENCYCLOPEDIA, variant: 'secondary' },
+  { label: '戦績', caption: '', scene: SceneKeys.RECORD, variant: 'secondary' },
 ];
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 5 : 4;
 /** Progress bar offset below a dock row's ship name; portrait text is taller, so the bar sits lower. */
@@ -93,7 +93,6 @@ export class HomeScene extends Phaser.Scene {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     // Portrait: the corner buttons take the right side, so the eyebrow sits left of centre.
-    this.add.text(CANVAS_W / 2 + (IS_PORTRAIT ? -20 : 0), IS_PORTRAIT ? 28 : 26, 'NAVAL BASE', eyebrowStyle(12)).setOrigin(0.5);
     const corner = IS_PORTRAIT ? { w: 100, h: 60, y: 46 } : { w: 120, h: 44, y: 44 };
     new UIButton(this, CANVAS_W - 16 - corner.w / 2, corner.y, '設定', () => this.scene.start(SceneKeys.SETTINGS, { returnTo: SceneKeys.HOME }), {
       variant: 'secondary', width: corner.w, height: corner.h, fontSize: 15,
@@ -107,8 +106,7 @@ export class HomeScene extends Phaser.Scene {
     this.buildAdmiral(save.current);
     this.buildMenu();
     addPanel(this, L.dock.x, L.dock.y, L.dock.w, L.dock.h, { radius: 24, fillAlpha: 0.55, glow: 0.6 });
-    this.add.text(L.dock.x + 22, L.dock.y + 18, 'DOCK', eyebrowStyle(11));
-    this.add.text(L.dock.x + 22, L.dock.y + (IS_PORTRAIT ? 46 : 34), '入渠 — 損傷艦の修理', textStyle(15, Css.text, { fontStyle: 'bold' }));
+    this.add.text(L.dock.x + 22, L.dock.y + (IS_PORTRAIT ? 30 : 22), '入渠 — 損傷艦の修理', textStyle(15, Css.text, { fontStyle: 'bold' }));
     this.refresh();
     // A brand-new save has no nation yet: pick one first (#27).
     if (!started) this.openNationPicker(false);
@@ -125,7 +123,7 @@ export class HomeScene extends Phaser.Scene {
     });
     const x = a.x + bw + 16;
     // Portrait: rank and next promotion on separate lines (one line would run off the narrow screen).
-    const rankLine = `${rank.name} (${rank.en})  ·  出撃枠 ${fleetSlots(progress)}`;
+    const rankLine = `${rank.name}  ·  出撃枠 ${fleetSlots(progress)}`;
     if (IS_PORTRAIT) {
       this.add.text(x, a.y, rankLine, textStyle(12, Css.gold, { fontStyle: 'bold' }));
       this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
@@ -159,7 +157,7 @@ export class HomeScene extends Phaser.Scene {
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(20, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
-    add(this.add.text(x + 28, y + 22, 'SELECT NATION', eyebrowStyle(11)));
+    add(this.add.text(x + 28, y + 22, '国を選択', eyebrowStyle(11)));
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 52 : 42), closable ? '鎮守府を切り替える' : '着任する国を選んでください', displayStyle(22)));
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '国ごとに資源・保有艦・研究・作戦の進み具合が別々に記録されます。\n新しい国は駆逐艦 1 隻・資源 0 から始まり、資源は時間で回復します。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
     let ry = y + (IS_PORTRAIT ? 210 : 136);
@@ -169,7 +167,7 @@ export class HomeScene extends Phaser.Scene {
         ? `${NATION_INFO[n].jaShort}   ${rankOf(np).name} · 攻略 ${clearCount(np)} · 保有艦 ${ownedIds(np, this.registryShips.byNation(n)).length}`
         : `${NATION_INFO[n].jaShort}   新規着任`;
       add(new UIButton(this, x + w / 2, ry + rowH / 2, label, () => this.selectNation(n), {
-        variant: n === save.current && np ? 'gold' : np ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: 16, caption: NATION_INFO[n].en,
+        variant: n === save.current && np ? 'gold' : np ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: 16,
       }));
       ry += rowH + gap;
     }
@@ -293,7 +291,7 @@ export class HomeScene extends Phaser.Scene {
     const damaged = Object.keys(progress.damage)
       .map((id) => this.registryShips.byId(id))
       .filter((s): s is IShipData => s !== undefined && !isDocked(progress, s.id));
-    add(this.add.text(d.x + pad, y, damaged.length > 0 ? 'DAMAGED · 損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
+    add(this.add.text(d.x + pad, y, damaged.length > 0 ? '損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
     y += IS_PORTRAIT ? 36 : 26;
     const dockFree = progress.docks.length < DOCK_COUNT;
     // Portrait: only as many rows as fit above the panel's bottom edge, leaving room for 他 n 隻.

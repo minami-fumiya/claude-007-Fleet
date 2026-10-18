@@ -126,7 +126,7 @@ export class PreloadScene extends Phaser.Scene {
     const y = CANVAS_H / 2 + 20;
 
     this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep).setOrigin(0, 0);
-    this.add.text(CANVAS_W / 2, y - 64, 'WW2 NAVAL FLEET', eyebrowStyle(13)).setOrigin(0.5);
+    this.add.text(CANVAS_W / 2, y - 64, '七海艦隊', eyebrowStyle(13)).setOrigin(0.5);
     this.add.text(CANVAS_W / 2, y - 32, '出撃準備中…', textStyle(18, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
 
     const fill = this.add.graphics();

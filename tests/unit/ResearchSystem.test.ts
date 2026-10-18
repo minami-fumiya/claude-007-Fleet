@@ -52,9 +52,10 @@ describe('ResearchSystem', () => {
 
   it('locks upgrades behind their research', () => {
     const catalog = upgrades.upgrades as IUpgradeData[];
-    const free = unlockedUpgrades(catalog, []).map((u) => u.id);
-    expect(free).toContain('heavy_shells');
-    expect(free).not.toContain('radar');
+    // Every upgrade needs its research; nothing can be fitted before any research is done (#72).
+    expect(unlockedUpgrades(catalog, [])).toEqual([]);
+    expect(catalog.every((u) => typeof u.requires === 'string')).toBe(true);
+    expect(unlockedUpgrades(catalog, ['gunnery_1']).map((u) => u.id)).toEqual(['heavy_shells']);
     expect(unlockedUpgrades(catalog, ['radar_1']).map((u) => u.id)).toContain('radar');
   });
 

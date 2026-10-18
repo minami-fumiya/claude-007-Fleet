@@ -117,11 +117,10 @@ export class HUD {
     const label = (pos: IPos, text: string): void => {
       this.staticTexts.push(scene.add.text(BX + pos.x, BY + pos.y, text, eyebrowStyle(9, Css.muted)).setDepth(STRIP_DEPTH + 1));
     };
-    label(L.hpLabel, IS_PORTRAIT ? `旗艦 · ${player.stats.name}` : `FLAGSHIP · ${player.stats.name}`);
-    label(L.sunkLabel, IS_PORTRAIT ? '撃沈' : '撃沈 SUNK');
-    const en = mainWeaponLabel === '主砲' ? 'MAIN GUN' : 'TORPEDO';
-    label(L.gunLabel, IS_PORTRAIT ? mainWeaponLabel : `${mainWeaponLabel} ${en}`);
-    label(L.timeLabel, 'TIME');
+    label(L.hpLabel, `旗艦 · ${player.stats.name}`);
+    label(L.sunkLabel, '撃沈');
+    label(L.gunLabel, mainWeaponLabel);
+    label(L.timeLabel, '経過時間');
 
     const value = (pos: IPos, size: number, color: string, originX = 0): Phaser.GameObjects.Text =>
       scene.add.text(BX + pos.x, BY + pos.y, '', textStyle(size, color, { fontStyle: 'bold' }))
@@ -232,7 +231,7 @@ export class HUD {
     drawMeter(this.meters, BX + hm.x, BY + hm.y, hm.w, hm.h, hpFrac, hpColor);
     drawMeter(this.meters, BX + gm.x, BY + gm.y, gm.w, gm.h, reload, reload >= 1 ? Colors.cyan : Colors.blue);
     this.hpText.setText(`${Math.max(0, Math.ceil(player.stats.currentHp))}`);
-    this.gunText.setText(reload >= 1 ? 'READY' : 'RELOAD').setColor(reload >= 1 ? Css.cyan : Css.muted);
+    this.gunText.setText(reload >= 1 ? '装填完了' : '装填中').setColor(reload >= 1 ? Css.cyan : Css.muted);
 
     const sec = Math.floor(this.status.elapsedSec);
     this.timeText.setText(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);

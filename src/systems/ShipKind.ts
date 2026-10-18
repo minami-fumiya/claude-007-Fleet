@@ -89,3 +89,35 @@ export function filterAndSort<T extends Pick<IShipData, 'shipClass' | 'subtype' 
   const key = (s: T): number => (sort === ShipSort.Hp ? s.hp : sort === ShipSort.Speed ? s.speed : 0);
   return list.sort((a, b) => key(b.s) - key(a.s) || a.i - b.i).map(({ s }) => s);
 }
+
+/** Display order of kinds in an enemy lineup: capital ships first (#68). */
+function kindRank(ship: Pick<IShipData, 'shipClass' | 'subtype'>): number {
+  if (ship.shipClass === ShipClass.Battleship) return 0;
+  if (ship.shipClass === ShipClass.Carrier) return 1;
+  if (isHeavyCruiser(ship)) return 2;
+  if (ship.shipClass === ShipClass.Cruiser) return 3;
+  if (ship.shipClass === ShipClass.Destroyer) return 4;
+  return 5;
+}
+
+/** Ships grouped by kind label (戦艦 / 重巡 / 駆逐艦 …), capital kinds first, names in fleet order. */
+export function kindGroups<T extends Pick<IShipData, 'shipClass' | 'subtype' | 'name'>>(ships: T[]): Array<{ kind: string; names: string[] }> {
+  const groups: Array<{ kind: string; rank: number; names: string[] }> = [];
+  for (const s of ships) {
+    const kind = kindShort(s);
+    const g = groups.find((x) => x.kind === kind);
+    if (g) g.names.push(s.name);
+    else groups.push({ kind, rank: kindRank(s), names: [s.name] });
+  }
+  return groups.sort((a, b) => a.rank - b.rank).map(({ kind, names }) => ({ kind, names }));
+}
+
+/** "戦艦 1・重巡 2・駆逐艦 3" — how many of each kind (#68). */
+export function kindBreakdown(ships: Array<Pick<IShipData, 'shipClass' | 'subtype' | 'name'>>): string {
+  return kindGroups(ships).map((g) => `${g.kind} ${g.names.length}`).join('・');
+}
+
+/** True when the fleet has a battleship, carrier or heavy cruiser (a hard fight for a small fleet). */
+export function hasCapitalShips(ships: Array<Pick<IShipData, 'shipClass' | 'subtype'>>): boolean {
+  return ships.some((s) => kindRank(s) <= 2);
+}
