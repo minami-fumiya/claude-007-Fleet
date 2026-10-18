@@ -8,7 +8,7 @@
   "time": "Day",
   "forces": {
     "A": { "nation": "IJN", "ships": ["akagi", "kaga", "ryujo", "tone"], "positions": [{ "x": 0.5, "y": 0.14, "angle": 180 }, { "x": 0.38, "y": 0.1, "angle": 180 }, { "x": 0.62, "y": 0.1, "angle": 180 }, { "x": 0.5, "y": 0.21, "angle": 180 }] },
-    "B": { "nation": "USN", "ships": ["enterprise", "yorktown", "atlanta", "fletcher"], "positions": [{ "x": 0.5, "y": 0.86, "angle": 0 }, { "x": 0.62, "y": 0.9, "angle": 0 }, { "x": 0.38, "y": 0.9, "angle": 0 }, { "x": 0.5, "y": 0.79, "angle": 0 }] }
+    "B": { "nation": "USN", "ships": ["enterprise", "yorktown", "independence", "atlanta"], "positions": [{ "x": 0.5, "y": 0.86, "angle": 0 }, { "x": 0.62, "y": 0.9, "angle": 0 }, { "x": 0.38, "y": 0.9, "angle": 0 }, { "x": 0.5, "y": 0.79, "angle": 0 }] }
   },
   "sides": [
     { "force": "B", "label": "米海軍で戦う", "objective": "SinkTargets", "targets": ["akagi", "kaga"], "timeLimitSec": 360, "brief": "制限時間内に空母 赤城・加賀を撃沈せよ。" },
