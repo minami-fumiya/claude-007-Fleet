@@ -1,13 +1,17 @@
-import { CaptainSkill, ICaptain, ICaptainData } from '@/types/Captain';
-import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
+import { Aptitude, CaptainAbility, CaptainSkill, ICaptain, ICaptainData } from '@/types/Captain';
+import { ADDITIVE_MODIFIERS, IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
+import { ShipClass } from '@/types/ShipClass';
 import { combineModifiers } from './CustomizationSystem';
 
 /**
  * Captains (pure): experience, levels and the bonus a captain's speciality gives their ship.
- * Level n needs 100 × n(n−1)/2 XP in total (Lv2 = 100, Lv3 = 300, Lv4 = 600 …), capped at MAX_LEVEL.
+ * Level n needs 100 × n(n−1)/2 XP in total (Lv2 = 100, Lv3 = 300, Lv4 = 600 …), capped at MAX_LEVEL (100, #131).
+ * XP is what the save keeps, so raising the cap needs no migration.
  */
 
-export const MAX_LEVEL = 10;
+export const MAX_LEVEL = 100;
+/** Skills grow with level up to here; past it the inherent skill strengthens in tiers instead (#131). */
+export const SKILL_LEVEL_CAP = 10;
 
 export function xpForLevel(level: number): number {
   const n = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
@@ -53,15 +57,30 @@ export function awardXp(captain: ICaptain, gained: number): IXpAward {
   return { captain: next, gained, leveledUp: next.level > captain.level };
 }
 
+/** What a level-up brought (#131): "固有スキル「砲術 II」"・"習得枠 +1"・"砲術 +0.4%" (the largest ability gain). */
+export function levelUpNotes(before: ICaptain, after: ICaptain): string[] {
+  if (after.level <= before.level) return [];
+  const notes: string[] = [];
+  if (inherentTier(after.level).mul > inherentTier(before.level).mul) notes.push(`固有スキル「${inherentLabel(after)}」`);
+  const slots = learnSlots(after.level) - learnSlots(before.level);
+  if (slots > 0) notes.push(`習得枠 +${slots}`);
+  const a = captainAbilities(before);
+  const b = captainAbilities(after);
+  const best = (Object.values(CaptainAbility) as CaptainAbility[]).reduce((m, k) => (b[k] - a[k] > b[m] - a[m] ? k : m), CaptainAbility.Gunnery);
+  const gain = Math.round((b[best] - a[best]) * 10) / 10;
+  if (gain > 0) notes.push(`${ABILITY_LABEL[best]} +${gain}%`);
+  return notes;
+}
+
 /** Battle conditions some specialities depend on. */
 export interface ICaptainContext {
   /** Night battle: the 夜戦 speciality only pays off in the dark */
   night?: boolean;
 }
 
-/** One speciality's bonus at `level`; `scale` shrinks it for learned (not inherent) skills (#45). */
+/** One speciality's bonus at `level` (counted up to Lv10); `scale` shrinks a learned skill (#45) or strengthens a tiered inherent one (#131). */
 export function skillModifiers(skill: CaptainSkill, level: number, ctx: ICaptainContext = {}, scale = 1): IShipModifiers {
-  const lv = level * scale;
+  const lv = Math.min(level, SKILL_LEVEL_CAP) * scale;
   switch (skill) {
     case CaptainSkill.Gunnery:
       return { ...NO_MODIFIERS, gunPowerMul: 1 + 0.03 * lv, gunReloadMul: 1 - 0.01 * lv };
@@ -88,8 +107,108 @@ export function skillModifiers(skill: CaptainSkill, level: number, ctx: ICaptain
 
 /** Learned skills work at this share of an inherent one, so a captain's own speciality stays special (#45). */
 export const LEARNED_SKILL_SCALE = 0.6;
-/** Levels at which a learn slot opens (Lv3 / Lv6 / Lv9 → up to three learned skills). */
-export const LEARN_SLOT_LEVELS = [3, 6, 9];
+/** Levels at which a learn slot opens (#131: Lv30 and Lv60 add a fourth and fifth). */
+export const LEARN_SLOT_LEVELS = [3, 6, 9, 30, 60];
+
+/** The inherent skill's own slot strengthens at Lv10 (II, ×1.5) and Lv50 (III, ×2) (#131). */
+export const INHERENT_TIERS: ReadonlyArray<{ level: number; mul: number; label: string }> = [
+  { level: 1, mul: 1, label: '' },
+  { level: 10, mul: 1.5, label: 'II' },
+  { level: 50, mul: 2, label: 'III' },
+];
+
+export function inherentTier(level: number): { level: number; mul: number; label: string } {
+  return [...INHERENT_TIERS].reverse().find((t) => level >= t.level) ?? INHERENT_TIERS[0];
+}
+
+/** The next tier and the level it comes at, or null at III. */
+export function nextInherentTier(level: number): { level: number; mul: number; label: string } | null {
+  return INHERENT_TIERS.find((t) => t.level > level) ?? null;
+}
+
+/** "砲術 II" */
+export function inherentLabel(captain: ICaptain): string {
+  const tier = inherentTier(captain.level).label;
+  return tier ? `${SKILL_LABEL[captain.skill]} ${tier}` : SKILL_LABEL[captain.skill];
+}
+
+// ---------------------------------------------------------------------------
+// Aptitude and abilities (#131)
+// ---------------------------------------------------------------------------
+
+export const APTITUDE_SCALE: Record<Aptitude, number> = { S: 1.2, A: 1, B: 0.8, C: 0.6 };
+
+/** The ship classes a speciality suits; a captain's data can override single classes. */
+const SKILL_APTITUDE: Record<CaptainSkill, Record<ShipClass, Aptitude>> = {
+  [CaptainSkill.Gunnery]: { Battleship: 'S', Cruiser: 'A', Destroyer: 'B', Carrier: 'C', Submarine: 'C' },
+  [CaptainSkill.Torpedo]: { Battleship: 'C', Cruiser: 'A', Destroyer: 'S', Carrier: 'C', Submarine: 'A' },
+  [CaptainSkill.Engineering]: { Battleship: 'A', Cruiser: 'A', Destroyer: 'A', Carrier: 'B', Submarine: 'B' },
+  [CaptainSkill.Aviation]: { Battleship: 'C', Cruiser: 'B', Destroyer: 'C', Carrier: 'S', Submarine: 'C' },
+  [CaptainSkill.ASW]: { Battleship: 'C', Cruiser: 'B', Destroyer: 'S', Carrier: 'B', Submarine: 'A' },
+  [CaptainSkill.Night]: { Battleship: 'B', Cruiser: 'A', Destroyer: 'S', Carrier: 'C', Submarine: 'B' },
+  [CaptainSkill.Recon]: { Battleship: 'B', Cruiser: 'S', Destroyer: 'B', Carrier: 'A', Submarine: 'A' },
+  [CaptainSkill.Damecon]: { Battleship: 'S', Cruiser: 'A', Destroyer: 'B', Carrier: 'A', Submarine: 'C' },
+};
+
+export function aptitudeFor(captain: ICaptainData, shipClass: ShipClass): Aptitude {
+  return captain.aptitude?.[shipClass] ?? SKILL_APTITUDE[captain.skill][shipClass];
+}
+
+export const ABILITY_LABEL: Record<CaptainAbility, string> = {
+  [CaptainAbility.Gunnery]: '砲術',
+  [CaptainAbility.Torpedo]: '雷撃',
+  [CaptainAbility.Aviation]: '航空',
+  [CaptainAbility.Handling]: '操艦',
+};
+
+/** An ability's bonus at Lv100 for the captain's strongest growth (+20%). */
+export const ABILITY_MAX = 20;
+
+/** How each speciality's abilities grow (share of ABILITY_MAX); every captain grows a little in everything. */
+const GROWTH: Record<CaptainSkill, Record<CaptainAbility, number>> = {
+  [CaptainSkill.Gunnery]: { gunnery: 1, torpedo: 0.3, aviation: 0.2, handling: 0.5 },
+  [CaptainSkill.Torpedo]: { gunnery: 0.4, torpedo: 1, aviation: 0.2, handling: 0.7 },
+  [CaptainSkill.Engineering]: { gunnery: 0.5, torpedo: 0.5, aviation: 0.3, handling: 1 },
+  [CaptainSkill.Aviation]: { gunnery: 0.2, torpedo: 0.3, aviation: 1, handling: 0.5 },
+  [CaptainSkill.ASW]: { gunnery: 0.4, torpedo: 0.5, aviation: 0.3, handling: 0.9 },
+  [CaptainSkill.Night]: { gunnery: 0.7, torpedo: 0.8, aviation: 0.2, handling: 0.6 },
+  [CaptainSkill.Recon]: { gunnery: 0.5, torpedo: 0.4, aviation: 0.7, handling: 0.6 },
+  [CaptainSkill.Damecon]: { gunnery: 0.7, torpedo: 0.3, aviation: 0.3, handling: 0.7 },
+};
+
+/**
+ * A captain's abilities in percent (one decimal). They grow from 0 at Lv1 to ABILITY_MAX × growth at Lv100, faster
+ * early on so the first levels are felt.
+ */
+export function captainAbilities(captain: ICaptainData & { level: number }): Record<CaptainAbility, number> {
+  const t = Math.pow(Math.max(0, Math.min(MAX_LEVEL, captain.level) - 1) / (MAX_LEVEL - 1), 0.7);
+  const growth = GROWTH[captain.skill];
+  const out = {} as Record<CaptainAbility, number>;
+  for (const a of Object.values(CaptainAbility)) out[a] = Math.round(ABILITY_MAX * growth[a] * t * 10) / 10;
+  return out;
+}
+
+/** What the abilities add: firepower, torpedoes and air strikes by their percent, 操艦 as evasion (+5% at 20). */
+export function abilityModifiers(abilities: Record<CaptainAbility, number>): IShipModifiers {
+  return {
+    ...NO_MODIFIERS,
+    gunPowerMul: 1 + abilities.gunnery / 100,
+    torpedoPowerMul: 1 + abilities.torpedo / 100,
+    airPowerMul: 1 + abilities.aviation / 100,
+    evadeAdd: abilities.handling / 400,
+  };
+}
+
+/** Scales a bonus by `f` (aptitude): multipliers move toward or away from 1, additions are multiplied. */
+export function scaleModifiers(m: IShipModifiers, f: number): IShipModifiers {
+  const out = { ...m };
+  for (const key of Object.keys(m) as Array<keyof IShipModifiers>) {
+    const v = m[key];
+    if (!ADDITIVE_MODIFIERS.includes(key)) out[key] = 1 + (v - 1) * f;
+    else out[key] = key === 'evadeAdd' ? v * f : Math.floor(v * f);
+  }
+  return out;
+}
 /** Swapping out a learned skill (retraining) costs this; filling an empty slot is free. */
 export const RETRAIN_COST = { fuel: 200, ammo: 200, steel: 0, bauxite: 0 };
 
@@ -119,6 +238,22 @@ export function learnSkill(captain: ICaptain, learned: readonly string[], skill:
     return next;
   }
   return current.length < learnSlots(captain.level) ? [...current, skill] : null;
+}
+
+/** What filling learn slot `slot` with `skill` does (#130): the new list, what it costs and which skill it drops. */
+export interface ILearnPlan {
+  learned: CaptainSkill[];
+  cost: typeof RETRAIN_COST | null;
+  replaces?: CaptainSkill;
+}
+
+export function learnPlan(captain: ICaptain, learned: readonly string[], slot: number, skill: CaptainSkill): ILearnPlan | null {
+  const current = validLearned(captain, learned);
+  if (slot < 0 || slot >= learnSlots(captain.level)) return null;
+  const replaces = current[slot];
+  if (replaces === skill) return null;
+  const next = learnSkill(captain, current, skill, replaces);
+  return next ? { learned: next, cost: replaces ? RETRAIN_COST : null, replaces } : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,19 +315,51 @@ export function addBattleStats(stats: ICaptainStats | undefined, battle: { night
   };
 }
 
-/** Everything a captain adds to their ship: inherent speciality, learned skills (60%) and earned traits. */
+/** One thing that adds to a captain's bonus, for the colour-coded breakdown (#130). */
+export interface ICaptainSource {
+  kind: 'inherent' | 'learned' | 'ability' | 'trait';
+  /** "砲術 II", "雷撃 (習得)", "能力", "夜戦巧者" */
+  label: string;
+  /** The skill behind it (inherent and learned), for its colour */
+  skill?: CaptainSkill;
+  mods: IShipModifiers;
+}
+
+/**
+ * Everything a captain adds to their ship, one source at a time: inherent speciality (tiered, #131), learned skills
+ * (60%), abilities and earned traits. Skills and abilities are scaled by the captain's aptitude for `shipClass`
+ * (#131); traits are not.
+ */
+export function captainSources(
+  captain: ICaptain | null | undefined,
+  ctx: ICaptainContext = {},
+  learned: readonly string[] = [],
+  stats?: ICaptainStats,
+  shipClass?: ShipClass,
+): ICaptainSource[] {
+  if (!captain) return [];
+  const f = shipClass ? APTITUDE_SCALE[aptitudeFor(captain, shipClass)] : 1;
+  const scaled = (m: IShipModifiers): IShipModifiers => (f === 1 ? m : scaleModifiers(m, f));
+  return [
+    { kind: 'inherent', label: inherentLabel(captain), skill: captain.skill, mods: scaled(skillModifiers(captain.skill, captain.level, ctx, inherentTier(captain.level).mul)) },
+    ...validLearned(captain, learned).map((s): ICaptainSource => ({
+      kind: 'learned', label: `${SKILL_LABEL[s]} (習得)`, skill: s, mods: scaled(skillModifiers(s, captain.level, ctx, LEARNED_SKILL_SCALE)),
+    })),
+    { kind: 'ability', label: '能力', mods: scaled(abilityModifiers(captainAbilities(captain))) },
+    ...earnedTraits(stats).map((t): ICaptainSource => ({ kind: 'trait', label: t.name, mods: combineModifiers(t.modifiers(ctx)) })),
+  ];
+}
+
+/** Everything a captain adds to their ship (all of captainSources combined). */
 export function captainModifiers(
   captain: ICaptain | null | undefined,
   ctx: ICaptainContext = {},
   learned: readonly string[] = [],
   stats?: ICaptainStats,
+  shipClass?: ShipClass,
 ): IShipModifiers {
   if (!captain) return NO_MODIFIERS;
-  return combineModifiers(
-    skillModifiers(captain.skill, captain.level, ctx),
-    ...validLearned(captain, learned).map((s) => skillModifiers(s, captain.level, ctx, LEARNED_SKILL_SCALE)),
-    ...earnedTraits(stats).map((t) => t.modifiers(ctx)),
-  );
+  return combineModifiers(...captainSources(captain, ctx, learned, stats, shipClass).map((s) => s.mods));
 }
 
 export const SKILL_LABEL: Record<CaptainSkill, string> = {

@@ -35,3 +35,12 @@ export function recruitCaptain(nation: string, owned: readonly string[]): { owne
 export function ownsCaptain(owned: readonly string[], id: string | null | undefined): boolean {
   return !!id && owned.includes(id);
 }
+
+/** XP a captain gets when they would join again (#131): once a nation has every captain, a recruit trains one instead. */
+export const DUPLICATE_CAPTAIN_XP = 300;
+
+/** The owned captain a duplicate recruit trains (random). */
+export function duplicateCaptain(nation: string, owned: readonly string[], rng: () => number = Math.random): ICaptainData | undefined {
+  const mine = nationCaptains(nation).filter((c) => owned.includes(c.id));
+  return mine.length > 0 ? mine[Math.min(mine.length - 1, Math.floor(rng() * mine.length))] : undefined;
+}

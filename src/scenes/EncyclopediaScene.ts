@@ -7,17 +7,15 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import {
   CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
 } from '@/systems/EncyclopediaSystem';
-import {
-  captainModifiers, earnedTraits, LEARNED_SKILL_SCALE, learnSkill, learnSlots, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS, validLearned, withProgress, xpForLevel, MAX_LEVEL,
-} from '@/systems/CaptainSystem';
+import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
+import { SKILL_COLOR } from '@/ui/SkillColors';
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { rewardAreaOf } from '@/systems/ShipyardSystem';
-import { canAfford, formatResources, pay } from '@/systems/ResourceSystem';
-import { loadSave, saveSave } from '@/utils/ProgressStore';
+import { loadSave } from '@/utils/ProgressStore';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
-import { CaptainSkill, ICaptainData } from '@/types/Captain';
+import { ICaptainData } from '@/types/Captain';
 import { AircraftType } from '@/types/Aircraft';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
@@ -89,7 +87,6 @@ export class EncyclopediaScene extends Phaser.Scene {
   private selectedId = '';
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private maxStat = { hp: 1, armor: 1, speed: 1 };
-  private status = '';
 
   constructor() {
     super({ key: SceneKeys.ENCYCLOPEDIA });
@@ -105,7 +102,6 @@ export class EncyclopediaScene extends Phaser.Scene {
     showScreenHelp(this);
     audio.music('menu');
     this.dynamic = [];
-    this.status = '';
     this.nation = loadSave().current;
     this.ownedOnly = audio.settings.encyclopediaOwnedOnly;
     const all = DataLoader.getRegistry(this).all();
@@ -283,8 +279,7 @@ export class EncyclopediaScene extends Phaser.Scene {
       const card = this.add.container(col * (colW + 8), row * (L.rowH + ROW_GAP), parts);
       this.list.addItem(card, colW, L.rowH, () => {
         this.selectedId = e.id;
-        this.status = '';
-        this.refresh();
+            this.refresh();
       });
     });
     this.list.setContentHeight(Math.max(0, rows * (L.rowH + ROW_GAP) - ROW_GAP));
@@ -358,83 +353,28 @@ export class EncyclopediaScene extends Phaser.Scene {
   // Captains (#43 / #45)
   // -------------------------------------------------------------------------
 
+  /** The 図鑑 page is the captain's biography (#130); skills are learned on the 艦長 screen. */
   private buildCaptainDetail(data: ICaptainData, owned: boolean): void {
     const d = L.detail;
-    const x = d.x + 26;
-    const w = d.w - 52;
     const np = loadSave().nations[this.nation];
     const captain = withProgress(data, np?.captainXp[data.id] ?? 0);
-    let y = this.detailHeader(`${NATION_INFO[data.nation].ja}  ·  艦長  ·  固有スキル ${SKILL_LABEL[data.skill]}`, data.name, owned ? Css.cyan : Css.dim);
+    const sc = SKILL_COLOR[data.skill];
+    let y = this.detailHeader(`${NATION_INFO[data.nation].ja}  ·  艦長${owned ? `  ·  Lv${captain.level}` : ''}`, data.name, owned ? Css.cyan : Css.dim);
+    y = this.section(y, '略歴', data.bio ?? '—');
+    y = this.section(y, `固有スキル「${owned ? inherentLabel(captain) : SKILL_LABEL[data.skill]}」`, `${modifierLines(skillModifiers(data.skill, SKILL_LEVEL_CAP, { night: true })).join('・')} (Lv${SKILL_LEVEL_CAP})\nLv10 で II (1.5 倍)、Lv50 で III (2 倍) に強化`, sc.css);
+    y = this.section(y, '搭乗適性', CLASS_ORDER.map((c) => `${CLASS_JA[c].slice(0, 2)} ${aptitudeFor(data, c)}`).join('   '));
     if (!owned) {
-      y = this.section(y, '入手方法', '作戦の初回攻略・昇進・戦闘の勝利 (低確率) で、まだ仲間になっていない艦長が加わります。', Css.gold);
-      this.section(y, `固有スキル「${SKILL_LABEL[data.skill]}」(Lv1 → Lv${MAX_LEVEL})`, `${modifierLines(skillModifiers(data.skill, 1)).join('・') || '夜戦でのみ'}  →  ${modifierLines(skillModifiers(data.skill, MAX_LEVEL, { night: true })).join('・')}`);
+      this.section(y, '入手方法', '作戦の初回攻略・昇進・戦闘の勝利 (低確率) で、まだ仲間になっていない艦長が加わります。', Css.gold);
       return;
     }
-    const learned = validLearned(captain, np?.captainSkills[data.id] ?? []);
-    const stats = np?.captainStats[data.id];
-
-    // Level and experience
-    const next = captain.level >= MAX_LEVEL ? null : xpForLevel(captain.level + 1);
-    const g = this.track(this.add.graphics());
-    const from = xpForLevel(captain.level);
-    drawMeter(g, x + 90, y + 4, Math.min(360, w - 260), 8, next ? (captain.xp - from) / (next - from) : 1, Colors.cyan);
-    this.track(this.add.text(x, y - 2, `Lv${captain.level}`, textStyle(16, Css.text, { fontStyle: 'bold' })));
-    this.track(this.add.text(x + 100 + Math.min(360, w - 260), y - 2, next ? `経験値 ${captain.xp} / ${next}` : '最大レベル', textStyle(12, Css.muted)));
-    y += 30;
-
-    const total = modifierLines(captainModifiers(captain, { night: true }, learned, stats));
-    y = this.section(y, '現在の補正 (夜戦時を含む)', total.join('・') || '—');
-
-    // Learned skills (#45)
-    const slots = learnSlots(captain.level);
-    const slotText = learned.length > 0 ? learned.map((s) => SKILL_LABEL[s]).join('・') : 'なし';
-    y = this.section(y, `習得スキル ${learned.length} / ${slots} 枠`, `${slotText}\n(Lv3・6・9 で 1 枠ずつ開く。固有スキルの ${Math.round(LEARNED_SKILL_SCALE * 100)}% の効果)`);
-    if (this.nation === loadSave().current && slots > 0) {
-      const options = (Object.values(CaptainSkill) as CaptainSkill[]).filter((s) => s !== data.skill && !learned.includes(s));
-      const full = learned.length >= slots;
-      const cols = IS_PORTRAIT ? 4 : 7;
-      const bh = IS_PORTRAIT ? 44 : 30;
-      const bw = (w - 6 * (cols - 1)) / cols;
-      options.forEach((skill, i) => {
-        this.track(new UIButton(this, x + (i % cols) * (bw + 6) + bw / 2, y + Math.floor(i / cols) * (bh + 6) + bh / 2, SKILL_LABEL[skill], () => this.learn(captain, learned, skill), {
-          variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 14 : 12,
-        }));
-      });
-      y += Math.ceil(options.length / cols) * (bh + 6) + 4;
-      this.track(this.add.text(x, y, full ? `枠がいっぱいです。選ぶと最初のスキルと付け替えます (${formatResources(RETRAIN_COST)})` : 'スキルを選ぶと、空いている枠で習得します (無料)', textStyle(11, Css.dim)));
-      y += 22;
+    const earned = earnedTraits(np?.captainStats[data.id]);
+    y = this.section(y, '特性', earned.length > 0 ? earned.map((t) => `★ ${t.name} — ${t.effect}`).join('\n') : 'まだありません', Css.muted);
+    if (this.nation === loadSave().current) {
+      const bh = IS_PORTRAIT ? 52 : 40;
+      this.track(new UIButton(this, d.x + 26 + 130, Math.min(y + bh / 2, d.y + d.h - 20 - bh / 2), 'スキルと成長  ›', () => this.scene.start(SceneKeys.CAPTAIN, { id: data.id }), {
+        variant: 'primary', width: 260, height: bh, fontSize: 14,
+      }));
     }
-    if (this.status) {
-      this.track(this.add.text(x, y, this.status, textStyle(13, Css.success)));
-      y += 24;
-    }
-
-    // Traits
-    const earned = new Set(earnedTraits(stats).map((t) => t.id));
-    const traitLines = TRAITS.map((t) => `${earned.has(t.id) ? '★' : '☆'} ${t.name} — ${t.effect}${earned.has(t.id) ? '' : ` (条件: ${t.condition})`}`);
-    this.section(y, '特性 (戦闘の実績で獲得)', traitLines.join('\n'), Css.muted);
-  }
-
-  /** Learns a skill into a free slot, or replaces the first learned one (paid retraining). */
-  private learn(captain: ReturnType<typeof withProgress>, learned: CaptainSkill[], skill: CaptainSkill): void {
-    const save = loadSave();
-    const np = save.nations[this.nation];
-    if (!np) return;
-    const full = learned.length >= learnSlots(captain.level);
-    const next = learnSkill(captain, learned, skill, full ? learned[0] : undefined);
-    if (!next) return;
-    let resources = np.resources;
-    if (full) {
-      if (!canAfford(resources, RETRAIN_COST)) {
-        this.status = `資源が足りません (${formatResources(RETRAIN_COST)})`;
-        this.refresh();
-        return;
-      }
-      resources = pay(resources, RETRAIN_COST)!;
-    }
-    saveSave({ ...save, nations: { ...save.nations, [this.nation]: { ...np, resources, captainSkills: { ...np.captainSkills, [captain.id]: next } } } });
-    this.status = `「${SKILL_LABEL[skill]}」を習得しました`;
-    this.refresh();
   }
 
   // -------------------------------------------------------------------------

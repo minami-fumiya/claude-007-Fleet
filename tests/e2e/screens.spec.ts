@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.16.1.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.17.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -42,6 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
+  'CaptainScene',
 ];
 
 async function boot(page: Page, layout: string, save: object = SAVE): Promise<string[]> {
@@ -267,6 +268,28 @@ test.describe('screens', () => {
     expect(swept.sweeps).toBe(1);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `sweep (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('sweep.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('captains: pick a skill for a slot, confirm it, and see it in the colour-coded bonus (#130 / #131)', async ({ page }, info) => {
+    const save = { ...SAVE, version: 7, seenHelp: ['CaptainScene'], nations: { IJN: { ...SAVE.nations.IJN, captainXp: { ijn_sakai: 60_000 }, captainSkills: { ijn_sakai: ['Torpedo'] } } } };
+    const errors = await boot(page, info.project.metadata.layout as string, save);
+    await open(page, 'CaptainScene', { id: 'ijn_sakai' });
+    await page.screenshot({ path: info.outputPath('captain.png') });
+    expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+    type Scene = { openPicker(c: unknown, slot: number): void; confirmLearn(c: unknown, slot: number, s: string): void; applyLearn(c: unknown, slot: number, s: string): void; owned(): Array<{ id: string }> };
+    const call = (fn: string, slot: number, skill?: string) => page.evaluate(([f, i, k]) => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as Scene & Record<string, (...a: unknown[]) => void>;
+      s[f as string](s.owned().find((c) => c.id === 'ijn_sakai'), i, k);
+    }, [fn, slot, skill] as const);
+    await call('openPicker', 0);
+    await page.screenshot({ path: info.outputPath('captain-picker.png') });
+    // Replacing 雷撃 asks first and names what it drops.
+    await call('confirmLearn', 0, 'Night');
+    await page.screenshot({ path: info.outputPath('captain-confirm.png') });
+    await call('applyLearn', 0, 'Night');
+    const learned = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.captainSkills.ijn_sakai);
+    expect(learned).toEqual(['Night']);
     expect(errors).toEqual([]);
   });
 

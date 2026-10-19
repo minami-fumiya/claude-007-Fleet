@@ -16,7 +16,7 @@ import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ICaptain, ICaptainData } from '@/types/Captain';
-import { SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
+import { aptitudeFor, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
@@ -1391,7 +1391,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     for (const t of texts) if (t.width > room) t.setScale(room / t.width);
 
     const captain = this.captainOf(i);
-    const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}` : '艦長を任命  ›';
+    const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}  適性${aptitudeFor(captain, ship.shipClass)}` : '艦長を任命  ›';
     const btnH = p ? (full ? 40 : tiny ? 30 : 36) : 24;
     const btnY = h - (p ? (full ? 26 : tiny ? 19 : 22) : 18);
     const detailW = p ? 110 : 64;
@@ -1429,7 +1429,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const captain = this.captainOf(i);
     const btnH = Math.min(24, h - 70);
     const detailW = 48;
-    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level}` : '艦長 ›', this.onTap(() => this.cycleCaptain(i)), {
+    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level} ${aptitudeFor(captain, ship.shipClass)}` : '艦長 ›', this.onTap(() => this.cycleCaptain(i)), {
       variant: captain ? 'primary' : 'secondary', width: w - detailW - 22, height: btnH, fontSize: 10,
     });
     const detailBtn = new UIButton(this, w - 8 - detailW / 2, h - btnH / 2 - 6, '詳細', this.onTap(() => this.openDetail(ship, i)), {

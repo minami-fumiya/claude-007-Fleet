@@ -69,15 +69,38 @@ export function modifierLines(mods: IShipModifiers): string[] {
   const out: string[] = [];
   for (const key of Object.keys(NO_MODIFIERS) as Array<keyof IShipModifiers>) {
     const label = MOD_LABEL[key];
-    const v = mods[key];
-    if (!label || v === NO_MODIFIERS[key]) continue;
-    if (ADDITIVE_MODIFIERS.includes(key)) {
-      const n = key === 'evadeAdd' ? Math.round(v * 100) : Math.round(v);
-      if (n !== 0) out.push(`${label} ${n > 0 ? '+' : '−'}${Math.abs(n)}${key === 'evadeAdd' ? '%' : ''}`);
-    } else {
-      const pct = Math.round((v - 1) * 100);
-      if (pct !== 0) out.push(`${label} ${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`);
-    }
+    const text = modifierValue(key, mods[key]);
+    if (label && text) out.push(`${label} ${text}`);
   }
   return out;
+}
+
+/** "+12%", "−8%", "+2" (armour), or '' when it rounds to no change. */
+export function modifierValue(key: keyof IShipModifiers, v: number): string {
+  if (v === NO_MODIFIERS[key]) return '';
+  const n = ADDITIVE_MODIFIERS.includes(key) ? (key === 'evadeAdd' ? Math.round(v * 100) : Math.round(v)) : Math.round((v - 1) * 100);
+  if (n === 0) return '';
+  const unit = !ADDITIVE_MODIFIERS.includes(key) || key === 'evadeAdd' ? '%' : '';
+  return `${n > 0 ? '+' : '−'}${Math.abs(n)}${unit}`;
+}
+
+/** One modifier and what each source adds to it (#130): sources are indices into the list passed in. */
+export interface IModifierRow {
+  key: keyof IShipModifiers;
+  label: string;
+  total: string;
+  parts: Array<{ source: number; value: string }>;
+}
+
+/** The colour-coded breakdown (#130): every modifier any source changes, with each source's share. */
+export function modifierBreakdown(sources: ReadonlyArray<{ mods: IShipModifiers }>, total: IShipModifiers): IModifierRow[] {
+  const rows: IModifierRow[] = [];
+  for (const key of Object.keys(NO_MODIFIERS) as Array<keyof IShipModifiers>) {
+    const label = MOD_LABEL[key];
+    const t = modifierValue(key, total[key]);
+    if (!label || !t) continue;
+    const parts = sources.map((s, i) => ({ source: i, value: modifierValue(key, s.mods[key]) })).filter((p) => p.value);
+    rows.push({ key, label, total: t, parts });
+  }
+  return rows;
 }
