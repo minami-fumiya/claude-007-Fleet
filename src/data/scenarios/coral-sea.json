@@ -1,0 +1,18 @@
+{
+  "id": "coral-sea",
+  "name": "珊瑚海海戦",
+  "date": "1942年5月",
+  "theater": "pacific",
+  "description": "ポートモレスビー攻略を目指す日本の機動部隊と米空母部隊が、互いの姿を見ないまま艦載機で戦った史上初の空母決戦。レキシントンが沈み、翔鶴は大破した。(レキシントン・祥鳳ほかは近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Overcast",
+  "time": "Day",
+  "forces": {
+    "A": {"nation": "IJN", "ships": ["shokaku", "zuikaku", "ryujo", "myoko", "takao", "yukikaze"], "positions": [{"x": 0.5, "y": 0.24, "angle": 180}, {"x": 0.45, "y": 0.18, "angle": 180}, {"x": 0.55, "y": 0.18, "angle": 180}, {"x": 0.45, "y": 0.12, "angle": 180}, {"x": 0.55, "y": 0.12, "angle": 180}, {"x": 0.4, "y": 0.24, "angle": 180}]},
+    "B": {"nation": "USN", "ships": ["yorktown", "enterprise", "baltimore", "atlanta", "fletcher", "sumner"], "positions": [{"x": 0.5, "y": 0.76, "angle": 0}, {"x": 0.55, "y": 0.82, "angle": 0}, {"x": 0.45, "y": 0.82, "angle": 0}, {"x": 0.55, "y": 0.88, "angle": 0}, {"x": 0.45, "y": 0.88, "angle": 0}, {"x": 0.6, "y": 0.76, "angle": 0}]}
+  },
+  "sides": [
+    {"force": "A", "label": "第五航空戦隊で攻撃", "objective": "SinkTargets", "targets": ["yorktown", "enterprise"], "timeLimitSec": 360, "brief": "米空母 2 隻を撃沈せよ。"},
+    {"force": "B", "label": "米空母部隊で迎撃", "objective": "SinkTargets", "targets": ["shokaku", "zuikaku"], "timeLimitSec": 360, "brief": "翔鶴と瑞鶴を撃沈し、攻略部隊を止めよ。"}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "denmark-strait",
+  "name": "デンマーク海峡海戦",
+  "date": "1941年5月",
+  "theater": "atlantic",
+  "description": "大西洋へ出ようとするビスマルクとプリンツ・オイゲンを、巡洋戦艦フッドと戦艦プリンス・オブ・ウェールズが迎え撃った。フッドは弾薬庫に被弾して数分で轟沈した。(プリンス・オブ・ウェールズは同型艦キング・ジョージ5世が代役)",
+  "map": "open-sea",
+  "weather": "Overcast",
+  "time": "Day",
+  "forces": {
+    "A": {"nation": "KM", "ships": ["bismarck", "prinz_eugen"], "positions": [{"x": 0.25, "y": 0.25, "angle": 180}, {"x": 0.2, "y": 0.19, "angle": 180}]},
+    "B": {"nation": "RN", "ships": ["hood", "king_george_v"], "positions": [{"x": 0.75, "y": 0.75, "angle": 300}, {"x": 0.827, "y": 0.737, "angle": 300}]}
+  },
+  "sides": [
+    {"force": "A", "label": "ビスマルクで迎撃", "objective": "SinkTargets", "targets": ["hood"], "timeLimitSec": 300, "brief": "制限時間内に巡洋戦艦フッドを撃沈せよ。"},
+    {"force": "B", "label": "フッドで阻止", "objective": "SinkTargets", "targets": ["bismarck"], "timeLimitSec": 300, "brief": "大西洋へ出る前に戦艦ビスマルクを撃沈せよ。"}
+  ]
+}

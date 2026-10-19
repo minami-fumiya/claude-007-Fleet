@@ -2,16 +2,17 @@
   "id": "leyte-gulf",
   "name": "レイテ沖海戦",
   "date": "1944年10月",
+  "theater": "pacific",
   "description": "史上最大規模の海戦。栗田艦隊はサマール島沖で米護衛空母群と遭遇し、レイテ湾への突入を目前に反転した。本シナリオは戦艦部隊のレイテ湾突入と、それを阻む米艦隊の遅滞戦闘を再現する (護衛空母はエンタープライズが代役)。",
   "map": "strait",
   "weather": "Overcast",
   "time": "Day",
   "forces": {
-    "A": { "nation": "IJN", "ships": ["yamato", "nagato", "kongo"], "positions": [{ "x": 0.5, "y": 0.88, "angle": 0 }, { "x": 0.42, "y": 0.93, "angle": 0 }, { "x": 0.58, "y": 0.93, "angle": 0 }] },
-    "B": { "nation": "USN", "ships": ["enterprise", "fletcher", "gearing"], "positions": [{ "x": 0.5, "y": 0.16, "angle": 180 }, { "x": 0.4, "y": 0.26, "angle": 180 }, { "x": 0.6, "y": 0.26, "angle": 180 }] }
+    "A": {"nation": "IJN", "ships": ["yamato", "nagato", "kongo", "musashi", "takao", "myoko", "shimakaze"], "positions": [{"x": 0.5, "y": 0.88, "angle": 0}, {"x": 0.42, "y": 0.93, "angle": 0}, {"x": 0.58, "y": 0.93, "angle": 0}, {"x": 0.6, "y": 0.88, "angle": 0}, {"x": 0.4, "y": 0.88, "angle": 0}, {"x": 0.65, "y": 0.88, "angle": 0}, {"x": 0.35, "y": 0.88, "angle": 0}]},
+    "B": {"nation": "USN", "ships": ["enterprise", "fletcher", "gearing", "essex", "independence", "south_dakota", "sumner"], "positions": [{"x": 0.5, "y": 0.16, "angle": 180}, {"x": 0.4, "y": 0.26, "angle": 180}, {"x": 0.6, "y": 0.26, "angle": 180}, {"x": 0.45, "y": 0.1, "angle": 180}, {"x": 0.55, "y": 0.1, "angle": 180}, {"x": 0.4, "y": 0.16, "angle": 180}, {"x": 0.6, "y": 0.16, "angle": 180}]}
   },
   "sides": [
-    { "force": "A", "label": "栗田艦隊で突入", "objective": "Breakthrough", "zone": { "x": 0.5, "y": 0.06, "r": 0.048, "label": "レイテ湾" }, "timeLimitSec": 300, "brief": "制限時間内に旗艦をレイテ湾へ突入させよ。" },
-    { "force": "B", "label": "米艦隊で阻止", "objective": "Delay", "targets": ["yamato"], "zone": { "x": 0.5, "y": 0.06, "r": 0.048, "label": "レイテ湾" }, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "大和をレイテ湾に入れるな。時間を稼ぐか、大和を撃沈せよ。" }
+    {"force": "A", "label": "栗田艦隊で突入", "objective": "Breakthrough", "zone": {"x": 0.5, "y": 0.06, "r": 0.048, "label": "レイテ湾"}, "timeLimitSec": 300, "brief": "制限時間内に旗艦をレイテ湾へ突入させよ。"},
+    {"force": "B", "label": "米艦隊で阻止", "objective": "Delay", "targets": ["yamato"], "zone": {"x": 0.5, "y": 0.06, "r": 0.048, "label": "レイテ湾"}, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "大和をレイテ湾に入れるな。時間を稼ぐか、大和を撃沈せよ。"}
   ]
 }

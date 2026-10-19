@@ -1,0 +1,18 @@
+{
+  "id": "tassafaronga",
+  "name": "ルンガ沖夜戦",
+  "date": "1942年11月",
+  "theater": "pacific",
+  "description": "ドラム缶輸送中の田中頼三少将の駆逐艦部隊は、待ち構えた米巡洋艦部隊に先手を取られながらも、酸素魚雷の反撃で重巡 1 隻を撃沈、3 隻を大破させた。(長波・高波ほかは同型・近似艦が代役)",
+  "map": "archipelago",
+  "weather": "Clear",
+  "time": "Night",
+  "forces": {
+    "A": {"nation": "IJN", "ships": ["yukikaze", "shimakaze", "fubuki", "etorofu"], "positions": [{"x": 0.2, "y": 0.22, "angle": 135}, {"x": 0.122, "y": 0.213, "angle": 135}, {"x": 0.193, "y": 0.142, "angle": 135}, {"x": 0.08, "y": 0.171, "angle": 135}]},
+    "B": {"nation": "USN", "ships": ["baltimore", "des_moines", "cleveland", "atlanta", "fletcher", "sumner"], "positions": [{"x": 0.62, "y": 0.7, "angle": 315}, {"x": 0.698, "y": 0.707, "angle": 315}, {"x": 0.627, "y": 0.778, "angle": 315}, {"x": 0.74, "y": 0.749, "angle": 315}, {"x": 0.669, "y": 0.82, "angle": 315}, {"x": 0.691, "y": 0.629, "angle": 315}]}
+  },
+  "sides": [
+    {"force": "A", "label": "田中隊で反撃", "objective": "SinkTargets", "targets": ["baltimore", "des_moines"], "timeLimitSec": 300, "brief": "魚雷で米重巡 2 隻を撃沈せよ。"},
+    {"force": "B", "label": "米巡洋艦隊で迎撃", "objective": "Annihilate", "timeLimitSec": 300, "brief": "輸送の駆逐艦部隊を全滅させよ。"}
+  ]
+}

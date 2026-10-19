@@ -2,16 +2,17 @@
   "id": "north-cape",
   "name": "北岬沖海戦",
   "date": "1943年12月",
+  "theater": "arctic",
   "description": "ソ連向け援助船団を襲うため出撃した戦艦シャルンホルストは、英巡洋艦部隊に阻まれ、ノルウェーへの帰路を戦艦デューク・オブ・ヨークに捕捉された。極夜の荒れた海で砲雷撃を受け、シャルンホルストは撃沈された。本シナリオは帰投を図るシャルンホルストとその追撃を再現する (デューク・オブ・ヨークは同型艦キング・ジョージ5世が代役)。",
   "map": "open-sea",
   "weather": "Overcast",
   "time": "Night",
   "forces": {
-    "A": { "nation": "KM", "ships": ["scharnhorst"], "positions": [{ "x": 0.16, "y": 0.5, "angle": 90 }] },
-    "B": { "nation": "RN", "ships": ["king_george_v", "belfast", "javelin"], "positions": [{ "x": 0.38, "y": 0.86, "angle": 30 }, { "x": 0.52, "y": 0.12, "angle": 150 }, { "x": 0.46, "y": 0.8, "angle": 30 }] }
+    "A": {"nation": "KM", "ships": ["scharnhorst"], "positions": [{"x": 0.16, "y": 0.5, "angle": 90}]},
+    "B": {"nation": "RN", "ships": ["king_george_v", "belfast", "javelin", "southampton", "dido", "cossack"], "positions": [{"x": 0.38, "y": 0.86, "angle": 30}, {"x": 0.52, "y": 0.12, "angle": 150}, {"x": 0.46, "y": 0.8, "angle": 30}, {"x": 0.393, "y": 0.937, "angle": 30}, {"x": 0.307, "y": 0.887, "angle": 30}, {"x": 0.277, "y": 0.939, "angle": 30}]}
   },
   "sides": [
-    { "force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["scharnhorst"], "zone": { "x": 0.92, "y": 0.5, "r": 0.036, "label": "ノルウェー沿岸" }, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "シャルンホルストがノルウェー沿岸に逃げ込む前に撃沈せよ。" },
-    { "force": "A", "label": "シャルンホルストで帰投", "objective": "Breakthrough", "zone": { "x": 0.92, "y": 0.5, "r": 0.036, "label": "ノルウェー沿岸" }, "timeLimitSec": 300, "brief": "英艦隊の包囲をかわし、ノルウェー沿岸へ逃げ込め。" }
+    {"force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["scharnhorst"], "zone": {"x": 0.92, "y": 0.5, "r": 0.036, "label": "ノルウェー沿岸"}, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "シャルンホルストがノルウェー沿岸に逃げ込む前に撃沈せよ。"},
+    {"force": "A", "label": "シャルンホルストで帰投", "objective": "Breakthrough", "zone": {"x": 0.92, "y": 0.5, "r": 0.036, "label": "ノルウェー沿岸"}, "timeLimitSec": 300, "brief": "英艦隊の包囲をかわし、ノルウェー沿岸へ逃げ込め。"}
   ]
 }

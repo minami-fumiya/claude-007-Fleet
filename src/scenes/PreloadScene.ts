@@ -18,14 +18,11 @@ import upgradesData from '@/data/upgrades.json';
 import openSea from '@/data/maps/open-sea.json';
 import archipelago from '@/data/maps/archipelago.json';
 import strait from '@/data/maps/strait.json';
+import { ALL_SCENARIOS } from '@/data/scenarios';
+import { sortScenarios } from '@/systems/ScenarioSystem';
 import atoll from '@/data/maps/atoll.json';
 import convoyRoute from '@/data/maps/convoy-route.json';
 
-import midway from '@/data/scenarios/midway.json';
-import leyte from '@/data/scenarios/leyte-gulf.json';
-import bismarck from '@/data/scenarios/bismarck-chase.json';
-import guadalcanal from '@/data/scenarios/guadalcanal.json';
-import northCape from '@/data/scenarios/north-cape.json';
 
 const MAPS = [openSea, archipelago, strait, atoll, convoyRoute];
 
@@ -47,7 +44,7 @@ export class PreloadScene extends Phaser.Scene {
     this.cache.json.add('captains', captainsData);
     this.cache.json.add('upgrades', upgradesData);
     for (const m of MAPS) this.cache.json.add(`map:${m.id}`, m);
-    this.cache.json.add('scenarios', { scenarios: [midway, guadalcanal, bismarck, northCape, leyte] });
+    this.cache.json.add('scenarios', { scenarios: sortScenarios(ALL_SCENARIOS) });
   }
 
   create(): void {
