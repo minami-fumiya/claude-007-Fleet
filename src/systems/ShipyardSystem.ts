@@ -177,16 +177,19 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
 // Construction time (#143)
 // ---------------------------------------------------------------------------
 
-/** Minutes to build by class (light cruisers are quicker than heavy ones); each grade adds GRADE_MINUTES. */
+/**
+ * Minutes to build by class (light cruisers are quicker than heavy ones); each grade adds GRADE_MINUTES. About half
+ * of 0.0.19's (#176): a destroyer in 3 minutes, the biggest battleships in about 25.
+ */
 export const BUILD_MINUTES: Record<ShipClass, number> = {
-  [ShipClass.Destroyer]: 5,
-  [ShipClass.Submarine]: 8,
-  [ShipClass.Cruiser]: 15,
-  [ShipClass.Carrier]: 35,
-  [ShipClass.Battleship]: 40,
+  [ShipClass.Destroyer]: 3,
+  [ShipClass.Submarine]: 4,
+  [ShipClass.Cruiser]: 8,
+  [ShipClass.Carrier]: 12,
+  [ShipClass.Battleship]: 15,
 };
-export const LIGHT_CRUISER_MINUTES = 10;
-export const GRADE_MINUTES = 4;
+export const LIGHT_CRUISER_MINUTES = 6;
+export const GRADE_MINUTES = 2;
 
 export function buildTimeMs(ship: IShipData, timeMul = 1): number {
   const base = isLightCruiser(ship) ? LIGHT_CRUISER_MINUTES : BUILD_MINUTES[ship.shipClass];

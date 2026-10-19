@@ -113,9 +113,17 @@ export function assignShips<T extends IBaseHoldings>(progress: T, shipIds: reado
   return { ...progress, shipBases };
 }
 
-/** Fuel to bring a ship over from another base: more for bigger ships. */
-export function relocationCost(ship: { hp: number }): number {
-  return Math.max(20, Math.round(ship.hp / 10 / 10) * 10);
+/**
+ * Brings ships over to `baseId` for free (#191): every listed ship the admiral owns that is at another base and not
+ * busy (out on a sortie, or in a repair dock there). Returns the moved and the held-back ids.
+ */
+export function recallShips<T extends IBaseHoldings & { ships: string[]; docks: ReadonlyArray<{ shipId: string }> }>(
+  progress: T, shipIds: readonly string[], baseId: string, busy: readonly string[] = [],
+): { progress: T; moved: string[]; held: string[] } {
+  const away = shipIds.filter((id) => progress.ships.includes(id) && (progress.shipBases[id] ?? baseId) !== baseId);
+  const blocked = (id: string): boolean => busy.includes(id) || progress.docks.some((d) => d.shipId === id);
+  const moved = away.filter((id) => !blocked(id));
+  return { progress: assignShips(progress, moved, baseId), moved, held: away.filter(blocked) };
 }
 
 /** Whether a sortie into `theater` can leave from `base`. */

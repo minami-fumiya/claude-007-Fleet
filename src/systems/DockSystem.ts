@@ -20,17 +20,17 @@ export const DOCK_UPGRADES: Array<{ rank: number; cost: IResources }> = [
   { rank: 8, cost: { fuel: 1000, ammo: 0, steel: 1500, bauxite: 0 } },
 ];
 /** Real milliseconds per point of HP repaired (a cruiser; the default when the class is unknown). */
-export const MS_PER_HP = 700;
+export const MS_PER_HP = 450;
 /**
- * Repair time per HP by class (#143, shortened to about 60% in #161): a destroyer's light damage takes ten-odd
- * seconds, a battleship coming home 大破 about 18 minutes.
+ * Repair time per HP by class (#143, shortened to about 60% in #161 and again in #176): a destroyer's light damage
+ * takes a few seconds, a battleship coming home 大破 about 10 minutes.
  */
 export const MS_PER_HP_BY_CLASS: Record<ShipClass, number> = {
-  [ShipClass.Destroyer]: 400,
-  [ShipClass.Submarine]: 400,
+  [ShipClass.Destroyer]: 250,
+  [ShipClass.Submarine]: 250,
   [ShipClass.Cruiser]: MS_PER_HP,
-  [ShipClass.Carrier]: 1200,
-  [ShipClass.Battleship]: 1500,
+  [ShipClass.Carrier]: 700,
+  [ShipClass.Battleship]: 900,
 };
 /** A ship sunk in battle comes home heavily damaged (大破) rather than being lost. */
 export const SUNK_HP_FRACTION = 0.1;
