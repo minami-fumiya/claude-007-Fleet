@@ -154,6 +154,32 @@ export function aptitudeFor(captain: ICaptainData, shipClass: ShipClass): Aptitu
   return captain.aptitude?.[shipClass] ?? SKILL_APTITUDE[captain.skill][shipClass];
 }
 
+/** How well a captain fits a ship class (#164): aptitude first, then level. */
+export function captainFit(captain: ICaptainData & { level: number }, shipClass: ShipClass): number {
+  return APTITUDE_SCALE[aptitudeFor(captain, shipClass)] * 1000 + captain.level;
+}
+
+/** Up to `n` of the given ships the captain suits best (S aptitude), the strongest first (#164). */
+export function recommendedShips<T extends { shipClass: ShipClass; hp: number }>(captain: ICaptainData, ships: readonly T[], n = 3): T[] {
+  return ships.filter((s) => aptitudeFor(captain, s.shipClass) === 'S').sort((a, b) => b.hp - a.hp).slice(0, n);
+}
+
+/**
+ * Captains for a fleet's slots (#164), greedily from the flagship down: each ship gets the best-fitting captain not
+ * already given a slot. Empty slots get none.
+ */
+export function assignCaptains(slots: ReadonlyArray<ShipClass | null>, captains: ReadonlyArray<ICaptainData & { level: number }>): (string | null)[] {
+  const free = [...captains];
+  return slots.map((cls) => {
+    if (!cls || free.length === 0) return null;
+    let best = 0;
+    free.forEach((c, i) => {
+      if (captainFit(c, cls) > captainFit(free[best], cls)) best = i;
+    });
+    return free.splice(best, 1)[0].id;
+  });
+}
+
 export const ABILITY_LABEL: Record<CaptainAbility, string> = {
   [CaptainAbility.Gunnery]: '砲術',
   [CaptainAbility.Torpedo]: '雷撃',

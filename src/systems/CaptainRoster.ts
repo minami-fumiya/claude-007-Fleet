@@ -1,5 +1,7 @@
 import captainData from '@/data/captains.json';
-import { ICaptainData } from '@/types/Captain';
+import { CaptainSkill, ICaptainData } from '@/types/Captain';
+import { ShipClass } from '@/types/ShipClass';
+import { aptitudeFor } from './CaptainSystem';
 
 /**
  * Which captains a nation has (#44, pure). A new nation starts with its first listed captain; more join on a
@@ -12,8 +14,22 @@ export const ALL_CAPTAINS = (captainData as { captains: ICaptainData[] }).captai
 /** Chance a won battle brings a new captain. */
 export const CAPTAIN_DROP_CHANCE = 0.05;
 
+/**
+ * The order captains join in (#159): destroyer specialists first, since a new nation owns only a destroyer; the
+ * battleship and carrier ones last.
+ */
+export const RECRUIT_ORDER: CaptainSkill[] = [
+  CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Recon,
+  CaptainSkill.Engineering, CaptainSkill.Gunnery, CaptainSkill.Damecon, CaptainSkill.Aviation,
+];
+
+/** The nation's captains, in the order they join. */
 export function nationCaptains(nation: string): ICaptainData[] {
-  return ALL_CAPTAINS.filter((c) => c.nation === nation);
+  const rank = (c: ICaptainData): number => {
+    const i = RECRUIT_ORDER.indexOf(c.skill);
+    return i < 0 ? RECRUIT_ORDER.length : i;
+  };
+  return ALL_CAPTAINS.filter((c) => c.nation === nation).sort((a, b) => rank(a) - rank(b));
 }
 
 /** The captain a new nation starts with. */
@@ -21,14 +37,19 @@ export function starterCaptain(nation: string): ICaptainData | undefined {
   return nationCaptains(nation)[0];
 }
 
-/** The next captain the nation would get (data order), or undefined when it has them all. */
-export function nextCaptain(nation: string, owned: readonly string[]): ICaptainData | undefined {
-  return nationCaptains(nation).find((c) => !owned.includes(c.id));
+/**
+ * The next captain the nation would get, or undefined when it has them all. With the classes the nation owns,
+ * a captain suited (S) to one of them comes first (#159): no battleship captain while the fleet is destroyers.
+ */
+export function nextCaptain(nation: string, owned: readonly string[], shipClasses?: readonly ShipClass[]): ICaptainData | undefined {
+  const left = nationCaptains(nation).filter((c) => !owned.includes(c.id));
+  if (!shipClasses) return left[0];
+  return left.find((c) => shipClasses.some((k) => aptitudeFor(c, k) === 'S')) ?? left[0];
 }
 
 /** Adds the next captain; returns the new list and who joined (null when none is left). */
-export function recruitCaptain(nation: string, owned: readonly string[]): { owned: string[]; joined: ICaptainData | null } {
-  const next = nextCaptain(nation, owned);
+export function recruitCaptain(nation: string, owned: readonly string[], shipClasses?: readonly ShipClass[]): { owned: string[]; joined: ICaptainData | null } {
+  const next = nextCaptain(nation, owned, shipClasses);
   return next ? { owned: [...owned, next.id], joined: next } : { owned: [...owned], joined: null };
 }
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ABILITY_MAX, APTITUDE_SCALE, aptitudeFor, awardXp, battleXp, captainAbilities, captainModifiers, inherentLabel, inherentTier, levelForXp, MAX_LEVEL,
+  ABILITY_MAX, APTITUDE_SCALE, aptitudeFor, assignCaptains, recommendedShips, awardXp, battleXp, captainAbilities, captainModifiers, inherentLabel, inherentTier, levelForXp, MAX_LEVEL,
   nextInherentTier, scaleModifiers, SKILL_LABEL, skillModifiers, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
 import { ShipClass } from '@/types/ShipClass';
@@ -145,5 +145,33 @@ describe('growth to Lv100 (#131)', () => {
     expect(scaleModifiers({ ...NO_MODIFIERS, gunPowerMul: 1.5, armorAdd: 3, evadeAdd: 0.1 }, APTITUDE_SCALE.C))
       .toMatchObject({ gunPowerMul: 1.3, armorAdd: 1, evadeAdd: 0.06 });
     expect(scaleModifiers(NO_MODIFIERS, 1.2)).toEqual(NO_MODIFIERS);
+  });
+});
+
+describe('recommended ships and automatic assignment (#164)', () => {
+  const cap = (id: string, skill: CaptainSkill, level: number): ICaptainData & { level: number } => ({ id, name: id, nation: Nation.IJN, skill, level } as ICaptainData & { level: number });
+  const torpedo = cap('t', CaptainSkill.Torpedo, 5);
+  const gunnery = cap('g', CaptainSkill.Gunnery, 3);
+  const aviation = cap('a', CaptainSkill.Aviation, 1);
+
+  it('recommends the strongest owned ships with S aptitude, at most 3', () => {
+    const ships = [
+      { id: 'dd1', shipClass: ShipClass.Destroyer, hp: 100 },
+      { id: 'dd2', shipClass: ShipClass.Destroyer, hp: 120 },
+      { id: 'bb', shipClass: ShipClass.Battleship, hp: 600 },
+      { id: 'dd3', shipClass: ShipClass.Destroyer, hp: 110 },
+      { id: 'dd4', shipClass: ShipClass.Destroyer, hp: 90 },
+    ];
+    expect(recommendedShips(torpedo, ships).map((s) => s.id)).toEqual(['dd2', 'dd3', 'dd1']);
+    expect(recommendedShips(gunnery, ships).map((s) => s.id)).toEqual(['bb']);
+    expect(recommendedShips(aviation, ships)).toEqual([]);
+  });
+
+  it('gives each ship the best-fitting free captain, flagship first', () => {
+    expect(assignCaptains([ShipClass.Battleship, ShipClass.Destroyer, ShipClass.Carrier, null], [torpedo, aviation, gunnery])).toEqual(['g', 't', 'a', null]);
+    // Fewer captains than ships: the flagship is served first.
+    expect(assignCaptains([ShipClass.Destroyer, ShipClass.Destroyer], [aviation])).toEqual(['a', null]);
+    // The same aptitude: the higher level wins.
+    expect(assignCaptains([ShipClass.Destroyer], [cap('low', CaptainSkill.Night, 2), cap('high', CaptainSkill.Night, 9)])).toEqual(['high']);
   });
 });
