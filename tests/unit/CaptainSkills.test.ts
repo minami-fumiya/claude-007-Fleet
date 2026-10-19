@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  abilityModifiers, addBattleStats, captainAbilities, captainModifiers, captainSources, learnPlan, levelUpNotes, RETRAIN_COST, earnedTraits, LEARNED_SKILL_SCALE, learnSkill, learnSlots, skillModifiers, validLearned, withProgress, xpForLevel,
+  abilityModifiers, addBattleStats, captainAbilities, captainModifiers, captainSources, learnPlan, levelUpNotes, openLearnSlots, RETRAIN_COST, earnedTraits, LEARNED_SKILL_SCALE, learnSkill, learnSlots, skillModifiers, validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
 import { combineModifiers } from '@/systems/CustomizationSystem';
 import { modifierBreakdown } from '@/systems/EncyclopediaSystem';
@@ -14,13 +14,24 @@ const data: ICaptainData = { id: 'c', name: '試験', nation: Nation.IJN, skill:
 const atLevel = (lv: number) => withProgress(data, xpForLevel(lv));
 
 describe('learned skills (#45)', () => {
-  it('slots open at Lv3 / 6 / 9 / 30 / 60 (#131)', () => {
-    expect([1, 2, 3, 5, 6, 8, 9, 10, 29, 30, 59, 60, 100].map(learnSlots)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 5, 5]);
+  it('slots open at Lv5 / 10 / 20 / 40 / 70 (#187)', () => {
+    expect([1, 4, 5, 9, 10, 19, 20, 39, 40, 69, 70, 100].map(learnSlots)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  });
+
+  it('skills learned under the old slot levels stay, and can be retrained, but no new one goes in early (#187)', () => {
+    // Lv6 had two slots before #187, one now.
+    const c = atLevel(6);
+    const kept = [CaptainSkill.Torpedo, CaptainSkill.Night];
+    expect(validLearned(c, kept)).toEqual(kept);
+    expect(openLearnSlots(c, kept)).toBe(2);
+    expect(learnPlan(c, kept, 1, CaptainSkill.Recon)?.learned).toEqual([CaptainSkill.Torpedo, CaptainSkill.Recon]);
+    expect(learnSkill(c, [CaptainSkill.Torpedo], CaptainSkill.Night)).toBeNull();
+    expect(openLearnSlots(c, [])).toBe(1);
   });
 
   it('learns into free slots, never the inherent skill or a repeat; retraining swaps one', () => {
-    const c = atLevel(6);
-    expect(learnSkill(atLevel(2), [], CaptainSkill.Torpedo)).toBeNull();
+    const c = atLevel(10);
+    expect(learnSkill(atLevel(4), [], CaptainSkill.Torpedo)).toBeNull();
     expect(learnSkill(c, [], CaptainSkill.Gunnery)).toBeNull();
     const one = learnSkill(c, [], CaptainSkill.Torpedo)!;
     expect(learnSkill(c, one, CaptainSkill.Torpedo)).toBeNull();
@@ -29,7 +40,7 @@ describe('learned skills (#45)', () => {
     expect(learnSkill(c, two, CaptainSkill.Recon)).toBeNull();
     expect(learnSkill(c, two, CaptainSkill.Recon, CaptainSkill.Torpedo)).toEqual([CaptainSkill.Recon, CaptainSkill.Night]);
     // Stored junk or skills beyond the open slots are ignored.
-    expect(validLearned(atLevel(3), ['Bogus', 'Gunnery', 'Torpedo', 'Night'])).toEqual([CaptainSkill.Torpedo]);
+    expect(validLearned(atLevel(5), ['Bogus', 'Gunnery', 'Torpedo', 'Night'])).toEqual([CaptainSkill.Torpedo]);
   });
 
   it('a learned skill gives 60% of the same skill as a speciality', () => {
@@ -63,7 +74,8 @@ describe('captain roster (#44)', () => {
     const r = recruitCaptain('USN', [first.id]);
     expect(r.joined?.id).toBe(nationCaptains('USN')[1].id);
     // Destroyers only: the next destroyer specialists; a carrier brings the aviator forward.
-    const dd = nationCaptains('USN').filter((c) => [CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night].includes(c.skill)).map((c) => c.id);
+    // The engineer suits destroyers at S too (#188).
+    const dd = nationCaptains('USN').filter((c) => [CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Engineering].includes(c.skill)).map((c) => c.id);
     expect(nextCaptain('USN', [first.id], [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.ASW);
     expect(nextCaptain('USN', dd, [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.Recon);
     expect(nextCaptain('USN', [first.id], [ShipClass.Carrier])?.skill).toBe(CaptainSkill.Aviation);
@@ -110,7 +122,7 @@ describe('captain screen (#130 / #131)', () => {
 
   it('level-ups name what they brought', () => {
     expect(levelUpNotes(atLevel(9), atLevel(10))).toEqual(expect.arrayContaining(['固有スキル「砲術 II」']));
-    expect(levelUpNotes(atLevel(29), atLevel(30))).toContain('習得枠 +1');
+    expect(levelUpNotes(atLevel(39), atLevel(40))).toContain('習得枠 +1');
     expect(levelUpNotes(atLevel(4), atLevel(5)).some((n) => n.startsWith('砲術 +'))).toBe(true);
     expect(levelUpNotes(atLevel(5), atLevel(5))).toEqual([]);
   });

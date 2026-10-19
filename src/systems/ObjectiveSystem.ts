@@ -14,6 +14,9 @@ export interface IObjectiveState {
   convoyTotal?: number;
   convoyEscaped?: number;
   convoyLost?: number;
+  /** Convoy HP left and in all (#186), for the objective line. */
+  convoyHp?: number;
+  convoyMaxHp?: number;
   /** Shore bombardment */
   landTargetsAlive?: number;
   /** Scenario objectives */
@@ -69,6 +72,13 @@ function clock(sec: number): string {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
+/** "  ·  船団 HP 72%" (#186): the convoy's HP left over all its ships, escaped ones included. */
+export function convoyHpText(s: IObjectiveState): string {
+  const max = s.convoyMaxHp ?? 0;
+  if (max <= 0) return '';
+  return `  ·  船団 HP ${Math.round((100 * Math.max(0, s.convoyHp ?? 0)) / max)}%`;
+}
+
 export function objectiveStatus(objective: Objective, s: IObjectiveState): string {
   const left = (s.timeLimitSec ?? 0) > 0 ? `  ·  残り ${clock((s.timeLimitSec ?? 0) - (s.elapsedSec ?? 0))}` : '';
   switch (objective) {
@@ -81,12 +91,31 @@ export function objectiveStatus(objective: Objective, s: IObjectiveState): strin
     case Objective.Delay:
       return `敵の突入を阻止せよ${left}`;
     case Objective.Convoy:
-      return `船団  脱出 ${s.convoyEscaped ?? 0} / 必要 ${CONVOY_NEEDED}  ·  喪失 ${s.convoyLost ?? 0}`;
+      return `船団  脱出 ${s.convoyEscaped ?? 0} / 必要 ${CONVOY_NEEDED}  ·  喪失 ${s.convoyLost ?? 0}${convoyHpText(s)}`;
     case Objective.Bombard:
       return `陸上目標  残り ${s.landTargetsAlive ?? 0}`;
     default:
       return '';
   }
+}
+
+/**
+ * What the pause sheet shows (#189): the objective, the battle clock (with its limit), both fleets' state and the
+ * objective's own progress. `goal` is the objective as the map words it ("敵旗艦の撃沈 — 突入地点 (6:00 以内)").
+ */
+export function pauseLines(objective: Objective, goal: string, s: IObjectiveState, fleet: { alive: number; total: number }): string[] {
+  const limit = s.timeLimitSec ?? 0;
+  const elapsed = s.elapsedSec ?? 0;
+  const lines = [
+    `作戦目標  ${goal}`,
+    `経過  ${clock(elapsed)}${limit > 0 ? `  /  制限 ${clock(limit)}  (残り ${clock(limit - elapsed)})` : ''}`,
+    `敵艦  撃沈 ${s.enemiesTotal - s.enemiesAlive} / ${s.enemiesTotal}`,
+    `味方  健在 ${fleet.alive} / ${fleet.total}${s.flagshipAlive ? '' : '  (旗艦喪失)'}`,
+  ];
+  // The time limit is already on the clock line.
+  const status = objectiveStatus(objective, { ...s, timeLimitSec: 0 }).trim();
+  if (status) lines.push(`進捗  ${status}`);
+  return lines;
 }
 
 /**

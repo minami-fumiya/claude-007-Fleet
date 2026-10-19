@@ -47,6 +47,10 @@ export class ResultsScene extends Phaser.Scene {
     const rewardTexts = rewardLines.map((line) =>
       this.add.text(CANVAS_W / 2, 0, line, textStyle(14, Css.cyan, { fontStyle: 'bold', align: 'center', wordWrap: { width: CARD_W - 56, useAdvancedWrap: true } })).setOrigin(0.5, 0),
     );
+    // A new captain stands out (#179).
+    rewardTexts.forEach((t, i) => {
+      if (data?.recruits && rewardLines[i] === data.recruits) t.setColor(Css.gold);
+    });
     const rewardH = rewardTexts.reduce((sum, t) => sum + Math.max(REPORT_LINE_H, t.height + 6), 0);
     const reportCols = !IS_PORTRAIT && reports.length >= REPORT_COLS_FROM ? 2 : 1;
     const reportLines = Math.ceil(reports.length / reportCols);

@@ -6,10 +6,10 @@ import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
   ABILITY_LABEL, ABILITY_MAX, aptitudeFor, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
-  LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, learnSlots, MAX_LEVEL, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
+  LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
-import { nationCaptains } from '@/systems/CaptainRoster';
+import { CAPTAIN_SOURCES, captainsLeft, DUPLICATE_CAPTAIN_XP, nationCaptains, nextCaptainText } from '@/systems/CaptainRoster';
 import { canAfford, formatResources, pay } from '@/systems/ResourceSystem';
 import { loadProgress, loadSave, saveSave } from '@/utils/ProgressStore';
 import { DataLoader } from '@/utils/DataLoader';
@@ -20,6 +20,7 @@ import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '
 import { ScrollList } from '@/ui/components/ScrollList';
 import { ABILITY_COLOR, SKILL_COLOR, TRAIT_COLOR } from '@/ui/SkillColors';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { recordLedger } from '@/systems/LedgerSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
@@ -126,7 +127,35 @@ export class CaptainScene extends Phaser.Scene {
         this.refresh();
       });
     });
-    this.list.setContentHeight(Math.max(0, Math.ceil(captains.length / cols) * (L.rowH + ROW_GAP) - ROW_GAP));
+    // Captains still to come (#179): how many, and a tap shows how they join and who is next.
+    const save = loadSave();
+    const left = captainsLeft(save.current, save.nations[save.current]?.captains ?? []);
+    const n = captains.length + (left > 0 ? 1 : 0);
+    if (left > 0) {
+      const i = captains.length;
+      const frame = drawPanel(this.add.graphics(), 0, 0, colW, L.rowH, { radius: 12, fill: Colors.panel, fillAlpha: 0.25, rimAlpha: 0.3 });
+      const label = this.add.text(14, L.rowH / 2, `未加入 ${left} 名  ·  入手方法 ›`, textStyle(IS_PORTRAIT ? 14 : 13, Css.gold)).setOrigin(0, 0.5);
+      if (label.width > colW - 24) label.setScale((colW - 24) / label.width);
+      const card = this.add.container((i % cols) * (colW + 8), Math.floor(i / cols) * (L.rowH + ROW_GAP), [frame, label]);
+      this.list.addItem(card, colW, L.rowH, () => this.openRecruitInfo());
+    }
+    this.list.setContentHeight(Math.max(0, Math.ceil(n / cols) * (L.rowH + ROW_GAP) - ROW_GAP));
+  }
+
+  /** How captains join and who comes next (#179). */
+  openRecruitInfo(): void {
+    const save = loadSave();
+    const np = save.nations[save.current];
+    const owned = np?.captains ?? [];
+    const registry = DataLoader.getRegistry(this).byNation(save.current);
+    const classes = [...new Set(registry.filter((s) => (np?.ships ?? []).includes(s.id)).map((s) => s.shipClass))];
+    const next = nextCaptainText(save.current, owned, classes);
+    const r = this.openSheet(IS_PORTRAIT ? 400 : 320);
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 22, `未加入の艦長 ${captainsLeft(save.current, owned)} 名`, eyebrowStyle(11, Css.cyan)));
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 44, '艦長が加わるとき', displayStyle(20)));
+    const body = [...CAPTAIN_SOURCES.map((t) => `・${t}`), '', next ? `次に加わるのは ${next.replace(/^艦長 /, '')}` : `全員が加わっています。以後は加入の代わりに、誰か 1 名が経験 +${DUPLICATE_CAPTAIN_XP}`, '持っている艦種に向いた (適性 S) 艦長から先に加わります。'].filter((l, i, a) => l || a[i + 1]);
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 84, body.join('\n'), textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { lineSpacing: 6, wordWrap: { width: r.w - 52, useAdvancedWrap: true } })));
+    this.sheetAdd(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeSheet(), { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15 }));
   }
 
   // -------------------------------------------------------------------------
@@ -166,7 +195,7 @@ export class CaptainScene extends Phaser.Scene {
 
     // Learned skills, one button per slot (#130)
     const learned = this.learnedOf(c);
-    const open = learnSlots(c.level);
+    const open = openLearnSlots(c, learned);
     y = this.label(x, y, `習得スキル ${learned.length} / ${open} 枠`);
     y = this.buildSlots(c, learned, x, y, colW);
     const caption = this.track(this.add.text(x, y, `枠をタップしてスキルを選ぶ (空き枠は無料・付け替えは ${formatResources(RETRAIN_COST)})。\n効果は固有スキルの ${Math.round(LEARNED_SKILL_SCALE * 100)}%`, textStyle(11, Css.dim, { wordWrap: { width: colW, useAdvancedWrap: true } })));
@@ -218,7 +247,7 @@ export class CaptainScene extends Phaser.Scene {
     const gap = 6;
     const sw = (w - gap * (n - 1)) / n;
     const sh = IS_PORTRAIT ? 48 : 38;
-    const open = learnSlots(c.level);
+    const open = openLearnSlots(c, learned);
     for (let i = 0; i < n; i++) {
       const sx = x + i * (sw + gap);
       const skill = learned[i];
@@ -385,7 +414,7 @@ export class CaptainScene extends Phaser.Scene {
       resources = pay(resources, plan.cost)!;
     }
     const ledger = plan.cost ? recordLedger(np.ledger, 'captain', plan.cost, Date.now()) : np.ledger;
-    saveSave({ ...save, nations: { ...save.nations, [save.current]: { ...np, resources, ledger, captainSkills: { ...np.captainSkills, [c.id]: plan.learned } } } });
+    saveSave({ ...save, nations: { ...save.nations, [save.current]: withQuestEvents({ ...np, resources, ledger, captainSkills: { ...np.captainSkills, [c.id]: plan.learned } }, [['learnSkill', 1]], Date.now()) } });
     this.status = plan.replaces ? `「${SKILL_LABEL[plan.replaces]}」を外し「${SKILL_LABEL[skill]}」を習得しました` : `「${SKILL_LABEL[skill]}」を習得しました`;
     this.statusCss = Css.success;
     this.refresh();

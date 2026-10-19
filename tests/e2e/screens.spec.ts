@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.23.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.24.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -114,24 +114,37 @@ async function overlappingTexts(page: Page, key: string): Promise<string[]> {
   return page.evaluate((k) => {
     const g = (window as unknown as { game: Phaser.Game }).game;
     const scene = g.scene.getScene(k);
-    const boxes: Array<{ text: string; b: Phaser.Geom.Rectangle; depth: number }> = [];
-    const visit = (o: Phaser.GameObjects.GameObject, visible: boolean, depth: number): void => {
+    // Buttons count as boxes too (#182): a text running under a button's face is hidden even if it misses the label.
+    const boxes: Array<{ text: string; b: Phaser.Geom.Rectangle; depth: number; owner: unknown }> = [];
+    const visit = (o: Phaser.GameObjects.GameObject, visible: boolean, depth: number, owner: unknown): void => {
       const v = visible && (o as unknown as { visible?: boolean }).visible !== false && ((o as unknown as { alpha?: number }).alpha ?? 1) > 0.05;
       if ((o as unknown as { mask?: unknown }).mask) return;
       if (o.type === 'Container') {
-        (o as Phaser.GameObjects.Container).list.forEach((c) => visit(c, v, depth));
+        const c = o as Phaser.GameObjects.Container;
+        const label = c.list.find((x) => x.type === 'Text') as Phaser.GameObjects.Text | undefined;
+        // The button's face is its hit area (its bounds also take in the glow around it).
+        const hit = c.input?.hitArea as Phaser.Geom.Rectangle | undefined;
+        if (v && hit && label) {
+          const m = c.getWorldTransformMatrix();
+          // Container hit areas are measured from the container's top-left (its display origin back from x, y).
+          const face = new Phaser.Geom.Rectangle(m.tx + (hit.x - c.displayOriginX) * m.scaleX, m.ty + (hit.y - c.displayOriginY) * m.scaleY, hit.width * m.scaleX, hit.height * m.scaleY);
+          boxes.push({ text: `[${label.text.replace(/\n/g, ' ').slice(0, 16)}]`, b: face, depth, owner: c });
+        }
+        c.list.forEach((x) => visit(x, v, depth, c.input ? c : owner));
         return;
       }
       const t = o as Phaser.GameObjects.Text;
       if (!v || o.type !== 'Text' || t.text.trim() === '') return;
-      boxes.push({ text: t.text.replace(/\n/g, ' ').slice(0, 24), b: t.getBounds(), depth });
+      boxes.push({ text: t.text.replace(/\n/g, ' ').slice(0, 24), b: t.getBounds(), depth, owner });
     };
-    scene.children.list.forEach((o) => visit(o, true, (o as unknown as { depth: number }).depth));
+    scene.children.list.forEach((o) => visit(o, true, (o as unknown as { depth: number }).depth, undefined));
     const out: string[] = [];
     const SLACK = 3;
     boxes.forEach((a, i) => {
       for (const c of boxes.slice(i + 1)) {
         if (c.depth !== a.depth) continue;
+        // A button and its own label, or two buttons (they may share a frame), are not a clash.
+        if ((a.owner && a.owner === c.owner) || (a.text.startsWith('[') && c.text.startsWith('['))) continue;
         const w = Math.min(a.b.right, c.b.right) - Math.max(a.b.left, c.b.left);
         const h = Math.min(a.b.bottom, c.b.bottom) - Math.max(a.b.top, c.b.top);
         if (w > SLACK && h > SLACK) out.push(`${a.text} × ${c.text}`);
@@ -153,6 +166,23 @@ test.describe('screens', () => {
       expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
+    expect(errors).toEqual([]);
+  });
+
+  test('the shipyard rank line and the research button never overlap, for every class (#182)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ShipyardScene'] });
+    await open(page, 'ShipyardScene');
+    for (const cls of ['Destroyer', 'Submarine', 'Cruiser', 'Carrier', 'Battleship']) {
+      await page.evaluate((c) => {
+        const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { shipClass: string; refresh(): void };
+        s.shipClass = c;
+        s.refresh();
+      }, cls);
+      expect(await overflowingTexts(page, 'ShipyardScene'), `${cls} (${layout})`).toEqual([]);
+      expect.soft(await overlappingTexts(page, 'ShipyardScene'), `${cls} overlaps (${layout})`).toEqual([]);
+    }
+    await page.screenshot({ path: info.outputPath('shipyard-battleship.png') });
     expect(errors).toEqual([]);
   });
 
@@ -253,8 +283,65 @@ test.describe('screens', () => {
       return after - before;
     });
     expect(paused).toBe(0);
+    // The pause sheet shows the objective and progress (#189), inside the sheet and above its buttons.
+    const sheet = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as {
+        setPaused(p: boolean): void; pauseLayer: Phaser.GameObjects.GameObject[];
+      };
+      b.setPaused(true);
+      const info = b.pauseLayer.find((o) => o.type === 'Text' && (o as Phaser.GameObjects.Text).text.startsWith('作戦目標')) as Phaser.GameObjects.Text;
+      const buttons = b.pauseLayer.filter((o) => o.type === 'Container') as Phaser.GameObjects.Container[];
+      const r = info.getBounds();
+      return { text: info.text, bottom: r.bottom, firstButtonTop: Math.min(...buttons.map((c) => c.y - c.height / 2)) };
+    });
+    await page.screenshot({ path: info.outputPath('battle-paused.png') });
+    expect(sheet.text).toContain('経過');
+    expect(sheet.text).toContain('敵艦  撃沈');
+    expect(sheet.bottom).toBeLessThan(sheet.firstButtonTop);
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { setPaused(p: boolean): void }).setPaused(false));
     await page.waitForTimeout(1500);
     await page.screenshot({ path: info.outputPath('battle.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('the 図鑑 and the 改装 screen open each other on the same ship (#178)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    type G = { game: Phaser.Game };
+    const shipId = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.ships.at(-1) as string);
+    await open(page, 'EncyclopediaScene', { tab: 'ships', id: shipId });
+    expect(await page.evaluate(() => ((window as unknown as G).game.scene.getScene('EncyclopediaScene') as unknown as { selectedId: string }).selectedId)).toBe(shipId);
+    expect(await overflowingTexts(page, 'EncyclopediaScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'EncyclopediaScene')).toEqual([]);
+    await page.screenshot({ path: info.outputPath('encyclopedia-ship.png') });
+    const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
+      const scene = (window as unknown as G).game.scene.getScene(k);
+      const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((c) => (c as Phaser.GameObjects.Text).text?.startsWith(l)));
+      btn!.emit('pointerdown');
+      btn!.emit('pointerup');
+    }, [key, label] as const);
+    await press('EncyclopediaScene', '改装・改造');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('CustomizationScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    const refit = await page.evaluate(() => {
+      const s = (window as unknown as G).game.scene.getScene('CustomizationScene') as unknown as { ships: Array<{ id: string }>; selected: number };
+      return s.ships[s.selected].id;
+    });
+    expect(refit).toBe(shipId);
+    await page.screenshot({ path: info.outputPath('refit-from-encyclopedia.png') });
+    await press('CustomizationScene', '図鑑');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('EncyclopediaScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => ((window as unknown as G).game.scene.getScene('EncyclopediaScene') as unknown as { selectedId: string }).selectedId)).toBe(shipId);
+    expect(errors).toEqual([]);
+  });
+
+  test('the captain screen tells how captains join and who is next (#179)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CaptainScene'] });
+    await open(page, 'CaptainScene');
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as { openRecruitInfo(): void }).openRecruitInfo());
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('captain-recruits.png') });
+    expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
     expect(errors).toEqual([]);
   });
 
