@@ -5,7 +5,7 @@ import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { baseBonusLines, baseLockText, baseOfProgress, currentBaseId, IBase, isBaseOpen, moveBase, nationBases } from '@/systems/BaseSystem';
 import {
-  COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilityState, FacilityId, maxLevelOf, regenRules, startFacility, uniqueStrength,
+  COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, regenRules, startFacility, uniqueStrength,
 } from '@/systems/FacilitySystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
@@ -45,9 +45,15 @@ export class BaseScene extends Phaser.Scene {
   private layer: Phaser.GameObjects.GameObject[] = [];
   private timer: { text: Phaser.GameObjects.Text; endsAt: number; label: string } | null = null;
   private status = '';
+  /** Where the back button goes: the home port, or the strategic map that opened this screen (#220) */
+  private returnTo: string = SceneKeys.HOME;
 
   constructor() {
     super({ key: SceneKeys.BASE });
+  }
+
+  init(data?: { returnTo?: string }): void {
+    this.returnTo = data?.returnTo ?? SceneKeys.HOME;
   }
 
   create(): void {
@@ -58,7 +64,8 @@ export class BaseScene extends Phaser.Scene {
     this.status = '';
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
-    new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
+    const backLabel = this.returnTo === SceneKeys.CAMPAIGN ? '‹  戦略地図' : '‹  鎮守府';
+    new UIButton(this, back.x, back.y, backLabel, () => this.scene.start(this.returnTo), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 56, `${NATION_INFO[loadProgress().nation].jaShort}の軍港`, displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, L.barCols);
     addPanel(this, L.list.x, L.list.y, L.list.w, L.list.h, { radius: 24, fillAlpha: 0.5 });
@@ -150,7 +157,8 @@ export class BaseScene extends Phaser.Scene {
 
     // Facilities: the base's own first, then the common ones.
     const rowH = IS_PORTRAIT ? 70 : 44;
-    const job = progress.facilityJobs.find((j) => j.base === base.id);
+    // Several facilities can be raised at once (#216).
+    const jobs = progress.facilityJobs.filter((j) => j.base === base.id);
     const rows: Array<{ id: FacilityId; name: string; effect: string }> = [
       { id: 'unique', name: `${uniqueName(base)} (固有)`, effect: `特色の効果 ×${uniqueStrength(facilities, base.id)}  →  次 ×${uniqueStrength(facilities, base.id) + 0.5}` },
       ...COMMON_FACILITIES.map((f) => ({ id: f.id, name: f.name, effect: f.id === 'workshop' ? f.effect : `${f.effect} (全軍港で合算)` })),
@@ -169,10 +177,10 @@ export class BaseScene extends Phaser.Scene {
       const room = w - bw - 40;
       if (effect.width > room) effect.setScale(room / effect.width);
       if (lv < max) {
-        // One job per base: only that facility reads 建設中; the others show their price, waiting.
+        // Facilities being raised read 建設中; the others show their price, waiting while every slot is taken.
         // The upper levels may need a medal first (#169).
         const medal = state === 'medal' ? facilityMedal(base.id, r.id, lv + 1) : undefined;
-        const label = job?.id === r.id ? '建設中…'
+        const label = jobs.some((j) => j.id === r.id) ? '建設中…'
           : medal ? `Lv${lv + 1} 要勲章${IS_PORTRAIT ? '\n' : ' '}「${medalName(medal)}」`
             : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(r.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(cost)}`;
         this.track(new UIButton(this, x + w - 8 - bw / 2, y + (rowH - 6) / 2, label, () => this.build(base, r.id), {
@@ -181,8 +189,10 @@ export class BaseScene extends Phaser.Scene {
       }
       y += rowH;
     }
-    if (job) {
-      const label = `${rows.find((r) => r.id === job.id)?.name ?? job.id} Lv${job.level}`;
+    if (jobs.length > 0) {
+      // The one finishing first gets the live countdown; the line also says how many slots are in use.
+      const job = [...jobs].sort((a, b) => a.endsAt - b.endsAt)[0];
+      const label = `${rows.find((r) => r.id === job.id)?.name ?? job.id} Lv${job.level}  (建設中 ${jobs.length} / ${facilitySlots(facilities, base.id)})`;
       const t = this.track(this.add.text(x, y + 4, '', textStyle(13, Css.cyan)));
       this.timer = { text: t, endsAt: job.endsAt, label };
       t.setText(`建設中: ${label}  残り ${clock(job.endsAt - Date.now())}`);

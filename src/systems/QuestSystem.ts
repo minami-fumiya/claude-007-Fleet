@@ -1,9 +1,10 @@
+import type { EventKind } from './EventSystem';
 import questData from '@/data/quests.json';
 import { IItems, IResources } from '@/types/Progression';
 
 /**
  * 任務 (#52 #158, pure): hourly, daily, weekly and one-time goals with resource rewards. Hourly ones turn over every
- * hour, dailies when the game day starts (05:00 JST), weeklies on Monday's; one-time ones never. Each period shows a
+ * hour, dailies when the game day starts (00:00 JST, #219), weeklies on Monday's; one-time ones never. Each period shows a
  * few of its kind, picked from the whole pool by the period number, so the set changes day to day. Progress moves on
  * events the game emits (sortie, win, sinkings by class, repairs, building …), and a finished quest's reward — and,
  * for some one-time ones, a medal (#92) — is claimed on the 任務 screen.
@@ -18,7 +19,11 @@ export type QuestEvent =
   // 0.0.25: convoy escorts won (#186), skills taught to captains (#187)
   | 'convoyWin' | 'learnSkill'
   // 0.0.26: new versions met on the title screen (#205)
-  | 'versionUpdate';
+  | 'versionUpdate'
+  // 0.0.27: captains joining from S ranks and promotions (#215)
+  | 'captainJoin'
+  // wins under each kind of event (#218)
+  | `event_${EventKind}`;
 
 export interface IQuest {
   id: string;
@@ -59,9 +64,12 @@ const CORE_DAILIES = ['d_sortie', 'd_win', 'd_sink', 'd_repair'];
 
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
-/** 05:00 JST = 20:00 UTC */
-const DAY_START_UTC = 20 * 3_600_000;
-/** Game day 0 began on Friday 1970-01-02 05:00 JST; a game week starts on Monday (day 3). */
+/**
+ * The game day starts at 00:00 JST = 15:00 UTC (#219; 05:00 JST before 0.0.27). Quests, sweeps and the event table
+ * all use it. A day keeps its number across the change, so nothing reset early or late.
+ */
+export const DAY_START_UTC = 15 * 3_600_000;
+/** Game day 0 began on Friday 1970-01-02 00:00 JST; a game week starts on Monday (day 3). */
 const MONDAY_OFFSET = 4;
 
 export function emptyQuestState(): IQuestState {

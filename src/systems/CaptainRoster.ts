@@ -2,7 +2,7 @@ import captainData from '@/data/captains.json';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { ShipClass } from '@/types/ShipClass';
 import { IItems } from '@/types/Progression';
-import { aptitudeFor, SKILL_LABEL } from './CaptainSystem';
+import { aptitudeFor } from './CaptainSystem';
 
 /**
  * Which captains a nation has (#44, pure). A new nation starts with its first listed captain; more join on a
@@ -38,14 +38,39 @@ export function starterCaptain(nation: string): ICaptainData | undefined {
   return nationCaptains(nation)[0];
 }
 
+/** Every OUTSIDER_EVERY-th recruit suits a class the nation doesn't own yet (#210): something to look forward to. */
+export const OUTSIDER_EVERY = 4;
+
 /**
- * The next captain the nation would get, or undefined when it has them all. With the classes the nation owns,
- * a captain suited (S) to one of them comes first (#159): no battleship captain while the fleet is destroyers.
+ * The next captain the nation would get, or undefined when it has them all (#159, spread out in #210).
+ * `shipClasses` has one entry per owned ship. An owned class with no captain suited (S) to it gets the recruit first,
+ * then the class with the most ships per suited captain, so a destroyer-heavy fleet stops drawing only destroyer
+ * captains once a battleship arrives; the last recruit's speciality is skipped when another fits; every
+ * OUTSIDER_EVERY-th recruit suits a class not owned.
  */
 export function nextCaptain(nation: string, owned: readonly string[], shipClasses?: readonly ShipClass[]): ICaptainData | undefined {
-  const left = nationCaptains(nation).filter((c) => !owned.includes(c.id));
-  if (!shipClasses) return left[0];
-  return left.find((c) => shipClasses.some((k) => aptitudeFor(c, k) === 'S')) ?? left[0];
+  const all = nationCaptains(nation);
+  const left = all.filter((c) => !owned.includes(c.id));
+  if (!shipClasses || shipClasses.length === 0 || left.length === 0) return left[0];
+  const mine = all.filter((c) => owned.includes(c.id));
+  const lastSkill = all.find((c) => c.id === owned[owned.length - 1])?.skill;
+  const suits = (c: ICaptainData, k: ShipClass): boolean => aptitudeFor(c, k) === 'S';
+  const freshFirst = (list: ICaptainData[]): ICaptainData | undefined => list.find((c) => c.skill !== lastSkill) ?? list[0];
+  const classes = [...new Set(shipClasses)];
+  if (owned.length % OUTSIDER_EVERY === OUTSIDER_EVERY - 1) {
+    const outsider = freshFirst(left.filter((c) => !classes.some((k) => suits(c, k))));
+    if (outsider) return outsider;
+  }
+  // Every owned class gets a suited captain first; then the class with the most ships per suited captain.
+  const ships = (k: ShipClass): number => shipClasses.filter((x) => x === k).length;
+  const crew = (k: ShipClass): number => mine.filter((c) => suits(c, k)).length;
+  const order = (k: ShipClass): [number, number] => [crew(k) === 0 ? 0 : 1, -ships(k) / (crew(k) + 1)];
+  const byNeed = [...classes].sort((a, b) => order(a)[0] - order(b)[0] || order(a)[1] - order(b)[1]);
+  for (const k of byNeed) {
+    const pick = freshFirst(left.filter((c) => suits(c, k)));
+    if (pick) return pick;
+  }
+  return freshFirst(left);
 }
 
 /** Adds the next captain; returns the new list and who joined (null when none is left). */
@@ -54,18 +79,12 @@ export function recruitCaptain(nation: string, owned: readonly string[], shipCla
   return next ? { owned: [...owned, next.id], joined: next } : { owned: [...owned], joined: null };
 }
 
-/** How captains join (#179), in the words the screens use. */
+/** How captains join (#179; S ranks only since #215), in the words the screens use. */
 export const CAPTAIN_SOURCES: readonly string[] = [
-  '作戦の初回攻略で 1 名',
+  '作戦の海域で初めて S 評価を取ると 1 名',
   '昇進するたびに 1 名',
-  `戦闘に勝つと ${Math.round(CAPTAIN_DROP_CHANCE * 100)}% の確率で 1 名`,
+  `S 評価で勝つと ${Math.round(CAPTAIN_DROP_CHANCE * 100)}% の確率で 1 名`,
 ];
-
-/** "艦長 坂井 (雷撃)" (#179): who the next recruit would be, or '' when every captain has joined. */
-export function nextCaptainText(nation: string, owned: readonly string[], shipClasses?: readonly ShipClass[]): string {
-  const next = nextCaptain(nation, owned, shipClasses);
-  return next ? `艦長 ${next.name} (${SKILL_LABEL[next.skill]})` : '';
-}
 
 /** Captains of the nation not joined yet (#179). */
 export function captainsLeft(nation: string, owned: readonly string[]): number {

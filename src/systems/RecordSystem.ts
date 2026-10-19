@@ -1,3 +1,4 @@
+import { EVENT_KINDS } from './EventKinds';
 import { IBattleRecordInput, IMedal, IServiceRecord } from '@/types/Record';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -41,6 +42,10 @@ export interface IMedalContext {
   captains?: number;
   /** Highest captain level */
   captainLevel?: number;
+  /** Most facilities one base is raising at once (#216) */
+  parallelFacilities?: number;
+  /** Most docks one base has (#211) */
+  maxDocks?: number;
   /** Most carriers one nation owns (#204) */
   carriersOwned?: number;
   /** Most enemies one captain's own ship has sunk (#199) */
@@ -116,15 +121,19 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
   ...ladder('captain_ace', '撃沈王章', 'growth', [10, 50, 150], (g) => `1 人の艦長の艦で ${g} 隻撃沈する`, (_r, c) => c.captainSinks ?? 0),
   ...ladder('mentor', '名艦長章', 'growth', [10, 30, 60, 100], (g) => `艦長を Lv${g} に育てる`, (_r, c) => c.captainLevel ?? 0),
+  ...ladder('s_recruiter', '完勝の将章', 'growth', [5, 15], (g) => `S 評価と昇進で艦長を ${g} 名迎える`, (_r, c) => total(c, 'captainJoin')),
   ...ladder('instructor', '教官章', 'growth', [1, 10, 30], (g) => `艦長にスキルを ${g} 回習得させる`, (_r, c) => total(c, 'learnSkill')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
   ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
   // 軍港・工廠
   ...ladder('shipwright', '造船章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻建造する`, (_r, c) => total(c, 'build')),
+  ...ladder('rush_work', '突貫工事章', 'base', [2, 3], (g) => `1 つの軍港で施設を ${g} つ同時に建設する`, (_r, c) => c.parallelFacilities ?? 0),
+  ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `1 つの軍港のドックを ${g} 本にする`, (_r, c) => c.maxDocks ?? 0),
   ...ladder('dockyard', '船渠章', 'base', [10, 100, 300], (g) => `損傷艦を ${g} 隻入渠させる`, (_r, c) => total(c, 'repair')),
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),
   ...ladder('patrol', '哨戒章', 'base', [10, 100], (g) => `攻略済みの海域を ${g} 回掃討する`, (_r, c) => total(c, 'sweep')),
   // 特殊
+  ...ladder('event_tour', 'イベント巡り章', 'special', [3, 7], (g) => `${g} 種類のイベントの開催中に勝利する`, (_r, c) => EVENT_KINDS.filter((k) => total(c, `event_${k}`) > 0).length),
   ...ladder('veteran_player', '古参章', 'special', [1, 3, 10], (g) => `新しい版を ${g} 回迎える (タイトルの更新内容)`, (_r, c) => total(c, 'versionUpdate')),
   ...ladder('nations', '連合章', 'special', [2, 4, 7], (g) => `${g} か国で艦隊を率いる`, (_r, c) => c.nationsPlayed ?? 0),
   ...ladder('torpedo_squadron', '水雷戦隊章', 'special', [10, 50], (g) => `駆逐艦が旗艦の艦隊で ${g} 回勝利する`, (_r, c) => total(c, 'ddFlagWin')),

@@ -13,7 +13,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventS
 import { activeEvent } from '@/utils/GameClock';
 import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
-import { nextCaptainText } from '@/systems/CaptainRoster';
+import { captainsLeft } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
@@ -96,6 +96,10 @@ export class CampaignMapScene extends Phaser.Scene {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '作戦 — 戦略地図', displayStyle(24)).setOrigin(0.5);
+    // The bases the sorties leave from (#220): their docks, facilities and ships, then back to this map.
+    new UIButton(this, CANVAS_W - back.x, back.y, '軍港  ›', () => this.scene.start(SceneKeys.BASE, { returnTo: SceneKeys.CAMPAIGN }), {
+      variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
+    });
 
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
@@ -233,10 +237,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const roster = registry.byNation(progress.nation);
     const rewardShip = rewardShipFor(roster, ownedIds(progress, roster), a.id);
     const reward = formatResources(a.reward) + (rewardShip ? `  /  S 評価で ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
-    // The captain the first clear brings (#179), while the area is not cleared and someone is left to join.
-    const owned = ownedIds(progress, roster);
-    const classes = [...new Set(roster.filter((s) => owned.includes(s.id)).map((s) => s.shipClass))];
-    const captain = progress.campaign.includes(a.id) ? '' : nextCaptainText(progress.nation, progress.captains, classes);
+    // The area's first S brings a captain (#179 #215), while someone is left to join; who it is stays a surprise.
+    const captain = progress.perfect.includes(a.id) || captainsLeft(progress.nation, progress.captains) === 0 ? '' : 'S 評価で艦長 +1';
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
       // Portrait keeps to the kinds (the names ran the sweep line into the buttons).
@@ -266,7 +268,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const sweepable = canSweep(progress, a);
     const left = sweepsLeft(progress, a.id, Date.now());
     const sweepNote = sweepable
-      ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎朝 5 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎日 0 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
     if (this.status || sweepNote) {

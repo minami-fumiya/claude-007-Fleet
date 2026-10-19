@@ -4,7 +4,9 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
-import { forceLineup, forceShips, SCENARIO_THEATER_LABEL, scenariosIn, setupFor } from '@/systems/ScenarioSystem';
+import { forceLineup, forceShips, playableScenarios, playableSides, SCENARIO_THEATER_LABEL, scenariosIn, setupFor } from '@/systems/ScenarioSystem';
+import { loadProgress } from '@/utils/ProgressStore';
+import { Nation } from '@/types/Nation';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
@@ -31,6 +33,7 @@ export class ScenarioScene extends Phaser.Scene {
   private scenarios: IScenario[] = [];
   private selected = 0;
   private side = 0;
+  private nation = '';
   /** List filter and page (#71): 13 scenarios, oldest first */
   private theater: ScenarioTheater | 'all' = 'all';
   private page = 0;
@@ -46,9 +49,11 @@ export class ScenarioScene extends Phaser.Scene {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
     audio.music('menu');
-    this.scenarios = DataLoader.getScenarios(this);
+    // Only the battles the nation fought in, from its own side (#224).
+    this.nation = loadProgress().nation;
+    this.scenarios = playableScenarios(DataLoader.getScenarios(this), this.nation);
     this.selected = 0;
-    this.side = 0;
+    this.side = this.scenarios[0] ? playableSides(this.scenarios[0], this.nation)[0] ?? 0 : 0;
     this.theater = 'all';
     this.page = 0;
     this.cardFrames = [];
@@ -61,8 +66,13 @@ export class ScenarioScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '史実シナリオ', displayStyle(24)).setOrigin(0.5);
 
     this.listLayer = [];
-    this.drawList();
     addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
+    if (this.scenarios.length === 0) {
+      const d = L.detail;
+      this.add.text(d.x + d.w / 2, d.y + d.h / 2, `${NATION_INFO[this.nation as Nation]?.ja ?? ''}が出た史実シナリオは、まだありません。\n他の国に切り替えると、その国の海戦を遊べます。`, textStyle(15, Css.muted, { align: 'center', wordWrap: { width: d.w - 60, useAdvancedWrap: true } })).setOrigin(0.5);
+      return;
+    }
+    this.drawList();
     this.refresh();
   }
 
@@ -111,7 +121,7 @@ export class ScenarioScene extends Phaser.Scene {
       makeClickable(card, r.w, r.h);
       card.on('pointerup', () => {
         this.selected = i;
-        this.side = 0;
+        this.side = playableSides(sc, this.nation)[0] ?? 0;
         this.refresh();
       });
     });
@@ -157,15 +167,19 @@ export class ScenarioScene extends Phaser.Scene {
     const desc = add(this.add.text(x, title.y + title.height + 10, sc.description, textStyle(13, Css.muted, { ...wrap, lineSpacing: 4 })));
     let y = desc.y + desc.height + 18;
 
-    // Side choice
+    // Side choice: only the nation's own side can be taken (#224); the other names the navy that plays it.
+    const mine = playableSides(sc, this.nation);
     const bw = (w - 10) / sc.sides.length;
     sc.sides.forEach((side, i) => {
-      add(
-        new UIButton(this, x + i * (bw + 10) + bw / 2, y + (IS_PORTRAIT ? 28 : 22), side.label, () => {
+      const own = mine.includes(i);
+      const label = own ? side.label : `${side.label}  (${NATION_INFO[sc.forces[side.force].nation].jaShort}で)`;
+      const btn = add(
+        new UIButton(this, x + i * (bw + 10) + bw / 2, y + (IS_PORTRAIT ? 28 : 22), label, () => {
           this.side = i;
           this.refresh();
-        }, { variant: i === this.side ? 'primary' : 'secondary', width: bw, height: IS_PORTRAIT ? 56 : 44, fontSize: 14 }),
+        }, { variant: i === this.side ? 'primary' : 'secondary', width: bw, height: IS_PORTRAIT ? 56 : 44, fontSize: own ? 14 : 12 }),
       );
+      btn.setEnabled(own);
     });
     y += IS_PORTRAIT ? 74 : 60;
 
@@ -211,7 +225,7 @@ export class ScenarioScene extends Phaser.Scene {
 
   start(sc: IScenario): void {
     const setup = setupFor(sc, this.side);
-    if (!setup) return;
+    if (!setup || !playableSides(sc, this.nation).includes(this.side)) return;
     const registry = DataLoader.getRegistry(this);
     const data: IBattleInitData = {
       playerFleet: FleetSystem.createFleet('scenario-player', sc.name, setup.player.nation, forceShips(setup.player, registry), 0),

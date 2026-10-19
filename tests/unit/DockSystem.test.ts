@@ -19,13 +19,17 @@ describe('DockSystem', () => {
     expect(repairTimeMs(500, 1)).toBe(0);
   });
 
-  it('repair time depends on the class (#143 / #161 / #176): seconds for a scratched destroyer, 8〜12 minutes for a battleship 大破', () => {
-    expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer) / 1000).toBeLessThan(15);
-    // A destroyer below 中破 (75% HP or more) is back within a minute.
-    expect(repairTimeMs(210, 0.75, 1, ShipClass.Destroyer) / 60_000).toBeLessThan(1);
+  it('repair time depends on the class (#143 / #161 / #176 / #212): light damage at once, 3〜4 minutes for a battleship 大破', () => {
+    // 75% HP or more needs no wait (#212).
+    expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer)).toBe(0);
+    expect(repairTimeMs(800, 0.75, 1, ShipClass.Battleship)).toBe(0);
+    expect(repairTimeMs(210, 0.5, 1, ShipClass.Destroyer) / 1000).toBeLessThan(15);
     const bb = repairTimeMs(800, 0.1, 1, ShipClass.Battleship) / 60_000;
-    expect(bb).toBeGreaterThanOrEqual(8);
-    expect(bb).toBeLessThanOrEqual(12);
+    expect(bb).toBeGreaterThanOrEqual(3);
+    expect(bb).toBeLessThanOrEqual(4);
+    // Bigger classes take longer for the same damage.
+    const order = [ShipClass.Destroyer, ShipClass.Cruiser, ShipClass.Carrier, ShipClass.Battleship].map((c) => repairTimeMs(500, 0.3, 1, c));
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(repairTimeMs(500, 0.5, 0.5, ShipClass.Cruiser)).toBe(repairTimeMs(500, 0.5, 1, ShipClass.Cruiser) / 2);
   });
 
@@ -57,7 +61,7 @@ describe('DockSystem', () => {
     expect(fastRepair(empty(), 'a')).toEqual(empty());
   });
 
-  it('a new admiral has one dock and builds more with rank and resources, up to four (#38)', () => {
+  it('a new admiral has two docks and builds more with rank and resources, up to eight (#38 #211)', () => {
     const rich = { fuel: 9999, ammo: 9999, steel: 9999, bauxite: 9999 };
     const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich, rankStats: ALL_MISSIONS_DONE };
     expect(dockCount(base)).toBe(START_DOCKS);
@@ -66,12 +70,13 @@ describe('DockSystem', () => {
     let p = { ...base, merit: 100 };
     expect(nextDock(p)?.state).toBe('ready');
     p = buildDock(p)!;
-    expect(dockCount(p)).toBe(2);
+    expect(dockCount(p)).toBe(3);
     expect(p.resources.steel).toBeLessThan(rich.steel);
-    expect(nextDock(p)?.rankName).toBe('少佐');
-    p = buildDock({ ...p, merit: 900 })!;
-    p = buildDock(p)!;
+    expect(nextDock(p)?.rankName).toBe('中尉');
+    p = { ...p, merit: 99_999, rankFloor: 13 };
+    while (nextDock(p)) p = buildDock(p)!;
     expect(dockCount(p)).toBe(MAX_DOCKS);
+    expect(MAX_DOCKS).toBe(8);
     expect(nextDock(p)).toBeNull();
     expect(nextDock({ ...base, merit: 100, resources: { fuel: 0, ammo: 0, steel: 0, bauxite: 0 } })?.state).toBe('resources');
   });

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  boostedBase, buildTimeMul, facilityCost, facilityLevel, facilityState, finishFacilities, regenRules, startFacility, uniqueStrength,
+  boostedBase, buildTimeMul, facilityCost, facilityLevel, facilitySlots, facilityState, finishFacilities, regenRules, startFacility, uniqueStrength,
 } from '@/systems/FacilitySystem';
 import { BASES } from '@/systems/BaseSystem';
 import { REGEN_CAP, REGEN_PER_TICK, regenerate, resources } from '@/systems/ResourceSystem';
@@ -28,13 +28,18 @@ describe('base facilities (#146)', () => {
     expect(regenerate(resources({ fuel: REGEN_CAP }), T0, T0 + 60_000, r).resources.fuel).toBe(REGEN_CAP + REGEN_PER_TICK.fuel);
   });
 
-  it('building pays, takes time and takes effect when finished; one job per base', () => {
+  it('building pays, takes time and takes effect when finished; two at once per base, three from its own facility Lv2 (#216)', () => {
     const p = { resources: rich, facilities: {}, facilityJobs: [] };
     const started = startFacility(p, 'ijn_home', 'fuelTank', T0)!;
     expect(started.resources.steel).toBe(rich.steel - facilityCost('fuelTank', 1).steel);
-    expect(facilityState(started.facilities, started.facilityJobs, 'ijn_home', 'steelMill', rich)).toBe('busy');
-    expect(facilityState(started.facilities, started.facilityJobs, 'ijn_light', 'steelMill', rich)).toBe('ready');
-    expect(startFacility(started, 'ijn_home', 'steelMill', T0)).toBeNull();
+    // The same facility can't be raised twice at once; another one can.
+    expect(facilityState(started.facilities, started.facilityJobs, 'ijn_home', 'fuelTank', rich)).toBe('busy');
+    const two = startFacility(started, 'ijn_home', 'steelMill', T0)!;
+    expect(facilitySlots(two.facilities, 'ijn_home')).toBe(2);
+    expect(facilityState(two.facilities, two.facilityJobs, 'ijn_home', 'ammoDepot', rich)).toBe('busy');
+    expect(facilityState(two.facilities, two.facilityJobs, 'ijn_light', 'ammoDepot', rich)).toBe('ready');
+    const bigger = { ...two, facilities: { ijn_home: { unique: 2 } } };
+    expect(facilityState(bigger.facilities, bigger.facilityJobs, 'ijn_home', 'ammoDepot', rich)).toBe('ready');
     expect(finishFacilities(started, T0 + 1)).toBe(started);
     const done = finishFacilities(started, T0 + 10 * 60_000);
     expect(facilityLevel(done.facilities, 'ijn_home', 'fuelTank')).toBe(1);
