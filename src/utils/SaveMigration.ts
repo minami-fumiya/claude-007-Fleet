@@ -156,6 +156,19 @@ export const MIGRATIONS: MigrationStep[] = [
     const captainStats = Object.fromEntries(Object.entries(stats).map(([id, v]) => [id, typeof v === 'object' && v !== null ? { sinks: 0, ...(v as RawSave) } : v]));
     return { ...nation, items: { captainBook: 0, ...items }, captainStats };
   }),
+  // v13 → v14 (0.0.27, #211): builds take a base's docks too, instead of separate slips the rank opened (1 / 2 at 少佐 /
+  // 3 at 大佐). Each base gets its docks plus the slips it had, so it can run as many jobs at once as before (max 8).
+  (data) => mapNations(data, (nation, key) => {
+    const campaign = Array.isArray(nation.campaign) ? (nation.campaign as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const rank = rankOf({ campaign, merit: num(nation.merit), rankFloor: num(nation.rankFloor), nation: key, rankStats: (nation.rankStats ?? {}) as Record<string, number> }, false).index;
+    const slips = [0, 6, 8].filter((r) => rank >= r).length;
+    const before = typeof nation.baseDocks === 'object' && nation.baseDocks !== null ? nation.baseDocks as Record<string, unknown> : {};
+    const home = currentBase(key, { campaign, merit: num(nation.merit), rankFloor: num(nation.rankFloor), nation: key, base: typeof nation.base === 'string' ? nation.base : '' })?.id;
+    const bases = new Set([...Object.keys(before), ...(home ? [home] : [])]);
+    const baseDocks = Object.fromEntries([...bases].map((b) => [b, Math.min(8, Math.max(2, (num(before[b]) || 1) + slips))]));
+    return { ...nation, baseDocks };
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

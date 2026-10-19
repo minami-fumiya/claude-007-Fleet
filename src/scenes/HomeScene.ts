@@ -13,7 +13,7 @@ import { Nation } from '@/types/Nation';
 import { nextRegenMs, regenFull } from '@/systems/ResourceSystem';
 import { captainsLeft } from '@/systems/CaptainRoster';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
-import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
+import { buildsHere, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -514,44 +514,48 @@ export class HomeScene extends Phaser.Scene {
     // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
     const event = activeEffects();
     const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
-    // Docks (#38): one at the start, more built as the rank allows.
+    // Docks (#38), shared by repairs and builds since #211: a summary line, then a row per repair.
     const docks = dockCount(progress);
-    for (let i = 0; i < docks; i++) {
+    const building = buildsHere(all).length;
+    const used = progress.docks.length + building;
+    add(this.add.text(d.x + pad, y, 'ドック', eyebrowStyle(10, Css.gold)));
+    add(this.add.text(d.x + pad + 110, y - 2, `使用中 ${used} / ${docks}  ·  入渠 ${progress.docks.length}・建造 ${building}  ·  空き ${Math.max(0, docks - used)}`, textStyle(13, used >= docks ? Css.gold : Css.muted)));
+    y += IS_PORTRAIT ? 48 : 36;
+    // Up to eight docks (#211): only so many repair rows fit above the damaged list; the rest are counted.
+    const repairRows = Math.min(progress.docks.length, IS_PORTRAIT ? 3 : 4);
+    for (let i = 0; i < repairRows; i++) {
       const job = progress.docks[i];
-      add(this.add.text(d.x + pad, y, `第${i + 1}ドック`, eyebrowStyle(10, Css.gold)));
-      if (!job) {
-        add(this.add.text(d.x + pad + 110, y, '空き', textStyle(13, Css.dim)));
-        // Empty docks take a short row so four still fit with the damaged list.
-        y += IS_PORTRAIT ? 48 : 36;
-        continue;
-      } else {
-        const ship = this.registryShips.byId(job.shipId);
-        if (ship) {
-          add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass);
-          const meterX = d.x + pad + 110;
-          const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
-          const g = add(this.add.graphics());
-          // Portrait: the 高速修理 button takes the right end of the row, so the remaining time
-          // goes on its own line under the progress bar (#22). Landscape keeps it right of the bar.
-          const t = add(
-            IS_PORTRAIT
-              ? this.add.text(meterX, y + DOCK_METER_Y + 14, '', textStyle(12, Css.muted))
-              : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
-          );
-          this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
-          // A 高速修理材 (#143) is used first; without one the repair is paid in resources.
-          const items = progress.items.fastRepair;
-          const affordable = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
-          const btn = add(
-            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速修理材 (${items})` : '高速修理', () => this.fastRepair(ship.id), {
-              variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
-            }),
-          );
-          btn.setEnabled(affordable);
-        }
+      add(this.add.text(d.x + pad, y, `入渠 ${i + 1}`, eyebrowStyle(10, Css.gold)));
+      const ship = this.registryShips.byId(job.shipId);
+      if (ship) {
+        add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
+        const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass);
+        const meterX = d.x + pad + 110;
+        const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
+        const g = add(this.add.graphics());
+        // Portrait: the 高速修理 button takes the right end of the row, so the remaining time
+        // goes on its own line under the progress bar (#22). Landscape keeps it right of the bar.
+        const t = add(
+          IS_PORTRAIT
+            ? this.add.text(meterX, y + DOCK_METER_Y + 14, '', textStyle(12, Css.muted))
+            : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
+        );
+        this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
+        // A 高速修理材 (#143) is used first; without one the repair is paid in resources.
+        const items = progress.items.fastRepair;
+        const affordable = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
+        const btn = add(
+          new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速修理材 (${items})` : '高速修理', () => this.fastRepair(ship.id), {
+            variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
+          }),
+        );
+        btn.setEnabled(affordable);
       }
       y += IS_PORTRAIT ? 100 : 52;
+    }
+    if (progress.docks.length > repairRows) {
+      add(this.add.text(d.x + pad + 110, y, `ほか ${progress.docks.length - repairRows} 隻入渠中`, textStyle(12, Css.muted)));
+      y += IS_PORTRAIT ? 36 : 26;
     }
     const next = nextDock(progress);
     if (next) {
@@ -575,7 +579,7 @@ export class HomeScene extends Phaser.Scene {
     const elsewhere = damagedAll.length - damaged.length;
     add(this.add.text(d.x + pad, y, damaged.length > 0 ? '損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
     y += IS_PORTRAIT ? 36 : 26;
-    const dockFree = progress.docks.length < docks;
+    const dockFree = used < docks;
     // Portrait: only as many rows as fit above the panel's bottom edge, leaving room for 他 n 隻.
     const fit = (reserve: number): number => Math.max(1, Math.min(MAX_DAMAGED_ROWS, Math.floor((d.y + d.h - y - reserve) / L.rowH)));
     const maxRows = !IS_PORTRAIT ? MAX_DAMAGED_ROWS : damaged.length <= fit(0) ? fit(0) : fit(40);
@@ -616,7 +620,8 @@ export class HomeScene extends Phaser.Scene {
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
     const here = currentBaseId(progress);
-    const docked = paid ? startRepair(baseDockView(progress, here), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass) : null;
+    // Builds at this base hold docks too (#211).
+    const docked = paid ? startRepair(baseDockView(progress, here), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass, buildsHere(progress).length) : null;
     if (!paid || !docked) return;
     saveProgress(withQuestEvents({ ...mergeBaseDocks(progress, here, { ...progress, ...docked }), resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();

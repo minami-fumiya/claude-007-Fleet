@@ -5,19 +5,23 @@ import { ShipClass } from '@/types/ShipClass';
 
 /**
  * Damage and repairs (pure). Damage is the HP fraction a ship came home with (missing = undamaged).
- * Docks repair in parallel in real time; a fast repair finishes a docked ship at once for a fee. A new admiral has
- * one dock and builds more (up to MAX_DOCKS) as the rank allows (#38).
+ * Docks repair in parallel in real time; a fast repair finishes a docked ship at once for a fee. Since #211 builds
+ * take a dock too: a base's docks are shared by its repairs and its builds. A new admiral has two docks and builds
+ * more (up to MAX_DOCKS) as the rank allows (#38).
  */
 
-/** Docks a new admiral starts with, and the most that can be built. */
-export const START_DOCKS = 1;
-export const MAX_DOCKS = 4;
+/** Docks a new admiral starts with, and the most a base can have (#211: 1 → 2 and 4 → 8). */
+export const START_DOCKS = 2;
+export const MAX_DOCKS = 8;
 
-/** Dock n + 2 (the 2nd, 3rd, 4th dock): the rank index it needs and what it costs. */
+/** Docks 3〜8: the rank index each needs (少尉・中尉・大尉・少佐・大佐・少将) and what it costs. */
 export const DOCK_UPGRADES: Array<{ rank: number; cost: IResources }> = [
   { rank: 2, cost: { fuel: 200, ammo: 0, steel: 300, bauxite: 0 } },
-  { rank: 6, cost: { fuel: 500, ammo: 0, steel: 800, bauxite: 0 } },
-  { rank: 8, cost: { fuel: 1000, ammo: 0, steel: 1500, bauxite: 0 } },
+  { rank: 3, cost: { fuel: 300, ammo: 0, steel: 500, bauxite: 0 } },
+  { rank: 4, cost: { fuel: 500, ammo: 0, steel: 800, bauxite: 0 } },
+  { rank: 6, cost: { fuel: 800, ammo: 0, steel: 1200, bauxite: 0 } },
+  { rank: 8, cost: { fuel: 1200, ammo: 0, steel: 1800, bauxite: 0 } },
+  { rank: 10, cost: { fuel: 1800, ammo: 0, steel: 2500, bauxite: 0 } },
 ];
 /** Real milliseconds per point of HP repaired (a cruiser; the default when the class is unknown). */
 export const MS_PER_HP = 220;
@@ -106,10 +110,13 @@ export function setDamage(state: IDockState, shipId: string, fraction: number): 
   return { ...state, damage };
 }
 
-/** Puts a damaged ship into a free dock. Returns null if it can't (no dock free, not damaged, already in). */
-export function startRepair(state: IDockState, shipId: string, maxHp: number, now: number, timeMul = 1, shipClass?: ShipClass): IDockState | null {
+/**
+ * Puts a damaged ship into a free dock. Returns null if it can't (no dock free, not damaged, already in). `building`
+ * is how many of the base's docks hold a build (#211).
+ */
+export function startRepair(state: IDockState, shipId: string, maxHp: number, now: number, timeMul = 1, shipClass?: ShipClass, building = 0): IDockState | null {
   const f = hpFraction(state, shipId);
-  if (f >= 1 || isDocked(state, shipId) || state.docks.length >= dockCount(state)) return null;
+  if (f >= 1 || isDocked(state, shipId) || state.docks.length + building >= dockCount(state)) return null;
   return { ...state, docks: [...state.docks, { shipId, endsAt: now + repairTimeMs(maxHp, f, timeMul, shipClass) }] };
 }
 

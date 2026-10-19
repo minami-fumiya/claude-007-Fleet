@@ -29,7 +29,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -38,6 +38,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     ctx.areasCleared += np.campaign.length;
     ctx.areasS += Object.values(np.areaRanks ?? {}).filter((r) => r === 'S').length;
     ctx.shipsOwned = Math.max(ctx.shipsOwned, np.ships.length);
+    for (const n of Object.values(np.baseDocks ?? {})) ctx.maxDocks = Math.max(ctx.maxDocks, n ?? 0);
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);

@@ -9,6 +9,7 @@ import { assignShips, buildMultiplier, currentBase, currentBaseId, scaleCost } f
 import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
+import { dockCount } from './DockSystem';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -147,7 +148,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   // The biggest battleships and carriers, and the fictional designs, need a medal too (#169).
   if (!hasMedal(progress.record ?? { medals: [] }, shipMedal(ship, shipGrade(ship)))) return 'medal';
   if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
-  if (buildsHere(progress).length >= buildDockCount(progress)) return 'dock';
+  if (docksInUse(progress) >= buildDockCount(progress)) return 'dock';
   return 'ready';
 }
 
@@ -156,7 +157,7 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
   switch (state) {
     case 'owned': return '保有';
     case 'building': return '建造中';
-    case 'dock': return '建造ドック満杯';
+    case 'dock': return 'ドック満杯';
     case 'reward': {
       const area = rewardAreaOf(ship) ?? '';
       return `作戦報酬: ${areaNames[area] ?? area}`;
@@ -197,12 +198,15 @@ export function buildTimeMs(ship: IShipData, timeMul = 1): number {
   return Math.round(minutes * 60_000 * timeMul);
 }
 
-/** Building slips (建造ドック): one at the start, a second at 少佐 and a third at 大佐. */
-export const BUILD_DOCK_RANKS = [0, 6, 8];
+/** The docks of the base the admiral is at (#211): builds share them with repairs. */
+export function buildDockCount(progress: Pick<IProgress, 'baseDocks' | 'base'> & Partial<IProgress>): number {
+  return dockCount({ docksOwned: progress.baseDocks?.[currentBaseId(progress as IProgress)] });
+}
 
-export function buildDockCount(progress: Parameters<typeof rankOf>[0]): number {
-  const rank = rankOf(progress).index;
-  return BUILD_DOCK_RANKS.filter((r) => rank >= r).length;
+/** Docks of the current base in use: its builds and its repairs (#211). */
+export function docksInUse(progress: IProgress): number {
+  const here = currentBaseId(progress);
+  return buildsHere(progress).length + progress.docks.filter((j) => (j.base ?? here) === here).length;
 }
 
 /** Builds on the slips of the base the admiral is at (#145); each base has its own. */

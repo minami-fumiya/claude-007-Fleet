@@ -61,7 +61,7 @@ describe('DockSystem', () => {
     expect(fastRepair(empty(), 'a')).toEqual(empty());
   });
 
-  it('a new admiral has one dock and builds more with rank and resources, up to four (#38)', () => {
+  it('a new admiral has two docks and builds more with rank and resources, up to eight (#38 #211)', () => {
     const rich = { fuel: 9999, ammo: 9999, steel: 9999, bauxite: 9999 };
     const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich, rankStats: ALL_MISSIONS_DONE };
     expect(dockCount(base)).toBe(START_DOCKS);
@@ -70,12 +70,13 @@ describe('DockSystem', () => {
     let p = { ...base, merit: 100 };
     expect(nextDock(p)?.state).toBe('ready');
     p = buildDock(p)!;
-    expect(dockCount(p)).toBe(2);
+    expect(dockCount(p)).toBe(3);
     expect(p.resources.steel).toBeLessThan(rich.steel);
-    expect(nextDock(p)?.rankName).toBe('少佐');
-    p = buildDock({ ...p, merit: 900 })!;
-    p = buildDock(p)!;
+    expect(nextDock(p)?.rankName).toBe('中尉');
+    p = { ...p, merit: 99_999, rankFloor: 13 };
+    while (nextDock(p)) p = buildDock(p)!;
     expect(dockCount(p)).toBe(MAX_DOCKS);
+    expect(MAX_DOCKS).toBe(8);
     expect(nextDock(p)).toBeNull();
     expect(nextDock({ ...base, merit: 100, resources: { fuel: 0, ammo: 0, steel: 0, bauxite: 0 } })?.state).toBe('resources');
   });

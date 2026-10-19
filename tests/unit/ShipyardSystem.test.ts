@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
-  REWARD_SHIPS, rewardShipFor, shipGrade, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, fastBuild,
+  REWARD_SHIPS, rewardShipFor, shipGrade, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, docksInUse, fastBuild,
 } from '@/systems/ShipyardSystem';
 import { ALL_MISSIONS_DONE, RANKS } from '@/systems/RankSystem';
+import { currentBaseId } from '@/systems/BaseSystem';
 import { emptyProgress, finishBuilds, IProgress } from '@/utils/ProgressStore';
 import { resources } from '@/systems/ResourceSystem';
 import { IShipData, ShipSubtype } from '@/types/Ship';
@@ -245,9 +246,14 @@ describe('construction time (#143)', () => {
     expect(p.resources.steel).toBeLessThan(rich.steel);
     expect(buildState(p, roster, byId('etorofu'))).toBe('building');
     expect(startBuild(p, roster, byId('etorofu'), now)).toBeNull();
-    // One slip at the start: a second build waits.
-    expect(buildState(p, roster, byId('i19'))).toBe('dock');
-    expect(buildStateLabel('dock', byId('i19'))).toBe('建造ドック満杯');
+    // Builds and repairs share the base's docks (#211): two at the start, so a second build fits, a third waits.
+    expect(buildState(p, roster, byId('i19'))).toBe('ready');
+    const two = startBuild(p, roster, byId('i19'), now)!;
+    expect(docksInUse(two)).toBe(buildDockCount(two));
+    expect(buildStateLabel('dock', byId('i19'))).toBe('ドック満杯');
+    // A ship in for repair takes a dock as well.
+    const repairing = { ...p, docks: [{ shipId: 'fubuki', endsAt: now + 1000 }] };
+    expect(buildState(repairing, roster, byId('i19'))).toBe('dock');
     const early = completeBuilds(p, roster, now + buildTimeMs(byId('etorofu')) - 1);
     expect(early.done).toEqual([]);
     const done = completeBuilds(p, roster, now + buildTimeMs(byId('etorofu')));
@@ -256,10 +262,9 @@ describe('construction time (#143)', () => {
     expect(done.progress.builds).toEqual([]);
   });
 
-  it('more slips come with rank; a 高速建造材 finishes a build at once', () => {
-    expect(buildDockCount(player())).toBe(1);
-    expect(buildDockCount(player({ rankFloor: 6 }))).toBe(2);
-    expect(buildDockCount(player({ rankFloor: 8 }))).toBe(3);
+  it('builds use the base\'s docks (#211); a 高速建造材 finishes a build at once', () => {
+    expect(buildDockCount(player())).toBe(2);
+    expect(buildDockCount(player({ baseDocks: { [currentBaseId(player())]: 5 } }))).toBe(5);
     const p = startBuild(ready({ items: { fastRepair: 0, fastBuild: 1 } }), IJN, byId('etorofu'), now)!;
     const fast = fastBuild(p, IJN, 'etorofu', now)!;
     expect(fast.ships).toContain('etorofu');
