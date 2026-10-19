@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { clock } from '@/utils/TimeFormat';
+import { nationLocks } from '@/systems/NationUnlock';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -8,7 +10,7 @@ import { isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { nextRegenMs, REGEN_CAP, REGEN_PER_TICK, regenFull } from '@/systems/ResourceSystem';
-import { clearCount, fleetSlots, promotionText, rankOf } from '@/systems/RankSystem';
+import { clearCount, fleetSlots, missionCount, missionText, promotionText, RANK_MISSIONS, rankOf } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
@@ -21,7 +23,7 @@ import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseBonusLines, baseLockText, baseOfProgress, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
-import { claimableCount, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
+import { addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
 import { eventLabel, nextEvent } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { rankTable } from '@/systems/RankTable';
@@ -61,11 +63,6 @@ const OVERLAY_DEPTH = 200;
 function longClock(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-}
-
-function clock(ms: number): string {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 /**
@@ -195,14 +192,18 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 52 : 42), closable ? '鎮守府を切り替える' : '着任する国を選んでください', displayStyle(22)));
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '国ごとに資源・保有艦・研究・作戦の進み具合が別々に記録されます。\n新しい国は駆逐艦 1 隻・資源 0 から始まり、資源は時間で回復します。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
     let ry = y + (IS_PORTRAIT ? 210 : 136);
+    // Nations open step by step (#134): locked ones show what opens them.
+    const locks = nationLocks(save.nations);
     for (const n of PLAYABLE_NATIONS) {
       const np = save.nations[n];
+      const lock = locks[n];
       const label = np
         ? `${NATION_INFO[n].jaShort}   ${rankOf(np).name} · 攻略 ${clearCount(np)} · 保有艦 ${ownedIds(np, this.registryShips.byNation(n)).length}`
-        : `${NATION_INFO[n].jaShort}   新規着任`;
+        : lock.unlocked ? `${NATION_INFO[n].jaShort}   新規着任` : `${NATION_INFO[n].jaShort}   未解放`;
       add(new UIButton(this, x + w / 2, ry + rowH / 2, label, () => this.selectNation(n), {
         variant: n === save.current && np ? 'gold' : np ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: 16,
-      }));
+        caption: lock.unlocked ? undefined : [lock.condition, lock.progress].filter((t) => t).join('  ·  '),
+      })).setEnabled(lock.unlocked);
       ry += rowH + gap;
     }
     if (closable) {
@@ -293,7 +294,7 @@ export class HomeScene extends Phaser.Scene {
       add(addPanel(this, x + 28, ry, w - 56, rowH, { radius: 14, fillAlpha: 0.5, rim: claimable ? Colors.gold : undefined }));
       add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 14 : 10), q.name, textStyle(IS_PORTRAIT ? 16 : 15, done ? Css.dim : Css.text, { fontStyle: 'bold' })));
       add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 44 : 34), `${q.text}  ${questProgress(state, q)} / ${q.goal}`, textStyle(12, done ? Css.dim : Css.muted)));
-      add(this.add.text(x + 44, ry + rowH - (IS_PORTRAIT ? 12 : 8), formatResources(q.reward), textStyle(11, Css.gold)).setOrigin(0, 1));
+      add(this.add.text(x + 44, ry + rowH - (IS_PORTRAIT ? 12 : 8), [formatResources(q.reward), formatItems(q.items ?? {})].filter((t) => t).join('・'), textStyle(11, Css.gold)).setOrigin(0, 1));
       add(new UIButton(this, x + w - 28 - 12 - bw / 2, ry + rowH / 2, done ? '受取済' : claimable ? '受け取る' : '未達成', () => this.claimQuest(q.id), {
         variant: claimable ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
       })).setEnabled(claimable);
@@ -344,9 +345,12 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[1], ry + 4, String(r.minMerit), textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
-      if (r.unlocks) {
+      // Promotion missions (#142) first: done (✓) or how far along.
+      const missions = (RANK_MISSIONS[r.index] ?? []).map((m) => (missionCount(progress, m.stat) >= m.goal || r.index <= current.index ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`));
+      const extra = [...missions, r.unlocks].filter((t) => t).join('  ·  ');
+      if (extra) {
         const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
-        const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, r.unlocks, textStyle(11, css)));
+        const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, extra, textStyle(11, missions.some((m) => m.startsWith('任務')) ? Css.cyan : css)));
         const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[4];
         if (t.width > room) t.setScale(room / t.width);
       }
@@ -361,7 +365,7 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const r = claimQuest(progress.quests, id, Date.now());
     if (!r) return;
-    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward) });
+    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) }, 'quest');
     this.refresh();
     this.openQuests();
   }
@@ -380,6 +384,7 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private selectNation(nation: Nation): void {
+    if (!nationLocks(loadSave().nations)[nation].unlocked) return;
     const starter = starterShip(this.registryShips.byNation(nation));
     saveSave(switchNation(loadSave(), nation, starter?.id, Date.now()));
     // The fleet selection belongs to the previous nation.
@@ -499,7 +504,7 @@ export class HomeScene extends Phaser.Scene {
         const ship = this.registryShips.byId(job.shipId);
         if (ship) {
           add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul);
+          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass);
           const meterX = d.x + pad + 110;
           const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
           const g = add(this.add.graphics());
@@ -511,9 +516,11 @@ export class HomeScene extends Phaser.Scene {
               : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
           );
           this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
-          const affordable = canAfford(progress.resources, FAST_REPAIR_COST);
+          // A 高速修理材 (#143) is used first; without one the repair is paid in resources.
+          const items = progress.items.fastRepair;
+          const affordable = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
           const btn = add(
-            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), '高速修理', () => this.fastRepair(ship.id), {
+            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速修理材 (${items})` : '高速修理', () => this.fastRepair(ship.id), {
               variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
             }),
           );
@@ -533,7 +540,7 @@ export class HomeScene extends Phaser.Scene {
       }
       y += IS_PORTRAIT ? 48 : 30;
     }
-    add(this.add.text(d.x + pad, y, `高速修理: ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
+    add(this.add.text(d.x + pad, y, `高速修理: 高速修理材 1 個 (所持 ${progress.items.fastRepair})、なければ ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
     y += IS_PORTRAIT ? 40 : 28;
 
     // Damaged ships waiting for a dock
@@ -550,13 +557,16 @@ export class HomeScene extends Phaser.Scene {
       const f = hpFraction(progress, ship.id);
       const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
       add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul, ship.shipClass))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
       const btn = add(
         new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 14, '入渠', () => this.dock(ship), {
           variant: 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 52 : 34, fontSize: 14,
         }),
       );
-      btn.setEnabled(dockFree && canAfford(progress.resources, cost));
+      // A ship out on an unfinished sortie (#138) can't be docked until it comes home.
+      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
+      if (away) btn.setLabel('出撃中');
+      btn.setEnabled(!away && dockFree && canAfford(progress.resources, cost));
       y += L.rowH;
     }
     if (damaged.length > maxRows) {
@@ -567,7 +577,7 @@ export class HomeScene extends Phaser.Scene {
   private buildDock(): void {
     const built = buildDock(loadProgress());
     if (!built) return;
-    saveProgress(built);
+    saveProgress(built, 'dock');
     this.refresh();
   }
 
@@ -576,17 +586,22 @@ export class HomeScene extends Phaser.Scene {
     const f = hpFraction(progress, ship.id);
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
-    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul) : null;
+    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass) : null;
     if (!paid || !docked) return;
-    saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();
   }
 
   private fastRepair(shipId: string): void {
     const progress = loadProgress();
+    if (progress.items.fastRepair > 0) {
+      saveProgress({ ...progress, ...fastRepair(progress, shipId), items: { ...progress.items, fastRepair: progress.items.fastRepair - 1 } });
+      this.refresh();
+      return;
+    }
     const paid = pay(progress.resources, FAST_REPAIR_COST);
     if (!paid) return;
-    saveProgress({ ...progress, ...fastRepair(progress, shipId), resources: paid });
+    saveProgress({ ...progress, ...fastRepair(progress, shipId), resources: paid }, 'repair');
     this.refresh();
   }
 }

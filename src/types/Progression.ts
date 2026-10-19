@@ -15,6 +15,14 @@ export interface IDockJob {
   endsAt: number;
 }
 
+/** Items that finish a repair or a build at once (#143). */
+export interface IItems {
+  /** 高速修理材 */
+  fastRepair: number;
+  /** 高速建造材 */
+  fastBuild: number;
+}
+
 /** Research branches (系統) of the tech tree, in display order. */
 export type TechBranch =
   | 'gunnery'

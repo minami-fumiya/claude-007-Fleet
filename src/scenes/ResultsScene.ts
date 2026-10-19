@@ -65,6 +65,15 @@ export class ResultsScene extends Phaser.Scene {
         shadow: { offsetX: 0, offsetY: 0, color: victory ? 'rgba(255,201,74,0.5)' : 'rgba(255,95,122,0.5)', blur: 24, fill: true },
       }))
       .setOrigin(0.5);
+    if (data?.rank) {
+      // Battle rank (#149) beside the outcome.
+      const rankCss: Record<string, string> = { S: Css.gold, A: Css.cyan, B: Css.text, C: Css.muted, D: Css.danger };
+      const rx = CANVAS_W / 2 + (IS_PORTRAIT ? 200 : 190);
+      this.add.text(rx, y + 168, '評価', eyebrowStyle(11, Css.muted)).setOrigin(0.5);
+      this.add.text(rx, y + 212, data.rank, displayStyle(56, rankCss[data.rank] ?? Css.text)).setOrigin(0.5);
+      // What the stat cards don't show: damage taken and ships lost.
+      if (data.rankNote) this.add.text(rx, y + 250, data.rankNote, textStyle(11, Css.muted)).setOrigin(0.5, 0);
+    }
     this.add
       .text(CANVAS_W / 2, y + 262, victory ? '敵艦隊を殲滅した！' : '旗艦が撃沈された…', textStyle(18, Css.text, { fontStyle: 'bold' }))
       .setOrigin(0.5);
@@ -101,6 +110,8 @@ export class ResultsScene extends Phaser.Scene {
 
     // Mid-sortie (#53): advance to the next node, or withdraw keeping what was won.
     const advance = data?.advance === true;
+    // A campaign battle that can't advance (the main fleet, a defeat, everyone 大破) ends the sortie (#138).
+    if (!advance && data?.returnScene === SceneKeys.CAMPAIGN) endSortie(this);
     const by1 = y + reportH + BUTTONS.y1;
     if (advance) {
       new UIButton(this, CANVAS_W / 2, by1, '進撃  ›', () => {

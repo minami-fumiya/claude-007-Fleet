@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { recordLedger } from '@/systems/LedgerSystem';
+import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -93,6 +95,10 @@ export class CampaignMapScene extends Phaser.Scene {
 
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
+    // A sortie left unfinished (#138) opens on its area.
+    const pending = pendingSortie(this);
+    const pendingArea = pending ? DATA.areas.find((a) => a.id === pending.areaId) : undefined;
+    if (pendingArea && this.theaters.some((t) => t.id === pendingArea.theater)) this.theater = pendingArea.theater;
     const w = CANVAS_W - L.map.x * 2;
     const bw = (w - 8 * (this.theaters.length - 1)) / Math.max(1, this.theaters.length);
     this.tabs = this.theaters.map(
@@ -114,7 +120,8 @@ export class CampaignMapScene extends Phaser.Scene {
       this.tabs[i].setLabel(`${t.name}  ${pct}%`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
     const areas = areasOf(DATA, id);
-    this.selected = areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
+    const pending = pendingSortie(this);
+    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
     this.drawMap();
     this.drawDetail();
   }
@@ -158,7 +165,9 @@ export class CampaignMapScene extends Phaser.Scene {
       node.fillCircle(x, y, NODE_R);
       node.lineStyle(a === this.selected ? 4 : 2, color, open ? 1 : 0.4);
       node.strokeCircle(x, y, NODE_R);
-      const label = this.add.text(x, y, done ? '✓' : String(i + 1), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
+      // A cleared area shows its best battle rank (#149), or ✓ when it has none yet.
+      const best = done ? loadProgress().areaRanks[a.id] : undefined;
+      const label = this.add.text(x, y, best ?? (done ? '✓' : String(i + 1)), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
       const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5, 0);
       const hit = this.add.zone(x, y, NODE_R * 3, NODE_R * 3).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => this.selectArea(a.id));
@@ -216,7 +225,8 @@ export class CampaignMapScene extends Phaser.Scene {
       this.detailLayer.push(o);
       return o;
     };
-    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? '攻略済' : open ? '作戦' : '未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
+    const bestRank = progress.areaRanks[a.id];
+    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? `攻略済${bestRank ? `  ·  最高評価 ${bestRank}` : ''}` : open ? '作戦' : '未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
     const title = add(this.add.text(x, d.y + 44, a.name, displayStyle(24)));
     const desc = add(this.add.text(x, title.y + title.height + 10, a.description, textStyle(13, Css.muted, wrap)));
     let y = desc.y + desc.height + 18;
@@ -232,13 +242,29 @@ export class CampaignMapScene extends Phaser.Scene {
     const left = sweepsLeft(progress, a.id, Date.now());
     const sweepNote = sweepable
       ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎朝 5 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
-      : isCleared(a, cleared) ? '掃討: 1 隻も失わずに勝利すると使えます' : '';
+      : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
     if (this.status || sweepNote) {
       add(this.add.text(x, y, this.status ? `${this.status}\n${sweepNote}` : sweepNote, textStyle(12, this.status ? Css.success : Css.muted, { ...wrap, lineSpacing: 2 })));
     }
-    const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
     const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
+    // A sortie left unfinished here (#138): continue it or withdraw.
+    const pending = pendingSortie(this);
+    if (pending && pending.areaId === a.id) {
+      const half = (d.w - 48 - 12) / 2;
+      const bh = IS_PORTRAIT ? 76 : 60;
+      add(this.add.text(x, by - bh / 2 - (IS_PORTRAIT ? 34 : 26), pending.advance ? `出撃中: 前の戦闘は終了。進撃すると ${pending.node} / ${pending.battles} 戦目` : `出撃中: ${pending.node} / ${pending.battles} 戦目の途中で中断 (戦い直し)`, textStyle(12, Css.cyan)));
+      add(new UIButton(this, d.x + 24 + half / 2, by, pending.advance ? '進撃して続ける  ›' : '続きから  ›', () => this.resume(), {
+        variant: 'gold', width: half, height: bh, fontSize: IS_PORTRAIT ? 18 : 17,
+      }));
+      add(new UIButton(this, d.x + d.w - 24 - half / 2, by, '撤退する', () => {
+        endSortie(this);
+        this.status = '撤退しました';
+        this.drawDetail();
+      }, { variant: 'secondary', width: half, height: bh, fontSize: 17 }));
+      return;
+    }
+    const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
     const btn = add(
       new UIButton(this, d.x + 24 + bw / 2, by, open ? '出撃準備  ›' : '前の海域を攻略してください', () => this.prepare(a), {
         variant: open ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open ? 20 : 14,
@@ -252,6 +278,16 @@ export class CampaignMapScene extends Phaser.Scene {
     }
   }
 
+  /** Continues the saved sortie (#138). */
+  private resume(): void {
+    const init = resumeSortie(this);
+    if (init) this.scene.start(SceneKeys.BATTLE, init);
+    else {
+      endSortie(this);
+      this.drawDetail();
+    }
+  }
+
   private sweep(a: ICampaignArea): void {
     const registry = DataLoader.getRegistry(this);
     const progress = loadProgress();
@@ -259,7 +295,9 @@ export class CampaignMapScene extends Phaser.Scene {
     const event = activeEvent();
     const r = sweepArea(progress, a, enemy, Date.now(), eventEffects(event));
     if (!r) return;
-    saveProgress(r.progress);
+    // Ledger (#137): the sweep's reward in, its fuel and ammo out as a sortie.
+    const now = Date.now();
+    saveProgress({ ...r.progress, ledger: recordLedger(recordLedger(r.progress.ledger, 'sweep', r.reward, now), 'sortie', r.cost, now) });
     this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
     this.drawDetail();
   }

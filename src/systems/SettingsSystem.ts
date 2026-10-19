@@ -12,9 +12,11 @@ export interface ISettings {
   keepExercise: boolean;
   /** 図鑑: show only what the nation has (#44); off shows everything, the rest as silhouettes */
   encyclopediaOwnedOnly: boolean;
+  /** 改装: list every owned ship (#144); off lists only the fleet */
+  customizeAll: boolean;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -42,6 +44,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       joystick: typeof d.joystick === 'boolean' ? d.joystick : DEFAULT_SETTINGS.joystick,
       keepExercise: typeof d.keepExercise === 'boolean' ? d.keepExercise : DEFAULT_SETTINGS.keepExercise,
       encyclopediaOwnedOnly: typeof d.encyclopediaOwnedOnly === 'boolean' ? d.encyclopediaOwnedOnly : DEFAULT_SETTINGS.encyclopediaOwnedOnly,
+      customizeAll: typeof d.customizeAll === 'boolean' ? d.customizeAll : DEFAULT_SETTINGS.customizeAll,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

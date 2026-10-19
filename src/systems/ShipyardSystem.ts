@@ -131,17 +131,19 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
-export type BuildState = 'owned' | 'reward' | 'research' | 'fictional' | 'rank' | 'resources' | 'ready';
+export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'resources' | 'dock' | 'ready';
 
 /** Why a ship can or can't be built right now; `techNames` maps research ids to their display names. */
 export function buildState(progress: IProgress, roster: IShipData[], ship: IShipData): BuildState {
   if (isOwned(progress, roster, ship.id)) return 'owned';
+  if ((progress.builds ?? []).some((b) => b.shipId === ship.id)) return 'building';
   if (isRewardOnly(ship)) return 'reward';
   const tech = buildTechFor(ship);
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
   if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
+  if ((progress.builds ?? []).length >= buildDockCount(progress)) return 'dock';
   return 'ready';
 }
 
@@ -149,6 +151,8 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
 export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}): string {
   switch (state) {
     case 'owned': return '保有';
+    case 'building': return '建造中';
+    case 'dock': return '建造ドック満杯';
     case 'reward': {
       const area = rewardAreaOf(ship) ?? '';
       return `作戦報酬: ${areaNames[area] ?? area}`;
@@ -162,6 +166,61 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
     case 'resources': return '資源不足';
     case 'ready': return '建造可 ›';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Construction time (#143)
+// ---------------------------------------------------------------------------
+
+/** Minutes to build by class (light cruisers are quicker than heavy ones); each grade adds GRADE_MINUTES. */
+export const BUILD_MINUTES: Record<ShipClass, number> = {
+  [ShipClass.Destroyer]: 5,
+  [ShipClass.Submarine]: 8,
+  [ShipClass.Cruiser]: 15,
+  [ShipClass.Carrier]: 35,
+  [ShipClass.Battleship]: 40,
+};
+export const LIGHT_CRUISER_MINUTES = 10;
+export const GRADE_MINUTES = 4;
+
+export function buildTimeMs(ship: IShipData, timeMul = 1): number {
+  const base = isLightCruiser(ship) ? LIGHT_CRUISER_MINUTES : BUILD_MINUTES[ship.shipClass];
+  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.fictional ? 1.5 : 1);
+  return Math.round(minutes * 60_000 * timeMul);
+}
+
+/** Building slips (建造ドック): one at the start, a second at 少佐 and a third at 大佐. */
+export const BUILD_DOCK_RANKS = [0, 6, 8];
+
+export function buildDockCount(progress: Parameters<typeof rankOf>[0]): number {
+  const rank = rankOf(progress).index;
+  return BUILD_DOCK_RANKS.filter((r) => rank >= r).length;
+}
+
+/** Pays for the ship and lays it down; it joins the fleet when `completeBuilds` finds it finished. */
+export function startBuild(progress: IProgress, roster: IShipData[], ship: IShipData, now: number, timeMul = 1): IProgress | null {
+  if (!roster.some((s) => s.id === ship.id) || buildState(progress, roster, ship) !== 'ready') return null;
+  const left = pay(progress.resources, buildCostAt(progress, ship));
+  if (!left) return null;
+  return { ...progress, resources: left, builds: [...(progress.builds ?? []), { shipId: ship.id, endsAt: now + buildTimeMs(ship, timeMul) }] };
+}
+
+/** Adds every finished ship to the fleet; `done` lists them (empty when nothing finished). */
+export function completeBuilds(progress: IProgress, roster: IShipData[], now: number): { progress: IProgress; done: string[] } {
+  const builds = progress.builds ?? [];
+  const done = builds.filter((b) => b.endsAt <= now).map((b) => b.shipId);
+  if (done.length === 0) return { progress, done };
+  let next: IProgress = { ...progress, builds: builds.filter((b) => b.endsAt > now) };
+  for (const id of done) next = grantShip(next, roster, id);
+  return { progress: next, done };
+}
+
+/** Finishes a build at once with a 高速建造材; null when there is none or the ship isn't being built. */
+export function fastBuild(progress: IProgress, roster: IShipData[], shipId: string, now: number): IProgress | null {
+  const items = progress.items ?? { fastRepair: 0, fastBuild: 0 };
+  if (items.fastBuild <= 0 || !(progress.builds ?? []).some((b) => b.shipId === shipId)) return null;
+  const sped = { ...progress, items: { ...items, fastBuild: items.fastBuild - 1 }, builds: progress.builds.map((b) => (b.shipId === shipId ? { ...b, endsAt: now } : b)) };
+  return completeBuilds(sped, roster, now).progress;
 }
 
 /** Pays for and adds the ship. Returns null when it can't be built now. */

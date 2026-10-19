@@ -4,6 +4,7 @@ import {
   applyToStats,
   applyToWeapons,
   combineModifiers,
+  customizeShips,
   describeModifiers,
   MAX_UPGRADE_SLOTS,
   toggleUpgrade,
@@ -12,7 +13,7 @@ import {
   UPGRADE_SLOTS,
 } from '@/systems/CustomizationSystem';
 import { IUpgradeData, NO_MODIFIERS } from '@/types/Modifiers';
-import { IShipStats } from '@/types/Ship';
+import { IShipData, IShipStats } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { emptyProgress, parseProgress } from '@/utils/ProgressStore';
@@ -135,5 +136,16 @@ describe('ProgressStore.parseProgress', () => {
     expect(q.damage).toEqual({ a: 1, b: 0.5 });
     expect(q.docks).toEqual([{ shipId: 'b', endsAt: 10 }]);
     expect(q.research).toEqual(['x']);
+  });
+});
+
+describe('customizeShips (#144)', () => {
+  const ship = (id: string, shipClass: string) => ({ id, shipClass } as unknown as IShipData);
+  const owned = [ship('dd', 'Destroyer'), ship('bb', 'Battleship'), ship('ca', 'Cruiser'), ship('cv', 'Carrier')];
+  it('the fleet only, or the fleet first and every other ship by class', () => {
+    expect(customizeShips(owned, ['ca', 'dd'], false).map((s) => s.id)).toEqual(['ca', 'dd']);
+    expect(customizeShips(owned, ['ca', 'dd'], true).map((s) => s.id)).toEqual(['ca', 'dd', 'bb', 'cv']);
+    expect(customizeShips(owned, [], true).map((s) => s.id)).toEqual(['bb', 'cv', 'ca', 'dd']);
+    expect(customizeShips(owned, ['gone'], false)).toEqual([]);
   });
 });

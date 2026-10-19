@@ -39,7 +39,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
-import { beginSortie, endSortie } from '@/utils/SortieFlow';
+import { beginSortie } from '@/utils/SortieFlow';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -1623,7 +1623,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       '改装  ›',
       this.onTap(() => {
         this.saveSelection();
-        this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.FLEET_BUILDER });
+        this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.FLEET_BUILDER, scope: 'fleet' });
       }),
       { variant: 'secondary', width: bw, height: bh, fontSize: 14 },
     );
@@ -1649,7 +1649,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
     const paid = paySortie(loadProgress(), ships, this.sortieOptions());
     if (!paid) return;
-    saveProgress(paid);
+    saveProgress(paid, 'sortie');
     this.saveSelection();
     const flagshipIndex = this.slots.findIndex((s) => s !== null);
 
@@ -1692,7 +1692,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const sortie = area
       ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList)
       : null;
-    if (!area) endSortie(this);
+    // An exercise leaves a campaign sortie in progress alone (#138): it can still be continued from the map.
     this.scene.start(SceneKeys.BATTLE, sortie ?? initData);
   }
 }

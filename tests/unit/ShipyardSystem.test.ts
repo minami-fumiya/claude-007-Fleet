@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
-  REWARD_SHIPS, rewardShipFor, shipGrade, starterShip,
+  REWARD_SHIPS, rewardShipFor, shipGrade, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, fastBuild,
 } from '@/systems/ShipyardSystem';
-import { RANKS } from '@/systems/RankSystem';
-import { emptyProgress, IProgress } from '@/utils/ProgressStore';
+import { ALL_MISSIONS_DONE, RANKS } from '@/systems/RankSystem';
+import { emptyProgress, finishBuilds, IProgress } from '@/utils/ProgressStore';
 import { resources } from '@/systems/ResourceSystem';
 import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
@@ -30,7 +30,8 @@ const IJN = ijn.ships as IShipData[];
 const byId = (id: string): IShipData => IJN.find((s) => s.id === id)!;
 const rich = resources({ fuel: 20000, ammo: 20000, steel: 20000, bauxite: 20000 });
 const withClears = (n: number): string[] => Array.from({ length: n }, (_, i) => `x${i}`);
-const player = (patch: Partial<IProgress> = {}): IProgress => ({ ...emptyProgress(), ships: ['fubuki'], ...patch });
+// Promotion missions (#142) done: merit alone sets the rank here.
+const player = (patch: Partial<IProgress> = {}): IProgress => ({ ...emptyProgress(), ships: ['fubuki'], rankStats: ALL_MISSIONS_DONE, ...patch });
 
 describe('ShipyardSystem (#18 / #29)', () => {
   it('every nation starts with one of its own destroyers', () => {
@@ -174,5 +175,54 @@ describe('reward-only ships (#39)', () => {
       const ship = rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], area);
       expect(ship && isRewardOnly(ship)).toBe(false);
     }
+  });
+});
+
+describe('construction time (#143)', () => {
+  const now = 1_700_000_000_000;
+  const ready = (patch: Partial<IProgress> = {}): IProgress => player({ resources: rich, ...patch });
+
+  it('takes minutes by class and grade: destroyers 5, battleships up to an hour', () => {
+    const min = (id: string): number => buildTimeMs(byId(id)) / 60_000;
+    expect(min('yukikaze')).toBe(5);
+    expect(min('sendai')).toBeLessThan(min('takao'));
+    expect(min('yamato')).toBeGreaterThanOrEqual(30);
+    expect(min('yamato')).toBeLessThanOrEqual(60);
+  });
+
+  it('a build is laid down, paid at once, and joins the fleet when finished', () => {
+    const roster = IJN;
+    const p = startBuild(ready(), roster, byId('yukikaze'), now)!;
+    expect(p.ships).not.toContain('yukikaze');
+    expect(p.resources.steel).toBeLessThan(rich.steel);
+    expect(buildState(p, roster, byId('yukikaze'))).toBe('building');
+    expect(startBuild(p, roster, byId('yukikaze'), now)).toBeNull();
+    // One slip at the start: a second build waits.
+    expect(buildState(p, roster, byId('shimakaze'))).toBe('dock');
+    expect(buildStateLabel('dock', byId('shimakaze'))).toBe('建造ドック満杯');
+    const early = completeBuilds(p, roster, now + buildTimeMs(byId('yukikaze')) - 1);
+    expect(early.done).toEqual([]);
+    const done = completeBuilds(p, roster, now + buildTimeMs(byId('yukikaze')));
+    expect(done.done).toEqual(['yukikaze']);
+    expect(done.progress.ships).toContain('yukikaze');
+    expect(done.progress.builds).toEqual([]);
+  });
+
+  it('more slips come with rank; a 高速建造材 finishes a build at once', () => {
+    expect(buildDockCount(player())).toBe(1);
+    expect(buildDockCount(player({ rankFloor: 6 }))).toBe(2);
+    expect(buildDockCount(player({ rankFloor: 8 }))).toBe(3);
+    const p = startBuild(ready({ items: { fastRepair: 0, fastBuild: 1 } }), IJN, byId('yukikaze'), now)!;
+    const fast = fastBuild(p, IJN, 'yukikaze', now)!;
+    expect(fast.ships).toContain('yukikaze');
+    expect(fast.items.fastBuild).toBe(0);
+    expect(fastBuild(fast, IJN, 'yukikaze', now)).toBeNull();
+    expect(fastBuild({ ...p, items: { fastRepair: 0, fastBuild: 0 } }, IJN, 'yukikaze', now)).toBeNull();
+  });
+
+  it('finished builds join the fleet on load, even after the game was closed', () => {
+    const np = { builds: [{ shipId: 'a', endsAt: now }, { shipId: 'b', endsAt: now + 1 }], ships: ['x'] };
+    expect(finishBuilds(np, now)).toEqual({ builds: [{ shipId: 'b', endsAt: now + 1 }], ships: ['x', 'a'] });
+    expect(finishBuilds(np, now - 1)).toBe(np);
   });
 });

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.17.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.18.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -293,6 +293,72 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('改装 lists every owned ship, steps through them and opens the ship list (#144)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CustomizationScene'] });
+    await open(page, 'CustomizationScene', { returnTo: 'HomeScene', scope: 'all' });
+    const count = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as { ships: unknown[] };
+      return s.ships.length;
+    });
+    expect(count).toBe(SAVE.nations.IJN.ships.length);
+    await page.screenshot({ path: info.outputPath('customize.png') });
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as { openShipList(): void };
+      s.openShipList();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('customize-list.png') });
+    expect(await overflowingTexts(page, 'CustomizationScene')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('建造 takes time: lay down a ship, see the countdown, finish it with a 高速建造材 (#143)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['ShipyardScene', 'HomeScene', 'RecordScene'] });
+    await open(page, 'ShipyardScene');
+    const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { builds: Array<{ shipId: string }>; ships: string[]; items: { fastBuild: number } });
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
+      const target = s.classShips().find((x) => x.id === 'shimakaze');
+      s.build(target);
+    });
+    let np = await read();
+    expect(np.builds.map((b) => b.shipId)).toEqual(['shimakaze']);
+    expect(np.ships).not.toContain('shimakaze');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('shipyard-building.png') });
+    // Tapping it again spends a 高速建造材 (migrated saves get two).
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
+      s.build(s.classShips().find((x) => x.id === 'shimakaze'));
+    });
+    np = await read();
+    expect(np.ships).toContain('shimakaze');
+    expect(np.items.fastBuild).toBe(1);
+    await open(page, 'HomeScene');
+    await page.screenshot({ path: info.outputPath('home-docks.png') });
+    // The build's cost shows in the ledger (#137).
+    await open(page, 'RecordScene', { view: 'ledger' });
+    await page.screenshot({ path: info.outputPath('ledger.png') });
+    expect(await overflowingTexts(page, 'RecordScene')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('nations open step by step: the others wait for the first nation (#134)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HomeScene'] });
+    await open(page, 'HomeScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openNationPicker(closable: boolean): void; selectNation(n: string): void };
+      s.openNationPicker(true);
+      // A locked nation can't be picked.
+      s.selectNation('USN');
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('nations-locked.png') });
+    const current = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).current);
+    expect(current).toBe('IJN');
+    expect(errors).toEqual([]);
+  });
+
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
@@ -326,6 +392,39 @@ test.describe('screens', () => {
     await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
     const second = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown } }).battleData.sortie);
     expect(second).toEqual({ node: 2, battles: 2, boss: true });
+    expect(errors).toEqual([]);
+  });
+
+  test('a sortie left after its first battle is continued from the map after a reload (#138)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout);
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
+        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
+      };
+      s.openPicker(0);
+      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
+      s.startBattle();
+    });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { setPaused(p: boolean): void; triggerGameOver(v: boolean): void };
+      b.setPaused(false);
+      b.triggerGameOver(true);
+    });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('ResultsScene')?.sys.settings.active === true, null, { timeout: 60_000 });
+    // Close the game on the results screen: the sortie is in the save.
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScene('MainMenuScene')?.sys.settings.active === true, null, { timeout: 60_000 });
+    await open(page, 'CampaignMapScene');
+    await page.screenshot({ path: info.outputPath('sortie-resume.png') });
+    expect(await overflowingTexts(page, 'CampaignMapScene')).toEqual([]);
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { resume(): void }).resume());
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    const node = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown } }).battleData.sortie);
+    expect(node).toEqual({ node: 2, battles: 2, boss: true });
     expect(errors).toEqual([]);
   });
 

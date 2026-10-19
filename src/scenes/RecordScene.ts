@@ -5,6 +5,8 @@ import { audio } from '@/systems/AudioSystem';
 import { MEDALS, totalSunk } from '@/systems/RecordSystem';
 import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
 import { loadProgress } from '@/utils/ProgressStore';
+import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerTotals, SPENDING } from '@/systems/LedgerSystem';
+import { RESOURCE_KEYS, RESOURCE_LABEL, resources } from '@/systems/ResourceSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { IServiceRecord } from '@/types/Record';
@@ -18,8 +20,16 @@ const L = IS_PORTRAIT
 
 /** 戦績: career totals and the medal case. */
 export class RecordScene extends Phaser.Scene {
+  /** Right panel: the medal case or the resource ledger (#137) */
+  private view: 'medals' | 'ledger' = 'medals';
+  private layer: Phaser.GameObjects.GameObject[] = [];
+
   constructor() {
     super({ key: SceneKeys.RECORD });
+  }
+
+  init(data?: { view?: 'medals' | 'ledger' }): void {
+    this.view = data?.view ?? 'medals';
   }
 
   create(): void {
@@ -35,7 +45,81 @@ export class RecordScene extends Phaser.Scene {
 
     const record = loadProgress().record;
     this.buildStats(record);
-    this.buildMedals(record.medals);
+    const p = L.medals;
+    addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
+    this.layer = [];
+    this.showView(this.view);
+  }
+
+  /** Switches the right panel between the medals and the ledger. */
+  showView(view: 'medals' | 'ledger'): void {
+    for (const o of this.layer) o.destroy();
+    this.layer = [];
+    this.view = view;
+    const p = L.medals;
+    const tw = IS_PORTRAIT ? 150 : 130;
+    const th = IS_PORTRAIT ? 44 : 32;
+    (['medals', 'ledger'] as const).forEach((v, i) => {
+      this.track(new UIButton(this, p.x + p.w - 22 - (1 - i) * (tw + 8) - tw / 2, p.y + 14 + th / 2, v === 'medals' ? '勲章' : '資源の収支', () => this.showView(v), {
+        variant: v === view ? 'primary' : 'secondary', width: tw, height: th, fontSize: 13,
+      }));
+    });
+    if (view === 'medals') this.buildMedals(loadProgress().record.medals);
+    else this.buildLedger();
+  }
+
+  private track<T extends Phaser.GameObjects.GameObject>(o: T): T {
+    this.layer.push(o);
+    return o;
+  }
+
+  /**
+   * 資源の収支 (#137): the last 24 hours by category, a row each, with a bar per resource scaled to the largest
+   * figure of that resource.
+   */
+  private buildLedger(): void {
+    const p = L.medals;
+    const now = Date.now();
+    const totals = ledgerTotals(loadProgress().ledger, now);
+    this.track(this.add.text(p.x + 22, p.y + 18, `資源の収支  ·  直近 ${LEDGER_HOURS} 時間`, eyebrowStyle(11)));
+    const rows: Array<{ cat: LedgerCategory | 'net'; sign: 1 | -1 }> = [
+      ...INCOME.filter((c) => totals[c]).map((c) => ({ cat: c, sign: 1 as const })),
+      ...SPENDING.filter((c) => totals[c]).map((c) => ({ cat: c, sign: -1 as const })),
+    ];
+    const top = p.y + (IS_PORTRAIT ? 74 : 62);
+    if (rows.length === 0) {
+      this.track(this.add.text(p.x + p.w / 2, p.y + p.h / 2, 'まだ記録がありません\n(戦闘・建造・修理などをすると記録されます)', textStyle(14, Css.dim, { align: 'center' })).setOrigin(0.5));
+      return;
+    }
+    const net = resources();
+    for (const r of rows) for (const k of RESOURCE_KEYS) net[k] += r.sign * (totals[r.cat as LedgerCategory]?.[k] ?? 0);
+    const labelW = IS_PORTRAIT ? 120 : 130;
+    const colW = (p.w - 44 - labelW) / RESOURCE_KEYS.length;
+    const rowH = Math.min(IS_PORTRAIT ? 40 : 30, (p.h - (top - p.y) - 70) / (rows.length + 1));
+    RESOURCE_KEYS.forEach((k, i) => this.track(this.add.text(p.x + 22 + labelW + i * colW + colW - 8, top, RESOURCE_LABEL[k], textStyle(11, Css.muted)).setOrigin(1, 0)));
+    const max: Record<string, number> = {};
+    for (const k of RESOURCE_KEYS) max[k] = Math.max(1, ...rows.map((r) => totals[r.cat as LedgerCategory]?.[k] ?? 0));
+    const g = this.track(this.add.graphics());
+    rows.forEach((r, i) => {
+      const y = top + 22 + i * rowH;
+      const css = r.sign > 0 ? Css.success : Css.danger;
+      this.track(this.add.text(p.x + 22, y, `${r.sign > 0 ? '+' : '−'} ${LEDGER_LABEL[r.cat as LedgerCategory]}`, textStyle(IS_PORTRAIT ? 13 : 12, css)));
+      RESOURCE_KEYS.forEach((k, j) => {
+        const v = totals[r.cat as LedgerCategory]?.[k] ?? 0;
+        const cx = p.x + 22 + labelW + j * colW;
+        g.fillStyle(r.sign > 0 ? Colors.success : Colors.danger, 0.35);
+        g.fillRect(cx, y + rowH - 10, (colW - 12) * (v / max[k]), 4);
+        this.track(this.add.text(cx + colW - 8, y, v > 0 ? v.toLocaleString('en-US') : '—', textStyle(IS_PORTRAIT ? 13 : 12, v > 0 ? Css.text : Css.dim)).setOrigin(1, 0));
+      });
+    });
+    const ny = top + 22 + rows.length * rowH + 6;
+    g.lineStyle(1, 0xffffff, 0.2);
+    g.lineBetween(p.x + 22, ny - 3, p.x + p.w - 22, ny - 3);
+    this.track(this.add.text(p.x + 22, ny, '差し引き', textStyle(IS_PORTRAIT ? 13 : 12, Css.text, { fontStyle: 'bold' })));
+    RESOURCE_KEYS.forEach((k, j) => {
+      const v = net[k];
+      this.track(this.add.text(p.x + 22 + labelW + j * colW + colW - 8, ny, `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('en-US')}`, textStyle(IS_PORTRAIT ? 13 : 12, v < 0 ? Css.danger : Css.success, { fontStyle: 'bold' })).setOrigin(1, 0));
+    });
   }
 
   private buildStats(r: IServiceRecord): void {
@@ -80,28 +164,29 @@ export class RecordScene extends Phaser.Scene {
 
   private buildMedals(earned: string[]): void {
     const p = L.medals;
-    addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
-    this.add.text(p.x + 22, p.y + 18, `勲章  ·  ${earned.length} / ${MEDALS.length}`, eyebrowStyle(11));
+    this.track(this.add.text(p.x + 22, p.y + 18, `勲章  ·  ${earned.length} / ${MEDALS.length}`, eyebrowStyle(11)));
     const gap = 10;
     const cw = (p.w - 44 - gap * (L.medalCols - 1)) / L.medalCols;
     const rows = Math.ceil(MEDALS.length / L.medalCols);
-    const ch = Math.min(IS_PORTRAIT ? 96 : 120, (p.h - 60 - gap * (rows - 1)) / rows);
+    // Below the 勲章 / 資源の収支 tabs.
+    const top = p.y + (IS_PORTRAIT ? 70 : 56);
+    const ch = Math.min(IS_PORTRAIT ? 96 : 120, (p.y + p.h - 16 - top - gap * (rows - 1)) / rows);
     MEDALS.forEach((m, i) => {
       const on = earned.includes(m.id);
       const x = p.x + 22 + (i % L.medalCols) * (cw + gap);
-      const y = p.y + 46 + Math.floor(i / L.medalCols) * (ch + gap);
-      drawPanel(this.add.graphics(), x, y, cw, ch, {
+      const y = top + Math.floor(i / L.medalCols) * (ch + gap);
+      this.track(drawPanel(this.add.graphics(), x, y, cw, ch, {
         radius: 14, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.35, rimAlpha: on ? 0.8 : 0.12, glow: on ? 0.8 : 0,
-      });
-      const g = this.add.graphics();
+      }));
+      const g = this.track(this.add.graphics());
       const cx = x + 30;
       const cy = y + ch / 2;
       g.fillStyle(on ? Colors.gold : 0xffffff, on ? 1 : 0.08);
       g.fillCircle(cx, cy, 15);
       g.lineStyle(2, 0xffffff, on ? 0.7 : 0.15);
       g.strokeCircle(cx, cy, 15);
-      this.add.text(x + 56, cy - 4, m.name, textStyle(15, on ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 1);
-      this.add.text(x + 56, cy + 2, m.description, textStyle(11, on ? Css.muted : Css.dim, { wordWrap: { width: cw - 66, useAdvancedWrap: true } })).setOrigin(0, 0);
+      this.track(this.add.text(x + 56, cy - 4, m.name, textStyle(15, on ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 1));
+      this.track(this.add.text(x + 56, cy + 2, m.description, textStyle(11, on ? Css.muted : Css.dim, { wordWrap: { width: cw - 66, useAdvancedWrap: true } })).setOrigin(0, 0));
     });
   }
 }

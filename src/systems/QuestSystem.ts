@@ -1,5 +1,5 @@
 import questData from '@/data/quests.json';
-import { IResources } from '@/types/Progression';
+import { IItems, IResources } from '@/types/Progression';
 
 /**
  * 任務 (#52, pure): daily, weekly and one-time goals with resource rewards. Dailies reset when the game day starts
@@ -20,6 +20,8 @@ export interface IQuest {
   event: QuestEvent;
   goal: number;
   reward: Partial<IResources>;
+  /** 高速修理材・高速建造材 on top of the resources (#143) */
+  items?: Partial<IItems>;
 }
 
 export interface IQuestState {
@@ -104,11 +106,11 @@ export function claimableCount(state: IQuestState, now: number): number {
 }
 
 /** Takes a finished quest's reward; null when it isn't finished or was already taken. */
-export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources> } | null {
+export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems> } | null {
   const s = refreshQuests(state, now);
   const q = QUESTS.find((x) => x.id === id);
   if (!q || !isClaimable(s, q)) return null;
-  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward };
+  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {} };
 }
 
 /** Tolerant parse of a stored quest state. */
@@ -133,4 +135,15 @@ export function withQuestEvents<T extends { quests: IQuestState }>(progress: T, 
   let quests = progress.quests;
   for (const [event, count] of events) quests = recordQuestEvent(quests, event, now, count);
   return quests === progress.quests ? progress : { ...progress, quests };
+}
+
+export const ITEM_LABEL: Record<keyof IItems, string> = { fastRepair: '高速修理材', fastBuild: '高速建造材' };
+
+/** "高速修理材 2・高速建造材 1" ('' when none). */
+export function formatItems(items: Partial<IItems>): string {
+  return (Object.keys(ITEM_LABEL) as Array<keyof IItems>).filter((k) => (items[k] ?? 0) > 0).map((k) => `${ITEM_LABEL[k]} ${items[k]}`).join('・');
+}
+
+export function addItems(have: IItems, add: Partial<IItems>): IItems {
+  return { fastRepair: have.fastRepair + (add.fastRepair ?? 0), fastBuild: have.fastBuild + (add.fastBuild ?? 0) };
 }
