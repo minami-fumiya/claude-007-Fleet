@@ -18,8 +18,8 @@ describe('medals (#92)', () => {
 
   it('new features bring medals and none is ever removed (0.0.25: convoy escort, captain instruction; 0.0.26: captain sinks)', () => {
     // Raise this floor whenever medals are added; it never goes down.
-    expect(MEDALS.length).toBeGreaterThanOrEqual(138);
-    for (const id of ['convoy', 'convoy_2', 'convoy_3', 'instructor', 'instructor_2', 'instructor_3', 'captain_ace', 'captain_ace_2', 'captain_ace_3', 'task_force', 'task_force_2', 'task_force_3', 'veteran_player', 'veteran_player_2', 'veteran_player_3', 'dock_expansion', 'dock_expansion_2', 'dock_expansion_3', 'rush_work', 'rush_work_2']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
+    expect(MEDALS.length).toBeGreaterThanOrEqual(140);
+    for (const id of ['convoy', 'convoy_2', 'convoy_3', 'instructor', 'instructor_2', 'instructor_3', 'captain_ace', 'captain_ace_2', 'captain_ace_3', 'task_force', 'task_force_2', 'task_force_3', 'veteran_player', 'veteran_player_2', 'veteran_player_3', 'dock_expansion', 'dock_expansion_2', 'dock_expansion_3', 'rush_work', 'rush_work_2', 's_recruiter', 's_recruiter_2']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
     const r = emptyRecord();
     expect(newMedals(r, { clearedTheaters: [], totals: { convoyWin: 3, learnSkill: 1 } }).map((m) => m.id)).toEqual(expect.arrayContaining(['convoy', 'instructor']));
     // 0.0.26: one captain's own sinkings (#199)

@@ -18,7 +18,9 @@ export type QuestEvent =
   // 0.0.25: convoy escorts won (#186), skills taught to captains (#187)
   | 'convoyWin' | 'learnSkill'
   // 0.0.26: new versions met on the title screen (#205)
-  | 'versionUpdate';
+  | 'versionUpdate'
+  // 0.0.27: captains joining from S ranks and promotions (#215)
+  | 'captainJoin';
 
 export interface IQuest {
   id: string;

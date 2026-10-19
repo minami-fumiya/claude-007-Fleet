@@ -120,6 +120,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
   ...ladder('captain_ace', '撃沈王章', 'growth', [10, 50, 150], (g) => `1 人の艦長の艦で ${g} 隻撃沈する`, (_r, c) => c.captainSinks ?? 0),
   ...ladder('mentor', '名艦長章', 'growth', [10, 30, 60, 100], (g) => `艦長を Lv${g} に育てる`, (_r, c) => c.captainLevel ?? 0),
+  ...ladder('s_recruiter', '完勝の将章', 'growth', [5, 15], (g) => `S 評価と昇進で艦長を ${g} 名迎える`, (_r, c) => total(c, 'captainJoin')),
   ...ladder('instructor', '教官章', 'growth', [1, 10, 30], (g) => `艦長にスキルを ${g} 回習得させる`, (_r, c) => total(c, 'learnSkill')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
   ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),

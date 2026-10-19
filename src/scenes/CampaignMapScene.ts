@@ -13,7 +13,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventS
 import { activeEvent } from '@/utils/GameClock';
 import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
-import { nextCaptainText } from '@/systems/CaptainRoster';
+import { captainsLeft } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
@@ -233,10 +233,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const roster = registry.byNation(progress.nation);
     const rewardShip = rewardShipFor(roster, ownedIds(progress, roster), a.id);
     const reward = formatResources(a.reward) + (rewardShip ? `  /  S 評価で ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
-    // The captain the first clear brings (#179), while the area is not cleared and someone is left to join.
-    const owned = ownedIds(progress, roster);
-    const classes = [...new Set(roster.filter((s) => owned.includes(s.id)).map((s) => s.shipClass))];
-    const captain = progress.campaign.includes(a.id) ? '' : nextCaptainText(progress.nation, progress.captains, classes);
+    // The area's first S brings a captain (#179 #215), while someone is left to join; who it is stays a surprise.
+    const captain = progress.perfect.includes(a.id) || captainsLeft(progress.nation, progress.captains) === 0 ? '' : 'S 評価で艦長 +1';
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
       // Portrait keeps to the kinds (the names ran the sweep line into the buttons).

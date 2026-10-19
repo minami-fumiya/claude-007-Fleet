@@ -364,7 +364,7 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the captain screen tells how captains join and who is next (#179)', async ({ page }, info) => {
+  test('the captain screen tells how captains join, without naming who is next (#179 #215)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CaptainScene'] });
     await open(page, 'CaptainScene');
     await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as { openRecruitInfo(): void }).openRecruitInfo());
