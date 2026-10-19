@@ -123,7 +123,7 @@ export function startingHp(progress: IProgress, shipId: string, exercise = false
 /** A sweep pays this share of a won battle's resource reward (#57). */
 export const SWEEP_REWARD_SCALE = 0.8;
 
-/** Sweeps per area per game day (#57): unlimited instant rewards made battles pointless. Resets at 05:00 JST. */
+/** Sweeps per area per game day (#57): unlimited instant rewards made battles pointless. Resets at 00:00 JST (#219). */
 export const SWEEPS_PER_DAY = 3;
 
 /** Sweeps of `area` left today. */

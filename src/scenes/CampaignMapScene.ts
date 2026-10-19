@@ -264,7 +264,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const sweepable = canSweep(progress, a);
     const left = sweepsLeft(progress, a.id, Date.now());
     const sweepNote = sweepable
-      ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎朝 5 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎日 0 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
     if (this.status || sweepNote) {

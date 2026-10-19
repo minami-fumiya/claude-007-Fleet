@@ -435,6 +435,18 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test("today's and tomorrow's event schedule opens from the home banner and fits (#218)", async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HomeScene'] });
+    await open(page, 'HomeScene');
+    for (const ahead of [0, 1]) {
+      await page.evaluate((a) => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openEventSchedule(n: number): void }).openEventSchedule(a), ahead);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: info.outputPath(`events-${ahead}.png`) });
+      expect(await overflowingTexts(page, 'HomeScene'), `day +${ahead}`).toEqual([]);
+    }
+    expect(errors).toEqual([]);
+  });
+
   test('編成 from the menu moves on to 作戦 or 演習 instead of a sortie (#109)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene', { organize: true });

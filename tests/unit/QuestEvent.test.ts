@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEventReward, eventAppliesToBattle, eventAt, eventEffects, eventFor, EVENT_WINDOW_MS, NO_EVENT, nextEvent, windowIndex } from '@/systems/EventSystem';
+import { applyEventReward, daySchedule, eventAppliesToBattle, eventAt, eventEffects, eventFor, EVENT_WINDOW_MS, MAX_DOUBLE, NO_EVENT, nextEvent, windowIndex, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import {
   activeQuests, claimQuest, emptyQuestState, gameDay, gameWeek, isClaimable, nextReset, parseQuestState, QUEST_KINDS, questBoard, questProgress, QUESTS, QUESTS_SHOWN,
   questStatus, recordQuestEvent, refreshQuests, withQuestEvents,
@@ -14,12 +14,12 @@ import { ShipClass } from '@/types/ShipClass';
 import campaign from '@/data/campaign.json';
 import { isFreeArea } from '@/systems/CampaignSystem';
 
-/** 2026-10-19 (Monday) 05:00 JST */
-const MONDAY_5AM = Date.UTC(2026, 9, 18, 20);
+/** 2026-10-19 (Monday) 00:00 JST: the game day's start since #219 (the name is kept from the 05:00 days). */
+const MONDAY_5AM = Date.UTC(2026, 9, 18, 15);
 const HOUR = 3_600_000;
 
 describe('events (#89)', () => {
-  it('the same moment gives the same event; windows are three hours from 05:00 JST', () => {
+  it('the same moment gives the same event; windows are three hours from 00:00 JST (#219)', () => {
     expect(windowIndex(MONDAY_5AM + 1) - windowIndex(MONDAY_5AM - 1)).toBe(1);
     expect(windowIndex(MONDAY_5AM + 3 * HOUR - 1)).toBe(windowIndex(MONDAY_5AM));
     for (let i = 0; i < 50; i++) {
@@ -30,16 +30,24 @@ describe('events (#89)', () => {
     }
   });
 
-  it('some windows have events and some do not; every kind turns up', () => {
+  it('every window has an event (#218); every kind turns up; 報酬 2 倍 at most twice a day', () => {
     const kinds = new Set<string>();
-    let none = 0;
     for (let i = 0; i < 400; i++) {
       const e = eventAt(MONDAY_5AM + i * EVENT_WINDOW_MS);
-      if (e) kinds.add(e.kind); else none++;
+      expect(e).not.toBeNull();
+      kinds.add(e!.kind);
     }
-    expect(kinds).toEqual(new Set(['double', 'steel', 'training', 'repair']));
-    expect(none).toBeGreaterThan(100);
-    expect(nextEvent(MONDAY_5AM)!.startsAt).toBeGreaterThan(MONDAY_5AM);
+    expect(kinds).toEqual(new Set(['double', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite']));
+    const today = gameDay(MONDAY_5AM);
+    for (let d = today; d < today + 60; d++) {
+      const day = daySchedule(d);
+      expect(day).toHaveLength(WINDOWS_PER_DAY);
+      expect(day.filter((e) => e.kind === 'double').length).toBeLessThanOrEqual(MAX_DOUBLE);
+      // The schedule starts at the day's 00:00 JST and is the table eventAt reads.
+      expect(day[0].startsAt).toBe(MONDAY_5AM + (d - today) * 24 * HOUR);
+      expect(eventAt(day[3].startsAt + 1)).toEqual(day[3]);
+    }
+    expect(nextEvent(MONDAY_5AM)!.startsAt).toBe(MONDAY_5AM + EVENT_WINDOW_MS);
   });
 
   it('effects apply to rewards; double only in its theater', () => {
@@ -68,7 +76,7 @@ describe('events (#89)', () => {
 });
 
 describe('quests (#52)', () => {
-  it('game days start at 05:00 JST and weeks on Monday', () => {
+  it('game days start at 00:00 JST and weeks on Monday (#219)', () => {
     expect(gameDay(MONDAY_5AM) - gameDay(MONDAY_5AM - 1)).toBe(1);
     expect(gameWeek(MONDAY_5AM) - gameWeek(MONDAY_5AM - 1)).toBe(1);
     expect(gameWeek(MONDAY_5AM + 6 * 24 * HOUR)).toBe(gameWeek(MONDAY_5AM));

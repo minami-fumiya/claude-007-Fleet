@@ -27,10 +27,10 @@ import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/H
 import { baseOfProgress, currentBaseId, isAtCurrentBase, repairTimeMultiplier } from '@/systems/BaseSystem';
 import {
   activeQuests, addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
-  QuestStatus, questStatus, refreshQuests, withQuestEvents,
+  gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
 import { MEDALS } from '@/systems/RecordSystem';
-import { eventLabel, nextEvent } from '@/systems/EventSystem';
+import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { rankTable } from '@/systems/RankTable';
 
@@ -141,6 +141,8 @@ export class HomeScene extends Phaser.Scene {
 
     // Limited-time event (#89): what runs now, or what comes next.
     this.eventText = this.add.text(IS_PORTRAIT ? CANVAS_W / 2 : L.resources.x + L.resources.w / 2, IS_PORTRAIT ? 134 : 82, '', textStyle(12, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5);
+    // Today's events, window by window (#218).
+    this.eventText.setInteractive({ useHandCursor: true }).on('pointerup', () => this.openEventSchedule(0));
     this.bar = new ResourceBar(this, L.resources.x, L.resources.y, L.resources.w, L.resourceCols);
     this.buildAdmiral(save.current);
     this.buildMenu();
@@ -189,11 +191,51 @@ export class HomeScene extends Phaser.Scene {
   private refreshEvent(now: number): void {
     const event = activeEvent(now);
     if (event) {
-      this.eventText.setText(`開催中: ${eventLabel(event)}  あと ${longClock(event.endsAt - now)}`).setColor(Css.gold);
+      this.eventText.setText(`開催中: ${eventLabel(event)}  あと ${longClock(event.endsAt - now)}  ·  予定 ›`).setColor(Css.gold);
       return;
     }
     const next = nextEvent(now);
     this.eventText.setText(next ? `次のイベント: ${eventLabel(next)}  ${longClock(next.startsAt - now)} 後` : '').setColor(Css.muted);
+  }
+
+  /** Today's (or, with `ahead` 1, tomorrow's) eight event windows, 00:00〜24:00 JST (#218). */
+  openEventSchedule(ahead: number): void {
+    this.closeNationPicker();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
+      this.overlay.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const rowH = IS_PORTRAIT ? 60 : 42;
+    const w = IS_PORTRAIT ? CANVAS_W - 32 : 640;
+    const head = IS_PORTRAIT ? 150 : 112;
+    const h = head + WINDOWS_PER_DAY * rowH + (IS_PORTRAIT ? 100 : 72);
+    const x = (CANVAS_W - w) / 2;
+    const y = Math.max(8, (CANVAS_H - h) / 2);
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 24, y + 20, 'イベントの予定 (日本時間)', eyebrowStyle(11)));
+    add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), ahead === 0 ? '今日のイベント' : '明日のイベント', displayStyle(IS_PORTRAIT ? 20 : 18)));
+    const tw = IS_PORTRAIT ? 150 : 120;
+    ['今日', '明日'].forEach((label, i) => add(new UIButton(this, x + w - 24 - (1 - i) * (tw + 8) - tw / 2, y + (IS_PORTRAIT ? 58 : 46), label, () => this.openEventSchedule(i), {
+      variant: i === ahead ? 'primary' : 'secondary', width: tw, height: IS_PORTRAIT ? 48 : 36, fontSize: 14,
+    })));
+    const now = Date.now();
+    daySchedule(gameDay(now) + ahead).forEach((e, i) => {
+      const ry = y + head + i * rowH;
+      const live = e.startsAt <= now && now < e.endsAt;
+      if (live) {
+        const g = add(this.add.graphics());
+        g.fillStyle(Colors.gold, 0.16);
+        g.fillRoundedRect(x + 12, ry - 6, w - 24, rowH - 4, 8);
+      }
+      const css = live ? Css.gold : e.endsAt <= now ? Css.dim : Css.text;
+      add(this.add.text(x + 28, ry, `${String(i * 3).padStart(2, '0')}:00〜${String(i * 3 + 3).padStart(2, '0')}:00`, textStyle(IS_PORTRAIT ? 15 : 13, css)));
+      add(this.add.text(x + (IS_PORTRAIT ? 190 : 170), ry, `${eventLabel(e)}${live ? '  (開催中)' : ''}`, textStyle(IS_PORTRAIT ? 15 : 13, css, { fontStyle: 'bold' })));
+    });
+    add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 44 : 32), '閉じる', () => this.closeNationPicker(), {
+      variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: IS_PORTRAIT ? 56 : 40, fontSize: 15,
+    }));
   }
 
   /** Lists every playable nation; picking one switches the base (a new nation starts with one destroyer). */

@@ -1636,6 +1636,8 @@ export class BattleScene extends Phaser.Scene {
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
+      // A win under each kind of event counts for the イベント巡り章 (#218).
+      ...(event ? [[`event_${event.kind}`, won(true)] as [QuestEvent, number]] : []),
     ], Date.now());
     if (skirmish) {
       result.campaign = `${area.name}  ${NODE_LABEL.battle} ${victory ? '勝利' : '敗北'} (${node.node} / ${node.battles})`;
