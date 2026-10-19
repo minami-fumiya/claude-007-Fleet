@@ -11,6 +11,7 @@ export const SceneKeys = {
   CAMPAIGN: 'CampaignMapScene',
   SCENARIO: 'ScenarioScene',
   ENCYCLOPEDIA: 'EncyclopediaScene',
+  CAPTAIN: 'CaptainScene',
   RECORD: 'RecordScene',
   SETTINGS: 'SettingsScene',
   HELP: 'HelpScene',

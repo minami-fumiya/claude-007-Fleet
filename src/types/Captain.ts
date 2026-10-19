@@ -1,4 +1,5 @@
 import { Nation } from './Nation';
+import { ShipClass } from './ShipClass';
 
 /** A captain's speciality; its bonus grows with the captain's level. */
 export enum CaptainSkill {
@@ -26,6 +27,25 @@ export interface ICaptainData {
   name: string;
   nation: Nation;
   skill: CaptainSkill;
+  /** A short biography for the 図鑑 (#130) */
+  bio?: string;
+  /** Overrides of the aptitude the speciality implies (#131) */
+  aptitude?: Partial<Record<ShipClass, Aptitude>>;
+}
+
+/** How well a captain commands a ship class (#131): S 120%, A 100%, B 80%, C 60% of their skills and abilities. */
+export type Aptitude = 'S' | 'A' | 'B' | 'C';
+
+/** The four abilities every captain grows with level (#131). */
+export enum CaptainAbility {
+  /** 砲術: gun firepower */
+  Gunnery = 'gunnery',
+  /** 雷撃: torpedo firepower */
+  Torpedo = 'torpedo',
+  /** 航空: air wing strike power */
+  Aviation = 'aviation',
+  /** 操艦: evasion */
+  Handling = 'handling',
 }
 
 /** A captain with progress applied. */

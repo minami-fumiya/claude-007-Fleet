@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAPTAIN_DROP_CHANCE, recruitCaptain } from '@/systems/CaptainRoster';
+import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, duplicateCaptain, recruitCaptain } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
@@ -55,7 +55,7 @@ import { IBattleInitData, IBattleResultData, ICaptainReport } from '@/types/Scen
 import { ICaptain } from '@/types/Captain';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
-import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, MAX_LEVEL, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
+import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, levelUpNotes, MAX_LEVEL, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
@@ -590,7 +590,7 @@ export class BattleScene extends Phaser.Scene {
     // Scenarios are exhibitions: the save's upgrades, research and refits don't apply.
     const captainCtx = { night: this.conditions.time === TimeOfDay.Night };
     const formation = formationModifiers(this.formation, isFlagship);
-    if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx), formation);
+    if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx, [], undefined, shipData.shipClass), formation);
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
     const fitted = progress.upgrades[shipData.id] ?? [];
@@ -599,8 +599,8 @@ export class BattleScene extends Phaser.Scene {
       upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
       researchModifiers(TECH_TREE, progress.research),
       refitModifiers(REFIT_TABLE, shipData, stage),
-      // The captain's own speciality, learned skills and earned traits (#45).
-      captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined),
+      // The captain's own speciality, learned skills, abilities and earned traits (#45), by aptitude for the ship (#131).
+      captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass),
       formation,
     );
   }
@@ -1454,8 +1454,9 @@ export class BattleScene extends Phaser.Scene {
       captainStats[captain.id] = addBattleStats(captainStats[captain.id], { night, sunk: enemiesSunk, subsSunk, heavySurvival });
       const traits = earnedTraits(captainStats[captain.id]);
       const newTrait = traits.length > before ? traits[traits.length - 1] : undefined;
+      const notes = [...levelUpNotes(captain, award.captain), ...(newTrait ? [`特性「${newTrait.name}」獲得`] : [])];
       reports.push({
-        name: newTrait ? `${captain.name} (特性「${newTrait.name}」獲得)` : captain.name,
+        name: notes.length > 0 ? `${captain.name} (${notes.join('・')})` : captain.name,
         level: award.captain.level, gained, leveledUp: award.leveledUp, maxed: captain.level >= MAX_LEVEL,
       });
     }
@@ -1618,13 +1619,25 @@ export class BattleScene extends Phaser.Scene {
     // New captains (#44): one per first clear, one per promotion, now and then after a win.
     const recruits = [firstClear, promoted.promotedTo !== null, victory && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
     const joined: string[] = [];
+    const trained: string[] = [];
     for (let i = 0; i < recruits; i++) {
       const r = recruitCaptain(progress.nation, progress.captains);
-      if (!r.joined) break;
+      if (!r.joined) {
+        // Everyone has joined (#131): the recruit trains one of them instead.
+        const dup = duplicateCaptain(progress.nation, progress.captains);
+        if (!dup) break;
+        progress = { ...progress, captainXp: { ...progress.captainXp, [dup.id]: (progress.captainXp[dup.id] ?? 0) + DUPLICATE_CAPTAIN_XP } };
+        trained.push(dup.name);
+        continue;
+      }
       progress = { ...progress, captains: r.owned };
       joined.push(`${r.joined.name} (${SKILL_LABEL[r.joined.skill]})`);
     }
-    if (joined.length > 0) result.recruits = `新しい艦長: ${joined.join('・')}`;
+    const recruitLines = [
+      joined.length > 0 ? `新しい艦長: ${joined.join('・')}` : '',
+      trained.length > 0 ? `艦長の訓練: ${trained.join('・')} 経験値 +${DUPLICATE_CAPTAIN_XP}` : '',
+    ].filter((l) => l);
+    if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
     saveProgress(progress);
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.

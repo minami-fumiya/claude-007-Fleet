@@ -16,7 +16,7 @@ import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ICaptain, ICaptainData } from '@/types/Captain';
-import { SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
+import { aptitudeFor, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
@@ -765,10 +765,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     const shown = filterAndSort(this.ships, this.kindFilter, this.sort);
     shown.forEach((ship, i) => {
       const at = this.slotOf(ship);
-      const tag = at === -1 ? null : at === this.pickerSlot ? '選択中' : at === 0 ? '旗艦で編成中' : `護衛 ${at} で編成中`;
+      // A ship already in another slot swaps places with this one (#147); it is never in two slots (#76).
+      const tag = at === -1 ? null : at === this.pickerSlot ? '選択中' : `${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
       const card = this.shipRow(ship, w, itemH, tag).setY(i * (itemH + ITEM_GAP));
-      // A ship already in another slot can't be added twice (#76).
-      if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.45);
+      if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
       list.addItem(card, w, itemH, () => this.pickShip(ship));
     });
     list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
@@ -779,11 +779,29 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private pickShip(ship: IShipData): void {
     const slot = this.pickerSlot;
+    if (slot < 0) return;
     const at = this.slotOf(ship);
-    if (slot < 0 || (at !== -1 && at !== slot)) return;
-    this.slots[slot] = ship;
+    if (at !== -1 && at !== slot) {
+      this.swapSlots(at, slot);
+    } else {
+      this.slots[slot] = ship;
+    }
     this.closePicker();
     this.refresh();
+  }
+
+  /** Moves a ship one slot up (#147); the ship above (or the empty slot) takes its place. */
+  private moveUp(i: number): void {
+    if (i <= 0) return;
+    this.swapSlots(i, i - 1);
+    this.refresh();
+  }
+
+  /** Swaps two slots (#147): ships and their captains change places together. */
+  private swapSlots(a: number, b: number): void {
+    if (a === b || a < 0 || b < 0) return;
+    [this.slots[a], this.slots[b]] = [this.slots[b], this.slots[a]];
+    [this.captainIds[a], this.captainIds[b]] = [this.captainIds[b], this.captainIds[a]];
   }
 
   private closePicker(): void {
@@ -1364,8 +1382,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const badge = addChip(this, nameX, rowY, kindShort(ship), kc.color, kc.css);
     const nameLeft = nameX + chipWidth(badge) + 8;
     const name = this.add.text(nameLeft, rowY, ship.name, textStyle(p && !tiny ? 18 : 16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
-    // Leave room for the remove button on the right.
-    fitName(name, ship.name, w - nameLeft - (p ? 84 : 64));
+    // Leave room for the move-up and remove buttons on the right.
+    fitName(name, ship.name, w - nameLeft - (i > 0 ? (p ? 152 : 112) : (p ? 84 : 64)));
     const status = this.add.text(nameX, rowY + (tiny ? 13 : p ? 18 : 16), this.slotStatus(ship), textStyle(tiny ? 12 : 13, this.isDamaged(ship) ? Css.danger : Css.muted));
     const texts = [status];
     if (full) texts.push(this.add.text(nameX, status.y + status.height + 4, `主兵装  ${this.mainArmament(ship)}`, textStyle(12, Css.muted)));
@@ -1373,7 +1391,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     for (const t of texts) if (t.width > room) t.setScale(room / t.width);
 
     const captain = this.captainOf(i);
-    const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}` : '艦長を任命  ›';
+    const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}  適性${aptitudeFor(captain, ship.shipClass)}` : '艦長を任命  ›';
     const btnH = p ? (full ? 40 : tiny ? 30 : 36) : 24;
     const btnY = h - (p ? (full ? 26 : tiny ? 19 : 22) : 18);
     const detailW = p ? 110 : 64;
@@ -1387,8 +1405,15 @@ export class FleetBuilderScene extends Phaser.Scene {
     const remove = new UIButton(this, p ? w - 44 : w - 34, p ? (tiny ? 28 : 40) : 30, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
       variant: 'secondary', width: p ? 60 : 40, height: p ? (tiny ? 38 : 48) : 36, fontSize: 15,
     });
+    const parts: Phaser.GameObjects.GameObject[] = [captainBtn, detailBtn, remove];
+    if (i > 0) {
+      // ▲ swaps with the slot above (#147), so the flagship is one tap away.
+      parts.push(new UIButton(this, p ? w - 112 : w - 80, p ? (tiny ? 28 : 40) : 30, '▲', this.onTap(() => this.moveUp(i)), {
+        variant: 'secondary', width: p ? 60 : 40, height: p ? (tiny ? 38 : 48) : 36, fontSize: 15,
+      }));
+    }
     const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, tiny ? 80 : 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
-    return [icon, badge, name, ...texts, captainBtn, detailBtn, remove];
+    return [icon, badge, name, ...texts, ...parts];
   }
 
   /** A two-column slot card (landscape, more than three slots): badge and name, short stats, captain and detail buttons. */
@@ -1398,13 +1423,13 @@ export class FleetBuilderScene extends Phaser.Scene {
     const badge = addChip(this, nameX, 36, kindShort(ship), kc.color, kc.css);
     const nameLeft = nameX + chipWidth(badge) + 6;
     const name = this.add.text(nameLeft, 36, ship.name, textStyle(13, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
-    fitName(name, ship.name, w - nameLeft - 8);
+    fitName(name, ship.name, w - nameLeft - (i > 0 ? 64 : 36));
     const status = this.add.text(nameX, 47, this.slotStatus(ship, true), textStyle(11, this.isDamaged(ship) ? Css.danger : Css.muted));
     if (status.width > w - nameX - 8) status.setScale((w - nameX - 8) / status.width);
     const captain = this.captainOf(i);
     const btnH = Math.min(24, h - 70);
     const detailW = 48;
-    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level}` : '艦長 ›', this.onTap(() => this.cycleCaptain(i)), {
+    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level} ${aptitudeFor(captain, ship.shipClass)}` : '艦長 ›', this.onTap(() => this.cycleCaptain(i)), {
       variant: captain ? 'primary' : 'secondary', width: w - detailW - 22, height: btnH, fontSize: 10,
     });
     const detailBtn = new UIButton(this, w - 8 - detailW / 2, h - btnH / 2 - 6, '詳細', this.onTap(() => this.openDetail(ship, i)), {
@@ -1413,7 +1438,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     const remove = new UIButton(this, w - 18, 16, '✕', this.onTap(() => this.removeShipFromSlot(i)), {
       variant: 'secondary', width: 26, height: 22, fontSize: 12,
     });
-    return [this.addShipIcon(32, 42, ship.spriteKey, 44, 1), badge, name, status, captainBtn, detailBtn, remove];
+    const parts: Phaser.GameObjects.GameObject[] = [captainBtn, detailBtn, remove];
+    if (i > 0) {
+      parts.push(new UIButton(this, w - 48, 16, '▲', this.onTap(() => this.moveUp(i)), { variant: 'secondary', width: 26, height: 22, fontSize: 12 }));
+    }
+    return [this.addShipIcon(32, 42, ship.spriteKey, 44, 1), badge, name, status, ...parts];
   }
 
   /**

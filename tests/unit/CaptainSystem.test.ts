@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { awardXp, battleXp, captainModifiers, levelForXp, MAX_LEVEL, SKILL_LABEL, withProgress, xpForLevel } from '@/systems/CaptainSystem';
+import {
+  ABILITY_MAX, APTITUDE_SCALE, aptitudeFor, awardXp, battleXp, captainAbilities, captainModifiers, inherentLabel, inherentTier, levelForXp, MAX_LEVEL,
+  nextInherentTier, scaleModifiers, SKILL_LABEL, skillModifiers, withProgress, xpForLevel,
+} from '@/systems/CaptainSystem';
+import { ShipClass } from '@/types/ShipClass';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { Nation } from '@/types/Nation';
 import { NO_MODIFIERS } from '@/types/Modifiers';
@@ -60,7 +64,7 @@ describe('captainModifiers', () => {
   });
 
   it('maps the new specialities to their modifiers', () => {
-    const lv5 = (skill: CaptainSkill) => captainModifiers(withProgress(data(skill), xpForLevel(5)));
+    const lv5 = (skill: CaptainSkill) => skillModifiers(skill, 5);
     expect(lv5(CaptainSkill.Aviation).airPowerMul).toBeCloseTo(1.2);
     expect(lv5(CaptainSkill.Aviation).aaMul).toBeGreaterThan(1);
     expect(lv5(CaptainSkill.ASW).depthChargeMul).toBeCloseTo(1.25);
@@ -73,10 +77,9 @@ describe('captainModifiers', () => {
   });
 
   it('gives the night-battle speciality its bonus only at night', () => {
-    const c = withProgress(data(CaptainSkill.Night), xpForLevel(4));
-    expect(captainModifiers(c)).toEqual(NO_MODIFIERS);
-    expect(captainModifiers(c, { night: false })).toEqual(NO_MODIFIERS);
-    const night = captainModifiers(c, { night: true });
+    expect(skillModifiers(CaptainSkill.Night, 4)).toEqual(NO_MODIFIERS);
+    expect(skillModifiers(CaptainSkill.Night, 4, { night: false })).toEqual(NO_MODIFIERS);
+    const night = skillModifiers(CaptainSkill.Night, 4, { night: true });
     expect(night.visionMul).toBeCloseTo(1.2);
     expect(night.gunPowerMul).toBeGreaterThan(1);
     expect(night.torpedoPowerMul).toBeGreaterThan(1);
@@ -93,5 +96,54 @@ describe('captainModifiers', () => {
       const mine = all.filter((c) => c.nation === nation);
       expect(mine.map((c) => c.skill).sort(), nation).toEqual(Object.values(CaptainSkill).sort());
     }
+  });
+});
+
+describe('growth to Lv100 (#131)', () => {
+  it('keeps the early curve and reaches Lv100', () => {
+    expect(MAX_LEVEL).toBe(100);
+    expect(xpForLevel(10)).toBe(4500);
+    expect(levelForXp(4500)).toBe(10);
+    expect(levelForXp(xpForLevel(100))).toBe(100);
+    expect(levelForXp(xpForLevel(100) - 1)).toBe(99);
+  });
+
+  it('skills stop growing at Lv10; the inherent one strengthens to II at Lv10 and III at Lv50', () => {
+    expect(skillModifiers(CaptainSkill.Gunnery, 80)).toEqual(skillModifiers(CaptainSkill.Gunnery, 10));
+    expect(inherentTier(9).mul).toBe(1);
+    expect(inherentTier(10)).toMatchObject({ mul: 1.5, label: 'II' });
+    expect(inherentTier(50)).toMatchObject({ mul: 2, label: 'III' });
+    expect(nextInherentTier(20)?.level).toBe(50);
+    expect(nextInherentTier(50)).toBeNull();
+    expect(inherentLabel(withProgress(data(CaptainSkill.Gunnery), xpForLevel(10)))).toBe('砲術 II');
+    const gun = (lv: number) => captainModifiers(withProgress(data(CaptainSkill.Gunnery), xpForLevel(lv))).gunPowerMul;
+    expect(gun(10)).toBeGreaterThan(gun(9) + 0.1);
+    expect(gun(50)).toBeGreaterThan(gun(49) + 0.1);
+  });
+
+  it('abilities grow with level up to +20% for the speciality, a little in everything', () => {
+    const lv = (n: number) => captainAbilities(withProgress(data(CaptainSkill.Gunnery), xpForLevel(n)));
+    expect(Object.values(lv(1)).every((v) => v === 0)).toBe(true);
+    expect(lv(100).gunnery).toBe(ABILITY_MAX);
+    expect(lv(50).gunnery).toBeGreaterThan(lv(10).gunnery);
+    expect(lv(10).gunnery).toBeGreaterThan(lv(5).gunnery);
+    for (const v of Object.values(lv(100))) expect(v).toBeGreaterThan(0);
+    expect(captainAbilities(withProgress(data(CaptainSkill.Aviation), xpForLevel(100))).aviation).toBe(ABILITY_MAX);
+  });
+
+  it('aptitude follows the speciality, can be overridden, and scales skills and abilities', () => {
+    expect(aptitudeFor(data(CaptainSkill.Aviation), ShipClass.Carrier)).toBe('S');
+    expect(aptitudeFor(data(CaptainSkill.Gunnery), ShipClass.Battleship)).toBe('S');
+    expect(aptitudeFor(data(CaptainSkill.Torpedo), ShipClass.Destroyer)).toBe('S');
+    expect(aptitudeFor({ ...data(CaptainSkill.Gunnery), aptitude: { Carrier: 'A' } }, ShipClass.Carrier)).toBe('A');
+    const c = withProgress(data(CaptainSkill.Gunnery), xpForLevel(20));
+    const bb = captainModifiers(c, {}, [], undefined, ShipClass.Battleship).gunPowerMul - 1;
+    const dd = captainModifiers(c, {}, [], undefined, ShipClass.Destroyer).gunPowerMul - 1;
+    const cv = captainModifiers(c, {}, [], undefined, ShipClass.Carrier).gunPowerMul - 1;
+    expect(bb).toBeGreaterThan(dd);
+    expect(dd).toBeGreaterThan(cv);
+    expect(scaleModifiers({ ...NO_MODIFIERS, gunPowerMul: 1.5, armorAdd: 3, evadeAdd: 0.1 }, APTITUDE_SCALE.C))
+      .toMatchObject({ gunPowerMul: 1.3, armorAdd: 1, evadeAdd: 0.06 });
+    expect(scaleModifiers(NO_MODIFIERS, 1.2)).toEqual(NO_MODIFIERS);
   });
 });
