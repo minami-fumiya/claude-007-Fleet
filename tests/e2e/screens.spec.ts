@@ -366,6 +366,25 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the backup list opens as a sheet that fits the screen (#157)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: [] });
+    await page.evaluate(() => {
+      const raw = localStorage.getItem('ww2fleet.progress.v2')!;
+      const list = Array.from({ length: 5 }, (_, i) => ({ at: Date.now() - i * 3_600_000, version: 9, reason: i % 2 ? 'migration' : 'reset', raw }));
+      localStorage.setItem('ww2fleet.progress.backups', JSON.stringify(list));
+    });
+    await open(page, 'SettingsScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('SettingsScene') as unknown as { backupsOpen: boolean; refresh(): void };
+      s.backupsOpen = true;
+      s.refresh();
+    });
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'SettingsScene')).toEqual([]);
+    await page.screenshot({ path: info.outputPath('backups.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
