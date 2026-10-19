@@ -4,7 +4,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
-import { forceShips, SCENARIO_THEATER_LABEL, scenariosIn, setupFor } from '@/systems/ScenarioSystem';
+import { forceLineup, forceShips, SCENARIO_THEATER_LABEL, scenariosIn, setupFor } from '@/systems/ScenarioSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
@@ -171,16 +171,35 @@ export class ScenarioScene extends Phaser.Scene {
 
     const setup = setupFor(sc, this.side)!;
     const registry = DataLoader.getRegistry(this);
-    const names = (ids: string[]): string => ids.map((id) => registry.byId(id)?.name.replace(/\s*\(.*\)\s*$/, '') ?? id).join('・');
-    const rows: Array<[string, string]> = [
-      ['勝利条件', `${OBJECTIVE_LABEL[setup.side.objective]} — ${setup.side.brief}`],
-      ['味方', `${NATION_INFO[setup.player.nation].ja}  ${names(setup.player.ships)}`],
-      ['敵', `${NATION_INFO[setup.enemy.nation].ja}  ${names(setup.enemy.ships)}`],
+    // Ships by kind (#196), not just names: a line per kind, then (when that runs into the note below) the kinds
+    // as one paragraph, then the headline alone.
+    const lineups = [setup.player, setup.enemy].map((f) => ({ nation: NATION_INFO[f.nation].ja, ...forceLineup(f, registry) }));
+    const variants = [
+      (l: (typeof lineups)[number]): string => `${l.nation}  ${l.headline}\n${l.lines.join('\n')}`,
+      (l: (typeof lineups)[number]): string => `${l.nation}  ${l.headline}\n${l.lines.join('  /  ')}`,
+      (l: (typeof lineups)[number]): string => `${l.nation}  ${l.headline}`,
     ];
-    for (const [k, v] of rows) {
-      add(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));
-      const t = add(this.add.text(x, y + (IS_PORTRAIT ? 24 : 18), v, textStyle(13, Css.text, wrap)));
-      y = t.y + t.height + 12;
+    const limit = d.y + d.h - (IS_PORTRAIT ? 128 : 100) - 8;
+    const top = y;
+    for (const [vi, variant] of variants.entries()) {
+      const placed: Phaser.GameObjects.Text[] = [];
+      y = top;
+      const rows: Array<[string, string]> = [
+        ['勝利条件', `${OBJECTIVE_LABEL[setup.side.objective]} — ${setup.side.brief}`],
+        ['味方', variant(lineups[0])],
+        ['敵', variant(lineups[1])],
+      ];
+      for (const [k, v] of rows) {
+        placed.push(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));
+        const t = this.add.text(x, y + (IS_PORTRAIT ? 24 : 18), v, textStyle(13, Css.text, wrap));
+        placed.push(t);
+        y = t.y + t.height + 12;
+      }
+      if (y - 12 <= limit || vi === variants.length - 1) {
+        placed.forEach(add);
+        break;
+      }
+      placed.forEach((o) => o.destroy());
     }
     add(this.add.text(x, d.y + d.h - (IS_PORTRAIT ? 128 : 100), '※ 史実シナリオは演習扱い: 資源・損傷・熟練度は変化しません', textStyle(11, Css.dim)));
     add(

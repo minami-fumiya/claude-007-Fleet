@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { forceShips, inZone, placeAt, scenarioMonth, scenariosIn, setupFor, sortScenarios } from '@/systems/ScenarioSystem';
+import { forceLineup, forceShips, inZone, placeAt, scenarioMonth, scenariosIn, setupFor, sortScenarios } from '@/systems/ScenarioSystem';
 import { ALL_SCENARIOS } from '@/data/scenarios';
 import { BATTLE_WORLD } from '@/systems/BattleLayout';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -99,5 +99,29 @@ describe('ScenarioSystem', () => {
       expect(r, sc.id).toBeGreaterThan(0.5);
       expect(r, sc.id).toBeLessThan(2);
     }
+  });
+});
+
+describe('scenario lineups by kind (#196)', () => {
+  it('every side has a headline with its ship count and a line per kind covering every ship', () => {
+    for (const sc of SCENARIOS) {
+      for (let i = 0; i < sc.sides.length; i++) {
+        const setup = setupFor(sc, i)!;
+        for (const force of [setup.player, setup.enemy]) {
+          const l = forceLineup(force, registry);
+          expect(l.headline, sc.id).toMatch(new RegExp(`^${force.ships.length} 隻 — `));
+          // "7 隻 — 戦艦 1・軽巡 1・駆逐艦 5": the kinds add up to every ship, one line each.
+          const counts = l.headline.split(' — ')[1].split('・').map((k) => Number(k.split(' ').at(-1)));
+          expect(counts.reduce((a, b) => a + b, 0), sc.id).toBe(force.ships.length);
+          expect(l.lines, sc.id).toHaveLength(counts.length);
+        }
+      }
+    }
+  });
+
+  it('counts repeated ships and marks stand-ins from another navy', () => {
+    const l = forceLineup({ nation: 'IJN', ships: ['fubuki', 'fubuki', 'fletcher'], positions: [] } as unknown as Parameters<typeof forceLineup>[0], registry);
+    expect(l.lines.join('|')).toContain('吹雪 ×2');
+    expect(l.lines.join('|')).toMatch(/フレッチャー※/);
   });
 });

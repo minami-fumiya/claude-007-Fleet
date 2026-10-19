@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, duplicateCaptain, recruitCaptain } from '@/systems/CaptainRoster';
+import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, recruitCaptain } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
@@ -298,8 +298,8 @@ export class BattleScene extends Phaser.Scene {
     this.playerNation = playerFleet.nation;
     this.enemyNation = enemyFleet.nation;
 
-    this.playerWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.enemies));
-    this.enemyWeapons = new WeaponSystem(this, (x, y, w) => this.onDepthCharge(x, y, w, this.playerSide()));
+    this.playerWeapons = new WeaponSystem(this, (x, y, w, src) => this.onDepthCharge(x, y, w, this.enemies, src));
+    this.enemyWeapons = new WeaponSystem(this, (x, y, w, src) => this.onDepthCharge(x, y, w, this.playerSide(), src));
     this.playerWeapons.aimError = this.conditions.aimError;
     this.enemyWeapons.aimError = this.conditions.aimError;
     const bomb = DataLoader.getWeaponById(this, 'aerial_bomb') ?? FALLBACK_WEAPON;
@@ -990,7 +990,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** A depth charge went off: area damage to every ship of the target side in the blast. */
-  private onDepthCharge(x: number, y: number, weapon: IWeaponData, targets: BaseShip[]): void {
+  private onDepthCharge(x: number, y: number, weapon: IWeaponData, targets: BaseShip[], source: BaseShip | null = null): void {
     this.splash.play(x, y, 1.6);
     this.sound3d('depthCharge', x, y);
     for (const ship of targets) {
@@ -998,7 +998,7 @@ export class BattleScene extends Phaser.Scene {
       const f = depthChargeFalloff(Phaser.Math.Distance.Between(x, y, ship.x, ship.y), DEPTH_CHARGE_RADIUS);
       if (f <= 0) continue;
       const dmg = CombatSystem.calculateDamage(weapon, ship.stats.shipClass, ship.stats.armor) * f;
-      CombatSystem.applyDamage(ship, dmg);
+      CombatSystem.applyDamage(ship, dmg, source);
       this.rollCritical(ship, weapon, dmg);
       this.explosion.play(ship.x, ship.y);
     }
@@ -1148,7 +1148,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const weapon = projectile.weapon ?? FALLBACK_WEAPON;
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
-    CombatSystem.applyDamage(target, dmg);
+    CombatSystem.applyDamage(target, dmg, projectile.source);
     this.rollCritical(target, weapon, dmg);
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
@@ -1451,8 +1451,10 @@ export class BattleScene extends Phaser.Scene {
     const reports: ICaptainReport[] = [];
     let levels = 0;
     const night = this.conditions.time === TimeOfDay.Night;
-    const subsSunk = this.enemies.filter((e) => !e.isAlive && e.stats.shipClass === ShipClass.Submarine).length;
     for (const [ship, captain] of this.captains) {
+      // What this captain's own ship sank (#199): the fleet's other kills no longer count for them.
+      const own = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy && e.lastHitBy === ship);
+      const ownSubs = own.filter((e) => e.stats.shipClass === ShipClass.Submarine).length;
       // 熟練度ブースト (#89) raises captain XP too.
       const gained = Math.round(battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive }) * this.battleEvent.xpMul);
       const award = awardXp(captain, gained);
@@ -1461,12 +1463,12 @@ export class BattleScene extends Phaser.Scene {
       // What traits count (#45): the fleet's sinks, and coming home 大破.
       const heavySurvival = ship.isAlive && ship.stats.maxHp > 0 && ship.stats.currentHp / ship.stats.maxHp <= 0.25;
       const before = earnedTraits(captainStats[captain.id]).length;
-      captainStats[captain.id] = addBattleStats(captainStats[captain.id], { night, sunk: enemiesSunk, subsSunk, heavySurvival });
+      captainStats[captain.id] = addBattleStats(captainStats[captain.id], { night, sunk: own.length, subsSunk: ownSubs, heavySurvival });
       const traits = earnedTraits(captainStats[captain.id]);
       const newTrait = traits.length > before ? traits[traits.length - 1] : undefined;
       const notes = [...levelUpNotes(captain, award.captain), ...(newTrait ? [`特性「${newTrait.name}」獲得`] : [])];
       reports.push({
-        name: notes.length > 0 ? `${captain.name} (${notes.join('・')})` : captain.name,
+        name: `${captain.name}${own.length > 0 ? ` 撃沈 ${own.length}` : ''}${notes.length > 0 ? ` (${notes.join('・')})` : ''}`,
         level: award.captain.level, gained, leveledUp: award.leveledUp, maxed: captain.level >= MAX_LEVEL,
       });
     }
@@ -1682,18 +1684,17 @@ export class BattleScene extends Phaser.Scene {
     // New captains (#44): one per first clear, one per promotion, now and then after a win.
     const recruits = [firstClear, promoted.promotedTo !== null, victory && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
     const joined: string[] = [];
-    const trained: string[] = [];
+    let books = 0;
     for (let i = 0; i < recruits; i++) {
       // Captains suited to the classes the nation owns come first (#159).
       const roster = DataLoader.getRegistry(this).byNation(progress.nation);
       const classes = [...new Set(ownedIds(progress, roster).map((id) => roster.find((s) => s.id === id)?.shipClass).filter((c): c is ShipClass => c !== undefined))];
       const r = recruitCaptain(progress.nation, progress.captains, classes);
       if (!r.joined) {
-        // Everyone has joined (#131): the recruit trains one of them instead.
-        const dup = duplicateCaptain(progress.nation, progress.captains);
-        if (!dup) break;
-        progress = { ...progress, captainXp: { ...progress.captainXp, [dup.id]: (progress.captainXp[dup.id] ?? 0) + DUPLICATE_CAPTAIN_XP } };
-        trained.push(dup.name);
+        // Everyone has joined (#131): the recruit becomes a 艦長教本 the player uses on a captain of their choice (#199).
+        if (progress.captains.length === 0) break;
+        progress = { ...progress, items: { ...progress.items, captainBook: (progress.items.captainBook ?? 0) + 1 } };
+        books++;
         continue;
       }
       progress = { ...progress, captains: r.owned };
@@ -1701,7 +1702,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const recruitLines = [
       joined.length > 0 ? `新しい艦長: ${joined.join('・')}` : '',
-      trained.length > 0 ? `艦長の訓練: ${trained.join('・')} 経験値 +${DUPLICATE_CAPTAIN_XP}` : '',
+      books > 0 ? `艦長教本 +${books} (艦長画面で好きな艦長に使えます: 経験値 +${DUPLICATE_CAPTAIN_XP})` : '',
     ].filter((l) => l);
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);

@@ -148,6 +148,14 @@ export const MIGRATIONS: MigrationStep[] = [
     seed('sinkBattleship', num(progress.a_battleship));
     return { ...nation, quests: { ...quests, hour: 0, totals } };
   }),
+  // v12 → v13 (0.0.26, #199): items gain 艦長教本 (a recruit once every captain has joined), captains' stats count what
+  // their own ship sank. Both start at 0; nothing a captain has already counted is taken away.
+  (data) => mapNations(data, (nation) => {
+    const items = typeof nation.items === 'object' && nation.items !== null ? nation.items as RawSave : {};
+    const stats = typeof nation.captainStats === 'object' && nation.captainStats !== null ? nation.captainStats as Record<string, unknown> : {};
+    const captainStats = Object.fromEntries(Object.entries(stats).map(([id, v]) => [id, typeof v === 'object' && v !== null ? { sinks: 0, ...(v as RawSave) } : v]));
+    return { ...nation, items: { captainBook: 0, ...items }, captainStats };
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

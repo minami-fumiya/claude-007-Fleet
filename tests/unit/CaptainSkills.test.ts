@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  abilityModifiers, addBattleStats, captainAbilities, captainModifiers, captainSources, learnPlan, levelUpNotes, openLearnSlots, RETRAIN_COST, earnedTraits, LEARNED_SKILL_SCALE, learnSkill, learnSlots, skillModifiers, validLearned, withProgress, xpForLevel,
+  abilityModifiers, addBattleStats, captainAbilities, captainModifiers, captainSources, learnPlan, levelUpNotes, openLearnSlots, RETRAIN_COST, earnedTraits, LEARNED_SKILL_SCALE, TRAITS, learnSkill, learnSlots, skillModifiers, validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
 import { combineModifiers } from '@/systems/CustomizationSystem';
 import { modifierBreakdown } from '@/systems/EncyclopediaSystem';
-import { ALL_CAPTAINS, DUPLICATE_CAPTAIN_XP, duplicateCaptain, RECRUIT_ORDER, nationCaptains, nextCaptain, recruitCaptain, starterCaptain } from '@/systems/CaptainRoster';
+import { ALL_CAPTAINS, DUPLICATE_CAPTAIN_XP, RECRUIT_ORDER, useCaptainBook, nationCaptains, nextCaptain, recruitCaptain, starterCaptain } from '@/systems/CaptainRoster';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
@@ -127,15 +127,32 @@ describe('captain screen (#130 / #131)', () => {
     expect(levelUpNotes(atLevel(5), atLevel(5))).toEqual([]);
   });
 
-  it('once every captain has joined, a recruit trains one instead', () => {
+  it('once every captain has joined, a recruit becomes a 艦長教本 (#199)', () => {
     const all = nationCaptains('IJN').map((c) => c.id);
     expect(recruitCaptain('IJN', all).joined).toBeNull();
-    expect(all).toContain(duplicateCaptain('IJN', all, () => 0.99)!.id);
-    expect(duplicateCaptain('IJN', [])).toBeUndefined();
+    // The recruit becomes a 艦長教本 used on a chosen captain (#199), never XP for a random one.
+    const p = { items: { fastRepair: 0, fastBuild: 0, captainBook: 1 }, captains: all, captainXp: {} as Record<string, number> };
+    const used = useCaptainBook(p, all[2])!;
+    expect(used.captainXp).toEqual({ [all[2]]: DUPLICATE_CAPTAIN_XP });
+    expect(used.items.captainBook).toBe(0);
+    expect(useCaptainBook(used, all[2])).toBeNull();
+    expect(useCaptainBook(p, 'not_mine')).toBeNull();
     expect(DUPLICATE_CAPTAIN_XP).toBeGreaterThan(0);
   });
 
   it('every captain has a biography', () => {
     for (const c of ALL_CAPTAINS) expect(c.bio?.length ?? 0, c.id).toBeGreaterThan(10);
+  });
+});
+
+describe('captain stats count their own ship (#199)', () => {
+  it('adds what the ship sank, at night and of submarines, and shows trait progress', () => {
+    let s = addBattleStats(undefined, { night: true, sunk: 2, subsSunk: 1, heavySurvival: false });
+    s = addBattleStats(s, { night: false, sunk: 0, subsSunk: 0, heavySurvival: true });
+    expect(s).toEqual({ nightSinks: 2, subSinks: 1, sinks: 2, heavySurvivals: 1 });
+    expect(earnedTraits(s)).toEqual([]);
+    const night = TRAITS.find((t) => t.id === 'night_ace')!;
+    expect(night.progress(s)).toEqual([2, 3]);
+    expect(earnedTraits(addBattleStats(s, { night: true, sunk: 1, subsSunk: 0, heavySurvival: false })).map((t) => t.id)).toEqual(['night_ace']);
   });
 });

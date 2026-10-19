@@ -6,10 +6,10 @@ import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
   ABILITY_LABEL, ABILITY_MAX, aptitudeFor, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
-  LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
+  LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, NO_STATS, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
-import { CAPTAIN_SOURCES, captainsLeft, DUPLICATE_CAPTAIN_XP, nationCaptains, nextCaptainText } from '@/systems/CaptainRoster';
+import { CAPTAIN_SOURCES, captainsLeft, DUPLICATE_CAPTAIN_XP, nationCaptains, nextCaptainText, useCaptainBook } from '@/systems/CaptainRoster';
 import { canAfford, formatResources, pay } from '@/systems/ResourceSystem';
 import { loadProgress, loadSave, saveSave } from '@/utils/ProgressStore';
 import { DataLoader } from '@/utils/DataLoader';
@@ -142,6 +142,18 @@ export class CaptainScene extends Phaser.Scene {
     this.list.setContentHeight(Math.max(0, Math.ceil(n / cols) * (L.rowH + ROW_GAP) - ROW_GAP));
   }
 
+  /** Spends a 艦長教本 on `c` (#199). */
+  useBook(c: ICaptain): void {
+    const save = loadSave();
+    const np = save.nations[save.current];
+    const next = np ? useCaptainBook(np, c.id) : null;
+    if (!next) return;
+    saveSave({ ...save, nations: { ...save.nations, [save.current]: next } });
+    this.status = `艦長教本で ${c.name} の経験値 +${DUPLICATE_CAPTAIN_XP}`;
+    this.statusCss = Css.success;
+    this.refresh();
+  }
+
   /** How captains join and who comes next (#179). */
   openRecruitInfo(): void {
     const save = loadSave();
@@ -173,6 +185,15 @@ export class CaptainScene extends Phaser.Scene {
     const colW = IS_PORTRAIT ? d.w - 52 : 420;
     this.track(this.add.text(x, d.y + 18, `${NATION_INFO[c.nation].ja}  ·  艦長`, eyebrowStyle(10, Css.cyan)));
     const title = this.track(this.add.text(x, d.y + 38, c.name, displayStyle(IS_PORTRAIT ? 24 : 24)));
+    // 艦長教本 (#199): the player picks who gets the XP.
+    const books = loadSave().nations[loadSave().current]?.items.captainBook ?? 0;
+    if (books > 0 && c.level < MAX_LEVEL) {
+      const bw = IS_PORTRAIT ? 220 : 190;
+      const bh = IS_PORTRAIT ? 44 : 34;
+      this.track(new UIButton(this, x + colW - bw / 2, title.y + title.height / 2, `教本を使う (${books})`, () => this.useBook(c), {
+        variant: 'gold', width: bw, height: bh, fontSize: 13,
+      }));
+    }
     let y = title.y + title.height + 12;
 
     // Level and experience
@@ -319,9 +340,15 @@ export class CaptainScene extends Phaser.Scene {
 
   private buildTraits(c: ICaptain, x: number, y: number, w: number): void {
     const save = loadSave();
-    const earned = new Set(earnedTraits(save.nations[save.current]?.captainStats[c.id]).map((t) => t.id));
-    y = this.label(x, y, '特性 (戦闘の実績で獲得)');
-    const lines = TRAITS.map((t) => `${earned.has(t.id) ? '★' : '☆'} ${t.name} — ${t.effect}${earned.has(t.id) ? '' : ` (条件: ${t.condition})`}`);
+    const stats = save.nations[save.current]?.captainStats[c.id] ?? NO_STATS;
+    const earned = new Set(earnedTraits(stats).map((t) => t.id));
+    y = this.label(x, y, `特性 (この艦長の艦の戦果で獲得)  ·  撃沈 ${stats.sinks ?? 0}`);
+    // Unearned traits show how far along they are (#199).
+    const lines = TRAITS.map((t) => {
+      if (earned.has(t.id)) return `★ ${t.name} — ${t.effect}`;
+      const [n, goal] = t.progress(stats);
+      return `☆ ${t.name} — ${t.effect} (条件: ${t.condition} — ${Math.min(n, goal)} / ${goal})`;
+    });
     this.track(this.add.text(x, y, lines.join('\n'), textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true }, lineSpacing: 4 })));
   }
 

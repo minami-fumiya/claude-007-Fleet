@@ -11,6 +11,8 @@ import { criticalEffects } from '@/systems/DamageSystem';
 
 export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   stats: IShipStats;
+  /** The ship whose fire last hit this one (#199): a sinking counts for that ship's captain */
+  lastHitBy: BaseShip | null = null;
   /** Every weapon the ship carries, in data order */
   loadout: IWeaponData[] = [];
   /** Dive state; null for surface ships */

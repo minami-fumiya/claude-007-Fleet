@@ -12,7 +12,7 @@ import { aimErrorMul } from './ProficiencySystem';
 export { ReloadState } from './ReloadState';
 
 /** Called when a depth charge goes off, so the scene can apply area damage. */
-export type DetonationHandler = (x: number, y: number, weapon: IWeaponData) => void;
+export type DetonationHandler = (x: number, y: number, weapon: IWeaponData, source: BaseShip | null) => void;
 
 /** Torpedoes leave the tubes this far apart (radians) when a spread is fired. */
 const TORPEDO_SPREAD = 0.08;
@@ -71,23 +71,23 @@ export class WeaponSystem {
         const each = this.torpedoShare(weapon);
         for (let i = 0; i < TORPEDOES_PER_SALVO; i++) {
           const offset = (i - (TORPEDOES_PER_SALVO - 1) / 2) * TORPEDO_SPREAD;
-          this.acquire(Torpedo).fire(ship.x, ship.y, targetAngle + offset, each);
+          this.acquire(Torpedo).fire(ship.x, ship.y, targetAngle + offset, each, ship);
         }
         break;
       }
       case WeaponKind.DepthCharge:
-        this.acquireCharge().drop(ship.x, ship.y, weapon, now);
+        this.acquireCharge().drop(ship.x, ship.y, weapon, now, ship);
         break;
       default:
-        this.acquire(Shell).fire(ship.x, ship.y, targetAngle, weapon);
+        this.acquire(Shell).fire(ship.x, ship.y, targetAngle, weapon, ship);
     }
     return true;
   }
 
   /** Launches a projectile without a reload check (aircraft drops). Depth charges are not supported. */
-  launchProjectile(x: number, y: number, angle: number, weapon: IWeaponData): void {
+  launchProjectile(x: number, y: number, angle: number, weapon: IWeaponData, source: BaseShip | null = null): void {
     const type = weaponKind(weapon) === WeaponKind.Torpedo ? Torpedo : Shell;
-    this.acquire<BaseProjectile>(type).fire(x, y, angle, weapon);
+    this.acquire<BaseProjectile>(type).fire(x, y, angle, weapon, source);
   }
 
   reloadProgress(ship: BaseShip, weapon: IWeaponData, now: number): number {
@@ -100,7 +100,7 @@ export class WeaponSystem {
       if (p.update(time, delta) && p instanceof Shell) this.onSplash(x, y);
     }
     for (const c of this.charges) {
-      if (c.update(time) && c.weapon) this.onDetonate(c.x, c.y, c.weapon);
+      if (c.update(time) && c.weapon) this.onDetonate(c.x, c.y, c.weapon, c.source);
     }
   }
 

@@ -14,9 +14,11 @@ export interface ISettings {
   encyclopediaOwnedOnly: boolean;
   /** 改装: list every owned ship (#144); off lists only the fleet */
   customizeAll: boolean;
+  /** The last version whose changes the title screen showed (#205); '' before 0.0.26 */
+  lastSeenVersion: string;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '' };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -45,6 +47,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       keepExercise: typeof d.keepExercise === 'boolean' ? d.keepExercise : DEFAULT_SETTINGS.keepExercise,
       encyclopediaOwnedOnly: typeof d.encyclopediaOwnedOnly === 'boolean' ? d.encyclopediaOwnedOnly : DEFAULT_SETTINGS.encyclopediaOwnedOnly,
       customizeAll: typeof d.customizeAll === 'boolean' ? d.customizeAll : DEFAULT_SETTINGS.customizeAll,
+      lastSeenVersion: typeof d.lastSeenVersion === 'string' ? d.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

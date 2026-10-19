@@ -6,6 +6,11 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import { addHeroShip } from '@/ui/components/HeroShip';
+import { titleTiles } from '@/systems/TitleCopy';
+import { CHANGELOG, IChangelogEntry, unseenEntries } from '@/systems/Changelog';
+import { withQuestEvents } from '@/systems/QuestSystem';
+import { ScrollList } from '@/ui/components/ScrollList';
+import { loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
 
 const CARD = IS_PORTRAIT
   ? { x: 32, y: 48, w: CANVAS_W - 64, h: CANVAS_H - 96 }
@@ -19,14 +24,7 @@ const SUBTITLE = '第二次世界大戦  ×  艦隊戦術';
 const TAGLINE = '艦隊を編成し、七つの海の制海権を握れ。';
 const NATIONS = '日本 · 米国 · ドイツ · 英国 · フランス · イタリア · ソ連';
 
-// Portrait means a phone (see Layout.ts), so the copy describes that device's controls.
-const INFO_TILES: Array<{ title: string; body: string }> = [
-  IS_PORTRAIT
-    ? { title: '◎ 自動砲撃', body: '射程内の敵へ自動で撃つ' }
-    : { title: '◎ 砲撃', body: '狙った地点へ主砲を放つ' },
-  { title: '⚓ 陣形', body: '単縦陣・輪形陣ほか 6 種' },
-  { title: '★ 勝利条件', body: '敵艦隊をすべて撃沈' },
-];
+const INFO_TILES = titleTiles(IS_PORTRAIT);
 
 /** "v0.0.17-alpha", plus "preview" on a Vercel PR preview (its own saves). */
 export function versionLabel(host: string): string {
@@ -36,6 +34,9 @@ export function versionLabel(host: string): string {
 
 export class MainMenuScene extends Phaser.Scene {
   private howToLayer: Phaser.GameObjects.Container | null = null;
+  /** The 更新内容 sheet (#205) */
+  private changesLayer: Phaser.GameObjects.GameObject[] = [];
+  private changesList?: ScrollList;
 
   constructor() {
     super({ key: SceneKeys.MAIN_MENU });
@@ -57,7 +58,63 @@ export class MainMenuScene extends Phaser.Scene {
       this.buildLandscape();
     }
     // Version, bottom right (#136); a PR preview says so, since its saves are kept apart from the real game's.
-    this.add.text(CANVAS_W - 16, CANVAS_H - 12, versionLabel(location.hostname), textStyle(12, Css.dim)).setOrigin(1, 1);
+    // Tapping it opens every version's changes (#205).
+    this.add.text(CANVAS_W - 16, CANVAS_H - 12, `${versionLabel(location.hostname)}  ·  更新内容`, textStyle(12, Css.dim)).setOrigin(1, 1)
+      .setInteractive({ useHandCursor: true }).on('pointerup', () => this.showChanges(CHANGELOG, false));
+    // A new version opened for the first time shows what changed since the last one seen (#205).
+    this.changesLayer = [];
+    const fresh = loadSave().record.sorties === 0;
+    const unseen = unseenEntries(CHANGELOG, audio.settings.lastSeenVersion, __APP_VERSION__, fresh);
+    if (unseen.length > 0) this.showChanges(unseen, true);
+    else if (audio.settings.lastSeenVersion !== __APP_VERSION__) audio.update({ lastSeenVersion: __APP_VERSION__ });
+  }
+
+  /** The 更新内容 sheet (#205): `entries` newest first; `isNew` marks this version seen when closed. */
+  showChanges(entries: readonly IChangelogEntry[], isNew: boolean): void {
+    this.closeChanges();
+    const depth = 200;
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(depth);
+      this.changesLayer.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.8).setOrigin(0, 0).setInteractive());
+    const r = IS_PORTRAIT ? { x: 24, y: 160, w: CANVAS_W - 48, h: CANVAS_H - 320 } : { x: 240, y: 70, w: 800, h: 580 };
+    add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(r.x + 26, r.y + 22, isNew ? '新しい版になりました' : 'これまでの更新', eyebrowStyle(11, Css.cyan)));
+    add(this.add.text(r.x + 26, r.y + 44, '更新内容', displayStyle(IS_PORTRAIT ? 24 : 22)));
+    const top = r.y + (IS_PORTRAIT ? 96 : 86);
+    const bottom = r.y + r.h - (IS_PORTRAIT ? 92 : 72);
+    const list = new ScrollList(this, { x: r.x + 22, y: top, w: r.w - 40, h: bottom - top });
+    list.setDepth(depth + 1);
+    this.changesList = list;
+    const w = r.w - 60;
+    let y = 0;
+    for (const e of entries) {
+      const head = this.add.text(0, 0, `${e.version}  ${e.title}`, textStyle(IS_PORTRAIT ? 17 : 15, Css.gold, { fontStyle: 'bold' }));
+      const body = this.add.text(0, head.height + 8, e.items.map((i) => `・${i}`).join('\n'), textStyle(IS_PORTRAIT ? 14 : 13, Css.text, {
+        wordWrap: { width: w, useAdvancedWrap: true }, lineSpacing: 5,
+      }));
+      const h = head.height + 8 + body.height;
+      list.addItem(this.add.container(0, y, [head, body]), w, h, () => undefined);
+      y += h + 22;
+    }
+    list.setContentHeight(Math.max(0, y - 22));
+    add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 46 : 36), '閉じる', () => {
+      this.closeChanges();
+      if (isNew) {
+        audio.update({ lastSeenVersion: __APP_VERSION__ });
+        // Each new version met counts for the 古参章 (#205).
+        saveProgress(withQuestEvents(loadProgress(), [['versionUpdate', 1]], Date.now()));
+      }
+    }, { variant: 'secondary', width: 220, height: IS_PORTRAIT ? 56 : 44, fontSize: 15 }));
+  }
+
+  private closeChanges(): void {
+    for (const o of this.changesLayer) o.destroy();
+    this.changesLayer = [];
+    this.changesList?.destroy();
+    this.changesList = undefined;
   }
 
   /** Two columns: copy and buttons on the left, the hero ship on the right. */

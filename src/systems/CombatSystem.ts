@@ -55,7 +55,9 @@ export class CombatSystem {
     return Math.max(1, weapon.firePower * multiplier - targetArmor * REDUCTION_FACTOR);
   }
 
-  static applyDamage(ship: BaseShip, damage: number): void {
+  /** `source` is the ship that fired (#199), kept on the target so its sinking is credited to that ship. */
+  static applyDamage(ship: BaseShip, damage: number, source?: BaseShip | null): void {
+    if (source) ship.lastHitBy = source;
     ship.takeDamage(Math.round(damage));
   }
 }
