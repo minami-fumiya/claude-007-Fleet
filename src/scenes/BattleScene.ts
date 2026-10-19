@@ -1616,9 +1616,9 @@ export class BattleScene extends Phaser.Scene {
       let newShip = '';
       if (rec.firstClear) {
         progress = { ...progress, resources: addResources(progress.resources, area.reward), ledger: recordLedger(progress.ledger, 'firstClear', area.reward, Date.now()) };
-        // First-clear ship (#18): one of this nation's ships of the area's reward class.
+        // First-clear ship (#18): the area's reward-only ship for this nation (#160).
         const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-        const ship = rewardShipFor(area.rewardShip, roster, ownedIds(progress, roster), area.id);
+        const ship = rewardShipFor(roster, ownedIds(progress, roster), area.id);
         if (ship) {
           progress = grantShip(progress, roster, ship.id);
           newShip = `  新しい艦: ${ship.name.replace(/\s*\(.*\)\s*$/, '')}`;

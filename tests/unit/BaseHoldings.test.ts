@@ -57,7 +57,7 @@ describe('ships, docks and builds by base (#145)', () => {
   });
 
   it('builds use the current base slips and join that base', () => {
-    const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('shimakaze'), T0)!;
+    const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('etorofu'), T0)!;
     expect(p.builds[0].base).toBe('ijn_heavy');
     expect(buildsHere(p)).toHaveLength(1);
     expect(buildsHere({ ...p, base: 'ijn_home' })).toHaveLength(0);

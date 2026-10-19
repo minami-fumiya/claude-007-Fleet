@@ -227,7 +227,7 @@ export class CampaignMapScene extends Phaser.Scene {
     // First-clear ship for the nation being played (#18).
     const progress = loadProgress();
     const roster = registry.byNation(progress.nation);
-    const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(a.rewardShip, roster, ownedIds(progress, roster), a.id);
+    const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(roster, ownedIds(progress, roster), a.id);
     const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],

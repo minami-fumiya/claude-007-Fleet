@@ -56,7 +56,7 @@ export interface ICampaignArea {
   reward: Partial<IResources>;
   /** Zone / time limit / target for the objectives beyond 殲滅・護衛・砲撃 (#40) */
   side?: ICampaignSide;
-  /** Class of the ship the first clear adds to the player's nation (see ShipyardSystem.rewardShipFor) */
+  /** Class of the ship the first clear grants; the ship itself is in reward-ships.json (#160, docs/specs/systems/reward-ships.md) */
   rewardShip?: ShipClass;
 }
 
