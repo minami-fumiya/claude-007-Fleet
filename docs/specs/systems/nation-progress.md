@@ -121,6 +121,12 @@ of the area's reward class.
 - `EventSystem.eventAt(now)`: three-hour windows from 05:00 JST, hashed into double (a theater's reward x2) / steel (+50%) / training (proficiency and captain XP x1.5) / repair (cost and time x0.5) / none (60%).
 - `ISave.lastSeenAt` guards against a clock set back (`eventFor`). `GameClock.activeEvent` keeps it updated.
 
+## Sortie routes (#53)
+- `SortieMapSystem.sortieRoute(area, enemy)`: one boss node for a theater's free first area or fewer than 3 enemies; else
+  skirmish (the lightest half, at most 3) → per-area resource / whirlpool / nothing (hash of the id) → boss (whole fleet, the area's objective).
+- `utils/SortieFlow`: the sortie in progress lives in the registry (`sortie.state`); `advanceSortie` applies in-between nodes,
+  drops ships at or below `HEAVY_DAMAGE` (0.25, from the saved damage) and starts the next battle. Only the boss win clears the area.
+
 ## Enemy fleet sizes (#25)
 Campaign areas grow along each theater: 太平洋 1·2·3·4·6·7, 大西洋 1·2·3·5·8, 地中海 1·2·3·5·7. Free battle: opponent
 size 同数 or 1–20 ships; each enemy mirrors the class of the player's ship in that position (extras mirror the smallest),

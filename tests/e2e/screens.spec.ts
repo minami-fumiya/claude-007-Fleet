@@ -265,4 +265,40 @@ test.describe('screens', () => {
     await page.screenshot({ path: info.outputPath('sweep.png') });
     expect(errors).toEqual([]);
   });
+
+  test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
+        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
+      };
+      s.openPicker(0);
+      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
+      s.startBattle();
+    });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    const first = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown }; setPaused(p: boolean): void; triggerGameOver(v: boolean): void };
+      const sortie = b.battleData.sortie;
+      b.setPaused(false);
+      b.triggerGameOver(true);
+      return sortie;
+    });
+    expect(first).toEqual({ node: 1, battles: 2, boss: false });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('ResultsScene')?.sys.settings.active === true, null, { timeout: 60_000 });
+    await page.screenshot({ path: info.outputPath('sortie-advance.png') });
+    expect(await page.evaluate(() => {
+      const r = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ResultsScene');
+      const btn = r.children.list.find((o) => ((o as Phaser.GameObjects.Container).list ?? []).some((c) => (c as Phaser.GameObjects.Text).text?.startsWith('進撃')));
+      btn?.emit('pointerdown');
+      btn?.emit('pointerup');
+      return btn !== undefined;
+    })).toBe(true);
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    const second = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown } }).battleData.sortie);
+    expect(second).toEqual({ node: 2, battles: 2, boss: true });
+    expect(errors).toEqual([]);
+  });
 });

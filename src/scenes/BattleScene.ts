@@ -77,6 +77,8 @@ import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems
 import { eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
+import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
+import { takeSortieNotes } from '@/utils/SortieFlow';
 
 
 
@@ -314,7 +316,9 @@ export class BattleScene extends Phaser.Scene {
     this.scenarioSetup = scenario && sc ? setupFor(scenario, sc.side) : null;
     // Zone, time limit and target: the scenario side's, or a campaign area's (#40).
     const battleArea = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
-    this.side = this.scenarioSetup?.side ?? campaignSide(battleArea);
+    // A skirmish before a campaign area's boss is a plain fight (#53).
+    const bossNode = this.battleData?.sortie?.boss ?? true;
+    this.side = this.scenarioSetup?.side ?? (bossNode ? campaignSide(battleArea) : null);
     this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
     this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
@@ -1556,8 +1560,13 @@ export class BattleScene extends Phaser.Scene {
     }
     progress = { ...progress, proficiency };
     let firstClear = false;
+    const routeNotes = takeSortieNotes(this);
+    if (routeNotes.length > 0) result.route = routeNotes.join('  ·  ');
+    // A skirmish before the boss (#53) never clears the area; a win lets the fleet advance.
+    const node = this.battleData?.sortie;
+    const skirmish = area !== undefined && node !== undefined && !node.boss;
     // A campaign win without losing a ship lets the area be swept from now on (#57).
-    if (area && victory && fleet.every((s) => s.isAlive) && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
+    if (area && !skirmish && victory && fleet.every((s) => s.isAlive) && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
     // 任務 (#52): the sortie, the win and what was sunk.
     const sunk = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy);
     const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
@@ -1565,7 +1574,14 @@ export class BattleScene extends Phaser.Scene {
       ['sortie', 1], ['win', victory ? 1 : 0], ['nightWin', victory && this.conditions.time === TimeOfDay.Night ? 1 : 0], ['sink', sunk.length],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
     ], Date.now());
-    if (area && victory) {
+    if (skirmish) {
+      result.campaign = `${area.name}  ${NODE_LABEL.battle} ${victory ? '勝利' : '敗北'} (${node.node} / ${node.battles})`;
+      result.returnScene = SceneKeys.CAMPAIGN;
+      // 大破 ships (judged on this battle's damage) drop out of the advance.
+      const dropped = fleet.filter((s) => !s.isAlive || s.stats.currentHp / Math.max(1, s.stats.maxHp) <= HEAVY_DAMAGE).map((s) => s.stats.name.replace(/\s*\(.*\)\s*$/, ''));
+      result.advance = victory && dropped.length < fleet.length;
+      if (victory) result.advanceNote = dropped.length === fleet.length ? '全艦が大破したため進撃できません' : dropped.length > 0 ? `大破で離脱: ${dropped.join('・')}` : '次は敵の主力艦隊です';
+    } else if (area && victory) {
       const rec = recordClear(progress.campaign, area.id);
       firstClear = rec.firstClear;
       progress = { ...progress, campaign: rec.cleared };

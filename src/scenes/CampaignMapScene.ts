@@ -20,6 +20,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
 export const CAMPAIGN_AREA_KEY = 'campaign.area';
@@ -206,6 +207,8 @@ export class CampaignMapScene extends Phaser.Scene {
       ['目標', objectiveText(a)],
       ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}\n${lineup}`],
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
+      // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
+      ['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')],
       ['初回報酬', reward],
     ];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
