@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
-  addMerit, clearCount, examPassed, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
+  addMerit, addRankStats, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examPassed, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
   MERIT_FIRST_CLEAR, maxBuildGrade, meritFor, nextRank, nextSlotRank, promotionText, RANKS, rankOf, START_RANK, TUTORIAL_RANK,
 } from '@/systems/RankSystem';
 import campaign from '@/data/campaign.json';
+import { runMigrations } from '@/utils/SaveMigration';
 
-const at = (merit: number, extra: { campaign?: string[]; nation?: string; rankFloor?: number } = {}) => ({ campaign: [], merit, ...extra });
+// Promotion missions (#142) done, so merit and exams alone decide (missions are tested on their own below).
+const at = (merit: number, extra: { campaign?: string[]; nation?: string; rankFloor?: number } = {}) => ({ campaign: [], merit, rankStats: ALL_MISSIONS_DONE, ...extra });
 
 describe('RankSystem (#30 / #36)', () => {
   it('runs 14 ranks from 士官候補生 to 元帥 with fleet slots 1..8', () => {
@@ -55,7 +57,7 @@ describe('RankSystem (#30 / #36)', () => {
   });
 
   it('describes the next promotion and the next extra slot', () => {
-    expect(nextRank(at(0))).toEqual({ rank: RANKS[2], meritNeeded: 80, exam: undefined });
+    expect(nextRank(at(0))).toEqual({ rank: RANKS[2], meritNeeded: 80, exam: undefined, missions: [] });
     expect(nextSlotRank(at(0))?.rank.name).toBe('少尉');
     expect(nextRank(at(900, { nation: 'IJN' }))?.exam).toBe('theaterFinal');
     expect(promotionText(at(0))).toContain('少尉');
@@ -91,5 +93,46 @@ describe('RankSystem (#30 / #36)', () => {
       expect(GRADE_RANK[old]).toBeLessThanOrEqual(floor);
       expect(fleetSlots(at(0, { rankFloor: floor }))).toBe(RANKS[floor].slots);
     });
+  });
+});
+
+describe('promotion missions (#142)', () => {
+  const fresh = (merit: number) => ({ campaign: [], merit });
+
+  it('merit alone stops at the first rank with an open mission', () => {
+    expect(rankOf(fresh(100)).name).toBe('准尉');
+    expect(nextRank(fresh(100))?.missions.map((m) => m.stat)).toEqual(['campaignWin']);
+    expect(promotionText(fresh(100))).toBe('次の昇進: 少尉 (作戦で 1 回勝利)');
+    expect(rankOf(addRankStats(fresh(100), { campaignWin: 1 })).name).toBe('少尉');
+  });
+
+  it('counters add up and show their progress', () => {
+    let p = addRankStats(fresh(200), { campaignWin: 1, sink: 12 });
+    expect(rankOf(p).name).toBe('少尉');
+    expect(missionText(openMissions(RANKS[3], p)[0], p)).toBe('作戦で敵艦を 20 隻撃沈 (12 / 20)');
+    p = addRankStats(p, { sink: 8, nightWin: 0 });
+    expect(rankOf(p).name).toBe('中尉');
+    expect(addRankStats(p, { sink: 0 })).toBe(p);
+  });
+
+  it('every mission sits on a rank between 少尉 and 大将 with a positive goal', () => {
+    for (const [index, list] of Object.entries(RANK_MISSIONS)) {
+      expect(Number(index)).toBeGreaterThanOrEqual(2);
+      expect(Number(index)).toBeLessThanOrEqual(12);
+      for (const m of list ?? []) expect(m.goal).toBeGreaterThan(0);
+    }
+  });
+
+  it('the tutorial promotion completes the missions up to its rank', () => {
+    expect(rankOf(grantRankMerit(fresh(0), TUTORIAL_RANK)).index).toBe(TUTORIAL_RANK);
+  });
+});
+
+describe('promotion missions and old saves (#142)', () => {
+  it('a nation keeps the rank it held before the missions existed', () => {
+    const out = runMigrations({ version: 9, nations: { IJN: { merit: 900, campaign: [], rankFloor: 0 } } }) as { nations: { IJN: { rankFloor: number; rankStats: object } } };
+    expect(out.nations.IJN.rankStats).toEqual({});
+    expect(RANKS[out.nations.IJN.rankFloor].name).toBe('大佐');
+    expect(rankOf({ campaign: [], merit: 900, rankFloor: out.nations.IJN.rankFloor }).name).toBe('大佐');
   });
 });

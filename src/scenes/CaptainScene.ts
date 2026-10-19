@@ -18,6 +18,7 @@ import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '
 import { ScrollList } from '@/ui/components/ScrollList';
 import { ABILITY_COLOR, SKILL_COLOR, TRAIT_COLOR } from '@/ui/SkillColors';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { recordLedger } from '@/systems/LedgerSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -376,7 +377,8 @@ export class CaptainScene extends Phaser.Scene {
       }
       resources = pay(resources, plan.cost)!;
     }
-    saveSave({ ...save, nations: { ...save.nations, [save.current]: { ...np, resources, captainSkills: { ...np.captainSkills, [c.id]: plan.learned } } } });
+    const ledger = plan.cost ? recordLedger(np.ledger, 'captain', plan.cost, Date.now()) : np.ledger;
+    saveSave({ ...save, nations: { ...save.nations, [save.current]: { ...np, resources, ledger, captainSkills: { ...np.captainSkills, [c.id]: plan.learned } } } });
     this.status = plan.replaces ? `「${SKILL_LABEL[plan.replaces]}」を外し「${SKILL_LABEL[skill]}」を習得しました` : `「${SKILL_LABEL[skill]}」を習得しました`;
     this.statusCss = Css.success;
     this.refresh();

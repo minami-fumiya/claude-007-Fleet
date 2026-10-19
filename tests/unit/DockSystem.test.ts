@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { ShipClass } from '@/types/ShipClass';
+import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
 
 const empty = (): IDockState => ({ damage: {}, docks: [] });
@@ -15,6 +17,14 @@ describe('DockSystem', () => {
     expect(repairTimeMs(500, 0.5)).toBe(250 * MS_PER_HP);
     expect(repairCost(500, 0.5)).toEqual({ fuel: 63, ammo: 0, steel: 38, bauxite: 0 });
     expect(repairTimeMs(500, 1)).toBe(0);
+  });
+
+  it('repair time depends on the class (#143): seconds for a scratched destroyer, half an hour for a battleship 大破', () => {
+    expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer) / 1000).toBeLessThan(60);
+    const bb = repairTimeMs(800, 0.1, 1, ShipClass.Battleship) / 60_000;
+    expect(bb).toBeGreaterThanOrEqual(20);
+    expect(bb).toBeLessThanOrEqual(35);
+    expect(repairTimeMs(500, 0.5, 0.5, ShipClass.Cruiser)).toBe(repairTimeMs(500, 0.5, 1, ShipClass.Cruiser) / 2);
   });
 
   it('fills at most the owned docks with damaged ships (#38)', () => {
@@ -47,7 +57,7 @@ describe('DockSystem', () => {
 
   it('a new admiral has one dock and builds more with rank and resources, up to four (#38)', () => {
     const rich = { fuel: 9999, ammo: 9999, steel: 9999, bauxite: 9999 };
-    const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich };
+    const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich, rankStats: ALL_MISSIONS_DONE };
     expect(dockCount(base)).toBe(START_DOCKS);
     expect(nextDock(base)?.state).toBe('rank');
     expect(buildDock(base)).toBeNull();

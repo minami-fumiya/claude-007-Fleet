@@ -10,10 +10,11 @@ import { IShipData } from '@/types/Ship';
 import { ITechNode } from '@/types/Progression';
 import { emptyNationProgress, IProgress } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
+import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import shipsIjn from '@/data/ships/ijn.json';
 
 const at = (merit: number, base = ''): IProgress => ({
-  ...emptyNationProgress(), nation: Nation.IJN, merit, base,
+  ...emptyNationProgress(), nation: Nation.IJN, merit, base, rankStats: ALL_MISSIONS_DONE,
   record: { sorties: 0, victories: 0, perfectVictories: 0, sunk: {}, damageDealt: 0, bestDamage: 0, shipsLost: 0, medals: [] },
 });
 

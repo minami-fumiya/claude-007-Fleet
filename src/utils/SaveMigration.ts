@@ -8,6 +8,7 @@
  */
 
 import { nationCaptains } from '@/systems/CaptainRoster';
+import { rankOf } from '@/systems/RankSystem';
 
 export type RawSave = Record<string, unknown>;
 /** Turns a raw save of version `n` into version `n + 1` (the version field is set by the runner). */
@@ -82,6 +83,26 @@ export const MIGRATIONS: MigrationStep[] = [
   (data) => mapNations({ ...data, lastSeenAt: 0 }, (nation) => ({ ...nation, quests: { day: 0, week: 0, progress: {}, claimed: [] }, perfect: [] })),
   // v8 → v9 (#57): sweeps are counted per area and game day; nothing used yet.
   (data) => mapNations(data, (nation) => ({ ...nation, sweeps: { day: 0, counts: {} } })),
+  // v9 → v10 (0.0.19): building takes time now (#143; nothing under construction yet) and repairs got slower, so
+  // every nation gets two of each time-saving item. Areas get a best battle rank (#149): a perfect win counts as S.
+  // Promotion missions (#142) start uncounted, so each nation keeps the rank it holds as its floor. The resource
+  // ledger (#137) starts empty, and no sortie is in progress (#138).
+  (data) => mapNations(data, (nation, key) => {
+    const campaign = (Array.isArray(nation.campaign) ? nation.campaign : []).filter((id): id is string => typeof id === 'string');
+    const merit = typeof nation.merit === 'number' ? nation.merit : 0;
+    const floor = typeof nation.rankFloor === 'number' ? nation.rankFloor : 0;
+    const held = rankOf({ campaign, merit, rankFloor: floor, nation: key }, false).index;
+    return {
+      ...nation,
+      builds: [],
+      items: { fastRepair: 2, fastBuild: 2 },
+      areaRanks: Object.fromEntries((Array.isArray(nation.perfect) ? nation.perfect : []).filter((id) => typeof id === 'string').map((id) => [id, 'S'])),
+      rankStats: {},
+      rankFloor: Math.max(floor, held),
+      ledger: {},
+      sortie: null,
+    };
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

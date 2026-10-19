@@ -6,7 +6,7 @@ import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, pay, resource
 import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } from './DockSystem';
 import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
-import { addMerit, IRank, meritFor } from './RankSystem';
+import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
 import { gameDay, withQuestEvents } from './QuestSystem';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -69,6 +69,9 @@ export interface ISettlement {
 export function sortieBlockers(progress: IProgress, ships: IShipData[], now: number, opts: ISortieOptions = {}): string[] {
   const state = completeRepairs(progress, now);
   const reasons: string[] = [];
+  // Ships out on an unfinished campaign sortie (#138) stay with it until it is continued or withdrawn.
+  const away = progress.sortie?.shipIds ?? [];
+  for (const s of ships) if (away.includes(s.id)) reasons.push(`${s.name} は出撃中 (作戦地図で続けるか撤退)`);
   // Exercises use docked ships too: they fight at full HP and keep no damage.
   if (!opts.exercise) {
     for (const s of ships) {
@@ -89,9 +92,11 @@ export function paySortie(progress: IProgress, ships: IShipData[], opts: ISortie
  * Applies a battle's outcome: rewards, aircraft replacement cost and each ship's damage.
  * An exercise pays half the reward and keeps neither damage nor aircraft losses.
  */
-export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean; event?: IEventEffects; theater?: string } = {}): ISettlement {
-  // A running event (#89) raises the reward: 2x in its theater, more steel.
-  const full = applyEventReward(battleReward(outcome.victory, outcome.enemiesSunk, outcome.sunkClasses), opts.event ?? NO_EVENT, opts.theater);
+export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean; event?: IEventEffects; theater?: string; rankMul?: number } = {}): ISettlement {
+  // A running event (#89) raises the reward: 2x in its theater, more steel. The battle rank (#149) scales it too.
+  const earned = battleReward(outcome.victory, outcome.enemiesSunk, outcome.sunkClasses);
+  const ranked = opts.rankMul !== undefined && opts.rankMul !== 1 ? addResources(resources(), earned, opts.rankMul) : earned;
+  const full = applyEventReward(ranked, opts.event ?? NO_EVENT, opts.theater);
   const reward = opts.exercise ? addResources(resources(), full, EXERCISE_REWARD_SCALE) : full;
   const aircraftCost = opts.exercise ? resources() : resources({ bauxite: Math.max(0, outcome.planesLost) * BAUXITE_PER_PLANE });
   let next: IProgress = {
@@ -125,7 +130,7 @@ export function sweepsLeft(progress: Pick<IProgress, 'sweeps'>, areaId: string, 
   return Math.max(0, SWEEPS_PER_DAY - used);
 }
 
-/** True when `area` may be swept: cleared, and once won without losing a ship (#57). */
+/** True when `area` may be swept: cleared, and once won with an S rank (#57 / #149; perfect wins from before count). */
 export function canSweep(progress: Pick<IProgress, 'campaign' | 'perfect'>, area: ICampaignArea): boolean {
   return progress.campaign.includes(area.id) && progress.perfect.includes(area.id);
 }
@@ -155,7 +160,11 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const won = applyEventReward(battleReward(true, enemy.length, enemy.map((s) => s.shipClass)), event, area.theater);
   const reward = addResources(resources(), won, SWEEP_REWARD_SCALE);
   const merit = meritFor({ victory: true, campaign: true, firstClear: false, enemiesSunk: enemy.length });
-  const promoted = addMerit({ ...progress, resources: addResources(paid, reward) }, merit);
+  // A sweep counts toward the 大将 promotion mission (#142), and may complete it.
+  const before = rankOf(progress);
+  const merited = addMerit(addRankStats({ ...progress, resources: addResources(paid, reward) }, { sweep: 1 }), merit).progress;
+  const after = rankOf(merited);
+  const promoted = { progress: merited, promotedTo: after.index > before.index ? after : null };
   const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
   const day = gameDay(now);
   const counts = progress.sweeps.day === day ? progress.sweeps.counts : {};

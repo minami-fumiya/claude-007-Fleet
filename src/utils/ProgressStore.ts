@@ -9,7 +9,11 @@
  * are step-by-step migrations in SaveMigration (#60).
  */
 
-import { IDockJob, IResources } from '@/types/Progression';
+import { IDockJob, IItems, IResources } from '@/types/Progression';
+import { BattleRank, isBattleRank } from '@/systems/BattleRank';
+import type { RankStat } from '@/systems/RankSystem';
+import { ISortieState } from '@/types/Sortie';
+import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
@@ -28,6 +32,8 @@ export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
 export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
 export const SAVE_VERSION = LATEST_VERSION;
+/** A new nation starts with one of each time-saving item (#143). */
+export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1 };
 
 /** Everything one nation's admiral has built up. */
 export interface INationProgress {
@@ -73,6 +79,18 @@ export interface INationProgress {
   sweeps: { day: number; counts: Record<string, number> };
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
+  /** Ships under construction (#143): they join `ships` when finished */
+  builds: IDockJob[];
+  /** 高速修理材・高速建造材 (#143) */
+  items: IItems;
+  /** Best battle rank per campaign area (#149) */
+  areaRanks: Record<string, BattleRank>;
+  /** What the promotion missions count (#142) */
+  rankStats: Partial<Record<RankStat, number>>;
+  /** Resource income and spending by hour and category, last 24 hours (#137) */
+  ledger: Ledger;
+  /** The campaign sortie in progress, if any (#138): it can be continued after closing the game */
+  sortie: ISortieState | null;
 }
 
 /** The whole save (v2 and later). */
@@ -111,6 +129,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null,
   };
 }
 
@@ -143,7 +162,18 @@ export function progressView(save: ISave, now?: number): IProgress {
   const view: IProgress = { ...np, nation: save.current, record: save.record };
   if (now === undefined) return view;
   const r = regenerate(view.resources, view.regenAt, now);
-  return r.resources === view.resources && r.regenAt === view.regenAt ? view : { ...view, resources: r.resources, regenAt: r.regenAt };
+  // Natural regeneration goes into the ledger (#137).
+  const regen = r.resources === view.resources && r.regenAt === view.regenAt
+    ? view
+    : { ...view, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(view.ledger, 'regen', resourceDelta(view.resources, r.resources).gained, now) };
+  return finishBuilds(regen, now);
+}
+
+/** Ships whose construction has finished join the fleet (#143), even if the game was closed meanwhile. */
+export function finishBuilds<T extends Pick<INationProgress, 'builds' | 'ships'>>(np: T, now: number): T {
+  const done = np.builds.filter((b) => b.endsAt <= now);
+  if (done.length === 0) return np;
+  return { ...np, builds: np.builds.filter((b) => b.endsAt > now), ships: [...new Set([...np.ships, ...done.map((b) => b.shipId)])] };
 }
 
 /** Writes a view back into its nation's slot (and the shared record). */
@@ -207,9 +237,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     : { ...defaultResources };
   const damage: Record<string, number> = {};
   for (const [id, f] of Object.entries(numbers(data.damage))) damage[id] = Math.min(1, Math.max(0, f));
-  const docks = (Array.isArray(data.docks) ? data.docks : []).filter(
-    (d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt),
-  );
+  const docks = parseJobs(data.docks);
   return {
     resources: res,
     regenAt: isNum(data.regenAt) ? data.regenAt : 0,
@@ -234,7 +262,53 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     quests: parseQuestState(data.quests),
     perfect: [...new Set(strings(data.perfect))],
     sweeps: parseSweeps(data.sweeps),
+    builds: parseJobs(data.builds),
+    items: parseItems(data.items),
+    areaRanks: parseAreaRanks(data.areaRanks),
+    rankStats: numbers(data.rankStats),
+    ledger: parseLedger(data.ledger),
+    sortie: parseSortie(data.sortie),
   };
+}
+
+/** A stored sortie when it has the parts the flow needs; anything else counts as none. */
+function parseSortie(v: unknown): ISortieState | null {
+  if (!isObject(v) || typeof v.areaId !== 'string' || !Array.isArray(v.route) || !isNum(v.at) || !isNation(v.nation) || !isNation(v.enemyNation)) return null;
+  const shipIds = strings(v.shipIds);
+  if (shipIds.length === 0) return null;
+  const captainIds = (Array.isArray(v.captainIds) ? v.captainIds : []).map((c) => (typeof c === 'string' ? c : null));
+  const route = v.route.filter((n): n is ISortieState['route'][number] => isObject(n) && typeof n.kind === 'string');
+  return {
+    areaId: v.areaId, route, at: v.at, nation: v.nation, enemyNation: v.enemyNation, shipIds, captainIds,
+    formation: (Object.values(Formation) as string[]).includes(v.formation as string) ? (v.formation as Formation) : Formation.LineAhead, fought: v.fought === true,
+  };
+}
+
+function parseLedger(v: unknown): Ledger {
+  const out: Ledger = {};
+  if (!isObject(v)) return out;
+  for (const [key, r] of Object.entries(v)) {
+    if (!/^\d+:\w+$/.test(key) || !isObject(r)) continue;
+    const n = (x: unknown): number => (isNum(x) ? Math.max(0, x) : 0);
+    out[key] = { fuel: n(r.fuel), ammo: n(r.ammo), steel: n(r.steel), bauxite: n(r.bauxite) };
+  }
+  return out;
+}
+
+function parseAreaRanks(v: unknown): Record<string, BattleRank> {
+  const out: Record<string, BattleRank> = {};
+  if (isObject(v)) for (const [id, r] of Object.entries(v)) if (isBattleRank(r)) out[id] = r;
+  return out;
+}
+
+function parseJobs(v: unknown): IDockJob[] {
+  return (Array.isArray(v) ? v : []).filter((d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt));
+}
+
+function parseItems(v: unknown): IItems {
+  const o = isObject(v) ? v : {};
+  const n = (x: unknown): number => (isNum(x) ? Math.max(0, Math.floor(x)) : 0);
+  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild) };
 }
 
 function parseSweeps(v: unknown): { day: number; counts: Record<string, number> } {
@@ -432,13 +506,24 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger)) saveSave(withProgress(save, view));
   return view;
 }
 
-/** Saves a view into its own nation's slot (whichever nation is current). */
-export function saveProgress(progress: IProgress): void {
-  saveSave(withProgress(loadSave(), progress));
+/**
+ * Saves a view into its own nation's slot (whichever nation is current). With `category`, the change in resources
+ * against what was stored goes into the ledger (#137): a gain for an income category, a cost for a spending one.
+ */
+export function saveProgress(progress: IProgress, category?: LedgerCategory, now = Date.now()): void {
+  const save = loadSave();
+  const before = save.nations[progress.nation]?.resources;
+  saveSave(withProgress(save, category && before ? noteLedger(progress, category, before, now) : progress));
+}
+
+/** Records the change from `before` to the progress's resources under `category` (#137). */
+export function noteLedger<T extends { resources: IResources; ledger: Ledger }>(progress: T, category: LedgerCategory, before: IResources, now: number): T {
+  const d = resourceDelta(before, progress.resources);
+  return { ...progress, ledger: recordLedger(progress.ledger, category, INCOME.includes(category) ? d.gained : d.spent, now) };
 }
 
 /** Drops the in-memory copy so the next load reads storage again (tests). */

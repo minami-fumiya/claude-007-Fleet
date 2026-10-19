@@ -1,6 +1,7 @@
 import { IDockJob, IResources } from '@/types/Progression';
 import { canAfford, pay, resources } from './ResourceSystem';
 import { RANKS, rankOf, IRankProgress } from './RankSystem';
+import { ShipClass } from '@/types/ShipClass';
 
 /**
  * Damage and repairs (pure). Damage is the HP fraction a ship came home with (missing = undamaged).
@@ -18,8 +19,19 @@ export const DOCK_UPGRADES: Array<{ rank: number; cost: IResources }> = [
   { rank: 6, cost: { fuel: 500, ammo: 0, steel: 800, bauxite: 0 } },
   { rank: 8, cost: { fuel: 1000, ammo: 0, steel: 1500, bauxite: 0 } },
 ];
-/** Real milliseconds per point of HP repaired. */
-export const MS_PER_HP = 40;
+/** Real milliseconds per point of HP repaired (a cruiser; the default when the class is unknown). */
+export const MS_PER_HP = 1200;
+/**
+ * Repair time per HP by class (#143): a destroyer's light damage takes tens of seconds, a battleship coming home
+ * 大破 20–30 minutes.
+ */
+export const MS_PER_HP_BY_CLASS: Record<ShipClass, number> = {
+  [ShipClass.Destroyer]: 700,
+  [ShipClass.Submarine]: 700,
+  [ShipClass.Cruiser]: MS_PER_HP,
+  [ShipClass.Carrier]: 2000,
+  [ShipClass.Battleship]: 2500,
+};
 /** A ship sunk in battle comes home heavily damaged (大破) rather than being lost. */
 export const SUNK_HP_FRACTION = 0.1;
 export const FAST_REPAIR_COST: IResources = { fuel: 40, ammo: 0, steel: 80, bauxite: 0 };
@@ -76,9 +88,10 @@ export function repairCost(maxHp: number, fraction: number): IResources {
   return resources({ fuel: Math.ceil(missing * 0.25), steel: Math.ceil(missing * 0.15) });
 }
 
-/** `timeMul` is the current base's repair-time multiplier (#88). */
-export function repairTimeMs(maxHp: number, fraction: number, timeMul = 1): number {
-  return Math.round(missingHp(maxHp, fraction) * MS_PER_HP * timeMul);
+/** `timeMul` is the current base's repair-time multiplier (#88); `shipClass` sets the time per HP (#143). */
+export function repairTimeMs(maxHp: number, fraction: number, timeMul = 1, shipClass?: ShipClass): number {
+  const perHp = shipClass ? MS_PER_HP_BY_CLASS[shipClass] : MS_PER_HP;
+  return Math.round(missingHp(maxHp, fraction) * perHp * timeMul);
 }
 
 /** Records a ship's state after a battle (1 = undamaged clears the entry). */
@@ -91,10 +104,10 @@ export function setDamage(state: IDockState, shipId: string, fraction: number): 
 }
 
 /** Puts a damaged ship into a free dock. Returns null if it can't (no dock free, not damaged, already in). */
-export function startRepair(state: IDockState, shipId: string, maxHp: number, now: number, timeMul = 1): IDockState | null {
+export function startRepair(state: IDockState, shipId: string, maxHp: number, now: number, timeMul = 1, shipClass?: ShipClass): IDockState | null {
   const f = hpFraction(state, shipId);
   if (f >= 1 || isDocked(state, shipId) || state.docks.length >= dockCount(state)) return null;
-  return { ...state, docks: [...state.docks, { shipId, endsAt: now + repairTimeMs(maxHp, f, timeMul) }] };
+  return { ...state, docks: [...state.docks, { shipId, endsAt: now + repairTimeMs(maxHp, f, timeMul, shipClass) }] };
 }
 
 /** Releases every ship whose repair has finished. */

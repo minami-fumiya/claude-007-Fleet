@@ -1,5 +1,5 @@
 import { ADDITIVE_MODIFIERS, IShipModifiers, IUpgradeData, NO_MODIFIERS } from '@/types/Modifiers';
-import { IShipStats } from '@/types/Ship';
+import { IShipData, IShipStats } from '@/types/Ship';
 import { IWeaponData } from '@/types/Weapon';
 import { IAirWing } from '@/types/Aircraft';
 import { weaponKind, WeaponKind } from './WeaponSelector';
@@ -104,4 +104,13 @@ export function describeModifiers(m: Partial<IShipModifiers>): string[] {
     else out.push(ADDITIVE_MODIFIERS.includes(key) ? `${MODIFIER_LABEL[key]} ${v > 0 ? '+' : ''}${v}` : `${MODIFIER_LABEL[key]} ×${v.toFixed(2)}`);
   }
   return out;
+}
+
+/** Ships the 改装 screen lists (#144): the fleet first (in slot order), then, with `all`, every other owned ship by class. */
+export function customizeShips(owned: readonly IShipData[], fleetIds: readonly string[], all: boolean): IShipData[] {
+  const fleet = fleetIds.map((id) => owned.find((s) => s.id === id)).filter((s): s is IShipData => s !== undefined);
+  if (!all) return fleet;
+  const order = ['Battleship', 'Carrier', 'Cruiser', 'Destroyer', 'Submarine'];
+  const rest = owned.filter((s) => !fleetIds.includes(s.id)).sort((a, b) => order.indexOf(a.shipClass) - order.indexOf(b.shipClass));
+  return [...fleet, ...rest];
 }

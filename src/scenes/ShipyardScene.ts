@@ -5,7 +5,8 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildShip, buildState, buildStateLabel, gradeRankName, ownedIds, shipGrade } from '@/systems/ShipyardSystem';
+import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
+import { clock } from '@/utils/TimeFormat';
 import { availableShips, canResearch, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
@@ -49,6 +50,9 @@ export class ShipyardScene extends Phaser.Scene {
   private status = '';
   private tabs: UIButton[] = [];
   private layer: Phaser.GameObjects.GameObject[] = [];
+  /** Countdown lines of ships under construction (#143), updated every frame */
+  private timers: Array<{ text: Phaser.GameObjects.Text; endsAt: number; items: number }> = [];
+  private building = 0;
 
   constructor() {
     super({ key: SceneKeys.SHIPYARD });
@@ -87,8 +91,20 @@ export class ShipyardScene extends Phaser.Scene {
   }
 
   update(): void {
-    // Natural regeneration keeps running while the player browses.
-    this.bar.refresh(loadProgress().resources);
+    // Natural regeneration keeps running while the player browses; finished builds join the fleet (#143).
+    const progress = loadProgress();
+    this.bar.refresh(progress.resources);
+    if (progress.builds.length < this.building) {
+      this.status = '建造が完了しました';
+      this.refresh();
+      return;
+    }
+    const now = Date.now();
+    for (const t of this.timers) t.text.setText(this.buildingLine(t.endsAt - now, t.items));
+  }
+
+  private buildingLine(left: number, items: number): string {
+    return `建造中  残り ${clock(Math.max(0, left))}${items > 0 ? `  ·  タップで高速建造 (高速建造材 ${items})` : ''}`;
   }
 
   /** The nation's ships of the selected class (fictional ones only once their research is done). */
@@ -108,6 +124,8 @@ export class ShipyardScene extends Phaser.Scene {
     const progress = loadProgress();
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
     const owned = ownedIds(progress, roster);
+    this.timers = [];
+    this.building = progress.builds.length;
     this.bar.refresh(progress.resources);
     CLASS_ORDER.forEach((c, i) => {
       const all = availableShips(roster, progress.research).filter((s) => s.shipClass === c);
@@ -123,7 +141,7 @@ export class ShipyardScene extends Phaser.Scene {
     const techs = this.shipClass === ShipClass.Cruiser ? [BUILD_TECH[ShipClass.Cruiser], HEAVY_CRUISER_TECH] : [BUILD_TECH[this.shipClass]];
     const techId = techs.find((t) => t && !progress.research.includes(t)) ?? techs[techs.length - 1];
     const node = techId ? TREE.find((n) => n.id === techId) : undefined;
-    const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで建造可`;
+    const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで  ·  建造ドック ${progress.builds.length} / ${buildDockCount(progress)}`;
     add(this.add.text(info.x + 16, info.y + info.h / 2, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     if (node && !progress.research.includes(node.id)) {
       const costMul = researchMultiplier(baseOfProgress(progress));
@@ -193,8 +211,17 @@ export class ShipyardScene extends Phaser.Scene {
       this.add.text(pad, 10 + lineH + 4, `${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
       this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
       // Reward-only ships (#39) show where they come from instead of a build cost.
-      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
+    const job = progress.builds.find((b) => b.shipId === ship.id);
+    if (job) {
+      // Under construction (#143): a countdown in place of the cost line.
+      const last = parts[parts.length - 1] as Phaser.GameObjects.Text;
+      last.setScale(1).setColor(Css.cyan);
+      this.timers.push({ text: last, endsAt: job.endsAt, items: progress.items.fastBuild });
+      last.setText(this.buildingLine(job.endsAt - Date.now(), progress.items.fastBuild));
+      this.fitWidth(last, r.w - pad * 2);
+    }
     const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(owned || ready ? 1 : 0.5);
     icon.setScale(Math.min(1, (IS_PORTRAIT ? 100 : 80) / Math.max(1, icon.height)));
     parts.splice(1, 0, icon);
@@ -216,10 +243,22 @@ export class ShipyardScene extends Phaser.Scene {
 
   private build(ship: IShipData): void {
     const progress = loadProgress();
-    const next = buildShip(progress, DataLoader.getRegistry(this).byNation(progress.nation), ship);
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    const short = ship.name.replace(/\s*\(.*\)\s*$/, '');
+    if (progress.builds.some((b) => b.shipId === ship.id)) {
+      // Tapping a ship under construction spends a 高速建造材 (#143).
+      const done = fastBuild(progress, roster, ship.id, Date.now());
+      if (!done) return;
+      saveProgress(done);
+      this.status = `高速建造材で ${short} が完成しました`;
+      this.refresh();
+      return;
+    }
+    const now = Date.now();
+    const next = startBuild(progress, roster, ship, now);
     if (!next) return;
-    saveProgress(withQuestEvents(next, [['build', 1]], Date.now()));
-    this.status = `${ship.name.replace(/\s*\(.*\)\s*$/, '')} が艦隊に加わりました`;
+    saveProgress(withQuestEvents(next, [['build', 1]], now), 'build');
+    this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship))})`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
   }
@@ -228,7 +267,7 @@ export class ShipyardScene extends Phaser.Scene {
     const progress = loadProgress();
     const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
     if (!result) return;
-    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.status = `${node.name}を研究しました`;
     this.refresh();

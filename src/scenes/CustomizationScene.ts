@@ -1,11 +1,15 @@
 import Phaser from 'phaser';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
-import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
+import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
+import { audio } from '@/systems/AudioSystem';
+import { ScrollList } from '@/ui/components/ScrollList';
+import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
+import { ShipClass } from '@/types/ShipClass';
 import { selectionFor } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { applyToStats, applyToWeapons, combineModifiers, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
+import { applyToStats, applyToWeapons, combineModifiers, customizeShips, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IUpgradeData } from '@/types/Modifiers';
@@ -26,6 +30,8 @@ interface IRect { x: number; y: number; w: number; h: number }
 /** Landscape: tabs on top, stats on the left, upgrade cards in a 2-column grid. Portrait: stacked. */
 /** Space at the bottom of the status panel for the remodel line and button. */
 const REFIT_H = IS_PORTRAIT ? 140 : 124;
+const SHEET_DEPTH = 300;
+const shortName = (name: string): string => name.replace(/\s*\(.*\)\s*$/, '');
 
 const L = IS_PORTRAIT
   ? {
@@ -53,7 +59,13 @@ export class CustomizationScene extends Phaser.Scene {
   private readonly tech = techTree.tech as ITechNode[];
   private selected = 0;
   private catalog: IUpgradeData[] = [];
-  private tabs: UIButton[] = [];
+  private pickerName?: Phaser.GameObjects.Text;
+  private pickerRoom = 0;
+  private fleetIds: string[] = [];
+  /** List every owned ship, not just the fleet (#144) */
+  private showAll = true;
+  private sheet: Phaser.GameObjects.GameObject[] = [];
+  private sheetList?: ScrollList;
   private cardFrames: Phaser.GameObjects.Graphics[] = [];
   private cardMarks: Phaser.GameObjects.Text[] = [];
   private statsText: Phaser.GameObjects.Text[] = [];
@@ -70,8 +82,10 @@ export class CustomizationScene extends Phaser.Scene {
     super({ key: SceneKeys.CUSTOMIZATION });
   }
 
-  init(data: { returnTo?: string }): void {
+  init(data: { returnTo?: string; scope?: 'fleet' | 'all' }): void {
     this.returnTo = data?.returnTo ?? SceneKeys.FLEET_BUILDER;
+    // From the Fleet Builder: its fleet; from the home port: the last choice (#144).
+    this.showAll = data?.scope ? data.scope === 'all' : audio.settings.customizeAll;
   }
 
   create(): void {
@@ -83,13 +97,14 @@ export class CustomizationScene extends Phaser.Scene {
     const registry = DataLoader.getRegistry(this);
     // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.
     const owned = ownedShips(loadProgress(), registry.byNation(loadProgress().nation));
-    this.ships = (selection?.slotIds ?? [])
-      .map((id) => owned.find((s) => s.id === id))
-      .filter((s): s is IShipData => s !== undefined);
+    this.fleetIds = (selection?.slotIds ?? []).filter((id): id is string => !!id);
+    this.ships = customizeShips(owned, this.fleetIds, this.showAll);
     this.catalog = DataLoader.getUpgrades(this);
     this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));
     this.selected = 0;
-    this.tabs = [];
+    this.pickerName = undefined;
+    this.sheet = [];
+    this.sheetList = undefined;
     this.cardFrames = [];
     this.cardMarks = [];
     this.statsText = [];
@@ -100,6 +115,7 @@ export class CustomizationScene extends Phaser.Scene {
       this.add
         .text(CANVAS_W / 2, IS_PORTRAIT ? 400 : 320, '艦隊に艦を追加すると改装できます', textStyle(18, Css.muted, { fontStyle: 'bold' }))
         .setOrigin(0.5);
+      this.buildScopeToggle();
       return;
     }
     this.buildTabs();
@@ -116,18 +132,96 @@ export class CustomizationScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '改装 — 装備を換装せよ', displayStyle(24)).setOrigin(0.5);
   }
 
+  /** 艦隊のみ / すべて (#144), remembered in the settings. */
+  private buildScopeToggle(): UIButton {
+    const w = IS_PORTRAIT ? 150 : 120;
+    return new UIButton(this, L.stats.x + w / 2, L.tabsY, this.showAll ? 'すべての艦' : '艦隊のみ', () => {
+      this.showAll = !this.showAll;
+      audio.update({ customizeAll: this.showAll });
+      this.scene.restart({ returnTo: this.returnTo, scope: this.showAll ? 'all' : 'fleet' });
+    }, { variant: 'secondary', width: w, height: L.tabH - 6, fontSize: 13 });
+  }
+
+  /** Scope, ‹ ship › and 一覧 (#144): the ship list can be long, so it steps or opens a picker. */
   private buildTabs(): void {
+    const h = L.tabH - 6;
     const x0 = L.stats.x;
-    const w = CANVAS_W - x0 * 2;
+    const right = CANVAS_W - x0;
+    const scopeW = IS_PORTRAIT ? 150 : 120;
+    const listW = IS_PORTRAIT ? 110 : 90;
+    const stepW = IS_PORTRAIT ? 60 : 48;
     const gap = 8;
-    const bw = Math.floor((w - gap * (this.ships.length - 1)) / this.ships.length);
-    this.tabs = this.ships.map((ship, i) => {
-      const short = ship.name.replace(/\s*\(.*\)\s*$/, '');
-      return new UIButton(this, x0 + i * (bw + gap) + bw / 2, L.tabsY, short, () => {
-        this.selected = i;
-        this.refresh();
-      }, { variant: 'secondary', width: bw, height: L.tabH - 6, fontSize: 14 });
+    this.buildScopeToggle();
+    const prevX = x0 + scopeW + gap + stepW / 2;
+    const nextX = right - listW - gap - stepW / 2;
+    new UIButton(this, prevX, L.tabsY, '‹', () => this.step(-1), { variant: 'secondary', width: stepW, height: h, fontSize: 18 });
+    new UIButton(this, nextX, L.tabsY, '›', () => this.step(1), { variant: 'secondary', width: stepW, height: h, fontSize: 18 });
+    new UIButton(this, right - listW / 2, L.tabsY, '一覧', () => this.openShipList(), { variant: 'primary', width: listW, height: h, fontSize: 14 });
+    const mid = (prevX + nextX) / 2;
+    this.pickerName = this.add.text(mid, L.tabsY, '', textStyle(15, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
+    this.pickerRoom = nextX - prevX - stepW - 12;
+  }
+
+  private step(d: number): void {
+    const n = this.ships.length;
+    this.selected = (this.selected + d + n) % n;
+    this.refresh();
+  }
+
+  private closeShipList(): void {
+    for (const o of this.sheet) o.destroy();
+    this.sheet = [];
+    this.sheetList?.destroy();
+    this.sheetList = undefined;
+  }
+
+  /** Every listed ship by class, as a scrolling sheet; tap one to customise it. */
+  openShipList(filter: ShipClass | null = null): void {
+    this.closeShipList();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      this.sheet.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.75).setOrigin(0, 0).setInteractive());
+    const r = IS_PORTRAIT ? { x: 24, y: 150, w: CANVAS_W - 48, h: CANVAS_H - 300 } : { x: 240, y: 60, w: 800, h: 600 };
+    add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(r.x + 24, r.y + 20, this.showAll ? 'すべての艦' : '艦隊の艦', eyebrowStyle(11, Css.cyan)));
+    const tabH = IS_PORTRAIT ? 48 : 36;
+    const filters: Array<ShipClass | null> = [null, ...CLASS_ORDER];
+    const tw = (r.w - 48 - 6 * (filters.length - 1)) / filters.length;
+    filters.forEach((c, i) => {
+      add(new UIButton(this, r.x + 24 + i * (tw + 6) + tw / 2, r.y + 52 + tabH / 2, c === null ? '全' : CLASS_JA[c].slice(0, 2), () => this.openShipList(c), {
+        variant: c === filter ? 'primary' : 'secondary', width: tw, height: tabH, fontSize: 13,
+      }));
     });
+    const top = r.y + 64 + tabH;
+    const bottom = r.y + r.h - (IS_PORTRAIT ? 90 : 70);
+    const list = new ScrollList(this, { x: r.x + 20, y: top, w: r.w - 36, h: bottom - top });
+    list.setDepth(SHEET_DEPTH + 1);
+    this.sheetList = list;
+    const rowH = IS_PORTRAIT ? 56 : 44;
+    const rowW = r.w - 52;
+    const refits = loadProgress().refits;
+    const shown = this.ships.map((s, i) => ({ s, i })).filter(({ s }) => filter === null || s.shipClass === filter);
+    shown.forEach(({ s, i }, row) => {
+      const on = i === this.selected;
+      const frame = drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.8 : 0.15 });
+      const label = shortName(refitName(this.refitTable, s.name, s, refits[s.id] ?? 0));
+      const name = this.add.text(16, rowH / 2, `${label}${this.fleetIds.includes(s.id) ? '  ⚑' : ''}`, textStyle(15, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
+      const sub = this.add.text(rowW - 14, rowH / 2, kindLabel(s), eyebrowStyle(10, Css.dim)).setOrigin(1, 0.5);
+      list.addItem(this.add.container(0, row * (rowH + 6), [frame, name, sub]), rowW, rowH, () => {
+        this.selected = i;
+        this.closeShipList();
+        this.refresh();
+      });
+    });
+    list.setContentHeight(Math.max(0, shown.length * (rowH + 6) - 6));
+    list.reveal(Math.max(0, shown.findIndex(({ i }) => i === this.selected)) * (rowH + 6), rowH);
+    add(this.add.text(r.x + 24, bottom + 8, '⚑ = 艦隊の艦', textStyle(11, Css.dim)));
+    add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeShipList(), {
+      variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15,
+    }));
   }
 
   private buildStatsPanel(): void {
@@ -188,9 +282,15 @@ export class CustomizationScene extends Phaser.Scene {
     return upgradeSlots(loadProgress().refits[this.ships[this.selected].id] ?? 0);
   }
 
+  /** A ship out on an unfinished sortie (#138) keeps its fit until it comes home. */
+  private away(shipId: string): boolean {
+    return (loadProgress().sortie?.shipIds ?? []).includes(shipId);
+  }
+
   private toggle(upgradeId: string): void {
     if (!this.unlocked.has(upgradeId)) return;
     const ship = this.ships[this.selected];
+    if (this.away(ship.id)) return;
     const progress = loadProgress();
     const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId, this.slots());
     saveProgress({ ...progress, upgrades: { ...progress.upgrades, [ship.id]: next } });
@@ -199,16 +299,20 @@ export class CustomizationScene extends Phaser.Scene {
 
   private remodel(): void {
     const ship = this.ships[this.selected];
+    if (this.away(ship.id)) return;
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
     const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
     if (!r) return;
-    saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } }, [['refit', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } }, [['refit', 1]], Date.now()), 'refit');
     this.refresh();
   }
 
   private refresh(): void {
-    this.tabs.forEach((t, i) => t.setVariant(i === this.selected ? 'primary' : 'secondary'));
+    if (this.pickerName) {
+      this.pickerName.setScale(1).setText(`${shortName(this.ships[this.selected].name)}  ${this.selected + 1} / ${this.ships.length}`);
+      if (this.pickerName.width > this.pickerRoom) this.pickerName.setScale(this.pickerRoom / this.pickerName.width);
+    }
     const fitted = this.fitted();
     const slots = this.slots();
     this.catalog.forEach((u, i) => {
@@ -299,5 +403,9 @@ export class CustomizationScene extends Phaser.Scene {
     }
     // Unremodelled ships have no upgrade slots (#72): point at the remodel that opens them.
     this.slotText.setText(slots > 0 ? `装備 ${fitted.length} / ${slots}` : `装備枠なし — 改に改造すると ${upgradeSlots(1)} 枠`);
+    if (this.away(ship.id)) {
+      this.refitBtn.setLabel('出撃中 — 帰投後に改装できます').setEnabled(false);
+      this.slotText.setText('出撃中');
+    }
   }
 }
