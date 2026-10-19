@@ -2,15 +2,19 @@ import questData from '@/data/quests.json';
 import { IItems, IResources } from '@/types/Progression';
 
 /**
- * 任務 (#52, pure): daily, weekly and one-time goals with resource rewards. Dailies reset when the game day starts
- * (05:00 JST), weeklies on Monday's; one-time ones never. Progress moves on events the game emits (sortie, win,
- * sinkings by class, repairs, building …), and a finished quest's reward is claimed on the 任務 screen.
+ * 任務 (#52 #158, pure): hourly, daily, weekly and one-time goals with resource rewards. Hourly ones turn over every
+ * hour, dailies when the game day starts (05:00 JST), weeklies on Monday's; one-time ones never. Each period shows a
+ * few of its kind, picked from the whole pool by the period number, so the set changes day to day. Progress moves on
+ * events the game emits (sortie, win, sinkings by class, repairs, building …), and a finished quest's reward — and,
+ * for some one-time ones, a medal (#92) — is claimed on the 任務 screen.
  */
 
-export type QuestKind = 'daily' | 'weekly' | 'once';
+export type QuestKind = 'hourly' | 'daily' | 'weekly' | 'once';
 export type QuestEvent =
-  | 'sortie' | 'win' | 'nightWin' | 'sink' | 'sinkCarrier' | 'sinkSubmarine' | 'sinkBattleship'
-  | 'repair' | 'build' | 'research' | 'refit' | 'sweep';
+  | 'sortie' | 'win' | 'nightWin' | 'dayWin' | 'winS' | 'winA' | 'perfectWin' | 'campaignWin' | 'objectiveWin' | 'exerciseWin' | 'ddFlagWin'
+  | 'winPacific' | 'winAtlantic' | 'winMediterranean' | 'winBaltic'
+  | 'sink' | 'sinkDestroyer' | 'sinkCruiser' | 'sinkCarrier' | 'sinkSubmarine' | 'sinkBattleship'
+  | 'repair' | 'build' | 'research' | 'refit' | 'sweep' | 'facility' | 'captainLevel';
 
 export interface IQuest {
   id: string;
@@ -22,6 +26,8 @@ export interface IQuest {
   reward: Partial<IResources>;
   /** 高速修理材・高速建造材 on top of the resources (#143) */
   items?: Partial<IItems>;
+  /** Medal awarded with the reward (#158) */
+  medal?: string;
 }
 
 export interface IQuestState {
@@ -29,15 +35,25 @@ export interface IQuestState {
   day: number;
   /** Game week the weekly progress belongs to */
   week: number;
+  /** Hour (epoch hours) the hourly progress belongs to (#158) */
+  hour: number;
   /** Quest id → progress */
   progress: Record<string, number>;
-  /** Quest ids whose reward was taken (this day / week for repeating ones) */
+  /** Quest ids whose reward was taken (this hour / day / week for repeating ones) */
   claimed: string[];
+  /** Lifetime count of every event (#158): one-time quests and medals read it */
+  totals: Partial<Record<QuestEvent, number>>;
 }
 
 export const QUESTS = (questData as { quests: IQuest[] }).quests;
-export const QUEST_KIND_LABEL: Record<QuestKind, string> = { daily: 'デイリー', weekly: 'ウィークリー', once: '戦果' };
+export const QUEST_KINDS: QuestKind[] = ['hourly', 'daily', 'weekly', 'once'];
+export const QUEST_KIND_LABEL: Record<QuestKind, string> = { hourly: '毎時', daily: 'デイリー', weekly: 'ウィークリー', once: '戦果' };
+/** How many of each kind are on the board at a time (#158); one-time ones show the first 10 by state. */
+export const QUESTS_SHOWN: Record<QuestKind, number> = { hourly: 3, daily: 8, weekly: 6, once: 10 };
+/** Dailies always on the board: the four from 0.0.15, so their progress carries over. */
+const CORE_DAILIES = ['d_sortie', 'd_win', 'd_sink', 'd_repair'];
 
+const HOUR = 3_600_000;
 const DAY = 86_400_000;
 /** 05:00 JST = 20:00 UTC */
 const DAY_START_UTC = 20 * 3_600_000;
@@ -45,7 +61,7 @@ const DAY_START_UTC = 20 * 3_600_000;
 const MONDAY_OFFSET = 4;
 
 export function emptyQuestState(): IQuestState {
-  return { day: 0, week: 0, progress: {}, claimed: [] };
+  return { day: 0, week: 0, hour: 0, progress: {}, claimed: [], totals: {} };
 }
 
 export function gameDay(now: number): number {
@@ -56,61 +72,116 @@ export function gameWeek(now: number): number {
   return Math.floor((gameDay(now) + MONDAY_OFFSET) / 7);
 }
 
+export function gameHour(now: number): number {
+  return Math.floor(now / HOUR);
+}
+
 /** Next reset of `kind` after `now` (epoch ms). */
-export function nextReset(kind: 'daily' | 'weekly', now: number): number {
+export function nextReset(kind: 'hourly' | 'daily' | 'weekly', now: number): number {
+  if (kind === 'hourly') return (gameHour(now) + 1) * HOUR;
   if (kind === 'daily') return DAY_START_UTC + (gameDay(now) + 1) * DAY;
   return DAY_START_UTC + ((gameWeek(now) + 1) * 7 - MONDAY_OFFSET) * DAY;
 }
 
-/** Clears the dailies of a past day and the weeklies of a past week. */
+/** A small seeded generator, so a period always shows the same quests. */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The repeating quests on the board for the period containing `now` (one-time ones: all of them). */
+export function activeQuests(kind: QuestKind, now: number): IQuest[] {
+  const pool = QUESTS.filter((q) => q.kind === kind);
+  if (kind === 'once') return pool;
+  const period = kind === 'hourly' ? gameHour(now) : kind === 'daily' ? gameDay(now) : gameWeek(now);
+  const fixed = kind === 'daily' ? pool.filter((q) => CORE_DAILIES.includes(q.id)) : [];
+  const rest = pool.filter((q) => !fixed.includes(q));
+  const rand = seeded(period * 7919 + QUEST_KINDS.indexOf(kind) * 104_729);
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const picked = new Set([...fixed, ...rest.slice(0, QUESTS_SHOWN[kind] - fixed.length)]);
+  return pool.filter((q) => picked.has(q));
+}
+
+function isActive(q: IQuest, now: number): boolean {
+  return activeQuests(q.kind, now).includes(q);
+}
+
+/** Clears the hourlies of a past hour, the dailies of a past day and the weeklies of a past week. */
 export function refreshQuests(state: IQuestState, now: number): IQuestState {
+  const hour = gameHour(now);
   const day = gameDay(now);
   const week = gameWeek(now);
-  if (day === state.day && week === state.week) return state;
-  const stale = (q: IQuest): boolean => (q.kind === 'daily' && day !== state.day) || (q.kind === 'weekly' && week !== state.week);
+  if (hour === state.hour && day === state.day && week === state.week) return state;
+  const stale = (q: IQuest): boolean =>
+    (q.kind === 'hourly' && hour !== state.hour) || (q.kind === 'daily' && day !== state.day) || (q.kind === 'weekly' && week !== state.week);
   const progress = { ...state.progress };
   for (const q of QUESTS) if (stale(q)) delete progress[q.id];
-  return { day, week, progress, claimed: state.claimed.filter((id) => !QUESTS.some((q) => q.id === id && stale(q))) };
+  return { ...state, hour, day, week, progress, claimed: state.claimed.filter((id) => !QUESTS.some((q) => q.id === id && stale(q))) };
 }
 
-/** Adds `count` to every unclaimed quest waiting for `event` (capped at its goal). */
+/** Adds `count` to the lifetime total and to every unclaimed quest on the board waiting for `event` (capped at its goal). */
 export function recordQuestEvent(state: IQuestState, event: QuestEvent, now: number, count = 1): IQuestState {
-  if (count <= 0) return refreshQuests(state, now);
   const s = refreshQuests(state, now);
+  if (count <= 0) return s;
   const progress = { ...s.progress };
-  let changed = false;
   for (const q of QUESTS) {
-    if (q.event !== event || s.claimed.includes(q.id)) continue;
-    const before = progress[q.id] ?? 0;
-    const after = Math.min(q.goal, before + count);
-    if (after !== before) {
-      progress[q.id] = after;
-      changed = true;
-    }
+    if (q.event !== event || s.claimed.includes(q.id) || !isActive(q, now)) continue;
+    progress[q.id] = Math.min(q.goal, (progress[q.id] ?? 0) + count);
   }
-  return changed ? { ...s, progress } : s;
+  return { ...s, progress, totals: { ...s.totals, [event]: (s.totals[event] ?? 0) + count } };
 }
 
+/** Progress towards the goal; one-time quests count everything done since tracking began (#158). */
 export function questProgress(state: IQuestState, q: IQuest): number {
-  return Math.min(q.goal, state.progress[q.id] ?? 0);
+  const own = state.progress[q.id] ?? 0;
+  return Math.min(q.goal, q.kind === 'once' ? Math.max(own, state.totals[q.event] ?? 0) : own);
 }
 
 export function isClaimable(state: IQuestState, q: IQuest): boolean {
   return !state.claimed.includes(q.id) && questProgress(state, q) >= q.goal;
 }
 
+export type QuestStatus = 'claimable' | 'progress' | 'idle' | 'claimed';
+
+/** The colour-coded state of a quest (#158): 受け取れる / 進行中 / 未着手 / 受取済. */
+export function questStatus(state: IQuestState, q: IQuest): QuestStatus {
+  if (state.claimed.includes(q.id)) return 'claimed';
+  if (isClaimable(state, q)) return 'claimable';
+  return questProgress(state, q) > 0 ? 'progress' : 'idle';
+}
+
+const STATUS_ORDER: QuestStatus[] = ['claimable', 'progress', 'idle', 'claimed'];
+
+/** The board for a kind (#158): its active quests, claimable first, then in progress, not started, claimed; at most 10. */
+export function questBoard(state: IQuestState, kind: QuestKind, now: number): IQuest[] {
+  const s = refreshQuests(state, now);
+  const list = activeQuests(kind, now);
+  return [...list]
+    .sort((a, b) => STATUS_ORDER.indexOf(questStatus(s, a)) - STATUS_ORDER.indexOf(questStatus(s, b)) || list.indexOf(a) - list.indexOf(b))
+    .slice(0, QUESTS_SHOWN.once);
+}
+
 /** Number of rewards waiting (the badge on the menu). */
 export function claimableCount(state: IQuestState, now: number): number {
   const s = refreshQuests(state, now);
-  return QUESTS.filter((q) => isClaimable(s, q)).length;
+  return QUEST_KINDS.reduce((n, k) => n + activeQuests(k, now).filter((q) => isClaimable(s, q)).length, 0);
 }
 
-/** Takes a finished quest's reward; null when it isn't finished or was already taken. */
-export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems> } | null {
+/** Takes a finished quest's reward; null when it isn't finished, isn't on the board or was already taken. */
+export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems>; medal?: string } | null {
   const s = refreshQuests(state, now);
   const q = QUESTS.find((x) => x.id === id);
-  if (!q || !isClaimable(s, q)) return null;
-  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {} };
+  if (!q || !isActive(q, now) || !isClaimable(s, q)) return null;
+  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {}, medal: q.medal };
 }
 
 /** Tolerant parse of a stored quest state. */
@@ -122,11 +193,17 @@ export function parseQuestState(v: unknown): IQuestState {
   if (typeof o.progress === 'object' && o.progress !== null) {
     for (const [k, x] of Object.entries(o.progress as Record<string, unknown>)) if (typeof x === 'number' && Number.isFinite(x)) progress[k] = Math.max(0, x);
   }
+  const totals: Partial<Record<QuestEvent, number>> = {};
+  if (typeof o.totals === 'object' && o.totals !== null) {
+    for (const [k, x] of Object.entries(o.totals as Record<string, unknown>)) if (typeof x === 'number' && Number.isFinite(x) && x > 0) totals[k as QuestEvent] = x;
+  }
   return {
     day: num(o.day),
     week: num(o.week),
+    hour: num(o.hour),
     progress,
     claimed: Array.isArray(o.claimed) ? o.claimed.filter((x): x is string => typeof x === 'string') : [],
+    totals,
   };
 }
 

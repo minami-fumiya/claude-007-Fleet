@@ -12,6 +12,7 @@
 import { IDockJob, IItems, IResources } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
+import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
 import { nationBases } from '@/systems/BaseSystem';
 import { Facilities, FacilityId, finishFacilities, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
@@ -570,7 +571,14 @@ export function loadProgress(): IProgress {
 export function saveProgress(progress: IProgress, category?: LedgerCategory, now = Date.now()): void {
   const save = loadSave();
   const before = save.nations[progress.nation]?.resources;
-  saveSave(withProgress(save, category && before ? noteLedger(progress, category, before, now) : progress));
+  // Medals earned by whatever just changed (a build, a facility, a quest …) are awarded on the spot (#92).
+  saveSave(awardEarnedMedals(withProgress(save, category && before ? noteLedger(progress, category, before, now) : progress)).save);
+}
+
+/** Awards every medal the save has earned but not received yet (#92), e.g. from an older version's progress. */
+export function awardPendingMedals(): void {
+  const r = awardEarnedMedals(loadSave());
+  if (r.medals.length > 0) saveSave(r.save);
 }
 
 /** Records the change from `before` to the progress's resources under `category` (#137). */

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { applyEventReward, eventAppliesToBattle, eventAt, eventEffects, eventFor, EVENT_WINDOW_MS, NO_EVENT, nextEvent, windowIndex } from '@/systems/EventSystem';
-import { claimableCount, claimQuest, emptyQuestState, gameDay, gameWeek, nextReset, parseQuestState, QUESTS, recordQuestEvent, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
+import {
+  activeQuests, claimQuest, emptyQuestState, gameDay, gameWeek, isClaimable, nextReset, parseQuestState, QUEST_KINDS, questBoard, questProgress, QUESTS, QUESTS_SHOWN,
+  questStatus, recordQuestEvent, refreshQuests, withQuestEvents,
+} from '@/systems/QuestSystem';
 import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost, SWEEPS_PER_DAY, sweepsLeft } from '@/systems/ProgressionSystem';
 import { battleReward, resources } from '@/systems/ResourceSystem';
 import { emptyNationProgress, IProgress } from '@/utils/ProgressStore';
@@ -75,28 +78,78 @@ describe('quests (#52)', () => {
 
   it('progress, claim once, daily reset keeps one-time quests', () => {
     let s = refreshQuests(emptyQuestState(), MONDAY_5AM);
-    s = recordQuestEvent(s, 'sortie', MONDAY_5AM, 5);
-    expect(s.progress.d_sortie).toBe(3);
-    expect(s.progress.w_sortie).toBe(5);
+    const weekly = activeQuests('weekly', MONDAY_5AM)[0];
+    s = recordQuestEvent(s, 'sortie', MONDAY_5AM, 7);
+    s = recordQuestEvent(s, weekly.event, MONDAY_5AM, 1);
+    expect(s.progress.d_sortie).toBe(5);
+    expect(s.progress[weekly.id]).toBeGreaterThanOrEqual(1);
     s = recordQuestEvent(s, 'build', MONDAY_5AM);
-    expect(claimableCount(s, MONDAY_5AM)).toBe(2);
+    expect(isClaimable(s, QUESTS.find((q) => q.id === 'a_build')!)).toBe(true);
     const c = claimQuest(s, 'd_sortie', MONDAY_5AM)!;
     expect(c.reward).toEqual(QUESTS.find((q) => q.id === 'd_sortie')!.reward);
     expect(claimQuest(c.state, 'd_sortie', MONDAY_5AM)).toBeNull();
-    expect(claimQuest(c.state, 'w_sortie', MONDAY_5AM)).toBeNull();
     // Next day: the daily is open again, the weekly keeps its progress, one-time quests stay.
     const next = refreshQuests(c.state, MONDAY_5AM + 25 * HOUR);
     expect(next.progress.d_sortie).toBeUndefined();
     expect(next.claimed).not.toContain('d_sortie');
-    expect(next.progress.w_sortie).toBe(5);
-    expect(next.progress.a_build).toBe(1);
-    // Next week: weeklies reset too.
-    expect(refreshQuests(next, MONDAY_5AM + 8 * 24 * HOUR).progress.w_sortie).toBeUndefined();
+    expect(next.progress[weekly.id]).toBe(s.progress[weekly.id]);
+    expect(questProgress(next, QUESTS.find((q) => q.id === 'a_build')!)).toBe(1);
+    // Next week: weeklies reset too; lifetime totals never do.
+    const later = refreshQuests(next, MONDAY_5AM + 8 * 24 * HOUR);
+    expect(later.progress[weekly.id]).toBeUndefined();
+    expect(later.totals.sortie).toBe(s.totals.sortie);
   });
 
   it('parses junk safely', () => {
     expect(parseQuestState(null)).toEqual(emptyQuestState());
-    expect(parseQuestState({ day: 3, progress: { a: 2, b: 'x' }, claimed: ['a', 1] })).toEqual({ day: 3, week: 0, progress: { a: 2 }, claimed: ['a'] });
+    expect(parseQuestState({ day: 3, progress: { a: 2, b: 'x' }, claimed: ['a', 1], totals: { win: 4, sink: 'x' } }))
+      .toEqual({ day: 3, week: 0, hour: 0, progress: { a: 2 }, claimed: ['a'], totals: { win: 4 } });
+  });
+});
+
+describe('quests: the board (#158)', () => {
+  it('has about 100 quests over hourly, daily, weekly and one-time kinds', () => {
+    expect(QUESTS.length).toBeGreaterThanOrEqual(95);
+    expect(new Set(QUESTS.map((q) => q.id)).size).toBe(QUESTS.length);
+    for (const k of QUEST_KINDS) expect(QUESTS.filter((q) => q.kind === k).length).toBeGreaterThanOrEqual(QUESTS_SHOWN[k]);
+  });
+
+  it('three hourly quests turn over every hour; dailies and weeklies are picked per period, at most 10 on a tab', () => {
+    const now = MONDAY_5AM + 30 * 60_000;
+    expect(activeQuests('hourly', now)).toHaveLength(3);
+    expect(activeQuests('hourly', now + 10 * 60_000)).toEqual(activeQuests('hourly', now));
+    const hours = new Set(Array.from({ length: 12 }, (_, i) => activeQuests('hourly', now + i * HOUR).map((q) => q.id).join()));
+    expect(hours.size).toBeGreaterThan(6);
+    expect(activeQuests('daily', now).map((q) => q.id)).toEqual(expect.arrayContaining(['d_sortie', 'd_win', 'd_sink', 'd_repair']));
+    expect(activeQuests('daily', now)).toHaveLength(QUESTS_SHOWN.daily);
+    expect(activeQuests('daily', now + 24 * HOUR)).not.toEqual(activeQuests('daily', now));
+    for (const k of QUEST_KINDS) expect(questBoard(emptyQuestState(), k, now).length).toBeLessThanOrEqual(10);
+    expect(nextReset('hourly', now)).toBe(MONDAY_5AM + HOUR);
+  });
+
+  it('hourly progress resets on the hour; an off-board quest gains nothing', () => {
+    const now = MONDAY_5AM + 5 * 60_000;
+    const h = activeQuests('hourly', now)[0];
+    let s = recordQuestEvent(emptyQuestState(), h.event, now, h.goal);
+    expect(isClaimable(s, h)).toBe(true);
+    s = refreshQuests(s, now + HOUR);
+    expect(s.progress[h.id]).toBeUndefined();
+    const off = QUESTS.find((q) => q.kind === 'daily' && !activeQuests('daily', now).includes(q))!;
+    expect(recordQuestEvent(emptyQuestState(), off.event, now, 99).progress[off.id]).toBeUndefined();
+    expect(claimQuest(recordQuestEvent(emptyQuestState(), off.event, now, 99), off.id, now)).toBeNull();
+  });
+
+  it('sorts the board: claimable, in progress, not started, claimed; claiming a ladder quest names its medal', () => {
+    const now = MONDAY_5AM;
+    let s = recordQuestEvent(emptyQuestState(), 'build', now, 10);
+    s = recordQuestEvent(s, 'win', now, 3);
+    s = claimQuest(s, 'a_build', now)!.state;
+    const board = questBoard(s, 'once', now);
+    const order = board.map((q) => questStatus(s, q));
+    expect(order).toEqual([...order].sort((a, b) => ['claimable', 'progress', 'idle', 'claimed'].indexOf(a) - ['claimable', 'progress', 'idle', 'claimed'].indexOf(b)));
+    expect(board[0].id).toBe('a_build10');
+    expect(claimQuest(s, 'a_build10', now)!.medal).toBe('q_build10');
+    expect(questStatus(s, QUESTS.find((q) => q.id === 'a_win50')!)).toBe('progress');
   });
 });
 
@@ -121,8 +174,8 @@ describe('sweep (#57)', () => {
     expect(r.reward.fuel).toBe(Math.round(won.fuel * SWEEP_REWARD_SCALE));
     expect(r.progress.resources.fuel).toBe(p.resources.fuel - cost.fuel + r.reward.fuel);
     expect(r.merit).toBeGreaterThan(0);
-    expect(r.progress.quests.progress.a_sweep).toBe(1);
-    expect(r.progress.quests.progress.w_carrier).toBe(1);
+    expect(questProgress(r.progress.quests, QUESTS.find((q) => q.id === 'a_sweep')!)).toBe(1);
+    expect(r.progress.quests.totals.sinkCarrier).toBe(1);
     expect(r.progress.campaign).toEqual(p.campaign);
     const doubled = sweepArea(p, area, enemy, MONDAY_5AM, eventEffects({ kind: 'double', theater: area.theater, startsAt: 0, endsAt: 1 }))!;
     expect(doubled.reward.fuel).toBe(Math.round(won.fuel * 2 * SWEEP_REWARD_SCALE));

@@ -7,11 +7,11 @@ import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
-import { isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation } from '@/utils/ProgressStore';
+import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation } from '@/utils/ProgressStore';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { nextRegenMs, regenFull } from '@/systems/ResourceSystem';
-import { clearCount, fleetSlots, missionCount, missionText, promotionText, RANK_MISSIONS, rankOf } from '@/systems/RankSystem';
+import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
@@ -24,7 +24,11 @@ import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseOfProgress, currentBaseId, isAtCurrentBase, repairTimeMultiplier } from '@/systems/BaseSystem';
-import { addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
+import {
+  activeQuests, addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
+  QuestStatus, questStatus, refreshQuests, withQuestEvents,
+} from '@/systems/QuestSystem';
+import { MEDALS } from '@/systems/RecordSystem';
 import { eventLabel, nextEvent } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { rankTable } from '@/systems/RankTable';
@@ -70,6 +74,21 @@ function longClock(ms: number): string {
  * 鎮守府: the home port hub. Shows resources, opens the sortie / arsenal / refit screens and runs the
  * docks, where damaged ships are repaired in real time (two at once) or instantly for a fee.
  */
+
+/** 任務 tab (#158): a quest kind, or the promotion missions. */
+type QuestTab = QuestKind | 'rank';
+
+/** One row of the 任務 sheet. */
+interface IQuestRow {
+  id: string;
+  name: string;
+  text: string;
+  value: number;
+  goal: number;
+  reward: string;
+  status: QuestStatus;
+}
+
 export class HomeScene extends Phaser.Scene {
   private registryShips!: ShipRegistry;
   private bar!: ResourceBar;
@@ -79,7 +98,7 @@ export class HomeScene extends Phaser.Scene {
   private regenText!: Phaser.GameObjects.Text;
   private overlay: Phaser.GameObjects.GameObject[] = [];
   private menuObjs: Phaser.GameObjects.GameObject[] = [];
-  private questKind: QuestKind = 'daily';
+  private questTab: QuestTab = 'daily';
   private eventText!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -90,6 +109,8 @@ export class HomeScene extends Phaser.Scene {
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
     audio.music('menu');
+    // Medals earned outside a battle (builds, facilities, an older version's progress) are handed out here (#92).
+    awardPendingMedals();
     this.registryShips = DataLoader.getRegistry(this);
     this.dynamic = [];
     this.dockMeters = [];
@@ -216,10 +237,14 @@ export class HomeScene extends Phaser.Scene {
     }
   }
 
-  /** 任務 (#52): one kind at a time; finished ones are claimed here. */
-  private openQuests(kind: QuestKind = this.questKind): void {
+  /**
+   * 任務 (#52 #158): one tab at a time — 毎時 / デイリー / ウィークリー / 戦果, and the promotion missions (#142). At
+   * most 10 rows, coloured by state: claimable gold, in progress cyan with a bar, not started grey, claimed dimmed.
+   * Landscape lays the rows out in two columns.
+   */
+  private openQuests(tab: QuestTab = this.questTab): void {
     this.closeNationPicker();
-    this.questKind = kind;
+    this.questTab = tab;
     const now = Date.now();
     const progress = loadProgress();
     const state = refreshQuests(progress.quests, now);
@@ -229,45 +254,81 @@ export class HomeScene extends Phaser.Scene {
       return o;
     };
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
-    const list = QUESTS.filter((q) => q.kind === kind);
-    const rowH = IS_PORTRAIT ? 100 : 74;
-    const gap = IS_PORTRAIT ? 10 : 6;
-    const w = IS_PORTRAIT ? CANVAS_W - 48 : 760;
-    const head = IS_PORTRAIT ? 190 : 136;
-    const h = head + list.length * (rowH + gap) + (IS_PORTRAIT ? 86 : 62);
+    const rows: IQuestRow[] = tab === 'rank' ? this.rankMissionRows(progress) : questBoard(state, tab, now).map((q) => {
+      const status = questStatus(state, q);
+      const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
+      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・');
+      return { id: q.id, name: q.name, text: q.text, value: questProgress(state, q), goal: q.goal, reward, status };
+    });
+    const cols = IS_PORTRAIT ? 1 : 2;
+    const perCol = Math.ceil(QUESTS_SHOWN.once / cols);
+    const rowH = IS_PORTRAIT ? 92 : 78;
+    const gap = IS_PORTRAIT ? 6 : 8;
+    const w = IS_PORTRAIT ? CANVAS_W - 48 : 1200;
+    const head = IS_PORTRAIT ? 150 : 128;
+    const h = head + perCol * (rowH + gap) + (IS_PORTRAIT ? 86 : 62);
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(16, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
     add(this.add.text(x + 28, y + 22, '任務', eyebrowStyle(11)));
-    const reset = kind === 'once' ? '1 回限り' : `更新まで ${longClock(nextReset(kind, now) - now)}`;
-    add(this.add.text(x + w - 28, y + 22, reset, textStyle(12, Css.muted)).setOrigin(1, 0));
-    const kinds: QuestKind[] = ['daily', 'weekly', 'once'];
-    const tw = (w - 56 - 16) / kinds.length;
-    const tabH = IS_PORTRAIT ? 56 : 44;
-    kinds.forEach((k, i) => {
-      const n = QUESTS.filter((q) => q.kind === k && isClaimable(state, q)).length;
-      add(new UIButton(this, x + 28 + i * (tw + 8) + tw / 2, y + (IS_PORTRAIT ? 80 : 64) + tabH / 2, n > 0 ? `${QUEST_KIND_LABEL[k]} (${n})` : QUEST_KIND_LABEL[k], () => this.openQuests(k), {
-        variant: k === kind ? 'primary' : 'secondary', width: tw, height: tabH, fontSize: IS_PORTRAIT ? 16 : 15,
+    const next = nextRank(progress);
+    const note = tab === 'once' ? '1 回限り・達成で勲章がもらえるものも'
+      : tab === 'rank' ? (next ? `次の階級: ${next.rank.name}` : '最高の階級です')
+        : `更新まで ${longClock(nextReset(tab, now) - now)}`;
+    add(this.add.text(x + w - 28, y + 22, note, textStyle(12, Css.muted)).setOrigin(1, 0));
+    const tabs: QuestTab[] = [...QUEST_KINDS, 'rank'];
+    const tw = (w - 56 - 8 * (tabs.length - 1)) / tabs.length;
+    const tabH = IS_PORTRAIT ? 52 : 40;
+    tabs.forEach((k, i) => {
+      const n = k === 'rank' ? 0 : activeQuests(k, now).filter((q) => isClaimable(state, q)).length;
+      const label = k === 'rank' ? '昇進' : QUEST_KIND_LABEL[k];
+      add(new UIButton(this, x + 28 + i * (tw + 8) + tw / 2, y + (IS_PORTRAIT ? 64 : 56) + tabH / 2, n > 0 ? `${label} (${n})` : label, () => this.openQuests(k), {
+        variant: k === tab ? 'primary' : 'secondary', width: tw, height: tabH, fontSize: IS_PORTRAIT ? 14 : 15,
       }));
     });
-    let ry = y + head;
-    const bw = IS_PORTRAIT ? 150 : 150;
-    for (const q of list) {
-      const done = state.claimed.includes(q.id);
-      const claimable = isClaimable(state, q);
-      add(addPanel(this, x + 28, ry, w - 56, rowH, { radius: 14, fillAlpha: 0.5, rim: claimable ? Colors.gold : undefined }));
-      add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 14 : 10), q.name, textStyle(IS_PORTRAIT ? 16 : 15, done ? Css.dim : Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 44 : 34), `${q.text}  ${questProgress(state, q)} / ${q.goal}`, textStyle(12, done ? Css.dim : Css.muted)));
-      add(this.add.text(x + 44, ry + rowH - (IS_PORTRAIT ? 12 : 8), [formatResources(q.reward), formatItems(q.items ?? {})].filter((t) => t).join('・'), textStyle(11, Css.gold)).setOrigin(0, 1));
-      add(new UIButton(this, x + w - 28 - 12 - bw / 2, ry + rowH / 2, done ? '受取済' : claimable ? '受け取る' : '未達成', () => this.claimQuest(q.id), {
-        variant: claimable ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
-      })).setEnabled(claimable);
-      ry += rowH + gap;
-    }
-    add(new UIButton(this, x + w / 2, ry + (IS_PORTRAIT ? 36 : 26), '閉じる', () => {
+    const colW = (w - 56 - 16 * (cols - 1)) / cols;
+    const bw = IS_PORTRAIT ? 140 : 120;
+    rows.forEach((r, i) => {
+      const rx = x + 28 + Math.floor(i / perCol) * (colW + 16);
+      const ry = y + head + (i % perCol) * (rowH + gap);
+      const claimed = r.status === 'claimed';
+      const color = r.status === 'claimable' ? Css.gold : r.status === 'progress' ? Css.cyan : Css.dim;
+      add(addPanel(this, rx, ry, colW, rowH, { radius: 14, fillAlpha: claimed ? 0.2 : 0.5, rim: r.status === 'claimable' ? Colors.gold : r.status === 'progress' ? Colors.cyan : undefined }));
+      const tx = rx + 16;
+      const textW = colW - 32 - bw - 12;
+      add(this.add.text(tx, ry + 8, r.name, textStyle(15, claimed ? Css.dim : r.status === 'idle' ? Css.muted : Css.text, { fontStyle: 'bold' })));
+      add(this.add.text(tx + textW, ry + 12, `${Math.min(r.goal, r.value)} / ${r.goal}`, textStyle(12, color)).setOrigin(1, 0));
+      add(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted)));
+      drawMeter(add(this.add.graphics()), tx, ry + rowH - (IS_PORTRAIT ? 30 : 27), textW, 4, r.value / r.goal, r.status === 'claimable' ? Colors.gold : claimed ? Colors.muted : Colors.cyan);
+      if (r.reward) add(this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : Css.gold)).setOrigin(0, 1));
+      const label = { claimable: '受け取る', progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
+      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
+        variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
+      })).setEnabled(r.status === 'claimable' && tab !== 'rank');
+      if (claimed) btn.setAlpha(0.5);
+    });
+    if (rows.length === 0) add(this.add.text(x + w / 2, y + head + 40, '表示できる任務はありません', textStyle(14, Css.muted)).setOrigin(0.5, 0));
+    add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 48 : 36), '閉じる', () => {
       this.closeNationPicker();
       this.buildMenu();
     }, { variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: IS_PORTRAIT ? 60 : 44, fontSize: 15 }));
+  }
+
+  /** The promotion missions (#142) of the ranks ahead, for the 昇進 tab (#158). */
+  private rankMissionRows(progress: IProgress): IQuestRow[] {
+    const current = rankOf(progress).index;
+    const rows: IQuestRow[] = [];
+    for (const [index, missions] of Object.entries(RANK_MISSIONS)) {
+      if (Number(index) <= current) continue;
+      for (const m of missions ?? []) {
+        const value = Math.min(m.goal, missionCount(progress, m.stat));
+        rows.push({
+          id: `${index}_${m.stat}`, name: `${RANKS[Number(index)].name}への昇進任務`, text: m.text, value, goal: m.goal, reward: '',
+          status: value >= m.goal ? 'claimed' : value > 0 ? 'progress' : 'idle',
+        });
+      }
+    }
+    return rows.slice(0, QUESTS_SHOWN.once);
   }
 
   /** Every rank (#128): merit needed, sortie slots, ship grade and what it opens; the current one highlighted. */
@@ -329,7 +390,9 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const r = claimQuest(progress.quests, id, Date.now());
     if (!r) return;
-    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) }, 'quest');
+    // A ladder quest's medal (#158) goes into the shared record with the reward.
+    const record = r.medal && !progress.record.medals.includes(r.medal) ? { ...progress.record, medals: [...progress.record.medals, r.medal] } : progress.record;
+    saveProgress({ ...progress, record, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) }, 'quest');
     this.refresh();
     this.openQuests();
   }
