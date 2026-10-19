@@ -1,6 +1,7 @@
 import { IScenario, IScenarioForce, IScenarioSide, ScenarioTheater } from '@/types/Scenario';
 import { IShipData } from '@/types/Ship';
 import { ShipRegistry } from './ShipRegistry';
+import { kindBreakdown, kindGroups } from './ShipKind';
 
 /** Historical scenarios (pure): which forces the player and the AI get when playing a side. */
 
@@ -52,4 +53,18 @@ export function sortScenarios(list: readonly IScenario[]): IScenario[] {
 /** The scenarios of a theater ('all' for every one). */
 export function scenariosIn(list: readonly IScenario[], theater: ScenarioTheater | 'all'): IScenario[] {
   return theater === 'all' ? [...list] : list.filter((s) => s.theater === theater);
+}
+
+/**
+ * A side's ships by kind (#196): a headline ("7 隻 — 戦艦 1・軽巡 1・駆逐艦 5") and one line per kind with its
+ * names, repeated ships counted ("駆逐艦  雪風・浜風 ×2"). Stand-ins of another nation are marked ※.
+ */
+export function forceLineup(force: IScenarioForce, registry: ShipRegistry): { headline: string; lines: string[] } {
+  const ships = forceShips(force, registry).map((s) => ({ ...s, name: `${s.name.replace(/\s*\(.*\)\s*$/, '')}${s.nation !== force.nation ? '※' : ''}` }));
+  const lines = kindGroups(ships).map((g) => {
+    const counts = new Map<string, number>();
+    for (const n of g.names) counts.set(n, (counts.get(n) ?? 0) + 1);
+    return `${g.kind}  ${[...counts].map(([n, c]) => (c > 1 ? `${n} ×${c}` : n)).join('・')}`;
+  });
+  return { headline: `${ships.length} 隻 — ${kindBreakdown(ships)}`, lines };
 }

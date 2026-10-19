@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.24.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.25.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -45,15 +45,17 @@ const SCREENS = [
   'CaptainScene', 'BaseScene',
 ];
 
-async function boot(page: Page, layout: string, save: object = SAVE): Promise<string[]> {
+/** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */
+async function boot(page: Page, layout: string, save: object = SAVE, lastSeen = '99.0.0'): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/?layout=${layout}`);
   await page.waitForFunction(() => (window as GameWindow).game !== undefined, null, { timeout: 60_000 });
-  await page.evaluate((s) => {
+  await page.evaluate(([s, seen]) => {
     const data = s as typeof SAVE;
     localStorage.setItem('ww2fleet.progress.v2', JSON.stringify({ ...data, nations: { IJN: { ...data.nations.IJN, regenAt: Date.now() } } }));
-  }, save);
+    localStorage.setItem('ww2fleet.settings.v1', JSON.stringify({ lastSeenVersion: seen }));
+  }, [save, lastSeen] as const);
   await page.reload();
   await page.waitForFunction(() => {
     const g = (window as unknown as { game?: Phaser.Game }).game;
@@ -220,6 +222,33 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('every scenario and side lists its ships by kind and fits (#196)', async ({ page }, info) => {
+    test.setTimeout(240_000);
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ScenarioScene'] });
+    await open(page, 'ScenarioScene');
+    type S = { scenarios: Array<{ id: string; sides: unknown[] }>; selected: number; side: number; theater: string; drawList(): void; refresh(): void; detail: Array<{ type: string; text?: string }> };
+    const count = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as S).scenarios.length);
+    const problems: string[] = [];
+    for (let i = 0; i < count; i++) {
+      for (let side = 0; side < 2; side++) {
+        const text = await page.evaluate(([idx, sd]) => {
+          const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as S;
+          s.selected = idx;
+          s.side = sd;
+          s.refresh();
+          return s.detail.filter((o) => o.type === 'Text').map((o) => o.text ?? '').join('|');
+        }, [i, side] as const);
+        if (!/隻 — /.test(text)) problems.push(`${i}/${side}: no kind headline`);
+        const over = [...await overflowingTexts(page, 'ScenarioScene'), ...await overlappingTexts(page, 'ScenarioScene')];
+        if (over.length > 0) problems.push(`${i}/${side}: ${over.join(', ')}`);
+      }
+    }
+    await page.screenshot({ path: info.outputPath('scenario-lineup.png') });
+    expect(problems, layout).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('a save full of ships, captains and cleared areas still fits every screen (#163)', async ({ page }, info) => {
     // Fourteen screens, each checked for overflow and overlaps.
     test.setTimeout(240_000);
@@ -342,6 +371,67 @@ test.describe('screens', () => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: info.outputPath('captain-recruits.png') });
     expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('help lists every formation, and the title copy fits (#197)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HelpScene'] });
+    expect(await overflowingTexts(page, 'MainMenuScene')).toEqual([]);
+    await open(page, 'HelpScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HelpScene') as unknown as { tab: string; refresh(): void };
+      s.tab = 'formations';
+      s.refresh();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('help-formations.png') });
+    expect(await overflowingTexts(page, 'HelpScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'HelpScene')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('a 艦長教本 goes to the captain the player picks, and traits show their progress (#199)', async ({ page }, info) => {
+    const save = { ...SAVE, version: 13, seenHelp: ['CaptainScene'], nations: { IJN: { ...SAVE.nations.IJN, captains: ['ijn_sakai', 'ijn_murase'], items: { fastRepair: 0, fastBuild: 0, captainBook: 1 } } } };
+    const errors = await boot(page, info.project.metadata.layout as string, save);
+    await open(page, 'CaptainScene');
+    await page.screenshot({ path: info.outputPath('captain-book.png') });
+    expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CaptainScene')).toEqual([]);
+    const r = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as {
+        selectedId: string; useBook(c: { id: string; name: string }): void; children: { list: Array<{ type: string; text?: string }> };
+      };
+      const xp = (): number => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.captainXp[s.selectedId] ?? 0;
+      const traits = s.children.list.some((o) => o.type === 'Text' && /夜戦で 3 隻撃沈 — \d+ \/ 3/.test(o.text ?? ''));
+      const before = xp();
+      s.useBook({ id: s.selectedId, name: '' });
+      return { gained: xp() - before, books: JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.items.captainBook, traits };
+    });
+    expect(r).toEqual({ gained: 300, books: 0, traits: true });
+    expect(errors).toEqual([]);
+  });
+
+  test('a new version shows its 更新内容 on the title once (#205)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, SAVE, '0.0.20-alpha');
+    type M = { changesLayer: unknown[]; children: { list: Array<{ type: string; list?: Array<{ text?: string }>; emit(e: string): void }> } };
+    const shown = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M).changesLayer.length);
+    expect(shown).toBeGreaterThan(0);
+    await page.screenshot({ path: info.outputPath('changes.png') });
+    expect(await overflowingTexts(page, 'MainMenuScene')).toEqual([]);
+    // 閉じる marks the version seen; the next visit shows nothing.
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M;
+      const close = s.children.list.find((o) => o.type === 'Container' && (o.list ?? []).some((c) => c.text === '閉じる'))!;
+      close.emit('pointerdown');
+      close.emit('pointerup');
+    });
+    const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.settings.v1')!).lastSeenVersion as string);
+    expect(seen).toMatch(/^0\.0\.\d+-alpha/);
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScene('MainMenuScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M).changesLayer.length)).toBe(0);
     expect(errors).toEqual([]);
   });
 

@@ -23,6 +23,8 @@ export interface IItems {
   fastRepair: number;
   /** 高速建造材 */
   fastBuild: number;
+  /** 艦長教本 (#199): a captain's XP +DUPLICATE_CAPTAIN_XP, used on whom the player chooses */
+  captainBook: number;
 }
 
 /** Research branches (系統) of the tech tree, in display order. */

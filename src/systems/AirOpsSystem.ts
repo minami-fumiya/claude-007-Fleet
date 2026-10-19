@@ -227,7 +227,7 @@ export class AirOpsSystem {
     for (let i = 0; i < sq.planes; i++) {
       // Each pilot's drop is a little off as well as spread across the formation.
       const offset = (i - (sq.planes - 1) / 2) * AERIAL_TORPEDO_SPREAD + (Math.random() * 2 - 1) * AERIAL_TORPEDO_ERROR;
-      this.weapons.launchProjectile(sq.x, sq.y, aim + offset, airPowered(this.aerialTorpedo, carrier));
+      this.weapons.launchProjectile(sq.x, sq.y, aim + offset, airPowered(this.aerialTorpedo, carrier), carrier);
     }
     sq.state = SquadronState.Return;
   }
@@ -254,7 +254,7 @@ export class AirOpsSystem {
     const bomb = airPowered(this.bomb, sq.carrier);
     for (let i = 0; i < hits && target.isAlive; i++) {
       const dmg = CombatSystem.calculateDamage(bomb, target.stats.shipClass, target.stats.armor);
-      CombatSystem.applyDamage(target, dmg);
+      CombatSystem.applyDamage(target, dmg, sq.carrier);
       this.onBombHit(target, this.bomb, dmg);
     }
     sq.state = SquadronState.Return;

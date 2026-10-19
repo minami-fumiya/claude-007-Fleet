@@ -109,3 +109,14 @@ describe('captain skills learned before #187 moved the slot levels', () => {
     expect(validLearned(murase, np.captainSkills.ijn_murase)).toEqual(['ASW']);
   });
 });
+
+describe('v13 (#199): 艦長教本 and captains own sinkings', () => {
+  it('a 0.0.25 save gets no books and keeps every trait count it had', () => {
+    const raw = readFileSync(join(DIR, 'save-0.0.25.json'), 'utf8');
+    const before = JSON.parse(raw).nations.IJN.captainStats.ijn_sakai;
+    const { save } = parseSaveChecked(raw);
+    const np = save.nations.IJN!;
+    expect(np.items.captainBook).toBe(0);
+    expect(np.captainStats.ijn_sakai).toEqual({ ...before, sinks: 0 });
+  });
+});

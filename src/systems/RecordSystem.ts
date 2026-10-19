@@ -41,6 +41,10 @@ export interface IMedalContext {
   captains?: number;
   /** Highest captain level */
   captainLevel?: number;
+  /** Most carriers one nation owns (#204) */
+  carriersOwned?: number;
+  /** Most enemies one captain's own ship has sunk (#199) */
+  captainSinks?: number;
   /** Sum of every facility level built (#146) */
   facilityLevels?: number;
   /** Nations with any progress */
@@ -106,9 +110,11 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('med_war', '地中海従軍章', 'campaign', [10, 50], (g) => `地中海で ${g} 回勝利する`, (_r, c) => total(c, 'winMediterranean')),
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
+  ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),
   ...ladder('fleet', '艦隊章', 'growth', [5, 15, 30], (g) => `艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.shipsOwned ?? 0),
   ...ladder('science', '技術章', 'growth', [5, 15, 30], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
+  ...ladder('captain_ace', '撃沈王章', 'growth', [10, 50, 150], (g) => `1 人の艦長の艦で ${g} 隻撃沈する`, (_r, c) => c.captainSinks ?? 0),
   ...ladder('mentor', '名艦長章', 'growth', [10, 30, 60, 100], (g) => `艦長を Lv${g} に育てる`, (_r, c) => c.captainLevel ?? 0),
   ...ladder('instructor', '教官章', 'growth', [1, 10, 30], (g) => `艦長にスキルを ${g} 回習得させる`, (_r, c) => total(c, 'learnSkill')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
@@ -119,6 +125,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),
   ...ladder('patrol', '哨戒章', 'base', [10, 100], (g) => `攻略済みの海域を ${g} 回掃討する`, (_r, c) => total(c, 'sweep')),
   // 特殊
+  ...ladder('veteran_player', '古参章', 'special', [1, 3, 10], (g) => `新しい版を ${g} 回迎える (タイトルの更新内容)`, (_r, c) => total(c, 'versionUpdate')),
   ...ladder('nations', '連合章', 'special', [2, 4, 7], (g) => `${g} か国で艦隊を率いる`, (_r, c) => c.nationsPlayed ?? 0),
   ...ladder('torpedo_squadron', '水雷戦隊章', 'special', [10, 50], (g) => `駆逐艦が旗艦の艦隊で ${g} 回勝利する`, (_r, c) => total(c, 'ddFlagWin')),
   ...ladder('drill', '演習章', 'special', [20, 100], (g) => `演習で ${g} 回勝利する`, (_r, c) => total(c, 'exerciseWin')),

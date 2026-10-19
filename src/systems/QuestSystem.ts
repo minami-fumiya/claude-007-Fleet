@@ -16,7 +16,9 @@ export type QuestEvent =
   | 'sink' | 'sinkDestroyer' | 'sinkCruiser' | 'sinkCarrier' | 'sinkSubmarine' | 'sinkBattleship'
   | 'repair' | 'build' | 'research' | 'refit' | 'sweep' | 'facility' | 'captainLevel'
   // 0.0.25: convoy escorts won (#186), skills taught to captains (#187)
-  | 'convoyWin' | 'learnSkill';
+  | 'convoyWin' | 'learnSkill'
+  // 0.0.26: new versions met on the title screen (#205)
+  | 'versionUpdate';
 
 export interface IQuest {
   id: string;
@@ -216,7 +218,7 @@ export function withQuestEvents<T extends { quests: IQuestState }>(progress: T, 
   return quests === progress.quests ? progress : { ...progress, quests };
 }
 
-export const ITEM_LABEL: Record<keyof IItems, string> = { fastRepair: '高速修理材', fastBuild: '高速建造材' };
+export const ITEM_LABEL: Record<keyof IItems, string> = { fastRepair: '高速修理材', fastBuild: '高速建造材', captainBook: '艦長教本' };
 
 /** "高速修理材 2・高速建造材 1" ('' when none). */
 export function formatItems(items: Partial<IItems>): string {
@@ -224,5 +226,5 @@ export function formatItems(items: Partial<IItems>): string {
 }
 
 export function addItems(have: IItems, add: Partial<IItems>): IItems {
-  return { fastRepair: have.fastRepair + (add.fastRepair ?? 0), fastBuild: have.fastBuild + (add.fastBuild ?? 0) };
+  return { fastRepair: have.fastRepair + (add.fastRepair ?? 0), fastBuild: have.fastBuild + (add.fastBuild ?? 0), captainBook: (have.captainBook ?? 0) + (add.captainBook ?? 0) };
 }

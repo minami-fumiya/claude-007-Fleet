@@ -36,7 +36,7 @@ export const STORAGE_KEY = 'ww2fleet.progress.v2';
 export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
 export const SAVE_VERSION = LATEST_VERSION;
 /** A new nation starts with one of each time-saving item (#143). */
-export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1 };
+export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1, captainBook: 0 };
 
 /** Everything one nation's admiral has built up. */
 export interface INationProgress {
@@ -362,7 +362,7 @@ function stringMap(src: unknown): Record<string, string> {
 function parseItems(v: unknown): IItems {
   const o = isObject(v) ? v : {};
   const n = (x: unknown): number => (isNum(x) ? Math.max(0, Math.floor(x)) : 0);
-  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild) };
+  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild), captainBook: n(o.captainBook) };
 }
 
 function parseSweeps(v: unknown): { day: number; counts: Record<string, number> } {
@@ -382,7 +382,7 @@ function parseCaptainStats(src: unknown): Record<string, ICaptainStats> {
   for (const [id, v] of Object.entries(src)) {
     if (!isObject(v)) continue;
     const n = (x: unknown): number => (isNum(x) ? Math.max(0, x) : 0);
-    out[id] = { nightSinks: n(v.nightSinks), subSinks: n(v.subSinks), heavySurvivals: n(v.heavySurvivals) };
+    out[id] = { nightSinks: n(v.nightSinks), subSinks: n(v.subSinks), sinks: n(v.sinks), heavySurvivals: n(v.heavySurvivals) };
   }
   return out;
 }
