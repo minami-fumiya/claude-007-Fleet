@@ -48,9 +48,16 @@ export function criticalChance(type: WeaponType, damage: number, targetMaxHp: nu
   return Math.min(1, base * size);
 }
 
-/** Rolls for a critical on a hit. `rng` returns [0, 1) and is called twice at most. */
-export function rollCriticalHit(type: WeaponType, damage: number, targetMaxHp: number, rng: () => number = Math.random): CriticalType | null {
+/** Shore targets can't move: a hit can only silence their guns (#133). */
+export const LAND_CRITICAL_LABEL = '砲台沈黙';
+
+/**
+ * Rolls for a critical on a hit. `rng` returns [0, 1) and is called twice at most. A shore target (`land`) only
+ * ever gets its guns knocked out — engines and rudders mean nothing to a fort.
+ */
+export function rollCriticalHit(type: WeaponType, damage: number, targetMaxHp: number, rng: () => number = Math.random, land = false): CriticalType | null {
   if (rng() >= criticalChance(type, damage, targetMaxHp)) return null;
+  if (land) return CriticalType.MainGun;
   const weights = WEIGHTS[type] ?? DEFAULT_WEIGHTS;
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let pick = rng() * total;

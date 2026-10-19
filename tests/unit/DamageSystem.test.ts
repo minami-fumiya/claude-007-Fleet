@@ -37,3 +37,13 @@ describe('DamageSystem', () => {
     expect(criticalEffects(s, CRITICAL_DURATION_MS + 1)).toEqual({ speedMul: 1, turnMul: 1, gunReloadMul: 1 });
   });
 });
+
+describe('shore targets (#133)', () => {
+  it('only ever get their guns knocked out', () => {
+    for (let i = 0; i < 50; i++) {
+      const seq = [0, i / 50];
+      let n = 0;
+      expect(rollCriticalHit(WeaponType.Torpedo, 999, 100, () => seq[n++ % 2], true)).toBe(CriticalType.MainGun);
+    }
+  });
+});

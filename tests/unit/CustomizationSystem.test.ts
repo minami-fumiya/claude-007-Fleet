@@ -48,8 +48,9 @@ describe('CustomizationSystem', () => {
     expect(fitted).toHaveLength(2);
     expect(toggleUpgrade(fitted, 'aa_guns', 2)).toBe(fitted);
     expect(toggleUpgrade(fitted, 'boiler', 2)).toEqual(['radar']);
-    // An unremodelled ship has no slots (#72).
-    expect(toggleUpgrade([], 'boiler', UPGRADE_SLOTS)).toEqual([]);
+    // An unremodelled ship has one slot (#132).
+    expect(toggleUpgrade([], 'boiler', UPGRADE_SLOTS)).toEqual(['boiler']);
+    expect(toggleUpgrade(['boiler'], 'radar', UPGRADE_SLOTS)).toEqual(['boiler']);
   });
 
   it('applies modifiers to stats', () => {
@@ -78,15 +79,15 @@ describe('CustomizationSystem', () => {
     expect(m.airPowerMul).toBe(1);
   });
 
-  it('upgrade slots come with remodelling: 0 → 2 (改) → 3 (改二) → 4 (改三) (#72)', () => {
-    expect([0, 1, 2, 3, 9].map(upgradeSlots)).toEqual([0, 2, 3, 4, 4]);
+  it('upgrade slots: 1 unremodelled, then 2 (改) → 3 (改二) → 4 (改三) (#72 #132)', () => {
+    expect([0, 1, 2, 3, 9].map(upgradeSlots)).toEqual([1, 2, 3, 4, 4]);
     expect(upgradeSlots(-1)).toBe(UPGRADE_SLOTS);
     expect(MAX_UPGRADE_SLOTS).toBe(4);
     let fitted: string[] = [];
     for (const id of ['boiler', 'radar', 'aa_guns', 'damage_control', 'heavy_shells']) fitted = toggleUpgrade(fitted, id, upgradeSlots(3));
     expect(fitted).toEqual(['boiler', 'radar', 'aa_guns', 'damage_control']);
     expect(upgradeModifiers(fitted, catalog, 2).aaMul).toBe(1);
-    expect(upgradeModifiers(fitted, catalog, upgradeSlots(0))).toEqual(upgradeModifiers([], catalog, 4));
+    expect(upgradeModifiers(fitted, catalog, upgradeSlots(0))).toEqual(upgradeModifiers(fitted.slice(0, 1), catalog, 4));
     expect(upgradeModifiers(fitted, catalog, 4).aaMul).toBeCloseTo(1.4);
     expect(upgradeModifiers(fitted, catalog, 4).hpMul).toBeCloseTo(1.1);
   });

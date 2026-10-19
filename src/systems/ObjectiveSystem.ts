@@ -88,3 +88,12 @@ export function objectiveStatus(objective: Objective, s: IObjectiveState): strin
       return '';
   }
 }
+
+/**
+ * Throttle that brings a ship `distance` px away to its goal in `arrivalSec` (velocity = speed × throttle px/s).
+ * A Delay's target (#40) used to run in at full speed and reach the zone within seconds.
+ */
+export function goalThrottle(distance: number, speed: number, arrivalSec?: number): number {
+  if (!arrivalSec || speed <= 0) return 1;
+  return Math.min(1, Math.max(0.1, distance / (arrivalSec * speed)));
+}

@@ -99,6 +99,8 @@ export class AISystem {
   private current: IShipView | null = null;
   /** When set the ship makes for this point (escape / breakthrough) and only fires on the way */
   goal: { x: number; y: number } | null = null;
+  /** Throttle while heading for `goal` (a slow escape or advance a fleet can still catch, #40) */
+  goalThrottle = 1;
   /** Where the ship searches when nothing is visible (default: the middle of the sea) */
   patrol: { x: number; y: number } | null = null;
 
@@ -138,7 +140,7 @@ export class AISystem {
 
     const target = decision.target;
     if (!target && this.goal) {
-      ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: 1 }, dtSec, turnRate);
+      ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: this.goalThrottle }, dtSec, turnRate);
       return;
     }
     if (!target) {
@@ -151,7 +153,7 @@ export class AISystem {
     }
 
     if (this.goal) {
-      ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: 1 }, dtSec, turnRate);
+      ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: this.goalThrottle }, dtSec, turnRate);
       fireAt(this.weapons, ship, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
       return;
     }

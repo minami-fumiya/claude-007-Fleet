@@ -28,6 +28,12 @@ const INFO_TILES: Array<{ title: string; body: string }> = [
   { title: '★ 勝利条件', body: '敵艦隊をすべて撃沈' },
 ];
 
+/** "v0.0.17-alpha", plus "preview" on a Vercel PR preview (its own saves). */
+export function versionLabel(host: string): string {
+  const preview = host.endsWith('.vercel.app') && host.includes('-git-');
+  return `v${__APP_VERSION__}${preview ? '  preview' : ''}`;
+}
+
 export class MainMenuScene extends Phaser.Scene {
   private howToLayer: Phaser.GameObjects.Container | null = null;
 
@@ -50,6 +56,8 @@ export class MainMenuScene extends Phaser.Scene {
     } else {
       this.buildLandscape();
     }
+    // Version, bottom right (#136); a PR preview says so, since its saves are kept apart from the real game's.
+    this.add.text(CANVAS_W - 16, CANVAS_H - 12, versionLabel(location.hostname), textStyle(12, Css.dim)).setOrigin(1, 1);
   }
 
   /** Two columns: copy and buttons on the left, the hero ship on the right. */

@@ -5,8 +5,8 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost } from '@/systems/ProgressionSystem';
-import { eventEffects, eventLabel } from '@/systems/EventSystem';
+import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost, SWEEPS_PER_DAY, sweepsLeft } from '@/systems/ProgressionSystem';
+import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -51,7 +51,7 @@ function objectiveText(a: ICampaignArea): string {
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { tabsY: 172, map: { x: 16, y: 216, w: CANVAS_W - 32, h: 440 } as IRect, detail: { x: 16, y: 672, w: CANVAS_W - 32, h: CANVAS_H - 688 } as IRect }
+  ? { tabsY: 172, map: { x: 16, y: 216, w: CANVAS_W - 32, h: 380 } as IRect, detail: { x: 16, y: 612, w: CANVAS_W - 32, h: CANVAS_H - 628 } as IRect }
   : { tabsY: 120, map: { x: 24, y: 160, w: 780, h: 540 } as IRect, detail: { x: 820, y: 160, w: 436, h: 540 } as IRect };
 const NODE_R = IS_PORTRAIT ? 26 : 22;
 
@@ -205,7 +205,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
-      ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}\n${lineup}`],
+      // Portrait keeps to the kinds (the names ran the sweep line into the buttons).
+      ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}${IS_PORTRAIT ? '' : `\n${lineup}`}`],
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
       ['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')],
@@ -228,11 +229,13 @@ export class CampaignMapScene extends Phaser.Scene {
     }
     // 掃討 (#57): an area won without losses can be swept, skipping the battle.
     const sweepable = canSweep(progress, a);
+    const left = sweepsLeft(progress, a.id, Date.now());
     const sweepNote = sweepable
-      ? `掃討: ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎朝 5 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: 1 隻も失わずに勝利すると使えます' : '';
+    // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
     if (this.status || sweepNote) {
-      add(this.add.text(x, d.y + d.h - (IS_PORTRAIT ? 112 : 88), this.status || sweepNote, textStyle(12, this.status ? Css.success : Css.muted, wrap)).setOrigin(0, 1));
+      add(this.add.text(x, y, this.status ? `${this.status}\n${sweepNote}` : sweepNote, textStyle(12, this.status ? Css.success : Css.muted, { ...wrap, lineSpacing: 2 })));
     }
     const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
     const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
@@ -245,7 +248,7 @@ export class CampaignMapScene extends Phaser.Scene {
     if (sweepable) {
       add(new UIButton(this, d.x + d.w - 24 - bw / 2, by, '掃討', () => this.sweep(a), {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: 20,
-      })).setEnabled(canAfford(progress.resources, sweepCost(a, enemy)));
+      })).setEnabled(left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
     }
   }
 
@@ -257,7 +260,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const r = sweepArea(progress, a, enemy, Date.now(), eventEffects(event));
     if (!r) return;
     saveProgress(r.progress);
-    this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${event ? `  (${eventLabel(event)})` : ''}`;
+    this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
     this.drawDetail();
   }
 

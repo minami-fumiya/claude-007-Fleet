@@ -115,7 +115,7 @@ of the area's reward class.
 - Events: sortie / win / nightWin / sink / sinkCarrier / sinkSubmarine / sinkBattleship (battle end, sweep), repair (dock), build, research, refit, sweep.
 
 ## Sweep / 掃討 (#57, save v8)
-- A campaign win with every ship alive adds the area to `perfect`. `sweepArea` pays `sweepCost` (sortie cost of a fleet the enemy's size), gives 80% of a win's reward, campaign-win merit and quest events. No damage, proficiency or first-clear reward.
+- A campaign win with every ship alive adds the area to `perfect`. At most `SWEEPS_PER_DAY` (3) sweeps per area per game day (`INationProgress.sweeps`, save v9). `sweepArea` pays `sweepCost` (sortie cost of a fleet the enemy's size), gives 80% of a win's reward, campaign-win merit and quest events. No damage, proficiency or first-clear reward.
 
 ## Limited-time events (#89, save v8)
 - `EventSystem.eventAt(now)`: three-hour windows from 05:00 JST, hashed into double (a theater's reward x2) / steel (+50%) / training (proficiency and captain XP x1.5) / repair (cost and time x0.5) / none (60%).

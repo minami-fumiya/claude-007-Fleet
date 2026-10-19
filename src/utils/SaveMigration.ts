@@ -80,6 +80,8 @@ export const MIGRATIONS: MigrationStep[] = [
   // v7 → v8 (#52 #57 #89): no quest progress yet, no area to sweep yet (a perfect win from now on opens it), and
   // the event clock guard starts at 0.
   (data) => mapNations({ ...data, lastSeenAt: 0 }, (nation) => ({ ...nation, quests: { day: 0, week: 0, progress: {}, claimed: [] }, perfect: [] })),
+  // v8 → v9 (#57): sweeps are counted per area and game day; nothing used yet.
+  (data) => mapNations(data, (nation) => ({ ...nation, sweeps: { day: 0, counts: {} } })),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

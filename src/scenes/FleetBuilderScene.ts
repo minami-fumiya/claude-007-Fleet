@@ -24,6 +24,7 @@ import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
+import { HEAVY_DAMAGE } from '@/systems/SortieMapSystem';
 import { proficiencyLabel } from '@/systems/ProficiencySystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
@@ -334,6 +335,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   private openGroup: string | null = null;
   /** Opened from the home menu's 編成 (#109) */
   private organizeOnly = false;
+  private rematch = false;
   /** Digits typed for the enemy count (#108) and when the last one came */
   private keyBuffer = '';
   private keyAt = 0;
@@ -343,8 +345,10 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   /** `organize`: opened from the home menu's 編成 (#109): fleet only, then 作戦へ / 演習へ instead of a sortie. */
-  init(data?: { organize?: boolean }): void {
+  /** `rematch` (#135): sortie again with the last fleet straight away (ships that can't go are left out). */
+  init(data?: { organize?: boolean; rematch?: boolean }): void {
     this.organizeOnly = data?.organize === true;
+    this.rematch = data?.rematch === true;
   }
 
   create(): void {
@@ -437,6 +441,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.setupCountKeys();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.saveSelection());
     new TutorialGuide(this);
+    if (this.rematch && !this.organizeOnly) this.startRematch();
   }
 
   /** Wraps a tap handler so it does nothing at the end of a scroll drag. */
@@ -1512,6 +1517,24 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
     // In organize mode the buttons only move on, so they stay enabled.
     if (!this.organizeOnly) this.startBtn.setEnabled(this.canStart());
+  }
+
+  /**
+   * そのまま連戦 (#135): the same fleet again. Ships in the dock or 大破 stay home; if nobody can go or the sortie
+   * can't be paid, the builder stays open with the reason in its footer.
+   */
+  private startRematch(): void {
+    this.rematch = false;
+    const progress = loadProgress();
+    const opts = this.sortieOptions();
+    // Exercises take any ship (no damage kept); a campaign sortie leaves docked and 大破 ships behind.
+    this.slots = this.slots.map((s) => (s && (opts.exercise || (!isDocked(progress, s.id) && hpFraction(progress, s.id) > HEAVY_DAMAGE)) ? s : null));
+    // A gap at the front would leave the flagship slot empty: close ranks, keeping each ship's captain.
+    const kept = this.slots.map((s, i) => ({ s, c: this.captainIds[i] })).filter((x) => x.s !== null);
+    this.slots = Array.from({ length: this.slotCount }, (_, i) => kept[i]?.s ?? null);
+    this.captainIds = Array.from({ length: this.slotCount }, (_, i) => kept[i]?.c ?? null);
+    this.refresh();
+    if (this.canStart()) this.startBattle();
   }
 
   /** 演習 (no campaign area) is free and may use docked ships (#15); the first area of a theater is free (#28). */

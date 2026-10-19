@@ -44,6 +44,11 @@ export const MAX_FLEET_SLOTS = RANKS[RANKS.length - 1].slots;
 
 /** Rank a finished tutorial promotes to (#90). */
 export const TUTORIAL_RANK = 2;
+/**
+ * Rank every nation starts at: 准尉 until the tutorial ships (#128 / #90), then 士官候補生 again. 士官候補生 stays
+ * in the table and the rank list either way.
+ */
+export const START_RANK = 1;
 
 /** Anything carrying a nation's rank inputs (IProgress / INationProgress). */
 export interface IRankProgress {
@@ -99,7 +104,7 @@ export function rankOf(progress: IRankProgress): IRank {
     if (merit < r.minMerit || !examPassed(r, progress)) break;
     rank = r;
   }
-  const floor = RANKS[Math.min(RANKS.length - 1, Math.max(0, progress.rankFloor ?? 0))];
+  const floor = RANKS[Math.min(RANKS.length - 1, Math.max(START_RANK, progress.rankFloor ?? 0))];
   return floor.index > rank.index ? floor : rank;
 }
 

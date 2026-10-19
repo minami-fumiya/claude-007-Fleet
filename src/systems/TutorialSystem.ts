@@ -57,7 +57,7 @@ export const TUTORIAL_STEPS: ITutorialStep[] = [
   },
   {
     id: 'refit', title: '改装', advance: 'next',
-    text: '「改装」で艦を改造すると、強化部品を付ける枠が増えます (未改造は 0 枠)。部品は研究で増えます。',
+    text: '「改装」で艦を改造すると、強化部品を付ける枠が増えます (未改造は 1 枠)。部品は研究で増えます。',
   },
   {
     id: 'campaign', title: '作戦', advance: 'firstClear',

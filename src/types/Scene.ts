@@ -45,6 +45,8 @@ export interface IBattleResultData {
   captainReports?: ICaptainReport[];
   /** Resources gained / spent replacing aircraft, already formatted */
   reward?: string;
+  /** The event that changed this battle's reward (#89), shown on its own line */
+  event?: string;
   cost?: string;
   /** Campaign / scenario line, e.g. "海域攻略: 南洋前哨  初回報酬 …" */
   campaign?: string;

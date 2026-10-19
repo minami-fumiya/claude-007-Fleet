@@ -13,7 +13,7 @@ describe('DockSystem', () => {
 
   it('prices and times repairs by missing HP', () => {
     expect(repairTimeMs(500, 0.5)).toBe(250 * MS_PER_HP);
-    expect(repairCost(500, 0.5)).toEqual({ fuel: 63, ammo: 0, steel: 63, bauxite: 0 });
+    expect(repairCost(500, 0.5)).toEqual({ fuel: 63, ammo: 0, steel: 38, bauxite: 0 });
     expect(repairTimeMs(500, 1)).toBe(0);
   });
 

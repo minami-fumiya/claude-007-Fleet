@@ -179,9 +179,10 @@ describe('fuel, ammo and steel stay in balance (#35 / 0.0.12)', () => {
       const net = addResources(addResources(reward, sortie, -1), repair, -1);
       const raw = (k: keyof IResources): number => reward[k] - sortie[k] - repair[k];
       for (const k of ['fuel', 'ammo', 'steel'] as const) expect(raw(k), `${fleet.map((s) => s.id)} ${k}`).toBeGreaterThan(0);
-      // Fuel and ammo no longer lag far behind steel.
-      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') * 0.6);
-      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') * 0.6);
+      // No resource lags far behind another (fuel was short in 0.0.12, steel in 0.0.16, #132).
+      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') * 0.5);
+      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') * 0.5);
+      expect(raw('steel')).toBeGreaterThanOrEqual(Math.max(raw('fuel'), raw('ammo')) * 0.6);
       expect(net.fuel).toBeGreaterThanOrEqual(0);
     }
   });
