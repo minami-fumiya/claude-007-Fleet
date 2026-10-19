@@ -8,7 +8,7 @@ import { unlocksOf } from '@/systems/MedalGate';
 import { TECH_TREE } from '@/systems/ResearchSystem';
 import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
 import { awardPendingMedals, loadProgress, loadSave } from '@/utils/ProgressStore';
-import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerTotals, SPENDING } from '@/systems/LedgerSystem';
+import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerHours, ledgerTotals, SPENDING } from '@/systems/LedgerSystem';
 import { RESOURCE_KEYS, RESOURCE_LABEL, resources } from '@/systems/ResourceSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
@@ -102,7 +102,9 @@ export class RecordScene extends Phaser.Scene {
     for (const r of rows) for (const k of RESOURCE_KEYS) net[k] += r.sign * (totals[r.cat as LedgerCategory]?.[k] ?? 0);
     const labelW = IS_PORTRAIT ? 120 : 130;
     const colW = (p.w - 44 - labelW) / RESOURCE_KEYS.length;
-    const rowH = Math.min(IS_PORTRAIT ? 40 : 30, (p.h - (top - p.y) - 70) / (rows.length + 1));
+    const lost = totals.overflow;
+    const extra = lost ? 3 : 2;
+    const rowH = Math.min(IS_PORTRAIT ? 40 : 30, (p.h - (top - p.y) - 70) / (rows.length + extra));
     RESOURCE_KEYS.forEach((k, i) => this.track(this.add.text(p.x + 22 + labelW + i * colW + colW - 8, top, RESOURCE_LABEL[k], textStyle(11, Css.muted)).setOrigin(1, 0)));
     const max: Record<string, number> = {};
     for (const k of RESOURCE_KEYS) max[k] = Math.max(1, ...rows.map((r) => totals[r.cat as LedgerCategory]?.[k] ?? 0));
@@ -127,6 +129,22 @@ export class RecordScene extends Phaser.Scene {
       const v = net[k];
       this.track(this.add.text(p.x + 22 + labelW + j * colW + colW - 8, ny, `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('en-US')}`, textStyle(IS_PORTRAIT ? 13 : 12, v < 0 ? Css.danger : Css.success, { fontStyle: 'bold' })).setOrigin(1, 0));
     });
+    // Per hour played (#222): which resource runs short shows at a glance.
+    const hours = ledgerHours(loadProgress().ledger, now);
+    const hy = ny + rowH;
+    this.track(this.add.text(p.x + 22, hy, `1 時間あたり (${hours} 時間)`, textStyle(IS_PORTRAIT ? 12 : 11, Css.muted)));
+    RESOURCE_KEYS.forEach((k, j) => {
+      const v = Math.round(net[k] / hours);
+      this.track(this.add.text(p.x + 22 + labelW + j * colW + colW - 8, hy, `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('en-US')}`, textStyle(IS_PORTRAIT ? 12 : 11, v < 0 ? Css.danger : Css.muted)).setOrigin(1, 0));
+    });
+    // Income the holding cap turned away (#221).
+    if (lost) {
+      const ly = hy + rowH;
+      this.track(this.add.text(p.x + 22, ly, LEDGER_LABEL.overflow, textStyle(IS_PORTRAIT ? 12 : 11, Css.dim)));
+      RESOURCE_KEYS.forEach((k, j) => {
+        this.track(this.add.text(p.x + 22 + labelW + j * colW + colW - 8, ly, lost[k] > 0 ? lost[k].toLocaleString('en-US') : '—', textStyle(IS_PORTRAIT ? 12 : 11, Css.dim)).setOrigin(1, 0));
+      });
+    }
   }
 
   private buildStats(r: IServiceRecord): void {

@@ -9,7 +9,7 @@
 
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { rankOf } from '@/systems/RankSystem';
-import { currentBase } from '@/systems/BaseSystem';
+import { currentBase, nationBases } from '@/systems/BaseSystem';
 
 export type RawSave = Record<string, unknown>;
 /** Turns a raw save of version `n` into version `n + 1` (the version field is set by the runner). */
@@ -168,6 +168,16 @@ export const MIGRATIONS: MigrationStep[] = [
     const bases = new Set([...Object.keys(before), ...(home ? [home] : [])]);
     const baseDocks = Object.fromEntries([...bases].map((b) => [b, Math.min(8, Math.max(2, (num(before[b]) || 1) + slips))]));
     return { ...nation, baseDocks };
+  }),
+  // v14 → v15 (0.0.28, #217): bases beyond the first are built once their rank is reached, no longer opened by the
+  // rank alone. Every base the rank had already opened counts as built, and so does the one the admiral is at.
+  (data) => mapNations(data, (nation, key) => {
+    const campaign = Array.isArray(nation.campaign) ? (nation.campaign as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const rank = rankOf({ campaign, merit: num(nation.merit), rankFloor: num(nation.rankFloor), nation: key, rankStats: (nation.rankStats ?? {}) as Record<string, number> }, false).index;
+    const list = nationBases(key);
+    const opened = list.slice(1).filter((b) => rank >= b.unlockRank || b.id === nation.base).map((b) => b.id);
+    return { ...nation, basesOpen: opened, baseWork: null };
   }),
 ];
 

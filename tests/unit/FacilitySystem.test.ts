@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  boostedBase, buildTimeMul, facilityCost, facilityLevel, facilitySlots, facilityState, finishFacilities, regenRules, startFacility, uniqueStrength,
+  boostedBase, buildTimeMul, facilityCost, facilityLevel, facilitySlots, facilityState, finishFacilities, facilityPreview, regenRules, UNIQUE_REGEN_CAP, startFacility, uniqueStrength,
 } from '@/systems/FacilitySystem';
 import { BASES } from '@/systems/BaseSystem';
 import { REGEN_CAP, REGEN_PER_TICK, regenerate, resources } from '@/systems/ResourceSystem';
@@ -24,8 +24,22 @@ describe('base facilities (#146)', () => {
     expect(r.cap.ammo).toBe(REGEN_CAP + 1000);
     expect(r.perTick.steel).toBe(REGEN_PER_TICK.steel + 1);
     expect(r.perTick.bauxite).toBe(REGEN_PER_TICK.bauxite + 3);
-    // The higher cap lets fuel regenerate past the old limit.
-    expect(regenerate(resources({ fuel: REGEN_CAP }), T0, T0 + 60_000, r).resources.fuel).toBe(REGEN_CAP + REGEN_PER_TICK.fuel);
+    // The higher cap lets fuel regenerate past the old limit, and the tanks speed it up too (#190).
+    expect(regenerate(resources({ fuel: REGEN_CAP }), T0, T0 + 60_000, r).resources.fuel).toBe(REGEN_CAP + REGEN_PER_TICK.fuel + 3);
+  });
+
+  it('every resource facility raises both rate and cap (#190), never below 0.0.27', () => {
+    const levels = { ijn_home: { fuelTank: 2, ammoDepot: 1, steelMill: 3, airBase: 1 } };
+    const r = regenRules(levels);
+    expect(r.perTick).toEqual({ fuel: REGEN_PER_TICK.fuel + 2, ammo: REGEN_PER_TICK.ammo + 1, steel: REGEN_PER_TICK.steel + 3, bauxite: REGEN_PER_TICK.bauxite + 1 });
+    expect(r.cap).toEqual({ fuel: REGEN_CAP + 2000, ammo: REGEN_CAP + 1000, steel: REGEN_CAP + 3000, bauxite: REGEN_CAP + 1000 });
+    // 0.0.27's rules: tanks raised caps only, mills and air bases rates only.
+    expect(r.cap.fuel).toBeGreaterThanOrEqual(REGEN_CAP + 1000 * 2);
+    expect(r.perTick.steel).toBeGreaterThanOrEqual(REGEN_PER_TICK.steel + 3);
+    // The base's own facility adds to every cap.
+    expect(regenRules({ ijn_home: { unique: 3 } }).cap.steel).toBe(REGEN_CAP + 2 * UNIQUE_REGEN_CAP);
+    expect(facilityPreview(levels, 'ijn_home', 'steelMill')).toContain(`回復 ${REGEN_PER_TICK.steel + 3} → ${REGEN_PER_TICK.steel + 4} / 分`);
+    expect(facilityPreview(levels, 'ijn_home', 'workshop')).toBeUndefined();
   });
 
   it('building pays, takes time and takes effect when finished; two at once per base, three from its own facility Lv2 (#216)', () => {

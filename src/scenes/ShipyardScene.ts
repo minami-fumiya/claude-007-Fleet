@@ -7,7 +7,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
-import { buildTimeMul } from '@/systems/FacilitySystem';
+import { buildTimeMul, holdCap } from '@/systems/FacilitySystem';
 import { currentBaseId } from '@/systems/BaseSystem';
 import { availableShips, canResearch, medalMet, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
@@ -97,7 +97,7 @@ export class ShipyardScene extends Phaser.Scene {
   update(): void {
     // Natural regeneration keeps running while the player browses; finished builds join the fleet (#143).
     const progress = loadProgress();
-    this.bar.refresh(progress.resources);
+    this.bar.refresh(progress.resources, holdCap(progress.facilities));
     if (progress.builds.length < this.building) {
       this.status = '建造が完了しました';
       this.refresh();
@@ -130,7 +130,7 @@ export class ShipyardScene extends Phaser.Scene {
     const owned = ownedIds(progress, roster);
     this.timers = [];
     this.building = progress.builds.length;
-    this.bar.refresh(progress.resources);
+    this.bar.refresh(progress.resources, holdCap(progress.facilities));
     CLASS_ORDER.forEach((c, i) => {
       const all = availableShips(roster, progress.research).filter((s) => s.shipClass === c);
       const have = all.filter((s) => owned.includes(s.id)).length;

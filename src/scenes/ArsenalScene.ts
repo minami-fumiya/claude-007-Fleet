@@ -8,6 +8,7 @@ import { ITechNode } from '@/types/Progression';
 import { displayStyle } from '@/ui/theme';
 import { addBackdrop, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
+import { holdCap } from '@/systems/FacilitySystem';
 import { ResearchView } from '@/ui/components/ResearchView';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -54,7 +55,8 @@ export class ArsenalScene extends Phaser.Scene {
       },
       (node) => this.research(node),
     );
-    this.bar.refresh(loadProgress().resources);
+    const p = loadProgress();
+    this.bar.refresh(p.resources, holdCap(p.facilities));
   }
 
   private research(node: ITechNode): void {
@@ -63,7 +65,7 @@ export class ArsenalScene extends Phaser.Scene {
     if (!result) return;
     saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
-    this.bar.refresh(result.resources);
+    this.bar.refresh(result.resources, holdCap(progress.facilities));
     this.view.refresh();
   }
 }

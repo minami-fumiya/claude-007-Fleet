@@ -66,7 +66,8 @@ import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/ResearchSystem';
-import { addResources, formatResources } from '@/systems/ResourceSystem';
+import { addResources, formatResources, gainResources, lostNote } from '@/systems/ResourceSystem';
+import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
 import { campaignSide, recordClear } from '@/systems/CampaignSystem';
@@ -1598,7 +1599,10 @@ export class BattleScene extends Phaser.Scene {
     }
     // Ledger (#137): the battle's reward in, replacement aircraft out.
     const now = Date.now();
-    let progress: IProgress = { ...settlement.progress, ledger: recordLedger(recordLedger(settlement.progress.ledger, 'battle', settlement.reward, now), 'aircraft', settlement.aircraftCost, now) };
+    // Only what fit under the holding cap counts as income; the rest is logged as lost (#221).
+    let lost = settlement.lost;
+    const received = addResources(settlement.reward, lost, -1);
+    let progress: IProgress = { ...settlement.progress, ledger: recordLedger(recordLedger(recordLedger(settlement.progress.ledger, 'battle', received, now), 'aircraft', settlement.aircraftCost, now), 'overflow', lost, now) };
     const proficiency = { ...progress.proficiency };
     for (const s of fleet) {
       const current = proficiency[s.dataId] ?? 0;
@@ -1652,7 +1656,9 @@ export class BattleScene extends Phaser.Scene {
       progress = { ...progress, campaign: rec.cleared };
       let newShip = '';
       if (rec.firstClear) {
-        progress = { ...progress, resources: addResources(progress.resources, area.reward), ledger: recordLedger(progress.ledger, 'firstClear', area.reward, Date.now()) };
+        const g = gainResources(progress.resources, area.reward, holdCap(progress.facilities));
+        progress = { ...progress, resources: g.resources, ledger: recordLedger(recordLedger(progress.ledger, 'firstClear', addResources(area.reward, g.lost, -1), now), 'overflow', g.lost, now) };
+        lost = addResources(lost, g.lost);
       }
       // The area's reward-only ship (#39 #160) joins on an S-rank win, the first clear or any later one.
       const roster = DataLoader.getRegistry(this).byNation(progress.nation);
@@ -1726,7 +1732,7 @@ export class BattleScene extends Phaser.Scene {
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
     emitTutorial('battleEnd', this.registry);
     if (firstClear) emitTutorial('firstClear', this.registry);
-    result.reward = formatResources(settlement.reward);
+    result.reward = `${formatResources(settlement.reward)}${lostNote(lost)}`;
     // On its own line under the reward (it ran into the reward and wrapped mid-word).
     if (eventAppliesToBattle(event, area?.theater)) result.event = `イベント: ${eventLabel(event)}`;
     result.cost = formatResources(settlement.aircraftCost);
