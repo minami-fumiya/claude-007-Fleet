@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.28.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.29.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -316,6 +316,52 @@ test.describe('screens', () => {
     await cap();
     expect(await overflowingTexts(page, 'FleetBuilderScene'), `captain picker (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('fleet-captain-picker.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('the last remodel stage takes a direction: 改三甲・乙・丙 (#86)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const save = {
+      ...SAVE, version: 16, seenHelp: ['CustomizationScene'],
+      nations: { IJN: { ...SAVE.nations.IJN, refits: { fubuki: 2 }, proficiency: { fubuki: 100 }, resources: { fuel: 9000, ammo: 9000, steel: 9000, bauxite: 4000 } } },
+    };
+    const errors = await boot(page, layout, save);
+    await open(page, 'CustomizationScene', { returnTo: 'HomeScene', scope: 'all', shipId: 'fubuki' });
+    type C = { openBranches(): void; chooseBranch(id: string): void };
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as C).openBranches());
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'CustomizationScene'), `branches (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('refit-branches.png') });
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as C).chooseBranch('asw'));
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { refits: Record<string, number>; refitBranches: Record<string, string> });
+    expect(stored.refits.fubuki).toBe(3);
+    expect(stored.refitBranches.fubuki).toBe('asw');
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'CustomizationScene'), `after (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('refit-branched.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('the strategic map shows the training areas and the Black Sea (#202)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 16, seenHelp: ['CampaignMapScene'] });
+    await open(page, 'CampaignMapScene');
+    expect(await overflowingTexts(page, 'CampaignMapScene'), `pacific (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CampaignMapScene'), `pacific overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('map-training.png') });
+    // A Soviet admiral: the Baltic and the Black Sea.
+    const su = { ...SAVE, version: 16, current: 'SU', seenHelp: ['CampaignMapScene'], nations: { SU: { ...SAVE.nations.IJN, ships: ['gnevny'], campaign: ['b1'] } } };
+    await page.evaluate((save) => localStorage.setItem('ww2fleet.progress.v2', JSON.stringify(save)), su);
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScenes(true).length);
+    await open(page, 'CampaignMapScene');
+    const tabs = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }>; selectTheater?(id: string): void };
+      return s.theaters.map((t) => t.id);
+    });
+    expect(tabs).toEqual(['baltic', 'blacksea']);
+    expect(await overflowingTexts(page, 'CampaignMapScene'), `SU (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('map-su.png') });
     expect(errors).toEqual([]);
   });
 

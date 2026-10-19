@@ -134,14 +134,19 @@ export function clearCount(progress: Pick<IRankProgress, 'campaign'>): number {
 interface ITheaterAreas {
   id: string;
   opponents: Record<string, string | undefined>;
+  /** False for a theater added later (#202): its final is no exam, so no admiral loses a rank they held */
+  exam?: boolean;
 }
 
-/** Each theater's final area (its last listed), for the theaters `nation` fights in (all of them if unknown). */
+/**
+ * Each theater's final area (its last listed, training areas aside), for the theaters `nation` fights in (all of them
+ * if unknown). Theaters marked `exam: false` don't count.
+ */
 export function finalAreas(nation?: string): string[] {
-  const data = campaignData as unknown as { theaters: ITheaterAreas[]; areas: Array<{ id: string; theater: string }> };
+  const data = campaignData as unknown as { theaters: ITheaterAreas[]; areas: Array<{ id: string; theater: string; training?: boolean }> };
   return data.theaters
-    .filter((t) => !nation || t.opponents[nation] !== undefined)
-    .map((t) => data.areas.filter((a) => a.theater === t.id).pop()?.id)
+    .filter((t) => t.exam !== false && (!nation || t.opponents[nation] !== undefined))
+    .map((t) => data.areas.filter((a) => a.theater === t.id && !a.training).pop()?.id)
     .filter((id): id is string => id !== undefined);
 }
 

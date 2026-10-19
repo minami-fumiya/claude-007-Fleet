@@ -193,7 +193,8 @@ export class CampaignMapScene extends Phaser.Scene {
       node.strokeCircle(x, y, NODE_R);
       // A cleared area shows its best battle rank (#149), or ✓ when it has none yet.
       const best = done ? loadProgress().areaRanks[a.id] : undefined;
-      const label = this.add.text(x, y, best ?? (done ? '✓' : String(i + 1)), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
+      // A training area (#202) reads 訓 instead of a number.
+      const label = this.add.text(x, y, best ?? (done ? '✓' : a.training ? '訓' : String(i + 1)), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
       const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 0);
       names.push(name);
       const hit = this.add.zone(x, y, NODE_R * 3, NODE_R * 3).setInteractive({ useHandCursor: true });

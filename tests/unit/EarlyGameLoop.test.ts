@@ -77,7 +77,8 @@ describe('campaign data for the growth curve (#25 / #18)', () => {
 
   it('only the first area of each theater is free', () => {
     for (const t of data.theaters) {
-      expect(areasOf(data, t.id).filter(isFreeArea)).toHaveLength(1);
+      // Besides the training area (#202), which is free too.
+      expect(areasOf(data, t.id).filter((a) => isFreeArea(a) && !a.training)).toHaveLength(1);
       expect(isFreeArea(areasOf(data, t.id)[0])).toBe(true);
     }
   });

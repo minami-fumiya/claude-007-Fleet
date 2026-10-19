@@ -56,6 +56,11 @@ export interface ICampaignArea {
   reward: Partial<IResources>;
   /** Zone / time limit / target for the objectives beyond 殲滅・護衛・砲撃 (#40) */
   side?: ICampaignSide;
+  /**
+   * 訓練海域 (#202): a weak, fixed area to try ships and captains in. Half rewards and experience, no captain from its
+   * S rank, and it never counts toward the theater's progress.
+   */
+  training?: boolean;
   /** Class of the ship the first clear grants; the ship itself is in reward-ships.json (#160, docs/specs/systems/reward-ships.md) */
   rewardShip?: ShipClass;
 }
@@ -66,6 +71,8 @@ export interface ITheater {
   en: string;
   /** Who each playable nation fights here; a nation missing from this map can't play the theater. */
   opponents: Partial<Record<Nation, Nation>>;
+  /** False for a theater added later (#202): its final area is no promotion exam */
+  exam?: boolean;
 }
 
 export interface ICampaignData {
