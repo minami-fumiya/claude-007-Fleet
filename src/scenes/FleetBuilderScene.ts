@@ -20,7 +20,8 @@ import { aptitudeFor, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem'
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
-import { formatResources } from '@/systems/ResourceSystem';
+import { formatResources, pay } from '@/systems/ResourceSystem';
+import { assignShips, currentBaseId, isAtCurrentBase, nationBases, relocationCost, shipBaseOf } from '@/systems/BaseSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
@@ -278,6 +279,8 @@ const SORTS = [ShipSort.Default, ShipSort.Hp, ShipSort.Speed];
 export class FleetBuilderScene extends Phaser.Scene {
   private shipRegistry!: ShipRegistry;
   private ships: IShipData[] = [];
+  /** Owned ships based elsewhere (#145): offered after the base's own, brought over for fuel */
+  private awayShips: IShipData[] = [];
   private slots: (IShipData | null)[] = [null];
   /** Fleet slots the admiral's rank allows (#25 / #30) */
   private slotCount = 1;
@@ -375,7 +378,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.timeChoice = saved?.time ?? standard.time;
     // Setting off (#108): every visit starts the exercise settings from random again; the fleet is still kept.
     if (!audio.settings.keepExercise) this.applyExercise(standard);
-    this.ships = this.offeredShips();
+    this.splitByBase();
     const used = new Set<string>();
     this.slots = Array.from({ length: this.slotCount }, (_, i) => {
       // Only ships still available (a reset or imported save can take away a ship), each once (#76).
@@ -534,6 +537,35 @@ export class FleetBuilderScene extends Phaser.Scene {
   private offeredShips(): IShipData[] {
     const progress = loadProgress();
     return availableShips(ownedShips(progress, this.shipRegistry.byNation(this.nation)), progress.research);
+  }
+
+  /** The base's own ships first; ships at other bases (#145) are listed after them. */
+  private splitByBase(): void {
+    const progress = loadProgress();
+    const all = this.offeredShips();
+    this.ships = all.filter((s) => isAtCurrentBase(progress, s.id));
+    this.awayShips = all.filter((s) => !isAtCurrentBase(progress, s.id));
+  }
+
+  /** "呉鎮守府 · 配置換え 燃料 40" for a ship at another base. */
+  private awayTag(ship: IShipData): string {
+    const progress = loadProgress();
+    const base = nationBases(this.nation).find((b) => b.id === shipBaseOf(progress, ship.id));
+    return `${base?.name ?? '他の軍港'} · 配置換え 燃料 ${relocationCost(ship)}`;
+  }
+
+  /** Brings a ship over from another base for fuel (#145); false when the fuel is short. */
+  private relocate(ship: IShipData): boolean {
+    const progress = loadProgress();
+    const fuel = relocationCost(ship);
+    const paid = pay(progress.resources, { fuel });
+    if (!paid) {
+      this.summaryText.setText(`⚠ 燃料が足りません (配置換え 燃料 ${fuel})`).setColor(Css.danger);
+      return false;
+    }
+    saveProgress(assignShips({ ...progress, resources: paid }, [ship.id], currentBaseId(progress)), 'sortie');
+    this.splitByBase();
+    return true;
   }
 
   /** The row above the ship list: how many ships the nation owns and where more come from. */
@@ -705,7 +737,15 @@ export class FleetBuilderScene extends Phaser.Scene {
       list.addItem(card, w, itemH, this.onTap(() => this.addShipToFleet(ship)));
       this.shipCards.push({ id: ship.id, card });
     });
-    list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
+    // Ships at other bases (#145): tapping one brings it over, then adds it.
+    const away = filterAndSort(this.awayShips, this.kindFilter, this.sort);
+    away.forEach((ship, j) => {
+      const card = this.shipRow(ship, w, itemH, this.awayTag(ship)).setY((shown.length + j) * (itemH + ITEM_GAP)).setAlpha(0.7);
+      list.addItem(card, w, itemH, this.onTap(() => {
+        if (this.relocate(ship)) this.addShipToFleet(ship);
+      }));
+    });
+    list.setContentHeight(Math.max(0, (shown.length + away.length) * (itemH + ITEM_GAP) - ITEM_GAP));
     this.shipCountText?.setText(shown.length === this.ships.length ? `${this.ships.length} 隻` : `${shown.length} / ${this.ships.length} 隻`);
     this.refreshShipCards();
   }
@@ -771,7 +811,15 @@ export class FleetBuilderScene extends Phaser.Scene {
       if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
       list.addItem(card, w, itemH, () => this.pickShip(ship));
     });
-    list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
+    // Ships at other bases (#145): picking one brings it over first.
+    const away = filterAndSort(this.awayShips, this.kindFilter, this.sort);
+    away.forEach((ship, j) => {
+      const card = this.shipRow(ship, w, itemH, this.awayTag(ship)).setY((shown.length + j) * (itemH + ITEM_GAP)).setAlpha(0.7);
+      list.addItem(card, w, itemH, () => {
+        if (this.relocate(ship)) this.pickShip(ship);
+      });
+    });
+    list.setContentHeight(Math.max(0, (shown.length + away.length) * (itemH + ITEM_GAP) - ITEM_GAP));
     list.setOffset(0);
     this.refreshListControls(this.pickerControls);
     this.refreshListControls(this.listControls);

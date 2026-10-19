@@ -9,15 +9,15 @@ import { RESOURCE_KEYS, resources } from './ResourceSystem';
 
 export type LedgerCategory =
   | 'regen' | 'battle' | 'firstClear' | 'quest' | 'sweep'
-  | 'sortie' | 'aircraft' | 'repair' | 'build' | 'research' | 'refit' | 'dock' | 'captain';
+  | 'sortie' | 'aircraft' | 'repair' | 'build' | 'research' | 'refit' | 'dock' | 'facility' | 'captain';
 
 export const LEDGER_LABEL: Record<LedgerCategory, string> = {
   regen: '自然回復', battle: '戦闘', firstClear: '初回報酬', quest: '任務', sweep: '掃討',
-  sortie: '出撃', aircraft: '艦載機補充', repair: '修理', build: '建造', research: '研究', refit: '改造', dock: 'ドック増設', captain: '艦長',
+  sortie: '出撃', aircraft: '艦載機補充', repair: '修理', build: '建造', research: '研究', refit: '改造', dock: 'ドック増設', facility: '軍港の施設', captain: '艦長',
 };
 
 export const INCOME: LedgerCategory[] = ['regen', 'battle', 'firstClear', 'quest', 'sweep'];
-export const SPENDING: LedgerCategory[] = ['sortie', 'aircraft', 'repair', 'build', 'research', 'refit', 'dock', 'captain'];
+export const SPENDING: LedgerCategory[] = ['sortie', 'aircraft', 'repair', 'build', 'research', 'refit', 'dock', 'facility', 'captain'];
 
 /** "hour:category" → resources (always positive; the category says which way they went). */
 export type Ledger = Record<string, IResources>;

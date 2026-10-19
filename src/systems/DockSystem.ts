@@ -124,3 +124,24 @@ export function fastRepair(state: IDockState, shipId: string): IDockState {
   if (!isDocked(state, shipId)) return state;
   return setDamage({ ...state, docks: state.docks.filter((d) => d.shipId !== shipId) }, shipId, 1);
 }
+
+// ---------------------------------------------------------------------------
+// Docks by base (#145)
+// ---------------------------------------------------------------------------
+
+type WithBaseDocks = IDockState & { baseDocks: Record<string, number> };
+
+/** One base's docks: its repairs and how many docks it has built (the other bases' jobs are left out). */
+export function baseDockView<T extends WithBaseDocks>(progress: T, baseId: string): T {
+  return { ...progress, docks: progress.docks.filter((j) => (j.base ?? baseId) === baseId), docksOwned: progress.baseDocks[baseId] ?? START_DOCKS };
+}
+
+/** Writes a base's dock view (after a repair, a fast repair or a new dock) back into the progress. */
+export function mergeBaseDocks<T extends WithBaseDocks>(progress: T, baseId: string, view: T): T {
+  return {
+    ...view,
+    docksOwned: progress.docksOwned,
+    docks: [...progress.docks.filter((j) => (j.base ?? baseId) !== baseId), ...view.docks.map((j) => ({ ...j, base: baseId }))],
+    baseDocks: { ...progress.baseDocks, [baseId]: dockCount(view) },
+  };
+}

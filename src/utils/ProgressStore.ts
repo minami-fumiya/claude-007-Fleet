@@ -13,6 +13,8 @@ import { IDockJob, IItems, IResources } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
 import { ISortieState } from '@/types/Sortie';
+import { nationBases } from '@/systems/BaseSystem';
+import { Facilities, FacilityId, finishFacilities, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
@@ -91,6 +93,14 @@ export interface INationProgress {
   ledger: Ledger;
   /** The campaign sortie in progress, if any (#138): it can be continued after closing the game */
   sortie: ISortieState | null;
+  /** Ship id → the base it belongs to (#145) */
+  shipBases: Record<string, string>;
+  /** Repair docks built per base (#145); a base without an entry has START_DOCKS */
+  baseDocks: Record<string, number>;
+  /** Facility levels per base (#146) */
+  facilities: Facilities;
+  /** Facilities being built or raised (#146) */
+  facilityJobs: IFacilityJob[];
 }
 
 /** The whole save (v2 and later). */
@@ -129,7 +139,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null,
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [],
   };
 }
 
@@ -161,19 +171,24 @@ export function progressView(save: ISave, now?: number): IProgress {
   const np = currentNation(save);
   const view: IProgress = { ...np, nation: save.current, record: save.record };
   if (now === undefined) return view;
-  const r = regenerate(view.resources, view.regenAt, now);
+  // Facilities finished meanwhile count from now on; they set the regeneration rates and caps (#146).
+  const built = finishFacilities(view, now);
+  const r = regenerate(built.resources, built.regenAt, now, regenRules(built.facilities));
   // Natural regeneration goes into the ledger (#137).
-  const regen = r.resources === view.resources && r.regenAt === view.regenAt
-    ? view
-    : { ...view, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(view.ledger, 'regen', resourceDelta(view.resources, r.resources).gained, now) };
+  const regen = r.resources === built.resources && r.regenAt === built.regenAt
+    ? built
+    : { ...built, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(built.ledger, 'regen', resourceDelta(built.resources, r.resources).gained, now) };
   return finishBuilds(regen, now);
 }
 
 /** Ships whose construction has finished join the fleet (#143), even if the game was closed meanwhile. */
-export function finishBuilds<T extends Pick<INationProgress, 'builds' | 'ships'>>(np: T, now: number): T {
+export function finishBuilds<T extends Pick<INationProgress, 'builds' | 'ships'> & { shipBases?: Record<string, string> }>(np: T, now: number): T {
   const done = np.builds.filter((b) => b.endsAt <= now);
   if (done.length === 0) return np;
-  return { ...np, builds: np.builds.filter((b) => b.endsAt > now), ships: [...new Set([...np.ships, ...done.map((b) => b.shipId)])] };
+  // Each joins the base it was laid down at (#145).
+  const shipBases = { ...(np.shipBases ?? {}) };
+  for (const b of done) if (b.base && !np.ships.includes(b.shipId)) shipBases[b.shipId] = b.base;
+  return { ...np, builds: np.builds.filter((b) => b.endsAt > now), ships: [...new Set([...np.ships, ...done.map((b) => b.shipId)])], ...(np.shipBases ? { shipBases } : {}) };
 }
 
 /** Writes a view back into its nation's slot (and the shared record). */
@@ -189,7 +204,13 @@ export function withProgress(save: ISave, progress: IProgress): ISave {
 export function switchNation(save: ISave, nation: Nation, starterId: string | undefined, now: number): ISave {
   if (isStarted(save, nation)) return { ...save, current: nation };
   const captain = starterCaptain(nation);
-  const slot: INationProgress = { ...emptyNationProgress(starterId ? [starterId] : [], captain ? [captain.id] : []), regenAt: now };
+  // The starter belongs to the nation's first base (#145).
+  const first = nationBases(nation)[0]?.id;
+  const slot: INationProgress = {
+    ...emptyNationProgress(starterId ? [starterId] : [], captain ? [captain.id] : []),
+    regenAt: now,
+    shipBases: starterId && first ? { [starterId]: first } : {},
+  };
   return { ...save, current: nation, nations: { ...save.nations, [nation]: slot } };
 }
 
@@ -268,6 +289,10 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     rankStats: numbers(data.rankStats),
     ledger: parseLedger(data.ledger),
     sortie: parseSortie(data.sortie),
+    shipBases: stringMap(data.shipBases),
+    baseDocks: numbers(data.baseDocks),
+    facilities: parseFacilities(data.facilities),
+    facilityJobs: parseFacilityJobs(data.facilityJobs),
   };
 }
 
@@ -302,7 +327,35 @@ function parseAreaRanks(v: unknown): Record<string, BattleRank> {
 }
 
 function parseJobs(v: unknown): IDockJob[] {
-  return (Array.isArray(v) ? v : []).filter((d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt));
+  return (Array.isArray(v) ? v : [])
+    .filter((d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt))
+    .map((d) => (typeof d.base === 'string' ? { shipId: d.shipId, endsAt: d.endsAt, base: d.base } : { shipId: d.shipId, endsAt: d.endsAt }));
+}
+
+const FACILITY_IDS = new Set<string>(['fuelTank', 'ammoDepot', 'steelMill', 'airBase', 'workshop', 'unique']);
+
+function parseFacilities(v: unknown): Facilities {
+  const out: Facilities = {};
+  if (!isObject(v)) return out;
+  for (const [base, levels] of Object.entries(v)) {
+    if (!isObject(levels)) continue;
+    const row: Facilities[string] = {};
+    for (const [id, lv] of Object.entries(levels)) if (FACILITY_IDS.has(id) && isNum(lv)) row[id as FacilityId] = Math.max(0, Math.floor(lv));
+    out[base] = row;
+  }
+  return out;
+}
+
+function parseFacilityJobs(v: unknown): IFacilityJob[] {
+  return (Array.isArray(v) ? v : [])
+    .filter((j): j is IFacilityJob => isObject(j) && typeof j.base === 'string' && FACILITY_IDS.has(j.id as string) && isNum(j.level) && isNum(j.endsAt))
+    .map((j) => ({ base: j.base, id: j.id, level: j.level, endsAt: j.endsAt }));
+}
+
+function stringMap(src: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (isObject(src)) for (const [k, v] of Object.entries(src)) if (typeof v === 'string') out[k] = v;
+  return out;
 }
 
 function parseItems(v: unknown): IItems {
@@ -506,7 +559,7 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs)) saveSave(withProgress(save, view));
   return view;
 }
 

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.18.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.19.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -42,7 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
-  'CaptainScene',
+  'CaptainScene', 'BaseScene',
 ];
 
 async function boot(page: Page, layout: string, save: object = SAVE): Promise<string[]> {
@@ -240,8 +240,15 @@ test.describe('screens', () => {
       }, tab);
       expect(await overflowingTexts(page, 'HomeScene'), `${tab} (${layout})`).toEqual([]);
     }
-    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openBasePicker(): void }).openBasePicker());
-    expect(await overflowingTexts(page, 'HomeScene'), `bases (${layout})`).toEqual([]);
+    // 軍港 (#145 / #146): bases, their theaters and facilities.
+    await open(page, 'BaseScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BaseScene') as unknown as { build(b: { id: string }, id: string): void };
+      s.build({ id: 'ijn_home' }, 'fuelTank');
+    });
+    const jobs = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.facilityJobs as Array<{ id: string }>);
+    expect(jobs.map((j) => j.id)).toEqual(['fuelTank']);
+    expect(await overflowingTexts(page, 'BaseScene'), `bases (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('home-bases.png') });
     expect(errors).toEqual([]);
   });
