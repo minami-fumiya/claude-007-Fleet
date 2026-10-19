@@ -304,6 +304,37 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the 図鑑 and the 改装 screen open each other on the same ship (#178)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    type G = { game: Phaser.Game };
+    const shipId = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.ships.at(-1) as string);
+    await open(page, 'EncyclopediaScene', { tab: 'ships', id: shipId });
+    expect(await page.evaluate(() => ((window as unknown as G).game.scene.getScene('EncyclopediaScene') as unknown as { selectedId: string }).selectedId)).toBe(shipId);
+    expect(await overflowingTexts(page, 'EncyclopediaScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'EncyclopediaScene')).toEqual([]);
+    await page.screenshot({ path: info.outputPath('encyclopedia-ship.png') });
+    const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
+      const scene = (window as unknown as G).game.scene.getScene(k);
+      const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((c) => (c as Phaser.GameObjects.Text).text?.startsWith(l)));
+      btn!.emit('pointerdown');
+      btn!.emit('pointerup');
+    }, [key, label] as const);
+    await press('EncyclopediaScene', '改装・改造');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('CustomizationScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    const refit = await page.evaluate(() => {
+      const s = (window as unknown as G).game.scene.getScene('CustomizationScene') as unknown as { ships: Array<{ id: string }>; selected: number };
+      return s.ships[s.selected].id;
+    });
+    expect(refit).toBe(shipId);
+    await page.screenshot({ path: info.outputPath('refit-from-encyclopedia.png') });
+    await press('CustomizationScene', '図鑑');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('EncyclopediaScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => ((window as unknown as G).game.scene.getScene('EncyclopediaScene') as unknown as { selectedId: string }).selectedId)).toBe(shipId);
+    expect(errors).toEqual([]);
+  });
+
   test('編成 from the menu moves on to 作戦 or 演習 instead of a sortie (#109)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene', { organize: true });

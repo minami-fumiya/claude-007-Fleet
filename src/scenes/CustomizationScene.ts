@@ -77,13 +77,16 @@ export class CustomizationScene extends Phaser.Scene {
   /** Scene the back button returns to (the Fleet Builder or the home port) */
   private returnTo: string = SceneKeys.FLEET_BUILDER;
   private unlocked = new Set<string>();
+  /** Ship to open on (#178: from the 図鑑) */
+  private startShipId?: string;
 
   constructor() {
     super({ key: SceneKeys.CUSTOMIZATION });
   }
 
-  init(data: { returnTo?: string; scope?: 'fleet' | 'all' }): void {
+  init(data: { returnTo?: string; scope?: 'fleet' | 'all'; shipId?: string }): void {
     this.returnTo = data?.returnTo ?? SceneKeys.FLEET_BUILDER;
+    this.startShipId = data?.shipId;
     // From the Fleet Builder: its fleet; from the home port: the last choice (#144).
     this.showAll = data?.scope ? data.scope === 'all' : audio.settings.customizeAll;
   }
@@ -99,9 +102,14 @@ export class CustomizationScene extends Phaser.Scene {
     const owned = ownedShips(loadProgress(), registry.byNation(loadProgress().nation));
     this.fleetIds = (selection?.slotIds ?? []).filter((id): id is string => !!id);
     this.ships = customizeShips(owned, this.fleetIds, this.showAll);
+    // A ship asked for by id (#178) is shown even when it is not in the fleet.
+    if (this.startShipId && !this.ships.some((s) => s.id === this.startShipId) && owned.some((s) => s.id === this.startShipId)) {
+      this.showAll = true;
+      this.ships = customizeShips(owned, this.fleetIds, true);
+    }
     this.catalog = DataLoader.getUpgrades(this);
     this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));
-    this.selected = 0;
+    this.selected = Math.max(0, this.ships.findIndex((s) => s.id === this.startShipId));
     this.pickerName = undefined;
     this.sheet = [];
     this.sheetList = undefined;
@@ -118,6 +126,7 @@ export class CustomizationScene extends Phaser.Scene {
       this.buildScopeToggle();
       return;
     }
+    this.buildEncyclopediaLink();
     this.buildTabs();
     this.buildStatsPanel();
     this.buildCards();
@@ -130,6 +139,18 @@ export class CustomizationScene extends Phaser.Scene {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '改装 — 装備を換装せよ', displayStyle(24)).setOrigin(0.5);
+  }
+
+  /** 図鑑 › (#178): the selected ship's encyclopedia page; its back button comes back here on the same ship. */
+  private buildEncyclopediaLink(): void {
+    const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
+    new UIButton(this, CANVAS_W - back.x, back.y, '図鑑  ›', () => {
+      const shipId = this.ships[this.selected]?.id;
+      this.scene.start(SceneKeys.ENCYCLOPEDIA, {
+        tab: 'ships', id: shipId,
+        back: { scene: SceneKeys.CUSTOMIZATION, data: { returnTo: this.returnTo, scope: this.showAll ? 'all' : 'fleet', shipId } },
+      });
+    }, { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
   }
 
   /** 艦隊のみ / すべて (#144), remembered in the settings. */
