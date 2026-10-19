@@ -19,14 +19,14 @@ describe('DockSystem', () => {
     expect(repairTimeMs(500, 1)).toBe(0);
   });
 
-  it('repair time depends on the class (#143 / #161 / #176 / #212): light damage at once, 4〜6 minutes for a battleship 大破', () => {
+  it('repair time depends on the class (#143 / #161 / #176 / #212): light damage at once, 3〜4 minutes for a battleship 大破', () => {
     // 75% HP or more needs no wait (#212).
     expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer)).toBe(0);
     expect(repairTimeMs(800, 0.75, 1, ShipClass.Battleship)).toBe(0);
     expect(repairTimeMs(210, 0.5, 1, ShipClass.Destroyer) / 1000).toBeLessThan(15);
     const bb = repairTimeMs(800, 0.1, 1, ShipClass.Battleship) / 60_000;
-    expect(bb).toBeGreaterThanOrEqual(4);
-    expect(bb).toBeLessThanOrEqual(6);
+    expect(bb).toBeGreaterThanOrEqual(3);
+    expect(bb).toBeLessThanOrEqual(4);
     // Bigger classes take longer for the same damage.
     const order = [ShipClass.Destroyer, ShipClass.Cruiser, ShipClass.Carrier, ShipClass.Battleship].map((c) => repairTimeMs(500, 0.3, 1, c));
     expect([...order].sort((a, b) => a - b)).toEqual(order);

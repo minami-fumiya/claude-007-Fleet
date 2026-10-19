@@ -228,15 +228,15 @@ describe('construction time (#143)', () => {
   const now = 1_700_000_000_000;
   const ready = (patch: Partial<IProgress> = {}): IProgress => player({ resources: rich, ...patch });
 
-  it('takes minutes by class and grade: destroyers 1.5, the biggest battleships about 12 (#176 #212)', () => {
+  it('takes minutes by class and grade: destroyers 1, the biggest battleships about 8 (#176 #212)', () => {
     const min = (id: string): number => buildTimeMs(byId(id)) / 60_000;
-    expect(min('yukikaze')).toBe(1.5);
+    expect(min('yukikaze')).toBe(1);
     expect(min('sendai')).toBeLessThan(min('takao'));
     expect(min('takao')).toBeLessThan(min('kaga'));
     expect(min('kaga')).toBeLessThan(min('yamato'));
-    expect(min('kongo')).toBeGreaterThanOrEqual(8);
-    expect(min('yamato')).toBeGreaterThanOrEqual(10);
-    expect(min('yamato')).toBeLessThanOrEqual(15);
+    expect(min('kongo')).toBeGreaterThanOrEqual(5);
+    expect(min('yamato')).toBeGreaterThanOrEqual(6);
+    expect(min('yamato')).toBeLessThanOrEqual(10);
   });
 
   it('a build is laid down, paid at once, and joins the fleet when finished', () => {
