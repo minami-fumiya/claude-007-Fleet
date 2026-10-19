@@ -220,6 +220,33 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('every scenario and side lists its ships by kind and fits (#196)', async ({ page }, info) => {
+    test.setTimeout(240_000);
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ScenarioScene'] });
+    await open(page, 'ScenarioScene');
+    type S = { scenarios: Array<{ id: string; sides: unknown[] }>; selected: number; side: number; theater: string; drawList(): void; refresh(): void; detail: Array<{ type: string; text?: string }> };
+    const count = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as S).scenarios.length);
+    const problems: string[] = [];
+    for (let i = 0; i < count; i++) {
+      for (let side = 0; side < 2; side++) {
+        const text = await page.evaluate(([idx, sd]) => {
+          const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as S;
+          s.selected = idx;
+          s.side = sd;
+          s.refresh();
+          return s.detail.filter((o) => o.type === 'Text').map((o) => o.text ?? '').join('|');
+        }, [i, side] as const);
+        if (!/隻 — /.test(text)) problems.push(`${i}/${side}: no kind headline`);
+        const over = [...await overflowingTexts(page, 'ScenarioScene'), ...await overlappingTexts(page, 'ScenarioScene')];
+        if (over.length > 0) problems.push(`${i}/${side}: ${over.join(', ')}`);
+      }
+    }
+    await page.screenshot({ path: info.outputPath('scenario-lineup.png') });
+    expect(problems, layout).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('a save full of ships, captains and cleared areas still fits every screen (#163)', async ({ page }, info) => {
     // Fourteen screens, each checked for overflow and overlaps.
     test.setTimeout(240_000);
