@@ -28,7 +28,11 @@ export class ResourceBar {
     });
   }
 
-  refresh(r: IResources): void {
-    for (const k of RESOURCE_KEYS) this.values.get(k)?.setText(String(r[k]));
+  /** With `cap` (#221), a resource at its holding cap turns red and says so: it cannot grow any further. */
+  refresh(r: IResources, cap?: IResources): void {
+    for (const k of RESOURCE_KEYS) {
+      const full = cap !== undefined && r[k] >= cap[k];
+      this.values.get(k)?.setText(full ? `${r[k]} 満` : String(r[k])).setColor(full ? Css.danger : Css.text);
+    }
   }
 }

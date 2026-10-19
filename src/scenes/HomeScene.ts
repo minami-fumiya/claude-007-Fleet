@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
-import { regenRules } from '@/systems/FacilitySystem';
+import { holdCap, regenRules } from '@/systems/FacilitySystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -10,12 +10,12 @@ import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation } from '@/utils/ProgressStore';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
-import { nextRegenMs, regenFull } from '@/systems/ResourceSystem';
+import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources } from '@/systems/ResourceSystem';
 import { captainsLeft } from '@/systems/CaptainRoster';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
-import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
+import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IShipData } from '@/types/Ship';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -26,7 +26,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseOfProgress, currentBaseId, isAtCurrentBase, repairTimeMultiplier } from '@/systems/BaseSystem';
 import {
-  activeQuests, addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
+  activeQuests, addItems, claimableCount, QUESTS, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
   gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
 import { MEDALS } from '@/systems/RecordSystem';
@@ -88,6 +88,8 @@ interface IQuestRow {
   goal: number;
   reward: string;
   status: QuestStatus;
+  /** The reward would not all fit under the holding cap (#221) */
+  overflow?: boolean;
 }
 
 export class HomeScene extends Phaser.Scene {
@@ -100,6 +102,8 @@ export class HomeScene extends Phaser.Scene {
   private overlay: Phaser.GameObjects.GameObject[] = [];
   private menuObjs: Phaser.GameObjects.GameObject[] = [];
   private questTab: QuestTab = 'daily';
+  /** A quest whose reward overflows the holding cap, pressed once: the next press takes it anyway (#221). */
+  private confirmClaim: string | null = null;
   private eventText!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -177,7 +181,7 @@ export class HomeScene extends Phaser.Scene {
 
   private refreshRegen(now: number): void {
     const progress = loadProgress();
-    this.bar.refresh(progress.resources);
+    this.bar.refresh(progress.resources, holdCap(progress.facilities));
     // Each resource regenerates at its own rate (0.0.12: fuel fastest).
     // Base facilities (#146) raise the rates and caps.
     const { perTick: r, cap } = regenRules(progress.facilities);
@@ -297,11 +301,14 @@ export class HomeScene extends Phaser.Scene {
       return o;
     };
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const cap = holdCap(progress.facilities);
     const rows: IQuestRow[] = tab === 'rank' ? this.rankMissionRows(progress) : questBoard(state, tab, now).map((q) => {
       const status = questStatus(state, q);
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
-      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・');
-      return { id: q.id, name: q.name, text: q.text, value: questProgress(state, q), goal: q.goal, reward, status };
+      // A reward that would overflow the holding cap (#221) waits unclaimed until there is room, or is taken anyway.
+      const lost = status === 'claimable' ? gainResources(progress.resources, q.reward, cap).lost : resources();
+      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・') + lostNote(lost);
+      return { id: q.id, name: q.name, text: q.text, value: questProgress(state, q), goal: q.goal, reward, status, overflow: lostNote(lost) !== '' };
     });
     const cols = IS_PORTRAIT ? 1 : 2;
     const perCol = Math.ceil(QUESTS_SHOWN.once / cols);
@@ -345,8 +352,9 @@ export class HomeScene extends Phaser.Scene {
       const fit = <T extends Phaser.GameObjects.Text>(t: T): T => (t.width > textW ? t.setScale(textW / t.width) : t);
       add(fit(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted))));
       drawMeter(add(this.add.graphics()), tx, ry + rowH - (IS_PORTRAIT ? 30 : 27), textW, 4, r.value / r.goal, r.status === 'claimable' ? Colors.gold : claimed ? Colors.muted : Colors.cyan);
-      if (r.reward) add(fit(this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : Css.gold)).setOrigin(0, 1)));
-      const label = { claimable: '受け取る', progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
+      if (r.reward) add(fit(this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : r.overflow ? Css.danger : Css.gold)).setOrigin(0, 1)));
+      const claimLabel = !r.overflow ? '受け取る' : this.confirmClaim === r.id ? 'あふれても\n受け取る' : '上限で保留';
+      const label = { claimable: claimLabel, progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
       const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
         variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
       })).setEnabled(r.status === 'claimable' && tab !== 'rank');
@@ -436,11 +444,19 @@ export class HomeScene extends Phaser.Scene {
 
   private claimQuest(id: string): void {
     const progress = loadProgress();
+    const quest = QUESTS.find((q) => q.id === id);
+    // The first press on an overflowing reward only asks (#221): the quest stays claimable until there is room.
+    if (quest && overflows(progress.resources, quest.reward, holdCap(progress.facilities)) && this.confirmClaim !== id) {
+      this.confirmClaim = id;
+      this.openQuests(this.questTab);
+      return;
+    }
+    this.confirmClaim = null;
     const r = claimQuest(progress.quests, id, Date.now());
     if (!r) return;
     // A ladder quest's medal (#158) goes into the shared record with the reward.
     const record = r.medal && !progress.record.medals.includes(r.medal) ? { ...progress.record, medals: [...progress.record.medals, r.medal] } : progress.record;
-    saveProgress({ ...progress, record, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) }, 'quest');
+    saveProgress({ ...progress, record, quests: r.state, resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) }, 'quest');
     this.refresh();
     this.openQuests();
   }
@@ -542,7 +558,7 @@ export class HomeScene extends Phaser.Scene {
     // The docks and damaged ships of the base the admiral is at (#145).
     const here = currentBaseId(all);
     const progress = baseDockView(all, here);
-    this.bar.refresh(progress.resources);
+    this.bar.refresh(progress.resources, holdCap(progress.facilities));
     if (this.regenText) this.refreshRegen(Date.now());
 
     const d = L.dock;

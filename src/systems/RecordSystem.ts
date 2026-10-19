@@ -46,6 +46,12 @@ export interface IMedalContext {
   parallelFacilities?: number;
   /** Most docks one base has (#211) */
   maxDocks?: number;
+  /** 1 when some nation holds all four resources at its holding cap (#221) */
+  fullStock?: number;
+  /** Highest steel holding cap of any nation (#221) */
+  steelCap?: number;
+  /** Lowest level among the four resource facilities (all bases summed), best nation (#190) */
+  supplyLevel?: number;
   /** Most carriers one nation owns (#204) */
   carriersOwned?: number;
   /** Most enemies one captain's own ship has sunk (#199) */
@@ -129,6 +135,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('shipwright', '造船章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻建造する`, (_r, c) => total(c, 'build')),
   ...ladder('rush_work', '突貫工事章', 'base', [2, 3], (g) => `1 つの軍港で施設を ${g} つ同時に建設する`, (_r, c) => c.parallelFacilities ?? 0),
   ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `1 つの軍港のドックを ${g} 本にする`, (_r, c) => c.maxDocks ?? 0),
+  { id: 'stockpile', name: '大備蓄章', description: '4 つの資源をすべて保有上限まで貯める', category: 'base', value: (_r, c) => c.fullStock ?? 0, goal: 1 },
+  ...ladder('warehouse', '備蓄拡張章', 'base', [20000, 40000], (g) => `製鋼所で鋼材の保有上限を ${g.toLocaleString()} にする`, (_r, c) => c.steelCap ?? 0),
+  ...ladder('supply_depot', '補給基地章', 'base', [3, 5], (g) => `燃料タンク・弾薬庫・製鋼所・航空基地をすべて Lv${g} 以上にする`, (_r, c) => c.supplyLevel ?? 0),
   ...ladder('dockyard', '船渠章', 'base', [10, 100, 300], (g) => `損傷艦を ${g} 隻入渠させる`, (_r, c) => total(c, 'repair')),
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),
   ...ladder('patrol', '哨戒章', 'base', [10, 100], (g) => `攻略済みの海域を ${g} 回掃討する`, (_r, c) => total(c, 'sweep')),

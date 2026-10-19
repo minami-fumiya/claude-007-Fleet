@@ -2,7 +2,8 @@ import { IShipData } from '@/types/Ship';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { ICampaignArea } from '@/types/Campaign';
-import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, pay, resources, sortieCost } from './ResourceSystem';
+import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, gainResources, pay, resources, sortieCost } from './ResourceSystem';
+import { holdCap } from './FacilitySystem';
 import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } from './DockSystem';
 import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
@@ -64,6 +65,8 @@ export interface ISettlement {
   reward: IResources;
   /** Bauxite spent replacing lost aircraft */
   aircraftCost: IResources;
+  /** Reward that did not fit under the holding cap (#221) */
+  lost: IResources;
 }
 
 /** Why the fleet can't sortie right now (empty = it can). */
@@ -102,16 +105,15 @@ export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts:
   const full = applyEventReward(ranked, opts.event ?? NO_EVENT, opts.theater);
   const reward = opts.exercise ? addResources(resources(), full, EXERCISE_REWARD_SCALE) : full;
   const aircraftCost = opts.exercise ? resources() : resources({ bauxite: Math.max(0, outcome.planesLost) * BAUXITE_PER_PLANE });
-  let next: IProgress = {
-    ...progress,
-    resources: addResources(addResources(progress.resources, reward), aircraftCost, -1),
-  };
-  if (opts.exercise) return { progress: next, reward, aircraftCost };
+  // The reward net of replacement aircraft fills up to the holding cap (#221).
+  const gain = gainResources(progress.resources, addResources(reward, aircraftCost, -1, true), holdCap(progress.facilities));
+  let next: IProgress = { ...progress, resources: gain.resources };
+  if (opts.exercise) return { progress: next, reward, aircraftCost, lost: gain.lost };
   for (const s of outcome.ships) {
     const f = s.sunk ? SUNK_HP_FRACTION : s.hpFraction;
     next = { ...next, ...setDamage(next, s.shipId, f) };
   }
-  return { progress: next, reward, aircraftCost };
+  return { progress: next, reward, aircraftCost, lost: gain.lost };
 }
 
 /** HP fraction a ship starts its next battle with (exercises always start at full HP). */
@@ -149,6 +151,8 @@ export interface ISweepResult {
   cost: IResources;
   merit: number;
   promotedTo: IRank | null;
+  /** Reward that did not fit under the holding cap (#221) */
+  lost: IResources;
 }
 
 /**
@@ -165,7 +169,8 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const merit = meritFor({ victory: true, campaign: true, firstClear: false, enemiesSunk: enemy.length });
   // A sweep counts toward the 大将 promotion mission (#142), and may complete it.
   const before = rankOf(progress);
-  const merited = addMerit(addRankStats({ ...progress, resources: addResources(paid, reward) }, { sweep: 1 }), merit).progress;
+  const gain = gainResources(paid, reward, holdCap(progress.facilities));
+  const merited = addMerit(addRankStats({ ...progress, resources: gain.resources }, { sweep: 1 }), merit).progress;
   const after = rankOf(merited);
   const promoted = { progress: merited, promotedTo: after.index > before.index ? after : null };
   const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
@@ -177,5 +182,5 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
     ['sinkDestroyer', of(ShipClass.Destroyer)], ['sinkCruiser', of(ShipClass.Cruiser)],
     ['sinkCarrier', of(ShipClass.Carrier)], ['sinkSubmarine', of(ShipClass.Submarine)], ['sinkBattleship', of(ShipClass.Battleship)],
   ], now);
-  return { progress: next, reward, cost, merit, promotedTo: promoted.promotedTo };
+  return { progress: next, reward, cost, merit, promotedTo: promoted.promotedTo, lost: gain.lost };
 }

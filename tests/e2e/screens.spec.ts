@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.26.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.27.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -558,6 +558,55 @@ test.describe('screens', () => {
     expect(jobs.map((j) => j.id)).toEqual(['fuelTank']);
     expect(await overflowingTexts(page, 'BaseScene'), `bases (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('home-bases.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('a new base is built before it opens, and quest rewards wait at the holding cap (#217 #221)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    // A 0.0.28 save: only the first base built, every resource at its cap, one 高速建造材.
+    const full = { fuel: 10000, ammo: 10000, steel: 10000, bauxite: 5000 };
+    const save = {
+      ...SAVE, version: 15, seenHelp: ['HomeScene', 'BaseScene', 'CampaignMapScene'],
+      nations: { IJN: { ...SAVE.nations.IJN, rankFloor: 2, resources: full, basesOpen: [], baseWork: null, items: { fastRepair: 0, fastBuild: 1, captainBook: 0 } } },
+    };
+    const errors = await boot(page, layout, save);
+    type G = { game: Phaser.Game };
+    const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
+      const scene = (window as unknown as G).game.scene.getScene(k);
+      const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((c) => (c as Phaser.GameObjects.Text).text?.includes(l)))!;
+      btn.emit('pointerdown');
+      btn.emit('pointerup');
+    }, [key, label] as const);
+    const stored = (): Promise<{ basesOpen: string[]; baseWork: { base: string } | null; resources: typeof full }> =>
+      page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN);
+    await open(page, 'BaseScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as G).game.scene.getScene('BaseScene') as unknown as { selectedId: string; refresh(): void };
+      s.selectedId = 'ijn_light';
+      s.refresh();
+    });
+    await press('BaseScene', '着工');
+    expect((await stored()).baseWork?.base).toBe('ijn_light');
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'BaseScene'), `base work (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'BaseScene'), `base work overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('base-work.png') });
+    await press('BaseScene', '高速建造材で完成');
+    expect((await stored()).basesOpen).toContain('ijn_light');
+    await page.screenshot({ path: info.outputPath('base-opened.png') });
+    // Resources back at the cap: the bar says so and the quest board still fits.
+    await page.evaluate((r) => {
+      const raw = JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!);
+      raw.nations.IJN.resources = r;
+      localStorage.setItem('ww2fleet.progress.v2', JSON.stringify(raw));
+    }, full);
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScenes(true).length);
+    await open(page, 'HomeScene');
+    await page.evaluate(() => ((window as unknown as G).game.scene.getScene('HomeScene') as unknown as { openQuests(k: string): void }).openQuests('hourly'));
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'HomeScene'), `quests at the cap (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('quests-at-cap.png') });
     expect(errors).toEqual([]);
   });
 

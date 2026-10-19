@@ -21,7 +21,7 @@ export function rankTable(nation: string): IRankRow[] {
     const unlocks: string[] = [];
     const docks = DOCK_UPGRADES.filter((d) => d.rank === r.index).length;
     if (docks > 0) unlocks.push('ドック増設');
-    for (const b of bases.filter((x) => x.unlockRank === r.index && r.index > 0)) unlocks.push(`軍港: ${b.name}`);
+    for (const b of bases.filter((x) => x.unlockRank === r.index && r.index > 0)) unlocks.push(`軍港の着工: ${b.name}`);
     if (r.exam) unlocks.push(`昇進試験: ${examText(r.exam)}`);
     return {
       index: r.index, name: r.name, minMerit: r.minMerit, slots: r.slots, grade: maxBuildGrade(r.index),

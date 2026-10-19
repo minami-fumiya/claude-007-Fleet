@@ -4,6 +4,8 @@ import { CLASS_JA } from './EncyclopediaSystem';
 export { scaleCost } from './ResourceSystem';
 import { RANKS, rankOf, IRankProgress } from './RankSystem';
 import { boostedBase, Facilities } from './FacilitySystem';
+import { canAfford, pay } from './ResourceSystem';
+import { IResources } from '@/types/Progression';
 
 /**
  * 軍港 (#88, pure): each nation has four home ports. The admiral works from one at a time; each gives one or two
@@ -32,8 +34,30 @@ export function nationBases(nation: string): IBase[] {
   return BASES.filter((b) => b.nation === nation);
 }
 
-export function isBaseOpen(base: IBase, progress: IRankProgress): boolean {
+/** What a nation records about its bases (#217): the ones built, and the one under construction. */
+export interface IBaseWorks {
+  basesOpen?: string[];
+  baseWork?: IBaseWork | null;
+}
+
+export interface IBaseWork {
+  base: string;
+  endsAt: number;
+}
+
+/** True when the rank this base asks for has been reached (it can then be built, #217). */
+export function baseRankMet(base: IBase, progress: IRankProgress): boolean {
   return rankOf(progress).index >= base.unlockRank;
+}
+
+/**
+ * A nation's first base is always open; the others once built (#217). A progress without a list of built bases (a
+ * save from before 0.0.28, mid-migration) falls back to the rank rule they had then.
+ */
+export function isBaseOpen(base: IBase, progress: IRankProgress & IBaseWorks): boolean {
+  if (nationBases(base.nation)[0]?.id === base.id) return true;
+  if (progress.basesOpen === undefined) return baseRankMet(base, progress);
+  return progress.basesOpen.includes(base.id);
 }
 
 /** The base in use: the stored one when it is this nation's and open, else the nation's first. */
@@ -78,7 +102,65 @@ export function baseBonusLines(base: IBase): string[] {
 }
 
 export function baseLockText(base: IBase): string {
-  return `${RANKS[base.unlockRank]?.name ?? '?'}に昇進で解放`;
+  return `${RANKS[base.unlockRank]?.name ?? '?'}に昇進で着工`;
+}
+
+// ---------------------------------------------------------------------------
+// Building a base (#217)
+// ---------------------------------------------------------------------------
+
+/** Price and minutes of the nation's 2nd, 3rd and 4th base (by their order in bases.json). */
+export const BASE_WORKS: ReadonlyArray<{ cost: IResources; minutes: number }> = [
+  { cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 20 },
+  { cost: { fuel: 1000, ammo: 500, steel: 2000, bauxite: 0 }, minutes: 40 },
+  { cost: { fuel: 1500, ammo: 1000, steel: 3000, bauxite: 300 }, minutes: 60 },
+];
+
+/** What building `base` takes (the last entry for any further base). */
+export function baseWorkOf(base: IBase): { cost: IResources; minutes: number } {
+  const i = Math.max(0, nationBases(base.nation).findIndex((b) => b.id === base.id) - 1);
+  return BASE_WORKS[Math.min(i, BASE_WORKS.length - 1)];
+}
+
+export type BaseState = 'open' | 'building' | 'busy' | 'ready' | 'resources' | 'locked';
+
+/**
+ * open: usable. building: under construction. busy: another base is being built (one at a time). ready / resources:
+ * the rank is met and it can be built now / once resources allow. locked: the rank is not reached yet.
+ */
+export function baseState(base: IBase, progress: IRankProgress & IBaseWorks & { resources: IResources }): BaseState {
+  if (isBaseOpen(base, progress)) return 'open';
+  if (progress.baseWork?.base === base.id) return 'building';
+  if (!baseRankMet(base, progress)) return 'locked';
+  if (progress.baseWork) return 'busy';
+  return canAfford(progress.resources, baseWorkOf(base).cost) ? 'ready' : 'resources';
+}
+
+/** Pays for and starts building `base`; null when it can't be built now. */
+export function startBaseWork<T extends IRankProgress & IBaseWorks & { resources: IResources }>(progress: T, base: IBase, now: number): T | null {
+  if (baseState(base, progress) !== 'ready') return null;
+  const work = baseWorkOf(base);
+  const left = pay(progress.resources, work.cost);
+  return left ? { ...progress, resources: left, baseWork: { base: base.id, endsAt: now + work.minutes * 60_000 } } : null;
+}
+
+/** A finished construction opens its base (also after the game was closed). */
+export function finishBaseWork<T extends IBaseWorks>(progress: T, now: number): T {
+  const w = progress.baseWork;
+  if (!w || w.endsAt > now) return progress;
+  return { ...progress, basesOpen: [...new Set([...(progress.basesOpen ?? []), w.base])], baseWork: null };
+}
+
+/** 高速建造材 finishes the construction at once. */
+export function rushBaseWork<T extends IBaseWorks & { items: { fastBuild: number } }>(progress: T, now: number): T | null {
+  if (!progress.baseWork || progress.items.fastBuild <= 0) return null;
+  const rushed = { ...progress, baseWork: { ...progress.baseWork, endsAt: now }, items: { ...progress.items, fastBuild: progress.items.fastBuild - 1 } };
+  return finishBaseWork(rushed, now);
+}
+
+/** Bases of the nation open (built) in this progress, the first one included. */
+export function openBaseCount(nation: string, progress: IRankProgress & IBaseWorks): number {
+  return nationBases(nation).filter((b) => isBaseOpen(b, progress)).length;
 }
 
 // ---------------------------------------------------------------------------

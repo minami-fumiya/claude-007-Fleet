@@ -14,7 +14,7 @@ import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
 import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
-import { nationBases } from '@/systems/BaseSystem';
+import { finishBaseWork, IBaseWork, nationBases } from '@/systems/BaseSystem';
 import { Facilities, FacilityId, finishFacilities, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
@@ -102,6 +102,9 @@ export interface INationProgress {
   facilities: Facilities;
   /** Facilities being built or raised (#146) */
   facilityJobs: IFacilityJob[];
+  /** Bases built beyond the nation's first (#217), and the one under construction */
+  basesOpen: string[];
+  baseWork: IBaseWork | null;
 }
 
 /** The whole save (v2 and later). */
@@ -140,7 +143,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [],
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null,
   };
 }
 
@@ -173,7 +176,8 @@ export function progressView(save: ISave, now?: number): IProgress {
   const view: IProgress = { ...np, nation: save.current, record: save.record };
   if (now === undefined) return view;
   // Facilities finished meanwhile count from now on; they set the regeneration rates and caps (#146).
-  const built = finishFacilities(view, now);
+  // So does a base whose construction ended (#217).
+  const built = finishBaseWork(finishFacilities(view, now), now);
   const r = regenerate(built.resources, built.regenAt, now, regenRules(built.facilities));
   // Natural regeneration goes into the ledger (#137).
   const regen = r.resources === built.resources && r.regenAt === built.regenAt
@@ -294,6 +298,8 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     baseDocks: numbers(data.baseDocks),
     facilities: parseFacilities(data.facilities),
     facilityJobs: parseFacilityJobs(data.facilityJobs),
+    basesOpen: [...new Set(strings(data.basesOpen))],
+    baseWork: isObject(data.baseWork) && typeof data.baseWork.base === 'string' && isNum(data.baseWork.endsAt) ? { base: data.baseWork.base, endsAt: data.baseWork.endsAt } : null,
   };
 }
 
@@ -560,7 +566,7 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs || view.baseWork !== np.baseWork)) saveSave(withProgress(save, view));
   return view;
 }
 

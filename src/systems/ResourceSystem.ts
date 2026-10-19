@@ -6,8 +6,8 @@ import { ShipClass } from '@/types/ShipClass';
 export const STARTING_RESOURCES: IResources = { fuel: 0, ammo: 0, steel: 0, bauxite: 0 };
 /** What a pre-Sprint-6 save (no resources stored) was given; only used when migrating such saves. */
 export const LEGACY_STARTING_RESOURCES: IResources = { fuel: 1500, ammo: 1500, steel: 1500, bauxite: 800 };
-/** Each resource is capped here. */
-export const RESOURCE_CAP = 20000;
+/** Sanity clamp on any resource; the real limit is the holding cap (#221), which bases raise well below this. */
+export const RESOURCE_CAP = 999_999;
 export const RESOURCE_KEYS: Array<keyof IResources> = ['fuel', 'ammo', 'steel', 'bauxite'];
 
 export const RESOURCE_LABEL: Record<keyof IResources, string> = {
@@ -37,12 +37,66 @@ export function resources(r: Partial<IResources> = {}): IResources {
   return { fuel: r.fuel ?? 0, ammo: r.ammo ?? 0, steel: r.steel ?? 0, bauxite: r.bauxite ?? 0 };
 }
 
-export function addResources(a: Partial<IResources>, b: Partial<IResources>, scale = 1): IResources {
+/** `a + b × scale`, clamped to 0..RESOURCE_CAP; `signed` keeps negatives (a net change rather than a stock). */
+export function addResources(a: Partial<IResources>, b: Partial<IResources>, scale = 1, signed = false): IResources {
   const x = resources(a);
   const y = resources(b);
   const out = resources();
-  for (const k of RESOURCE_KEYS) out[k] = Math.max(0, Math.min(RESOURCE_CAP, Math.round(x[k] + y[k] * scale)));
+  for (const k of RESOURCE_KEYS) out[k] = Math.max(signed ? -RESOURCE_CAP : 0, Math.min(RESOURCE_CAP, Math.round(x[k] + y[k] * scale)));
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Holding cap (#221)
+// ---------------------------------------------------------------------------
+
+/** What a nation can hold without any facility; each level of a resource's facility adds HOLD_CAP_PER_LEVEL. */
+export const HOLD_CAP_BASE: IResources = { fuel: 10000, ammo: 10000, steel: 10000, bauxite: 5000 };
+export const HOLD_CAP_PER_LEVEL = 5000;
+
+export interface IGain {
+  resources: IResources;
+  /** What did not fit under the cap */
+  lost: IResources;
+}
+
+/**
+ * Adds an income under the holding cap (#221): a resource rises to at most `cap`, the rest is lost. A resource already
+ * above the cap (an old save, a cap that shrank) is never cut, it just stops growing. Negative parts are applied as is.
+ */
+export function gainResources(have: Partial<IResources>, gain: Partial<IResources>, cap: IResources): IGain {
+  const h = resources(have);
+  const g = resources(gain);
+  const out = resources();
+  const lost = resources();
+  for (const k of RESOURCE_KEYS) {
+    if (g[k] <= 0) {
+      out[k] = Math.max(0, h[k] + g[k]);
+      continue;
+    }
+    const room = Math.max(0, cap[k] - h[k]);
+    const take = Math.min(room, g[k]);
+    out[k] = h[k] + take;
+    lost[k] = g[k] - take;
+  }
+  return { resources: out, lost };
+}
+
+/** " (上限で受け取れず: 鋼材 320)" after a reward, or '' when everything fit. */
+export function lostNote(lost: Partial<IResources>): string {
+  const text = formatResources(lost);
+  return text ? `  (上限で受け取れず: ${text})` : '';
+}
+
+/** True when some resource of `gain` would not fit under the cap. */
+export function overflows(have: Partial<IResources>, gain: Partial<IResources>, cap: IResources): boolean {
+  const l = gainResources(have, gain, cap).lost;
+  return RESOURCE_KEYS.some((k) => l[k] > 0);
+}
+
+/** True when every resource has reached the holding cap (大備蓄章, #221). */
+export function atHoldCap(have: IResources, cap: IResources): boolean {
+  return RESOURCE_KEYS.every((k) => have[k] >= cap[k]);
 }
 
 export function canAfford(have: Partial<IResources>, cost: Partial<IResources>): boolean {
@@ -66,7 +120,7 @@ export function sortieCost(ships: IShipData[]): IResources {
  */
 export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses: ShipClass[] = []): IResources {
   const perSunk = resources({ fuel: 80, ammo: 70, steel: 0, bauxite: 20 });
-  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 130, bauxite: 50 }) : resources();
+  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 170, bauxite: 50 }) : resources();
   const scale = victory ? 1 : 0.5;
   const out = addResources(bonus, perSunk, Math.max(0, enemiesSunk) * scale);
   // Steel comes from the wrecks (#132): big ships give more. Sinks without a known class count as average.
@@ -75,15 +129,15 @@ export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses:
   return { ...out, steel: Math.round(out.steel + steel * scale) };
 }
 
-/** Steel salvaged per enemy sunk, by class (#132). */
+/** Steel salvaged per enemy sunk, by class (#132); a quarter more since 0.0.28 (#222): builds burn steel fastest. */
 export const SINK_STEEL: Partial<Record<ShipClass, number>> = {
-  [ShipClass.Battleship]: 150,
-  [ShipClass.Carrier]: 120,
-  [ShipClass.Cruiser]: 80,
-  [ShipClass.Destroyer]: 45,
-  [ShipClass.Submarine]: 35,
+  [ShipClass.Battleship]: 190,
+  [ShipClass.Carrier]: 150,
+  [ShipClass.Cruiser]: 100,
+  [ShipClass.Destroyer]: 55,
+  [ShipClass.Submarine]: 45,
 };
-const SINK_STEEL_DEFAULT = 60;
+const SINK_STEEL_DEFAULT = 75;
 
 export function formatResources(r: Partial<IResources>, onlyNonZero = true): string {
   const x = resources(r);
@@ -100,7 +154,7 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
  * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Fuel regenerates fastest (every sortie
  * and repair spends it), then ammo and steel (0.0.12: steel led after #35 and fuel became the bottleneck).
  */
-export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 4, bauxite: 1 };
+export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 5, bauxite: 1 };
 export const REGEN_INTERVAL_MS = 60_000;
 /** Regeneration stops at this amount; rewards can still take a resource above it. */
 export const REGEN_CAP = 1500;
