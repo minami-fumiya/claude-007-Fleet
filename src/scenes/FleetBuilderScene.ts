@@ -16,7 +16,7 @@ import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ICaptain, ICaptainData } from '@/types/Captain';
-import { aptitudeFor, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
+import { aptitudeFor, assignCaptains, captainFit, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
@@ -1648,21 +1648,39 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Tap: next captain of this nation not commanding another slot, then none. */
   private cycleCaptain(slot: number): void {
     const taken = new Set(this.captainIds.filter((id, i) => id && i !== slot));
-    const owned = loadProgress().captains;
+    const ship = this.slots[slot];
     const options: (string | null)[] = [
       null,
-      // Only captains this nation has (#44).
-      ...this.captainData.filter((c) => c.nation === this.nation && !taken.has(c.id) && owned.includes(c.id)).map((c) => c.id),
+      // Only captains this nation has (#44), the best fit for this ship first (#164).
+      ...this.ownedCaptains()
+        .filter((c) => !taken.has(c.id))
+        .sort((a, b) => (ship ? captainFit(b, ship.shipClass) - captainFit(a, ship.shipClass) : 0))
+        .map((c) => c.id),
     ];
     const at = options.indexOf(this.captainIds[slot]);
     this.captainIds[slot] = options[(at + 1) % options.length];
     this.refreshSlots();
   }
 
-  /** 改装: refit the ships of this fleet (upgrade slots). */
+  /** This nation's captains the player has, with their levels. */
+  private ownedCaptains(): ICaptain[] {
+    const progress = loadProgress();
+    return this.captainData
+      .filter((c) => c.nation === this.nation && progress.captains.includes(c.id))
+      .map((c) => withProgress(c, progress.captainXp[c.id] ?? 0));
+  }
+
+  /** 艦長を自動配属 (#164): the best-fitting captain for every ship, flagship first. */
+  autoCaptains(): void {
+    this.captainIds = assignCaptains(this.slots.map((s) => s?.shipClass ?? null), this.ownedCaptains());
+    this.refreshSlots();
+  }
+
+  /** 改装: refit the ships of this fleet (upgrade slots); 艦長自動 beside it. */
   private buildRefitButton(): void {
     const p = this.L.fleet;
-    const bw = IS_PORTRAIT ? 150 : 110;
+    // Landscape keeps both buttons clear of the panel title.
+    const bw = IS_PORTRAIT ? 150 : 78;
     const bh = IS_PORTRAIT ? 52 : 32;
     new UIButton(
       this,
@@ -1673,8 +1691,11 @@ export class FleetBuilderScene extends Phaser.Scene {
         this.saveSelection();
         this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.FLEET_BUILDER, scope: 'fleet' });
       }),
-      { variant: 'secondary', width: bw, height: bh, fontSize: 14 },
+      { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 14 : 12 },
     );
+    new UIButton(this, p.x + p.w - PANEL_PAD - bw * 1.5 - 8, p.y + (IS_PORTRAIT ? 42 : 32), IS_PORTRAIT ? '艦長を自動配属' : '艦長自動', this.onTap(() => this.autoCaptains()), {
+      variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 14 : 12,
+    });
   }
 
   private saveSelection(): void {
