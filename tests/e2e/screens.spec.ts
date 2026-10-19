@@ -114,24 +114,37 @@ async function overlappingTexts(page: Page, key: string): Promise<string[]> {
   return page.evaluate((k) => {
     const g = (window as unknown as { game: Phaser.Game }).game;
     const scene = g.scene.getScene(k);
-    const boxes: Array<{ text: string; b: Phaser.Geom.Rectangle; depth: number }> = [];
-    const visit = (o: Phaser.GameObjects.GameObject, visible: boolean, depth: number): void => {
+    // Buttons count as boxes too (#182): a text running under a button's face is hidden even if it misses the label.
+    const boxes: Array<{ text: string; b: Phaser.Geom.Rectangle; depth: number; owner: unknown }> = [];
+    const visit = (o: Phaser.GameObjects.GameObject, visible: boolean, depth: number, owner: unknown): void => {
       const v = visible && (o as unknown as { visible?: boolean }).visible !== false && ((o as unknown as { alpha?: number }).alpha ?? 1) > 0.05;
       if ((o as unknown as { mask?: unknown }).mask) return;
       if (o.type === 'Container') {
-        (o as Phaser.GameObjects.Container).list.forEach((c) => visit(c, v, depth));
+        const c = o as Phaser.GameObjects.Container;
+        const label = c.list.find((x) => x.type === 'Text') as Phaser.GameObjects.Text | undefined;
+        // The button's face is its hit area (its bounds also take in the glow around it).
+        const hit = c.input?.hitArea as Phaser.Geom.Rectangle | undefined;
+        if (v && hit && label) {
+          const m = c.getWorldTransformMatrix();
+          // Container hit areas are measured from the container's top-left (its display origin back from x, y).
+          const face = new Phaser.Geom.Rectangle(m.tx + (hit.x - c.displayOriginX) * m.scaleX, m.ty + (hit.y - c.displayOriginY) * m.scaleY, hit.width * m.scaleX, hit.height * m.scaleY);
+          boxes.push({ text: `[${label.text.replace(/\n/g, ' ').slice(0, 16)}]`, b: face, depth, owner: c });
+        }
+        c.list.forEach((x) => visit(x, v, depth, c.input ? c : owner));
         return;
       }
       const t = o as Phaser.GameObjects.Text;
       if (!v || o.type !== 'Text' || t.text.trim() === '') return;
-      boxes.push({ text: t.text.replace(/\n/g, ' ').slice(0, 24), b: t.getBounds(), depth });
+      boxes.push({ text: t.text.replace(/\n/g, ' ').slice(0, 24), b: t.getBounds(), depth, owner });
     };
-    scene.children.list.forEach((o) => visit(o, true, (o as unknown as { depth: number }).depth));
+    scene.children.list.forEach((o) => visit(o, true, (o as unknown as { depth: number }).depth, undefined));
     const out: string[] = [];
     const SLACK = 3;
     boxes.forEach((a, i) => {
       for (const c of boxes.slice(i + 1)) {
         if (c.depth !== a.depth) continue;
+        // A button and its own label, or two buttons (they may share a frame), are not a clash.
+        if ((a.owner && a.owner === c.owner) || (a.text.startsWith('[') && c.text.startsWith('['))) continue;
         const w = Math.min(a.b.right, c.b.right) - Math.max(a.b.left, c.b.left);
         const h = Math.min(a.b.bottom, c.b.bottom) - Math.max(a.b.top, c.b.top);
         if (w > SLACK && h > SLACK) out.push(`${a.text} × ${c.text}`);
@@ -153,6 +166,23 @@ test.describe('screens', () => {
       expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
+    expect(errors).toEqual([]);
+  });
+
+  test('the shipyard rank line and the research button never overlap, for every class (#182)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ShipyardScene'] });
+    await open(page, 'ShipyardScene');
+    for (const cls of ['Destroyer', 'Submarine', 'Cruiser', 'Carrier', 'Battleship']) {
+      await page.evaluate((c) => {
+        const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { shipClass: string; refresh(): void };
+        s.shipClass = c;
+        s.refresh();
+      }, cls);
+      expect(await overflowingTexts(page, 'ShipyardScene'), `${cls} (${layout})`).toEqual([]);
+      expect.soft(await overlappingTexts(page, 'ShipyardScene'), `${cls} overlaps (${layout})`).toEqual([]);
+    }
+    await page.screenshot({ path: info.outputPath('shipyard-battleship.png') });
     expect(errors).toEqual([]);
   });
 
