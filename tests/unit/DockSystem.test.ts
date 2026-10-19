@@ -19,11 +19,11 @@ describe('DockSystem', () => {
     expect(repairTimeMs(500, 1)).toBe(0);
   });
 
-  it('repair time depends on the class (#143): seconds for a scratched destroyer, half an hour for a battleship 大破', () => {
-    expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer) / 1000).toBeLessThan(60);
+  it('repair time depends on the class (#143 / #161): seconds for a scratched destroyer, under 20 minutes for a battleship 大破', () => {
+    expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer) / 1000).toBeLessThan(30);
     const bb = repairTimeMs(800, 0.1, 1, ShipClass.Battleship) / 60_000;
-    expect(bb).toBeGreaterThanOrEqual(20);
-    expect(bb).toBeLessThanOrEqual(35);
+    expect(bb).toBeGreaterThanOrEqual(12);
+    expect(bb).toBeLessThanOrEqual(20);
     expect(repairTimeMs(500, 0.5, 0.5, ShipClass.Cruiser)).toBe(repairTimeMs(500, 0.5, 1, ShipClass.Cruiser) / 2);
   });
 
