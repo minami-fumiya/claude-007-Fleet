@@ -20,18 +20,20 @@ export const DOCK_UPGRADES: Array<{ rank: number; cost: IResources }> = [
   { rank: 8, cost: { fuel: 1000, ammo: 0, steel: 1500, bauxite: 0 } },
 ];
 /** Real milliseconds per point of HP repaired (a cruiser; the default when the class is unknown). */
-export const MS_PER_HP = 450;
+export const MS_PER_HP = 220;
 /**
- * Repair time per HP by class (#143, shortened to about 60% in #161 and again in #176): a destroyer's light damage
- * takes a few seconds, a battleship coming home 大破 about 10 minutes.
+ * Repair time per HP by class (#143, shortened in #161, #176 and halved again in #212): a battleship coming home 大破
+ * takes about 5 minutes, a destroyer a few seconds.
  */
 export const MS_PER_HP_BY_CLASS: Record<ShipClass, number> = {
-  [ShipClass.Destroyer]: 250,
-  [ShipClass.Submarine]: 250,
+  [ShipClass.Destroyer]: 120,
+  [ShipClass.Submarine]: 120,
   [ShipClass.Cruiser]: MS_PER_HP,
-  [ShipClass.Carrier]: 700,
-  [ShipClass.Battleship]: 900,
+  [ShipClass.Carrier]: 350,
+  [ShipClass.Battleship]: 450,
 };
+/** At or above this HP the repair needs no wait (#212): light damage is patched up at once (it is still paid for). */
+export const INSTANT_REPAIR_FRACTION = 0.75;
 /** A ship sunk in battle comes home heavily damaged (大破) rather than being lost. */
 export const SUNK_HP_FRACTION = 0.1;
 export const FAST_REPAIR_COST: IResources = { fuel: 40, ammo: 0, steel: 80, bauxite: 0 };
@@ -90,6 +92,7 @@ export function repairCost(maxHp: number, fraction: number): IResources {
 
 /** `timeMul` is the current base's repair-time multiplier (#88); `shipClass` sets the time per HP (#143). */
 export function repairTimeMs(maxHp: number, fraction: number, timeMul = 1, shipClass?: ShipClass): number {
+  if (fraction >= INSTANT_REPAIR_FRACTION) return 0;
   const perHp = shipClass ? MS_PER_HP_BY_CLASS[shipClass] : MS_PER_HP;
   return Math.round(missingHp(maxHp, fraction) * perHp * timeMul);
 }
