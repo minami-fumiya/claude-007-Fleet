@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.28.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.29.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
