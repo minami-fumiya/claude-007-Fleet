@@ -1,0 +1,18 @@
+{
+  "id": "matapan",
+  "name": "マタパン岬沖海戦",
+  "date": "1941年3月",
+  "theater": "mediterranean",
+  "description": "イタリア艦隊は英空母の雷撃機に戦艦ヴィットリオ・ヴェネトを損傷させられ、夜には停止した重巡ポーラの救援に向かったザラ・フィウメが英戦艦部隊の夜襲で撃沈された。(ヴァリアント・バーラム・フォーミダブル等は近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Night",
+  "forces": {
+    "A": {"nation": "RM", "ships": ["vittorio_veneto", "zara", "trento", "garibaldi", "aviere", "maestrale"], "positions": [{"x": 0.3, "y": 0.3, "angle": 270}, {"x": 0.36, "y": 0.25, "angle": 270}, {"x": 0.36, "y": 0.35, "angle": 270}, {"x": 0.42, "y": 0.25, "angle": 270}, {"x": 0.42, "y": 0.35, "angle": 270}, {"x": 0.3, "y": 0.2, "angle": 270}]},
+    "B": {"nation": "RN", "ships": ["warspite", "queen_elizabeth", "rodney", "illustrious", "dido", "javelin"], "positions": [{"x": 0.8, "y": 0.7, "angle": 300}, {"x": 0.877, "y": 0.687, "angle": 300}, {"x": 0.827, "y": 0.773, "angle": 300}, {"x": 0.929, "y": 0.717, "angle": 300}, {"x": 0.879, "y": 0.803, "angle": 300}, {"x": 0.85, "y": 0.613, "angle": 300}]}
+  },
+  "sides": [
+    {"force": "B", "label": "英地中海艦隊で夜襲", "objective": "SinkTargets", "targets": ["zara", "trento"], "timeLimitSec": 300, "brief": "夜のうちに重巡ザラとトレントを撃沈せよ。"},
+    {"force": "A", "label": "イタリア艦隊で離脱", "objective": "Breakthrough", "zone": {"x": 0.06, "y": 0.12, "r": 0.07, "label": "ターラント方面"}, "timeLimitSec": 300, "brief": "英艦隊の追撃を振り切り、北西のターラント方面へ戻れ。"}
+  ]
+}

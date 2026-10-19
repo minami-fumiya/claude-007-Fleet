@@ -4,11 +4,11 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
-import { forceShips, setupFor } from '@/systems/ScenarioSystem';
+import { forceShips, SCENARIO_THEATER_LABEL, scenariosIn, setupFor } from '@/systems/ScenarioSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
-import { IScenario } from '@/types/Scenario';
+import { IScenario, ScenarioTheater } from '@/types/Scenario';
 import { IBattleInitData } from '@/types/Scene';
 import { Formation } from '@/types/Formation';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -18,8 +18,8 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { list: { x: 16, y: 150, w: CANVAS_W - 32, h: 320 } as IRect, cols: 2, cardH: 100, detail: { x: 16, y: 486, w: CANVAS_W - 32, h: CANVAS_H - 502 } as IRect }
-  : { list: { x: 24, y: 96, w: 380, h: 604 } as IRect, cols: 1, cardH: 110, detail: { x: 420, y: 96, w: 836, h: 604 } as IRect };
+  ? { list: { x: 16, y: 150, w: CANVAS_W - 32, h: 340 } as IRect, cols: 2, rows: 2, cardH: 92, tabH: 44, navH: 44, detail: { x: 16, y: 500, w: CANVAS_W - 32, h: CANVAS_H - 516 } as IRect }
+  : { list: { x: 24, y: 96, w: 380, h: 604 } as IRect, cols: 1, rows: 4, cardH: 104, tabH: 34, navH: 36, detail: { x: 420, y: 96, w: 836, h: 604 } as IRect };
 const GAP = 10;
 const CARD_W = (L.list.w - GAP * (L.cols - 1)) / L.cols;
 
@@ -31,7 +31,11 @@ export class ScenarioScene extends Phaser.Scene {
   private scenarios: IScenario[] = [];
   private selected = 0;
   private side = 0;
-  private cardFrames: Phaser.GameObjects.Graphics[] = [];
+  /** List filter and page (#71): 13 scenarios, oldest first */
+  private theater: ScenarioTheater | 'all' = 'all';
+  private page = 0;
+  private cardFrames: Array<{ g: Phaser.GameObjects.Graphics; index: number }> = [];
+  private listLayer: Phaser.GameObjects.GameObject[] = [];
   private detail: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
@@ -45,6 +49,8 @@ export class ScenarioScene extends Phaser.Scene {
     this.scenarios = DataLoader.getScenarios(this);
     this.selected = 0;
     this.side = 0;
+    this.theater = 'all';
+    this.page = 0;
     this.cardFrames = [];
     this.detail = [];
     addBackdrop(this, 'menu');
@@ -54,21 +60,54 @@ export class ScenarioScene extends Phaser.Scene {
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '史実シナリオ', displayStyle(24)).setOrigin(0.5);
 
-    this.scenarios.forEach((sc, i) => {
-      const col = i % L.cols;
-      const row = Math.floor(i / L.cols);
-      const r = { x: L.list.x + col * (CARD_W + GAP), y: L.list.y + row * (L.cardH + GAP), w: CARD_W, h: L.cardH };
+    this.listLayer = [];
+    this.drawList();
+    addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
+    this.refresh();
+  }
+
+  /** Theater tabs, a page of cards and the page buttons (#71). */
+  drawList(): void {
+    for (const o of this.listLayer) o.destroy();
+    this.listLayer = [];
+    this.cardFrames = [];
+    const track = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      this.listLayer.push(o);
+      return o;
+    };
+    const tabs: Array<ScenarioTheater | 'all'> = ['all', 'pacific', 'atlantic', 'mediterranean', 'arctic'];
+    const tw = (L.list.w - 6 * (tabs.length - 1)) / tabs.length;
+    tabs.forEach((t, i) => {
+      const n = scenariosIn(this.scenarios, t).length;
+      track(new UIButton(this, L.list.x + i * (tw + 6) + tw / 2, L.list.y + L.tabH / 2, `${t === 'all' ? '全て' : SCENARIO_THEATER_LABEL[t]} ${n}`, () => {
+        this.theater = t;
+        this.page = 0;
+        this.drawList();
+      }, { variant: t === this.theater ? 'primary' : 'secondary', width: tw, height: L.tabH, fontSize: IS_PORTRAIT ? 13 : 12 }));
+    });
+    const list = scenariosIn(this.scenarios, this.theater);
+    const perPage = L.cols * L.rows;
+    const pages = Math.max(1, Math.ceil(list.length / perPage));
+    this.page = Math.min(this.page, pages - 1);
+    const top = L.list.y + L.tabH + GAP;
+    list.slice(this.page * perPage, (this.page + 1) * perPage).forEach((sc, k) => {
+      const i = this.scenarios.indexOf(sc);
+      const col = k % L.cols;
+      const row = Math.floor(k / L.cols);
+      const r = { x: L.list.x + col * (CARD_W + GAP), y: top + row * (L.cardH + GAP), w: CARD_W, h: L.cardH };
       const frame = this.add.graphics();
-      this.cardFrames.push(frame);
-      const date = this.add.text(18, 14, sc.date, eyebrowStyle(10, Css.gold));
-      const sides = `${NATION_INFO[sc.forces.A.nation].jaShort} vs ${NATION_INFO[sc.forces.B.nation].jaShort}`;
+      this.cardFrames.push({ g: frame, index: i });
+      const date = this.add.text(18, 12, sc.date, eyebrowStyle(10, Css.gold));
+      const sides = `${NATION_INFO[sc.forces.A.nation].jaShort} vs ${NATION_INFO[sc.forces.B.nation].jaShort}  ${sc.forces.A.ships.length} 対 ${sc.forces.B.ships.length}`;
       const vs = IS_PORTRAIT
-        ? this.add.text(r.w - 16, 14, sides, textStyle(12, Css.muted)).setOrigin(1, 0)
-        : this.add.text(18, r.h - 30, sides, textStyle(12, Css.muted));
+        ? this.add.text(r.w - 16, 12, sides, textStyle(12, Css.muted)).setOrigin(1, 0)
+        : this.add.text(18, r.h - 28, sides, textStyle(12, Css.muted));
       // Portrait: long country names (e.g. イタリア vs フランス) shrink rather than run into the date.
       const room = r.w - 16 - (date.x + date.width + 12);
       if (IS_PORTRAIT && vs.width > room) vs.setScale(room / vs.width);
-      const card = this.add.container(r.x, r.y, [frame, date, this.add.text(18, IS_PORTRAIT ? 40 : 36, sc.name, displayStyle(20)), vs]);
+      const title = this.add.text(18, IS_PORTRAIT ? 38 : 34, sc.name, displayStyle(IS_PORTRAIT ? 18 : 20));
+      if (title.width > r.w - 30) title.setScale((r.w - 30) / title.width);
+      const card = track(this.add.container(r.x, r.y, [frame, date, title, vs]));
       makeClickable(card, r.w, r.h);
       card.on('pointerup', () => {
         this.selected = i;
@@ -76,16 +115,32 @@ export class ScenarioScene extends Phaser.Scene {
         this.refresh();
       });
     });
-    addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
-    this.refresh();
+    if (pages > 1) {
+      const ny = L.list.y + L.list.h - L.navH / 2;
+      const nw = IS_PORTRAIT ? 120 : 90;
+      track(new UIButton(this, L.list.x + L.list.w / 2 - nw - 40, ny, '‹ 前', () => {
+        this.page = (this.page + pages - 1) % pages;
+        this.drawList();
+      }, { variant: 'secondary', width: nw, height: L.navH, fontSize: 13 }));
+      track(this.add.text(L.list.x + L.list.w / 2, ny, `${this.page + 1} / ${pages}`, textStyle(13, Css.muted)).setOrigin(0.5));
+      track(new UIButton(this, L.list.x + L.list.w / 2 + nw + 40, ny, '次 ›', () => {
+        this.page = (this.page + 1) % pages;
+        this.drawList();
+      }, { variant: 'secondary', width: nw, height: L.navH, fontSize: 13 }));
+    }
+    this.drawFrames();
+  }
+
+  private drawFrames(): void {
+    for (const { g, index } of this.cardFrames) {
+      g.clear();
+      const on = index === this.selected;
+      drawPanel(g, 0, 0, CARD_W, L.cardH, { radius: 18, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.85 : 0.2, glow: on ? 1 : 0 });
+    }
   }
 
   private refresh(): void {
-    this.cardFrames.forEach((g, i) => {
-      g.clear();
-      const on = i === this.selected;
-      drawPanel(g, 0, 0, CARD_W, L.cardH, { radius: 18, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.85 : 0.2, glow: on ? 1 : 0 });
-    });
+    this.drawFrames();
     for (const o of this.detail) o.destroy();
     this.detail = [];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {

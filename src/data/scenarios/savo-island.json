@@ -1,0 +1,18 @@
+{
+  "id": "savo-island",
+  "name": "第一次ソロモン海戦",
+  "date": "1942年8月",
+  "theater": "pacific",
+  "description": "三川軍一中将の重巡部隊は夜のサボ島沖に突入し、米豪の重巡 4 隻を撃沈した。輸送船団は攻撃を免れた。(鳥海・古鷹・加古ほかは同型・近似艦が代役)",
+  "map": "archipelago",
+  "weather": "Clear",
+  "time": "Night",
+  "forces": {
+    "A": {"nation": "IJN", "ships": ["takao", "atago", "myoko", "mogami", "tone", "sendai", "yukikaze"], "positions": [{"x": 0.22, "y": 0.24, "angle": 135}, {"x": 0.142, "y": 0.233, "angle": 135}, {"x": 0.213, "y": 0.162, "angle": 135}, {"x": 0.1, "y": 0.191, "angle": 135}, {"x": 0.171, "y": 0.12, "angle": 135}, {"x": 0.149, "y": 0.311, "angle": 135}, {"x": 0.291, "y": 0.169, "angle": 135}]},
+    "B": {"nation": "USN", "ships": ["baltimore", "des_moines", "cleveland", "atlanta", "fletcher", "sumner"], "positions": [{"x": 0.62, "y": 0.7, "angle": 315}, {"x": 0.698, "y": 0.707, "angle": 315}, {"x": 0.627, "y": 0.778, "angle": 315}, {"x": 0.74, "y": 0.749, "angle": 315}, {"x": 0.669, "y": 0.82, "angle": 315}, {"x": 0.691, "y": 0.629, "angle": 315}]}
+  },
+  "sides": [
+    {"force": "A", "label": "三川艦隊で夜襲", "objective": "Breakthrough", "zone": {"x": 0.88, "y": 0.86, "r": 0.048, "label": "ルンガ泊地"}, "timeLimitSec": 300, "brief": "警戒部隊を突破し、旗艦をルンガ泊地へ突入させよ。"},
+    {"force": "B", "label": "米豪巡洋艦隊で警戒", "objective": "Delay", "targets": ["takao"], "zone": {"x": 0.88, "y": 0.86, "r": 0.048, "label": "ルンガ泊地"}, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "敵旗艦を泊地に入れるな。時間を稼ぐか、撃沈せよ。"}
+  ]
+}

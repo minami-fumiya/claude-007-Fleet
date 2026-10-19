@@ -1,0 +1,18 @@
+{
+  "id": "river-plate",
+  "name": "ラプラタ沖海戦",
+  "date": "1939年12月",
+  "theater": "atlantic",
+  "description": "南大西洋で通商破壊を続けた装甲艦グラーフ・シュペーは、ハーウッド准将の巡洋艦 3 隻に捕捉された。損傷したシュペーはモンテビデオに逃れ、のちに自沈した。(エクセター・エイジャックス・アキリーズは同型・近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Day",
+  "forces": {
+    "A": {"nation": "KM", "ships": ["admiral_graf_spee"], "positions": [{"x": 0.2, "y": 0.3, "angle": 120}]},
+    "B": {"nation": "RN", "ships": ["dorsetshire", "dido", "southampton"], "positions": [{"x": 0.7, "y": 0.75, "angle": 300}, {"x": 0.777, "y": 0.737, "angle": 300}, {"x": 0.727, "y": 0.823, "angle": 300}]}
+  },
+  "sides": [
+    {"force": "B", "label": "英巡洋艦隊で追撃", "objective": "PreventEscape", "targets": ["admiral_graf_spee"], "zone": {"x": 0.06, "y": 0.9, "r": 0.07, "label": "モンテビデオ"}, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "シュペーがモンテビデオに逃れる前に撃沈せよ。"},
+    {"force": "A", "label": "シュペーで脱出", "objective": "Breakthrough", "zone": {"x": 0.06, "y": 0.9, "r": 0.07, "label": "モンテビデオ"}, "timeLimitSec": 300, "brief": "3 隻の巡洋艦をかわし、南西のモンテビデオへ逃れよ。"}
+  ]
+}

@@ -71,6 +71,11 @@ When starting a new sprint, read in this order:
 - `parseSave` が例外で空のセーブを返す経路を増やさない。新しい項目は必ず既定値付きで読む (欠けていても落ちない)。
 - 注意: Vercel のプレビュー URL (PR ごとの URL) と本番 URL は保存場所 (localStorage) が別。プレビューで遊んだ進行は本番には無い。
 
+## 新要素には勲章も (Medals come with every new feature)
+新しい要素 (画面・仕組み・アイテム・遊び方) を追加するときは、それに関わる勲章も併せて追加する (#92 #193)。
+- 勲章は `src/systems/RecordSystem.ts` の `MEDALS` に表で追加する (分類・条件・目標)。数える値が要るときは `IMedalContext` か任務の累計 (`quests.totals`) に足す。
+- 勲章のテスト (`tests/unit/Medals.test.ts`) が通ること、勲章の総数が減らないこと。
+
 ## Conventions
 - **Branches**: `feature/sprint<N>-<slug>` → develop → main
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`)

@@ -39,10 +39,15 @@ export interface IScenarioSide {
   enemyGoesForZone?: boolean;
 }
 
+/** Sea area a scenario is filed under in the list (#71). */
+export type ScenarioTheater = 'pacific' | 'atlantic' | 'mediterranean' | 'arctic';
+
 export interface IScenario {
   id: string;
   name: string;
+  /** "1942年6月" */
   date: string;
+  theater?: ScenarioTheater;
   description: string;
   map: string;
   weather: Weather;
