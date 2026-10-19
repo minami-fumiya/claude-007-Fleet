@@ -1,6 +1,7 @@
 import { IResources } from '@/types/Progression';
 import { canAfford, pay, REGEN_CAP, REGEN_PER_TICK, RESOURCE_KEYS, resources } from './ResourceSystem';
 import type { IBase } from './BaseSystem';
+import { facilityMedal } from './MedalGate';
 
 /**
  * Base facilities (#146, pure). Every base can build the common facilities and has one of its own (its bonus from
@@ -62,21 +63,26 @@ export function facilityMinutes(id: FacilityId, level: number): number {
   return (id === 'unique' ? 30 : 10) * Math.max(1, level);
 }
 
-export type FacilityState = 'max' | 'busy' | 'resources' | 'ready';
+export type FacilityState = 'max' | 'busy' | 'medal' | 'resources' | 'ready';
 
-/** Whether the facility can be raised now: one job per base at a time. */
-export function facilityState(facilities: Facilities, jobs: readonly IFacilityJob[], base: string, id: FacilityId, have: IResources): FacilityState {
+/**
+ * Whether the facility can be raised now: one job per base at a time, and the upper levels need a medal (#169) when
+ * `medals` is given.
+ */
+export function facilityState(facilities: Facilities, jobs: readonly IFacilityJob[], base: string, id: FacilityId, have: IResources, medals?: readonly string[]): FacilityState {
   const lv = facilityLevel(facilities, base, id);
   if (lv >= maxLevelOf(id)) return 'max';
   if (jobs.some((j) => j.base === base)) return 'busy';
+  const need = facilityMedal(base, id, lv + 1);
+  if (medals && need && !medals.includes(need)) return 'medal';
   return canAfford(have, facilityCost(id, lv + 1)) ? 'ready' : 'resources';
 }
 
 /** Pays for and starts raising a facility; null when it can't be raised now. */
-export function startFacility<T extends { resources: IResources; facilities: Facilities; facilityJobs: IFacilityJob[] }>(
+export function startFacility<T extends { resources: IResources; facilities: Facilities; facilityJobs: IFacilityJob[]; record?: { medals: string[] } }>(
   progress: T, base: string, id: FacilityId, now: number,
 ): T | null {
-  if (facilityState(progress.facilities, progress.facilityJobs, base, id, progress.resources) !== 'ready') return null;
+  if (facilityState(progress.facilities, progress.facilityJobs, base, id, progress.resources, progress.record?.medals ?? []) !== 'ready') return null;
   const level = facilityLevel(progress.facilities, base, id) + 1;
   const left = pay(progress.resources, facilityCost(id, level));
   if (!left) return null;

@@ -8,12 +8,13 @@ import {
   COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilityState, FacilityId, maxLevelOf, regenRules, startFacility, uniqueStrength,
 } from '@/systems/FacilitySystem';
 import { formatResources } from '@/systems/ResourceSystem';
-import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { withQuestEvents } from '@/systems/QuestSystem';
+import { facilityMedal, medalName } from '@/systems/MedalGate';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import campaignData from '@/data/campaign.json';
 
@@ -51,6 +52,7 @@ export class BaseScene extends Phaser.Scene {
 
   create(): void {
     showScreenHelp(this);
+    awardPendingMedals();
     audio.music('menu');
     this.layer = [];
     this.status = '';
@@ -159,7 +161,7 @@ export class BaseScene extends Phaser.Scene {
     for (const r of rows) {
       const lv = facilityLevel(facilities, base.id, r.id);
       const max = maxLevelOf(r.id);
-      const state = open ? facilityState(facilities, progress.facilityJobs, base.id, r.id, progress.resources) : 'busy';
+      const state = open ? facilityState(facilities, progress.facilityJobs, base.id, r.id, progress.resources, progress.record.medals) : 'busy';
       const cost = facilityCost(r.id, lv + 1);
       this.track(drawPanel(this.add.graphics(), x, y, w, rowH - 6, { radius: 10, fill: Colors.panel, fillAlpha: 0.45, rimAlpha: 0.12 }));
       this.track(this.add.text(x + 14, y + (IS_PORTRAIT ? 10 : 5), `${r.name}  Lv${lv} / ${max}`, textStyle(IS_PORTRAIT ? 14 : 13, lv > 0 ? Css.text : Css.muted, { fontStyle: 'bold' })));
@@ -168,7 +170,11 @@ export class BaseScene extends Phaser.Scene {
       if (effect.width > room) effect.setScale(room / effect.width);
       if (lv < max) {
         // One job per base: only that facility reads 建設中; the others show their price, waiting.
-        const label = job?.id === r.id ? '建設中…' : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(r.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(cost)}`;
+        // The upper levels may need a medal first (#169).
+        const medal = state === 'medal' ? facilityMedal(base.id, r.id, lv + 1) : undefined;
+        const label = job?.id === r.id ? '建設中…'
+          : medal ? `Lv${lv + 1} 要勲章${IS_PORTRAIT ? '\n' : ' '}「${medalName(medal)}」`
+            : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(r.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(cost)}`;
         this.track(new UIButton(this, x + w - 8 - bw / 2, y + (rowH - 6) / 2, label, () => this.build(base, r.id), {
           variant: state === 'ready' ? 'primary' : 'secondary', width: bw, height: rowH - 14, fontSize: IS_PORTRAIT ? 11 : 10,
         })).setEnabled(state === 'ready');

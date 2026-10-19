@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
-import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { research, TECH_TREE } from '@/systems/ResearchSystem';
 import { ITechNode } from '@/types/Progression';
 import { displayStyle } from '@/ui/theme';
@@ -34,6 +34,7 @@ export class ArsenalScene extends Phaser.Scene {
   create(): void {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
+    awardPendingMedals();
     this.guide = new TutorialGuide(this);
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
@@ -49,7 +50,7 @@ export class ArsenalScene extends Phaser.Scene {
       TECH_TREE,
       () => {
         const p = loadProgress();
-        return { done: p.research, resources: p.resources, costMul: researchMultiplier(baseOfProgress(p)) };
+        return { done: p.research, resources: p.resources, costMul: researchMultiplier(baseOfProgress(p)), medals: p.record.medals };
       },
       (node) => this.research(node),
     );
@@ -58,7 +59,7 @@ export class ArsenalScene extends Phaser.Scene {
 
   private research(node: ITechNode): void {
     const progress = loadProgress();
-    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
+    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)), progress.record.medals);
     if (!result) return;
     saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();

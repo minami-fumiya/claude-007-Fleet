@@ -170,7 +170,10 @@ describe('reward-only ships (#39)', () => {
     expect(isRewardOnly(byId('nagato'))).toBe(true);
     expect(buildState(p, IJN, byId('nagato'))).toBe('reward');
     expect(buildShip(p, IJN, byId('nagato'))).toBeNull();
-    expect(buildState(p, IJN, byId('yamato'))).toBe('ready');
+    // The biggest battleships also need the 戦艦撃沈章 (#169).
+    expect(buildState(p, IJN, byId('yamato'))).toBe('medal');
+    expect(buildStateLabel('medal', byId('yamato'))).toBe('要勲章: 戦艦撃沈章 三等');
+    expect(buildState({ ...p, record: { ...p.record, medals: ['battleship_slayer'] } }, IJN, byId('yamato'))).toBe('ready');
     expect(buildStateLabel('reward', byId('nagato'), {}, { p6: '坊ノ岬沖' })).toBe('作戦報酬: 坊ノ岬沖');
     // An owned reward ship stays owned.
     expect(buildState({ ...p, ships: [...p.ships, 'nagato'] }, IJN, byId('nagato'))).toBe('owned');
