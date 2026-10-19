@@ -23,6 +23,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { placeLabels } from '@/utils/LabelLayout';
 import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
@@ -54,7 +55,7 @@ function objectiveText(a: ICampaignArea): string {
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { tabsY: 172, map: { x: 16, y: 216, w: CANVAS_W - 32, h: 380 } as IRect, detail: { x: 16, y: 612, w: CANVAS_W - 32, h: CANVAS_H - 628 } as IRect }
+  ? { tabsY: 172, map: { x: 16, y: 216, w: CANVAS_W - 32, h: 480 } as IRect, detail: { x: 16, y: 712, w: CANVAS_W - 32, h: CANVAS_H - 728 } as IRect }
   : { tabsY: 120, map: { x: 24, y: 160, w: 780, h: 540 } as IRect, detail: { x: 820, y: 160, w: 436, h: 540 } as IRect };
 const NODE_R = IS_PORTRAIT ? 26 : 22;
 
@@ -132,7 +133,15 @@ export class CampaignMapScene extends Phaser.Scene {
   private nodePos(a: ICampaignArea): { x: number; y: number } {
     const m = L.map;
     const pad = 60;
-    return { x: m.x + pad + a.x * (m.w - pad * 2), y: m.y + pad + a.y * (m.h - pad * 2) };
+    // Portrait stretches the theater's nodes over the whole map: the narrow screen has no room to waste (#162).
+    const fit = (v: number, lo: number, hi: number): number => (IS_PORTRAIT && hi - lo > 0.2 ? (v - lo) / (hi - lo) : v);
+    const areas = areasOf(DATA, a.theater);
+    const xs = areas.map((n) => n.x);
+    const ys = areas.map((n) => n.y);
+    return {
+      x: m.x + pad + fit(a.x, Math.min(...xs), Math.max(...xs)) * (m.w - pad * 2),
+      y: m.y + pad + fit(a.y, Math.min(...ys), Math.max(...ys)) * (m.h - pad * 2),
+    };
   }
 
   private drawMap(): void {
@@ -158,6 +167,7 @@ export class CampaignMapScene extends Phaser.Scene {
       }
     }
     // Nodes
+    const names: Phaser.GameObjects.Text[] = [];
     areas.forEach((a, i) => {
       const { x, y } = this.nodePos(a);
       const done = isCleared(a, cleared);
@@ -171,7 +181,8 @@ export class CampaignMapScene extends Phaser.Scene {
       // A cleared area shows its best battle rank (#149), or ✓ when it has none yet.
       const best = done ? loadProgress().areaRanks[a.id] : undefined;
       const label = this.add.text(x, y, best ?? (done ? '✓' : String(i + 1)), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
-      const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5, 0);
+      const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 0);
+      names.push(name);
       const hit = this.add.zone(x, y, NODE_R * 3, NODE_R * 3).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => this.selectArea(a.id));
       this.mapLayer.push(node, label, name, hit);
@@ -181,6 +192,9 @@ export class CampaignMapScene extends Phaser.Scene {
         this.mapLayer.push(pulse);
       }
     });
+    // Names go wherever they overlap nothing (#162): dense theaters crowd the portrait map.
+    const placed = placeLabels(areas.map((a) => this.nodePos(a)), names.map((t) => ({ w: t.width, h: t.height })), NODE_R, { x: L.map.x + 8, y: L.map.y + 8, w: L.map.w - 16, h: L.map.h - 16 });
+    placed.forEach((p, i) => names[i].setPosition(p.x, p.y).setScale(p.scale));
   }
 
   selectArea(id: string): void {
@@ -237,8 +251,8 @@ export class CampaignMapScene extends Phaser.Scene {
       add(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));
       // Battleships, carriers or heavy cruisers in the enemy fleet show in gold.
       const strong = k === '敵' && hasCapitalShips(enemy);
-      const t = add(this.add.text(x, y + (IS_PORTRAIT ? 26 : 18), v, textStyle(13, strong ? Css.gold : Css.text, { ...wrap, lineSpacing: 4 })));
-      y = t.y + t.height + (IS_PORTRAIT ? 14 : 10);
+      const t = add(this.add.text(x, y + 18, v, textStyle(13, strong ? Css.gold : Css.text, { ...wrap, lineSpacing: 4 })));
+      y = t.y + t.height + 10;
     }
     // 掃討 (#57): an area won without losses can be swept, skipping the battle.
     const sweepable = canSweep(progress, a);
