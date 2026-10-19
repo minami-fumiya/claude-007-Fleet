@@ -69,6 +69,8 @@ export interface INationProgress {
   quests: IQuestState;
   /** Campaign areas won without losing a ship: they can be swept (#57) */
   perfect: string[];
+  /** Sweeps used today by area (#57): limited to SWEEPS_PER_DAY a game day */
+  sweeps: { day: number; counts: Record<string, number> };
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
 }
@@ -108,7 +110,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
-    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [],
+    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
   };
 }
 
@@ -231,7 +233,13 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     base: typeof data.base === 'string' ? data.base : '',
     quests: parseQuestState(data.quests),
     perfect: [...new Set(strings(data.perfect))],
+    sweeps: parseSweeps(data.sweeps),
   };
+}
+
+function parseSweeps(v: unknown): { day: number; counts: Record<string, number> } {
+  if (!isObject(v)) return { day: 0, counts: {} };
+  return { day: isNum(v.day) ? v.day : 0, counts: numbers(v.counts) };
 }
 
 function stringLists(src: unknown): Record<string, string[]> {

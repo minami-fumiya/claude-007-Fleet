@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "current": "IJN",
   "nations": {
     "IJN": {
@@ -94,7 +94,13 @@
       "perfect": [
         "p1",
         "p2"
-      ]
+      ],
+      "sweeps": {
+        "day": 20745,
+        "counts": {
+          "p1": 2
+        }
+      }
     },
     "USN": {
       "resources": {
@@ -131,7 +137,11 @@
         "progress": {},
         "claimed": []
       },
-      "perfect": []
+      "perfect": [],
+      "sweeps": {
+        "day": 0,
+        "counts": {}
+      }
     }
   },
   "record": {

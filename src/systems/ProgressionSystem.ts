@@ -7,7 +7,7 @@ import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } fr
 import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
 import { addMerit, IRank, meritFor } from './RankSystem';
-import { withQuestEvents } from './QuestSystem';
+import { gameDay, withQuestEvents } from './QuestSystem';
 import { ShipClass } from '@/types/ShipClass';
 
 /**
@@ -115,6 +115,16 @@ export function startingHp(progress: IProgress, shipId: string, exercise = false
 /** A sweep pays this share of a won battle's resource reward (#57). */
 export const SWEEP_REWARD_SCALE = 0.8;
 
+/** Sweeps per area per game day (#57): unlimited instant rewards made battles pointless. Resets at 05:00 JST. */
+export const SWEEPS_PER_DAY = 3;
+
+/** Sweeps of `area` left today. */
+export function sweepsLeft(progress: Pick<IProgress, 'sweeps'>, areaId: string, now: number): number {
+  const s = progress.sweeps;
+  const used = s.day === gameDay(now) ? s.counts[areaId] ?? 0 : 0;
+  return Math.max(0, SWEEPS_PER_DAY - used);
+}
+
 /** True when `area` may be swept: cleared, and once won without losing a ship (#57). */
 export function canSweep(progress: Pick<IProgress, 'campaign' | 'perfect'>, area: ICampaignArea): boolean {
   return progress.campaign.includes(area.id) && progress.perfect.includes(area.id);
@@ -138,7 +148,7 @@ export interface ISweepResult {
  * reward (events apply), counts as a win for merit and 任務. No damage, no proficiency, never a first clear.
  */
 export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShipData[], now: number, event: IEventEffects = NO_EVENT): ISweepResult | null {
-  if (!canSweep(progress, area)) return null;
+  if (!canSweep(progress, area) || sweepsLeft(progress, area.id, now) <= 0) return null;
   const cost = sweepCost(area, enemy);
   const paid = pay(progress.resources, cost);
   if (!paid) return null;
@@ -147,7 +157,10 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const merit = meritFor({ victory: true, campaign: true, firstClear: false, enemiesSunk: enemy.length });
   const promoted = addMerit({ ...progress, resources: addResources(paid, reward) }, merit);
   const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
-  const next = withQuestEvents(promoted.progress, [
+  const day = gameDay(now);
+  const counts = progress.sweeps.day === day ? progress.sweeps.counts : {};
+  const counted = { ...promoted.progress, sweeps: { day, counts: { ...counts, [area.id]: (counts[area.id] ?? 0) + 1 } } };
+  const next = withQuestEvents(counted, [
     ['sortie', 1], ['win', 1], ['sink', enemy.length], ['sweep', 1],
     ['sinkCarrier', of(ShipClass.Carrier)], ['sinkSubmarine', of(ShipClass.Submarine)], ['sinkBattleship', of(ShipClass.Battleship)],
   ], now);

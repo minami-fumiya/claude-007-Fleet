@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { applyEventReward, eventAppliesToBattle, eventAt, eventEffects, eventFor, EVENT_WINDOW_MS, NO_EVENT, nextEvent, windowIndex } from '@/systems/EventSystem';
 import { claimableCount, claimQuest, emptyQuestState, gameDay, gameWeek, nextReset, parseQuestState, QUESTS, recordQuestEvent, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
-import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost } from '@/systems/ProgressionSystem';
+import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost, SWEEPS_PER_DAY, sweepsLeft } from '@/systems/ProgressionSystem';
 import { battleReward, resources } from '@/systems/ResourceSystem';
 import { emptyNationProgress, IProgress } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
@@ -127,5 +127,19 @@ describe('sweep (#57)', () => {
     const doubled = sweepArea(p, area, enemy, MONDAY_5AM, eventEffects({ kind: 'double', theater: area.theater, startsAt: 0, endsAt: 1 }))!;
     expect(doubled.reward.fuel).toBe(Math.round(won.fuel * 2 * SWEEP_REWARD_SCALE));
     expect(withQuestEvents(p, [], MONDAY_5AM)).toBe(p);
+  });
+
+  it('three sweeps per area per game day (#57: unlimited sweeps made battles pointless)', () => {
+    let p: IProgress = { ...base(), perfect: [area.id] };
+    for (let i = 0; i < SWEEPS_PER_DAY; i++) {
+      expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(SWEEPS_PER_DAY - i);
+      p = sweepArea(p, area, enemy, MONDAY_5AM)!.progress;
+    }
+    expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(0);
+    expect(sweepArea(p, area, enemy, MONDAY_5AM + HOUR)).toBeNull();
+    // Other areas have their own count; the next game day starts over.
+    expect(sweepsLeft(p, 'other', MONDAY_5AM)).toBe(SWEEPS_PER_DAY);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 24 * HOUR)).toBe(SWEEPS_PER_DAY);
+    expect(sweepArea(p, area, enemy, MONDAY_5AM + 24 * HOUR)).not.toBeNull();
   });
 });
