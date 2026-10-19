@@ -22,6 +22,7 @@ import { Formation } from '@/types/Formation';
 import { ICaptainStats } from '@/systems/CaptainSystem';
 import { nationCaptains, starterCaptain } from '@/systems/CaptainRoster';
 import { addBackup, BACKUP_KEY, BackupReason, ISaveBackup, parseBackups, rawVersion } from './SaveBackup';
+import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -64,6 +65,10 @@ export interface INationProgress {
   captainStats: Record<string, ICaptainStats>;
   /** Home port in use (#88); '' or unknown = the nation's first (see BaseSystem.currentBase) */
   base: string;
+  /** 任務 progress (#52) */
+  quests: IQuestState;
+  /** Campaign areas won without losing a ship: they can be swept (#57) */
+  perfect: string[];
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
 }
@@ -80,6 +85,8 @@ export interface ISave {
   tutorial: ITutorialState;
   /** Screens whose first-visit help was shown (#61) */
   seenHelp: string[];
+  /** Newest clock time the game has seen (#89): a clock set back gets no event */
+  lastSeenAt: number;
 }
 
 export interface ITutorialState {
@@ -101,12 +108,12 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
-    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '',
+    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [],
   };
 }
 
 export function emptySave(): ISave {
-  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [] };
+  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [], lastSeenAt: 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +218,8 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     captainSkills: stringLists(data.captainSkills),
     captainStats: parseCaptainStats(data.captainStats),
     base: typeof data.base === 'string' ? data.base : '',
+    quests: parseQuestState(data.quests),
+    perfect: [...new Set(strings(data.perfect))],
   };
 }
 
@@ -264,6 +273,7 @@ export function migrateV1(data: Record<string, unknown>): ISave {
     record: parseRecord(data.record),
     tutorial: { step: 0, done: true },
     seenHelp: [...EXISTING_PLAYER_HELP],
+    lastSeenAt: 0,
   };
 }
 
@@ -285,6 +295,7 @@ function parseLatest(data: Record<string, unknown>): ISave {
     tutorial: parseTutorial(data.tutorial),
     // A save without the list is an existing player's: the screens they know are not explained again.
     seenHelp: Array.isArray(data.seenHelp) ? [...new Set(strings(data.seenHelp))] : [...EXISTING_PLAYER_HELP],
+    lastSeenAt: isNum(data.lastSeenAt) ? data.lastSeenAt : 0,
   };
 }
 

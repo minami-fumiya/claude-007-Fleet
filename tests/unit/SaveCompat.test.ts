@@ -45,6 +45,10 @@ describe('every released save loads without losing progress', () => {
         expect(np!.captains).toEqual(expect.arrayContaining(ownedBefore));
         expect(np!.captainSkills).toEqual(expect.objectContaining((old.captainSkills as Record<string, string[]>) ?? {}));
         if (typeof old.base === 'string') expect(np!.base, `${nation} base`).toBe(old.base);
+        // Sweepable areas (#57) and quest progress / claimed rewards (#52) stay.
+        expect(np!.perfect).toEqual(expect.arrayContaining((old.perfect as string[]) ?? []));
+        const quests = old.quests as { progress?: Record<string, number>; claimed?: string[] } | undefined;
+        if (quests) expect(np!.quests.claimed).toEqual(expect.arrayContaining(quests.claimed ?? []));
         const res = old.resources as Record<string, number> | undefined;
         if (res) for (const k of ['fuel', 'ammo', 'steel', 'bauxite'] as const) expect(np!.resources[k], `${nation} ${k}`).toBeGreaterThanOrEqual(res[k] ?? 0);
         // Slots never shrink: saves from before merit ranks (v5) keep what the old six-rank table gave.
