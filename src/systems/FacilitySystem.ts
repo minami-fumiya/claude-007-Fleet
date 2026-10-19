@@ -146,7 +146,7 @@ export function regenRules(facilities: Facilities): IRegenRules {
  * "回復 5 → 6 / 分・回復上限 2,500 → 3,500・保有上限 15,000 → 20,000" for a resource facility's next level (#190), or
  * its current values once it is at the top. Undefined for the workshop and the unique facility.
  */
-export function facilityPreview(facilities: Facilities, base: string, id: FacilityId): string | undefined {
+export function facilityPreview(facilities: Facilities, base: string, id: FacilityId, short = false): string | undefined {
   const k = RESOURCE_KEYS.find((r) => HOLD_FACILITY[r] === id);
   if (!k) return undefined;
   const now = regenRules(facilities);
@@ -156,6 +156,8 @@ export function facilityPreview(facilities: Facilities, base: string, id: Facili
   const raised: Facilities = { ...facilities, [base]: { ...(facilities[base] ?? {}), [id]: facilityLevel(facilities, base, id) + 1 } };
   const next = regenRules(raised);
   const nextHold = holdCap(raised);
+  // Narrow screens: only the next level's figures ("次: 回復 7 / 分・回復上限 2,500・保有上限 15,000").
+  if (short) return `次: 回復 ${next.perTick[k]} / 分・回復上限 ${n(next.cap[k])}・保有上限 ${n(nextHold[k])}`;
   return `回復 ${now.perTick[k]} → ${next.perTick[k]} / 分・回復上限 ${n(now.cap[k])} → ${n(next.cap[k])}・保有上限 ${n(hold[k])} → ${n(nextHold[k])}`;
 }
 

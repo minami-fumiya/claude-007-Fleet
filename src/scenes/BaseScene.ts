@@ -198,7 +198,7 @@ export class BaseScene extends Phaser.Scene {
     const rows: Array<{ id: FacilityId; name: string; effect: string }> = [
       { id: 'unique', name: `${uniqueName(base)} (固有)`, effect: `特色の効果 ×${uniqueStrength(facilities, base.id)}  →  次 ×${uniqueStrength(facilities, base.id) + 0.5}・4 資源の回復上限 +${UNIQUE_REGEN_CAP}` },
       // Resource facilities show their next level's figures (#190); every base's levels add up.
-      ...COMMON_FACILITIES.map((f) => ({ id: f.id, name: f.name, effect: f.id === 'workshop' ? f.effect : `${facilityPreview(facilities, base.id, f.id) ?? f.effect} (全軍港で合算)` })),
+      ...COMMON_FACILITIES.map((f) => ({ id: f.id, name: f.name, effect: f.id === 'workshop' ? f.effect : IS_PORTRAIT ? facilityPreview(facilities, base.id, f.id, true) ?? f.effect : `${facilityPreview(facilities, base.id, f.id) ?? f.effect} (全軍港で合算)` })),
     ];
     this.track(this.add.text(x, y, '施設', eyebrowStyle(10, Css.gold)));
     y += 20;
