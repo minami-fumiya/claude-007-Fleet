@@ -38,7 +38,7 @@ export const HOME_MENU: IHomeMenuTab[] = [
       // Fleet only, then on to 作戦 or 演習 (#109). The fleet is kept between visits.
       { label: '編成', caption: '艦と艦長', scene: SceneKeys.FLEET_BUILDER, variant: 'gold', data: { organize: true } },
       { label: '改装', caption: '改造と部品', scene: SceneKeys.CUSTOMIZATION, variant: 'primary' },
-      { label: '艦長', caption: '習得スキル', scene: SceneKeys.ENCYCLOPEDIA, variant: 'primary', data: { tab: 'captains' } },
+      { label: '艦長', caption: 'スキルと成長', scene: SceneKeys.CAPTAIN, variant: 'primary' },
       { label: '軍港', caption: '拠点の移動', scene: SceneKeys.HOME, variant: 'secondary', action: 'base' },
     ],
   },

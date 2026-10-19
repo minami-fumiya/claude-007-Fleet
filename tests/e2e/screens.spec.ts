@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.16.1.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.17.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -42,6 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
+  'CaptainScene',
 ];
 
 async function boot(page: Page, layout: string, save: object = SAVE): Promise<string[]> {
@@ -123,16 +124,20 @@ test.describe('screens', () => {
     const fleet = await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
         ships: Array<{ id: string }>; slots: Array<{ id: string } | null>;
-        openPicker(i: number): void; pickShip(s: { id: string }): void; refresh(): void;
+        openPicker(i: number): void; pickShip(s: { id: string }): void; refresh(): void; moveUp(i: number): void;
       };
-      s.openPicker(0);
-      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
-      s.openPicker(1);
-      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
-      s.pickShip(s.ships.find((x) => x.id === 'fubuki')!);
-      return s.slots.map((x) => x?.id ?? null);
+      const pick = (slot: number, id: string): void => { s.openPicker(slot); s.pickShip(s.ships.find((x) => x.id === id)!); };
+      pick(0, 'yamato');
+      pick(1, 'fubuki');
+      // Picking a ship already in the fleet swaps the two slots (#147).
+      pick(1, 'yamato');
+      const swapped = s.slots.map((x) => x?.id ?? null);
+      // ▲ moves a ship one slot up.
+      s.moveUp(1);
+      return { swapped, after: s.slots.map((x) => x?.id ?? null) };
     });
-    expect(fleet.slice(0, 2)).toEqual(['yamato', 'fubuki']);
+    expect(fleet.swapped.slice(0, 2)).toEqual(['fubuki', 'yamato']);
+    expect(fleet.after.slice(0, 2)).toEqual(['yamato', 'fubuki']);
     await page.screenshot({ path: info.outputPath('builder.png') });
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { startBattle(): void };
@@ -263,6 +268,28 @@ test.describe('screens', () => {
     expect(swept.sweeps).toBe(1);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `sweep (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('sweep.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('captains: pick a skill for a slot, confirm it, and see it in the colour-coded bonus (#130 / #131)', async ({ page }, info) => {
+    const save = { ...SAVE, version: 7, seenHelp: ['CaptainScene'], nations: { IJN: { ...SAVE.nations.IJN, captainXp: { ijn_sakai: 60_000 }, captainSkills: { ijn_sakai: ['Torpedo'] } } } };
+    const errors = await boot(page, info.project.metadata.layout as string, save);
+    await open(page, 'CaptainScene', { id: 'ijn_sakai' });
+    await page.screenshot({ path: info.outputPath('captain.png') });
+    expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+    type Scene = { openPicker(c: unknown, slot: number): void; confirmLearn(c: unknown, slot: number, s: string): void; applyLearn(c: unknown, slot: number, s: string): void; owned(): Array<{ id: string }> };
+    const call = (fn: string, slot: number, skill?: string) => page.evaluate(([f, i, k]) => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as Scene & Record<string, (...a: unknown[]) => void>;
+      s[f as string](s.owned().find((c) => c.id === 'ijn_sakai'), i, k);
+    }, [fn, slot, skill] as const);
+    await call('openPicker', 0);
+    await page.screenshot({ path: info.outputPath('captain-picker.png') });
+    // Replacing 雷撃 asks first and names what it drops.
+    await call('confirmLearn', 0, 'Night');
+    await page.screenshot({ path: info.outputPath('captain-confirm.png') });
+    await call('applyLearn', 0, 'Night');
+    const learned = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.captainSkills.ijn_sakai);
+    expect(learned).toEqual(['Night']);
     expect(errors).toEqual([]);
   });
 
