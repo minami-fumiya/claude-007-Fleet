@@ -4,16 +4,24 @@ import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { BattleMode } from '@/types/Battle';
 import { ShipRegistry } from './ShipRegistry';
+import type { IScenarioSide } from '@/types/Scenario';
 
 /** Campaign progress (pure): which areas are open, recording clears and building the enemy fleet. */
 
+/** Open when every `requires` area is cleared and, where routes merge (#40), one of `requiresAny`. */
 export function isUnlocked(area: ICampaignArea, cleared: string[]): boolean {
-  return area.requires.every((r) => cleared.includes(r));
+  const any = area.requiresAny ?? [];
+  return area.requires.every((r) => cleared.includes(r)) && (any.length === 0 || any.some((r) => cleared.includes(r)));
+}
+
+/** Areas that lead into `area` (both kinds of prerequisite). */
+export function prerequisitesOf(area: ICampaignArea): string[] {
+  return [...area.requires, ...(area.requiresAny ?? [])];
 }
 
 /** The first area of a theater (no prerequisites) is sortied to for free (#28), so a new nation can't get stuck. */
 export function isFreeArea(area: ICampaignArea): boolean {
-  return area.requires.length === 0;
+  return prerequisitesOf(area).length === 0;
 }
 
 export function isCleared(area: ICampaignArea, cleared: string[]): boolean {
@@ -104,4 +112,11 @@ export function areaMode(ships: IShipData[]): BattleMode {
 export function theaterProgress(data: ICampaignData, theater: string, cleared: string[]): number {
   const areas = areasOf(data, theater);
   return areas.length === 0 ? 0 : areas.filter((a) => cleared.includes(a.id)).length / areas.length;
+}
+
+/** A campaign area's objective set up like a scenario side (#40), so the battle reads both the same way. */
+export function campaignSide(area: ICampaignArea | undefined): (IScenarioSide & { targetLead?: boolean }) | null {
+  if (!area?.side) return null;
+  const { targetLead, zone, timeLimitSec, enemyGoesForZone } = area.side;
+  return { force: 'A', label: area.name, brief: area.description, objective: area.objective, targetLead, zone, timeLimitSec, enemyGoesForZone };
 }

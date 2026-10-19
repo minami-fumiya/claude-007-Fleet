@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.14.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.15.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -186,13 +186,14 @@ test.describe('screens', () => {
     await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScene('MainMenuScene')?.sys.settings.active === true, null, { timeout: 60_000 });
     await open(page, 'HomeScene');
     const stored = await page.evaluate(() => {
-      const save = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations?: Record<string, { ships: string[] }> };
+      const save = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { version?: number; nations?: Record<string, { ships: string[] }> };
       const backups = JSON.parse(localStorage.getItem('ww2fleet.progress.backups') ?? '[]') as Array<{ reason: string }>;
-      return { ships: save.nations?.IJN?.ships ?? [], backups: backups.map((b) => b.reason) };
+      return { version: save.version ?? 0, ships: save.nations?.IJN?.ships ?? [], backups: backups.map((b) => b.reason) };
     });
     const before = (JSON.parse(PREVIOUS_SAVE) as { nations: { IJN: { ships: string[] } } }).nations.IJN.ships;
     expect(stored.ships).toEqual(expect.arrayContaining(before));
-    expect(stored.backups).toContain('migration');
+    // An older format is backed up before it is migrated; the same format is loaded as is.
+    if ((JSON.parse(PREVIOUS_SAVE) as { version: number }).version < stored.version) expect(stored.backups).toContain('migration');
     await page.screenshot({ path: info.outputPath('previous-save-home.png') });
     expect(errors).toEqual([]);
   });
