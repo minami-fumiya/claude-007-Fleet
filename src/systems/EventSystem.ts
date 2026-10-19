@@ -102,6 +102,13 @@ export function applyEventReward(reward: IResources, effects: IEventEffects, the
   return out;
 }
 
+/** Whether `event` changes a battle fought in `theater` (none for exercises): what the results should mention. */
+export function eventAppliesToBattle(event: IGameEvent | null, theater?: string): event is IGameEvent {
+  if (!event) return false;
+  if (event.kind === 'double') return theater !== undefined && theater === event.theater;
+  return event.kind === 'steel' || event.kind === 'training';
+}
+
 /** "報酬 2 倍 (太平洋)" */
 export function eventLabel(event: IGameEvent): string {
   const theater = event.theater ? THEATERS.find((t) => t.id === event.theater)?.name : undefined;

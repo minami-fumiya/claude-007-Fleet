@@ -1,9 +1,9 @@
 {
-  "IJN": { "p6": "yamato", "m5": "musashi" },
-  "USN": { "p6": "iowa", "a5": "missouri" },
-  "KM": { "a5": "bismarck", "b5": "tirpitz" },
-  "RN": { "a5": "hood", "m5": "warspite" },
-  "FR": { "a5": "richelieu", "m5": "strasbourg" },
+  "IJN": { "p6": "nagato", "m5": "mutsu" },
+  "USN": { "p6": "south_dakota", "a5": "north_carolina" },
+  "KM": { "a5": "scharnhorst", "b5": "gneisenau" },
+  "RN": { "a5": "renown", "m5": "warspite" },
+  "FR": { "a5": "dunkerque", "m5": "strasbourg" },
   "SU": { "b5": "marat" },
-  "RM": { "m5": "vittorio_veneto" }
+  "RM": { "m5": "conte_di_cavour" }
 }

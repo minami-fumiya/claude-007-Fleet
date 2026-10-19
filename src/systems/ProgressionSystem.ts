@@ -54,6 +54,8 @@ export interface IBattleOutcome {
   ships: IShipOutcome[];
   /** Carrier aircraft shot down */
   planesLost: number;
+  /** Classes of the enemies sunk (steel by class, #132) */
+  sunkClasses?: ShipClass[];
 }
 
 export interface ISettlement {
@@ -89,7 +91,7 @@ export function paySortie(progress: IProgress, ships: IShipData[], opts: ISortie
  */
 export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean; event?: IEventEffects; theater?: string } = {}): ISettlement {
   // A running event (#89) raises the reward: 2x in its theater, more steel.
-  const full = applyEventReward(battleReward(outcome.victory, outcome.enemiesSunk), opts.event ?? NO_EVENT, opts.theater);
+  const full = applyEventReward(battleReward(outcome.victory, outcome.enemiesSunk, outcome.sunkClasses), opts.event ?? NO_EVENT, opts.theater);
   const reward = opts.exercise ? addResources(resources(), full, EXERCISE_REWARD_SCALE) : full;
   const aircraftCost = opts.exercise ? resources() : resources({ bauxite: Math.max(0, outcome.planesLost) * BAUXITE_PER_PLANE });
   let next: IProgress = {
@@ -140,7 +142,7 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const cost = sweepCost(area, enemy);
   const paid = pay(progress.resources, cost);
   if (!paid) return null;
-  const won = applyEventReward(battleReward(true, enemy.length), event, area.theater);
+  const won = applyEventReward(battleReward(true, enemy.length, enemy.map((s) => s.shipClass)), event, area.theater);
   const reward = addResources(resources(), won, SWEEP_REWARD_SCALE);
   const merit = meritFor({ victory: true, campaign: true, firstClear: false, enemiesSunk: enemy.length });
   const promoted = addMerit({ ...progress, resources: addResources(paid, reward) }, merit);

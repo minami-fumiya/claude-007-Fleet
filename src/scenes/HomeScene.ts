@@ -24,6 +24,7 @@ import { baseBonusLines, baseLockText, baseOfProgress, isBaseOpen, moveBase, nat
 import { claimableCount, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
 import { eventLabel, nextEvent } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
+import { rankTable } from '@/systems/RankTable';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -304,6 +305,58 @@ export class HomeScene extends Phaser.Scene {
     }, { variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: IS_PORTRAIT ? 60 : 44, fontSize: 15 }));
   }
 
+  /** Every rank (#128): merit needed, sortie slots, ship grade and what it opens; the current one highlighted. */
+  private openRanks(): void {
+    this.closeNationPicker();
+    const progress = loadProgress();
+    const current = rankOf(progress);
+    const rows = rankTable(progress.nation);
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
+      this.overlay.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const rowH = IS_PORTRAIT ? 66 : 38;
+    const w = IS_PORTRAIT ? CANVAS_W - 32 : 900;
+    const head = IS_PORTRAIT ? 120 : 88;
+    const h = head + rows.length * rowH + (IS_PORTRAIT ? 110 : 78);
+    const x = (CANVAS_W - w) / 2;
+    const y = Math.max(8, (CANVAS_H - h) / 2);
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 24, y + 20, '階級一覧', eyebrowStyle(11)));
+    add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), `現在: ${current.name}  ·  戦功 ${Math.floor(progress.merit ?? 0)}`, displayStyle(IS_PORTRAIT ? 20 : 18)));
+    const cols = IS_PORTRAIT ? [0, 150, 270, 380] : [0, 150, 260, 350, 440];
+    const hy = y + head - (IS_PORTRAIT ? 26 : 22);
+    const labels = ['階級', '必要戦功', '出撃枠', '建造', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
+    labels.forEach((l, i) => add(this.add.text(x + 24 + cols[i], hy, l, textStyle(11, Css.muted))));
+    rows.forEach((r, i) => {
+      const ry = y + head + i * rowH;
+      const here = r.index === current.index;
+      if (here) {
+        const g = add(this.add.graphics());
+        g.fillStyle(Colors.gold, 0.16);
+        g.fillRoundedRect(x + 12, ry - 2, w - 24, rowH - 2, 8);
+      }
+      const css = here ? Css.gold : r.index < current.index ? Css.text : r.beforeStart ? Css.dim : Css.muted;
+      const name = r.beforeStart ? `${r.name} *` : r.name;
+      add(this.add.text(x + 24 + cols[0], ry + 4, name, textStyle(IS_PORTRAIT ? 15 : 13, css, { fontStyle: 'bold' })));
+      add(this.add.text(x + 24 + cols[1], ry + 4, String(r.minMerit), textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      if (r.unlocks) {
+        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
+        const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, r.unlocks, textStyle(11, css)));
+        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[4];
+        if (t.width > room) t.setScale(room / t.width);
+      }
+    });
+    add(this.add.text(x + 24, y + head + rows.length * rowH + 4, '* 士官候補生はチュートリアル実装後の開始階級です (今は准尉から始まります)。', textStyle(11, Css.dim)));
+    add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 40 : 28), '閉じる', () => this.closeNationPicker(), {
+      variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: IS_PORTRAIT ? 56 : 40, fontSize: 15,
+    }));
+  }
+
   private claimQuest(id: string): void {
     const progress = loadProgress();
     const r = claimQuest(progress.quests, id, Date.now());
@@ -402,6 +455,10 @@ export class HomeScene extends Phaser.Scene {
     }
     if (item.action === 'quests') {
       this.openQuests();
+      return;
+    }
+    if (item.action === 'ranks') {
+      this.openRanks();
       return;
     }
     // Free battles are not campaign sorties.

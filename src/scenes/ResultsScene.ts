@@ -101,21 +101,31 @@ export class ResultsScene extends Phaser.Scene {
 
     // Mid-sortie (#53): advance to the next node, or withdraw keeping what was won.
     const advance = data?.advance === true;
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, advance ? '進撃  ›' : '再出撃', () => {
-      if (advance) {
+    const by1 = y + reportH + BUTTONS.y1;
+    if (advance) {
+      new UIButton(this, CANVAS_W / 2, by1, '進撃  ›', () => {
         const next = advanceSortie(this);
         if (next) this.scene.start(SceneKeys.BATTLE, next.init);
         else this.scene.start(SceneKeys.CAMPAIGN);
-        return;
-      }
-      if (data?.retry) this.scene.start(SceneKeys.BATTLE, data.retry);
-      else this.scene.start(SceneKeys.FLEET_BUILDER);
-    }, {
-      variant: victory ? 'gold' : 'primary',
-      width: CARD_W - 96,
-      height: BUTTONS.h1,
-      fontSize: 22,
-    });
+      }, { variant: victory ? 'gold' : 'primary', width: CARD_W - 96, height: BUTTONS.h1, fontSize: 22 });
+    } else if (data?.retry) {
+      // Historical scenarios replay their fixed setup.
+      new UIButton(this, CANVAS_W / 2, by1, '再出撃', () => this.scene.start(SceneKeys.BATTLE, data.retry), {
+        variant: victory ? 'gold' : 'primary', width: CARD_W - 96, height: BUTTONS.h1, fontSize: 22,
+      });
+    } else {
+      // Two ways to go again (#135): straight back in with the same fleet, or via the fleet builder.
+      const gap = 12;
+      const half = (CARD_W - 96 - gap) / 2;
+      new UIButton(this, CANVAS_W / 2 - gap / 2 - half / 2, by1, 'そのまま連戦', () => {
+        endSortie(this);
+        this.scene.start(SceneKeys.FLEET_BUILDER, { rematch: true });
+      }, { variant: victory ? 'gold' : 'primary', width: half, height: BUTTONS.h1, fontSize: 19 });
+      new UIButton(this, CANVAS_W / 2 + gap / 2 + half / 2, by1, '編成して再出撃', () => {
+        endSortie(this);
+        this.scene.start(SceneKeys.FLEET_BUILDER);
+      }, { variant: 'primary', width: half, height: BUTTONS.h1, fontSize: 17 });
+    }
     new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, advance ? '撤退 (報酬はそのまま)' : BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => {
       endSortie(this);
       this.scene.start(data?.returnScene ?? SceneKeys.HOME);

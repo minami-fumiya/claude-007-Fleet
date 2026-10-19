@@ -19,7 +19,7 @@ import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
-import { applyCritical, CRITICAL_LABEL, rollCriticalHit } from '@/systems/DamageSystem';
+import { applyCritical, CRITICAL_LABEL, LAND_CRITICAL_LABEL, rollCriticalHit } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
@@ -74,7 +74,7 @@ import specialData from '@/data/special.json';
 import { IScenario, IScenarioSide } from '@/types/Scenario';
 import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
-import { eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
+import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
@@ -1163,13 +1163,13 @@ export class BattleScene extends Phaser.Scene {
   private rollCritical(target: BaseShip, weapon: IWeaponData, dmg: number): void {
     this.logDamage(target, weapon, dmg);
     if (!target.isAlive) return;
-    const crit = rollCriticalHit(weapon.type, dmg, target.stats.maxHp);
+    const crit = rollCriticalHit(weapon.type, dmg, target.stats.maxHp, Math.random, target.isLand);
     if (!crit) return;
     target.criticals = applyCritical(target.criticals, crit, this.battleNow());
     if (!target.visible) return;
     const friendly = this.playerSide().includes(target);
     const t = this.add
-      .text(target.x, target.y - 30, CRITICAL_LABEL[crit], textStyle(13, friendly ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+      .text(target.x, target.y - 30, target.isLand ? LAND_CRITICAL_LABEL : CRITICAL_LABEL[crit], textStyle(13, friendly ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(0.5)
       .setDepth(DEPTH_HUD - 2);
     this.tweens.add({ targets: t, y: t.y - 36, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
@@ -1540,6 +1540,7 @@ export class BattleScene extends Phaser.Scene {
       victory,
       enemiesSunk,
       planesLost: this.playerAir.totalLost(),
+      sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
     }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater });
     if (this.scenario) {
@@ -1625,7 +1626,7 @@ export class BattleScene extends Phaser.Scene {
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
     emitTutorial('battleEnd', this.registry);
     if (firstClear) emitTutorial('firstClear', this.registry);
-    result.reward = formatResources(settlement.reward) + (event ? `  (イベント: ${eventLabel(event)})` : '');
+    result.reward = formatResources(settlement.reward) + (eventAppliesToBattle(event, area?.theater) ? `  (イベント: ${eventLabel(event)})` : '');
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }

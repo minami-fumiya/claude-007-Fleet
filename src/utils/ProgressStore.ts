@@ -161,6 +161,17 @@ export function switchNation(save: ISave, nation: Nation, starterId: string | un
   return { ...save, current: nation, nations: { ...save.nations, [nation]: slot } };
 }
 
+/**
+ * Resets one nation (#129): its slot goes, so picking it again starts it fresh (one destroyer, no resources).
+ * Every other nation, the shared service record and the settings stay.
+ */
+export function resetNation(save: ISave, nation: Nation): ISave {
+  if (!save.nations[nation]) return save;
+  const nations = { ...save.nations };
+  delete nations[nation];
+  return { ...save, nations };
+}
+
 // ---------------------------------------------------------------------------
 // Parsing and migration
 // ---------------------------------------------------------------------------

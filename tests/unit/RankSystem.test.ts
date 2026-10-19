@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addMerit, clearCount, examPassed, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
-  MERIT_FIRST_CLEAR, maxBuildGrade, meritFor, nextRank, nextSlotRank, promotionText, RANKS, rankOf, TUTORIAL_RANK,
+  MERIT_FIRST_CLEAR, maxBuildGrade, meritFor, nextRank, nextSlotRank, promotionText, RANKS, rankOf, START_RANK, TUTORIAL_RANK,
 } from '@/systems/RankSystem';
 import campaign from '@/data/campaign.json';
 
@@ -18,8 +18,10 @@ describe('RankSystem (#30 / #36)', () => {
     });
   });
 
-  it('a new admiral is a 士官候補生 with one slot; the first clear makes 少尉 (two slots)', () => {
-    expect(rankOf(at(0)).name).toBe('士官候補生');
+  it('a new admiral starts at 准尉 (until the tutorial, #128) with one slot; the first clear makes 少尉 (two slots)', () => {
+    expect(RANKS[0].name).toBe('士官候補生');
+    expect(RANKS[START_RANK].name).toBe('准尉');
+    expect(rankOf(at(0)).name).toBe('准尉');
     expect(fleetSlots(at(0))).toBe(1);
     const first = meritFor({ victory: true, campaign: true, firstClear: true, enemiesSunk: 1 });
     expect(rankOf(at(first)).name).toBe('少尉');
@@ -53,10 +55,10 @@ describe('RankSystem (#30 / #36)', () => {
   });
 
   it('describes the next promotion and the next extra slot', () => {
-    expect(nextRank(at(0))).toEqual({ rank: RANKS[1], meritNeeded: 30, exam: undefined });
+    expect(nextRank(at(0))).toEqual({ rank: RANKS[2], meritNeeded: 80, exam: undefined });
     expect(nextSlotRank(at(0))?.rank.name).toBe('少尉');
     expect(nextRank(at(900, { nation: 'IJN' }))?.exam).toBe('theaterFinal');
-    expect(promotionText(at(0))).toContain('准尉');
+    expect(promotionText(at(0))).toContain('少尉');
     expect(promotionText(at(100_000, { nation: 'IJN', campaign: finalAreas('IJN') }))).toBe('最高位に到達');
   });
 

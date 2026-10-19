@@ -64,11 +64,26 @@ export function sortieCost(ships: IShipData[]): IResources {
  * Spoils of a battle: per enemy sunk (half on a defeat) plus a victory bonus. Fuel pays most: sorties, repairs,
  * research, building and docks all burn it. Steel used to pay double (#35) and piled up while fuel ran out (0.0.12).
  */
-export function battleReward(victory: boolean, enemiesSunk: number): IResources {
-  const perSunk = resources({ fuel: 70, ammo: 70, steel: 50, bauxite: 20 });
-  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 120, bauxite: 50 }) : resources();
-  return addResources(bonus, perSunk, Math.max(0, enemiesSunk) * (victory ? 1 : 0.5));
+export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses: ShipClass[] = []): IResources {
+  const perSunk = resources({ fuel: 80, ammo: 70, steel: 0, bauxite: 20 });
+  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 130, bauxite: 50 }) : resources();
+  const scale = victory ? 1 : 0.5;
+  const out = addResources(bonus, perSunk, Math.max(0, enemiesSunk) * scale);
+  // Steel comes from the wrecks (#132): big ships give more. Sinks without a known class count as average.
+  const known = sunkClasses.slice(0, Math.max(0, enemiesSunk));
+  const steel = known.reduce((sum, c) => sum + (SINK_STEEL[c] ?? SINK_STEEL_DEFAULT), 0) + (Math.max(0, enemiesSunk) - known.length) * SINK_STEEL_DEFAULT;
+  return { ...out, steel: Math.round(out.steel + steel * scale) };
 }
+
+/** Steel salvaged per enemy sunk, by class (#132). */
+export const SINK_STEEL: Partial<Record<ShipClass, number>> = {
+  [ShipClass.Battleship]: 150,
+  [ShipClass.Carrier]: 120,
+  [ShipClass.Cruiser]: 80,
+  [ShipClass.Destroyer]: 45,
+  [ShipClass.Submarine]: 35,
+};
+const SINK_STEEL_DEFAULT = 60;
 
 export function formatResources(r: Partial<IResources>, onlyNonZero = true): string {
   const x = resources(r);

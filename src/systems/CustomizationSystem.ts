@@ -4,9 +4,9 @@ import { IWeaponData } from '@/types/Weapon';
 import { IAirWing } from '@/types/Aircraft';
 import { weaponKind, WeaponKind } from './WeaponSelector';
 
-/** Upgrade slots on a ship that has not been remodelled: none, upgrades come with remodelling (#72). */
-export const UPGRADE_SLOTS = 0;
-/** Upgrade slots by remodel stage: 0 → 2 (改) → 3 (改二) → 4 (改三). */
+/** Upgrade slots on a ship that has not been remodelled: one (#132; remodelling adds more, #72). */
+export const UPGRADE_SLOTS = 1;
+/** Upgrade slots by remodel stage: 1 → 2 (改) → 3 (改二) → 4 (改三). */
 export const SLOTS_BY_STAGE = [UPGRADE_SLOTS, 2, 3, 4];
 export const MAX_UPGRADE_SLOTS = SLOTS_BY_STAGE[SLOTS_BY_STAGE.length - 1];
 

@@ -15,7 +15,7 @@ export interface IHomeMenuItem {
   variant: 'gold' | 'primary' | 'secondary';
   data?: Record<string, unknown>;
   /** Opens a sheet on the home screen instead of a scene */
-  action?: 'base' | 'quests';
+  action?: 'base' | 'quests' | 'ranks';
 }
 
 export interface IHomeMenuTab {
@@ -52,6 +52,7 @@ export const HOME_MENU: IHomeMenuTab[] = [
     id: 'record', label: '記録', items: [
       { label: '図鑑', caption: '艦・艦長・機', scene: SceneKeys.ENCYCLOPEDIA, variant: 'primary', data: { tab: 'ships' } },
       { label: '戦績', caption: '戦いの記録', scene: SceneKeys.RECORD, variant: 'primary' },
+      { label: '階級', caption: '昇進の条件', scene: SceneKeys.HOME, variant: 'primary', action: 'ranks' },
       { label: 'ヘルプ', caption: '遊び方', scene: SceneKeys.HELP, variant: 'secondary' },
       { label: '設定', caption: '音・保存', scene: SceneKeys.SETTINGS, variant: 'secondary' },
     ],

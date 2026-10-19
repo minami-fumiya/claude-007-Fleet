@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyEventReward, eventAt, eventEffects, eventFor, EVENT_WINDOW_MS, NO_EVENT, nextEvent, windowIndex } from '@/systems/EventSystem';
+import { applyEventReward, eventAppliesToBattle, eventAt, eventEffects, eventFor, EVENT_WINDOW_MS, NO_EVENT, nextEvent, windowIndex } from '@/systems/EventSystem';
 import { claimableCount, claimQuest, emptyQuestState, gameDay, gameWeek, nextReset, parseQuestState, QUESTS, recordQuestEvent, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
 import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost } from '@/systems/ProgressionSystem';
 import { battleReward, resources } from '@/systems/ResourceSystem';
@@ -49,6 +49,11 @@ describe('events (#89)', () => {
     expect(applyEventReward(r, steel).steel).toBe(Math.round(r.steel * 1.5));
     expect(applyEventReward(r, steel).fuel).toBe(r.fuel);
     expect(eventEffects(null)).toBe(NO_EVENT);
+    // Only an event that changed the battle is named on its results.
+    expect(eventAppliesToBattle({ kind: 'double', theater: 'pacific', startsAt: 0, endsAt: 1 }, undefined)).toBe(false);
+    expect(eventAppliesToBattle({ kind: 'double', theater: 'pacific', startsAt: 0, endsAt: 1 }, 'pacific')).toBe(true);
+    expect(eventAppliesToBattle({ kind: 'repair', startsAt: 0, endsAt: 1 }, 'pacific')).toBe(false);
+    expect(eventAppliesToBattle({ kind: 'steel', startsAt: 0, endsAt: 1 })).toBe(true);
   });
 
   it('a clock set back before the newest time seen gets no event', () => {
