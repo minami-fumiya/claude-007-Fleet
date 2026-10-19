@@ -58,7 +58,12 @@ describe('campaign data for the growth curve (#25 / #18)', () => {
       expect(sizes[0]).toBe(1);
       expect(Math.max(...sizes)).toBeGreaterThanOrEqual(6);
       expect(Math.max(...sizes)).toBeLessThanOrEqual(8);
-      for (let i = 1; i < sizes.length; i++) expect(sizes[i]).toBeGreaterThanOrEqual(sizes[i - 1]);
+    }
+    // Along every route (#40 branches), an area never has fewer enemies than the one it follows.
+    const size = (id: string): number => data.areas.find((a) => a.id === id)!.enemy.ships.length;
+    for (const a of data.areas) {
+      for (const r of a.requires) expect(a.enemy.ships.length, `${a.id} after ${r}`).toBeGreaterThanOrEqual(size(r));
+      if (a.requiresAny?.length) expect(a.enemy.ships.length, a.id).toBeGreaterThanOrEqual(Math.min(...a.requiresAny.map(size)));
     }
   });
 

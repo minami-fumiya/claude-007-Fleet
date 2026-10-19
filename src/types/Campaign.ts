@@ -2,6 +2,7 @@ import { Nation } from './Nation';
 import { ShipClass } from './ShipClass';
 import { IResources } from './Progression';
 import { TimeOfDay, Weather } from './Weather';
+import type { IScenarioZone } from './Scenario';
 
 /** What wins an operation. */
 export enum Objective {
@@ -21,6 +22,16 @@ export enum Objective {
   Delay = 'Delay',
 }
 
+/** Objective details of a campaign area (#40); the enemy fleet's lead ship is the target. */
+export interface ICampaignSide {
+  /** The enemy lead ship is the target (SinkTargets / PreventEscape / Delay) */
+  targetLead?: boolean;
+  zone?: IScenarioZone;
+  timeLimitSec?: number;
+  /** The target heads for the zone instead of hunting */
+  enemyGoesForZone?: boolean;
+}
+
 export interface ICampaignArea {
   id: string;
   theater: string;
@@ -31,6 +42,8 @@ export interface ICampaignArea {
   y: number;
   /** Area ids that must be cleared first */
   requires: string[];
+  /** Branch merge (#40): at least one of these must be cleared too */
+  requiresAny?: string[];
   enemy: { nation: Nation; ships: string[] };
   objective: Objective;
   map: string;
@@ -38,6 +51,8 @@ export interface ICampaignArea {
   time: TimeOfDay;
   /** Paid on the first clear */
   reward: Partial<IResources>;
+  /** Zone / time limit / target for the objectives beyond 殲滅・護衛・砲撃 (#40) */
+  side?: ICampaignSide;
   /** Class of the ship the first clear adds to the player's nation (see ShipyardSystem.rewardShipFor) */
   rewardShip?: ShipClass;
 }

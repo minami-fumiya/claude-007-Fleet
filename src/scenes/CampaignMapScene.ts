@@ -8,7 +8,7 @@ import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost } from '@/systems/ProgressionSystem';
 import { eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
-import { areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
+import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
@@ -35,6 +35,17 @@ export const OBJECTIVE_LABEL: Record<Objective, string> = {
   [Objective.PreventEscape]: '脱出の阻止',
   [Objective.Delay]: '遅滞戦闘',
 };
+
+/** "敵旗艦の撃沈 (6:00 以内)" — the objective with its target, zone and time limit (#40). */
+function objectiveText(a: ICampaignArea): string {
+  const side = a.side;
+  if (!side) return OBJECTIVE_LABEL[a.objective];
+  const label = side.targetLead && a.objective === Objective.SinkTargets ? '敵旗艦の撃沈' : OBJECTIVE_LABEL[a.objective];
+  const zone = side.zone ? ` — ${side.zone.label}` : '';
+  const t = side.timeLimitSec ?? 0;
+  const time = t > 0 ? `  (${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}${a.objective === Objective.Delay ? ' 持ちこたえる' : ' 以内'})` : '';
+  return `${label}${zone}${time}`;
+}
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -127,7 +138,7 @@ export class CampaignMapScene extends Phaser.Scene {
     // Routes
     for (const a of areas) {
       const to = this.nodePos(a);
-      for (const r of a.requires) {
+      for (const r of prerequisitesOf(a)) {
         const from = areas.find((x) => x.id === r);
         if (!from) continue;
         const p = this.nodePos(from);
@@ -192,7 +203,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(a.rewardShip, roster, ownedIds(progress, roster), a.id);
     const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
-      ['目標', OBJECTIVE_LABEL[a.objective]],
+      ['目標', objectiveText(a)],
       ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}\n${lineup}`],
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       ['初回報酬', reward],

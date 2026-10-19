@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { areaMode, areasOf, enemyNationFor, enemyShips, isCleared, isUnlocked, recordClear, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
+import { areaMode, areasOf, campaignSide, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, prerequisitesOf, recordClear, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { ShipRegistry } from '@/systems/ShipRegistry';
-import { ICampaignData } from '@/types/Campaign';
+import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
 import { IShipData } from '@/types/Ship';
 import { BattleMode } from '@/types/Battle';
 import { ShipClass } from '@/types/ShipClass';
@@ -127,3 +127,37 @@ describe('campaign by nation (#27)', () => {
   });
 });
 
+
+describe('more areas and branches (#40)', () => {
+  const data = campaign as unknown as ICampaignData;
+  const byId = (id: string): ICampaignArea => data.areas.find((a) => a.id === id)!;
+
+  it('every theater has 8+ areas and a branch; finals stay the last listed (rank exams)', () => {
+    for (const t of data.theaters) {
+      const list = areasOf(data, t.id);
+      expect(list.length, t.id).toBeGreaterThanOrEqual(8);
+      expect(list.some((a) => (a.requiresAny ?? []).length >= 2), t.id).toBe(true);
+    }
+    expect(data.theaters.map((t) => areasOf(data, t.id).pop()!.id)).toEqual(['p6', 'a5', 'm5', 'b5']);
+  });
+
+  it('a merge opens after either route; a branch area is not free', () => {
+    const p5 = byId('p5');
+    expect(isUnlocked(p5, ['p1', 'p2', 'p3'])).toBe(false);
+    expect(isUnlocked(p5, ['p1', 'p2', 'p3', 'p4'])).toBe(true);
+    expect(isUnlocked(p5, ['p1', 'p2', 'p3', 'p7'])).toBe(true);
+    expect(isFreeArea(p5)).toBe(false);
+    expect(prerequisitesOf(p5)).toEqual(['p4', 'p7']);
+  });
+
+  it('new objectives carry what the battle needs', () => {
+    for (const a of data.areas.filter((x) => [Objective.SinkTargets, Objective.Breakthrough, Objective.Delay].includes(x.objective))) {
+      const side = campaignSide(a)!;
+      expect(side.objective).toBe(a.objective);
+      expect(side.timeLimitSec, a.id).toBeGreaterThan(0);
+      if (a.objective !== Objective.SinkTargets) expect(side.zone, a.id).toBeDefined();
+      if (a.objective !== Objective.Breakthrough) expect(side.targetLead, a.id).toBe(true);
+    }
+    expect(campaignSide(byId('p1'))).toBeNull();
+  });
+});
