@@ -1623,7 +1623,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       '改装  ›',
       this.onTap(() => {
         this.saveSelection();
-        this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.FLEET_BUILDER });
+        this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.FLEET_BUILDER, scope: 'fleet' });
       }),
       { variant: 'secondary', width: bw, height: bh, fontSize: 14 },
     );

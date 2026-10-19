@@ -293,6 +293,25 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('改装 lists every owned ship, steps through them and opens the ship list (#144)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CustomizationScene'] });
+    await open(page, 'CustomizationScene', { returnTo: 'HomeScene', scope: 'all' });
+    const count = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as { ships: unknown[] };
+      return s.ships.length;
+    });
+    expect(count).toBe(SAVE.nations.IJN.ships.length);
+    await page.screenshot({ path: info.outputPath('customize.png') });
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as { openShipList(): void };
+      s.openShipList();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('customize-list.png') });
+    expect(await overflowingTexts(page, 'CustomizationScene')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
