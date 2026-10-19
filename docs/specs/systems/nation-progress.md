@@ -110,6 +110,17 @@ of the area's reward class.
 - `src/data/screen-help.json` + `ScreenHelpSheet`: a screen explains itself the first time it opens; `ISave.seenHelp` lists those shown.
   The v6 → v7 migration marks every screen that had help in 0.0.14 as seen (`EXISTING_PLAYER_HELP`), so only new screens explain themselves to existing players. 設定 → 「画面の説明をもう一度表示」 clears the list.
 
+## Quests / 任務 (#52, save v8)
+- `src/data/quests.json` + `QuestSystem`: daily (reset 05:00 JST = 20:00 UTC), weekly (Monday 05:00 JST), once. `INationProgress.quests = { day, week, progress, claimed }`.
+- Events: sortie / win / nightWin / sink / sinkCarrier / sinkSubmarine / sinkBattleship (battle end, sweep), repair (dock), build, research, refit, sweep.
+
+## Sweep / 掃討 (#57, save v8)
+- A campaign win with every ship alive adds the area to `perfect`. `sweepArea` pays `sweepCost` (sortie cost of a fleet the enemy's size), gives 80% of a win's reward, campaign-win merit and quest events. No damage, proficiency or first-clear reward.
+
+## Limited-time events (#89, save v8)
+- `EventSystem.eventAt(now)`: three-hour windows from 05:00 JST, hashed into double (a theater's reward x2) / steel (+50%) / training (proficiency and captain XP x1.5) / repair (cost and time x0.5) / none (60%).
+- `ISave.lastSeenAt` guards against a clock set back (`eventFor`). `GameClock.activeEvent` keeps it updated.
+
 ## Enemy fleet sizes (#25)
 Campaign areas grow along each theater: 太平洋 1·2·3·4·6·7, 大西洋 1·2·3·5·8, 地中海 1·2·3·5·7. Free battle: opponent
 size 同数 or 1–20 ships; each enemy mirrors the class of the player's ship in that position (extras mirror the smallest),

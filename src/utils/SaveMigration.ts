@@ -77,6 +77,9 @@ export const MIGRATIONS: MigrationStep[] = [
   // v6 → v7 (#61 / #88): the screens an existing player already knows skip their first-visit help; every nation
   // works from its first base ('' = the nation's first).
   (data) => mapNations({ ...data, seenHelp: [...EXISTING_PLAYER_HELP] }, (nation) => ({ ...nation, base: '' })),
+  // v7 → v8 (#52 #57 #89): no quest progress yet, no area to sweep yet (a perfect win from now on opens it), and
+  // the event clock guard starts at 0.
+  (data) => mapNations({ ...data, lastSeenAt: 0 }, (nation) => ({ ...nation, quests: { day: 0, week: 0, progress: {}, claimed: [] }, perfect: [] })),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

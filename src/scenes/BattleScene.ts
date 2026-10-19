@@ -74,6 +74,9 @@ import specialData from '@/data/special.json';
 import { IScenario } from '@/types/Scenario';
 import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
+import { eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
+import { withQuestEvents } from '@/systems/QuestSystem';
+import { activeEvent } from '@/utils/GameClock';
 
 
 
@@ -226,6 +229,8 @@ export class BattleScene extends Phaser.Scene {
 
   private aimAngle = 0;
   private gameOver = false;
+  /** Event effects for this battle's rewards (#89); set when the battle ends */
+  private battleEvent: IEventEffects = NO_EVENT;
 
   constructor() {
     super({ key: SceneKeys.BATTLE });
@@ -1424,7 +1429,8 @@ export class BattleScene extends Phaser.Scene {
     const night = this.conditions.time === TimeOfDay.Night;
     const subsSunk = this.enemies.filter((e) => !e.isAlive && e.stats.shipClass === ShipClass.Submarine).length;
     for (const [ship, captain] of this.captains) {
-      const gained = battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive });
+      // 熟練度ブースト (#89) raises captain XP too.
+      const gained = Math.round(battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive }) * this.battleEvent.xpMul);
       const award = awardXp(captain, gained);
       captainXp[captain.id] = award.captain.xp;
       // What traits count (#45): the fleet's sinks, and coming home 大破.
@@ -1503,6 +1509,11 @@ export class BattleScene extends Phaser.Scene {
     this.gameOver = true;
     const fleet = this.friendlies();
     const enemiesSunk = this.enemies.filter((e) => !e.isAlive).length;
+    const areaId = this.battleData?.areaId;
+    const area = areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === areaId) : undefined;
+    // The event running as the battle ends (#89).
+    const event = this.scenario ? null : activeEvent();
+    this.battleEvent = eventEffects(event);
     const result: IBattleResultData = {
       victory,
       score: 0,
@@ -1519,7 +1530,7 @@ export class BattleScene extends Phaser.Scene {
       enemiesSunk,
       planesLost: this.playerAir.totalLost(),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    }, { exercise: this.exercise });
+    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over.
       result.reward = undefined;
@@ -1534,12 +1545,19 @@ export class BattleScene extends Phaser.Scene {
     const proficiency = { ...progress.proficiency };
     for (const s of fleet) {
       const current = proficiency[s.dataId] ?? 0;
-      proficiency[s.dataId] = addProficiency(current, proficiencyGain({ victory, enemiesSunk, survived: s.isAlive, current }));
+      proficiency[s.dataId] = addProficiency(current, Math.round(proficiencyGain({ victory, enemiesSunk, survived: s.isAlive, current }) * this.battleEvent.xpMul));
     }
     progress = { ...progress, proficiency };
-    const areaId = this.battleData?.areaId;
-    const area = areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === areaId) : undefined;
     let firstClear = false;
+    // A campaign win without losing a ship lets the area be swept from now on (#57).
+    if (area && victory && fleet.every((s) => s.isAlive) && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
+    // 任務 (#52): the sortie, the win and what was sunk.
+    const sunk = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy);
+    const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
+    progress = withQuestEvents(progress, [
+      ['sortie', 1], ['win', victory ? 1 : 0], ['nightWin', victory && this.conditions.time === TimeOfDay.Night ? 1 : 0], ['sink', sunk.length],
+      ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
+    ], Date.now());
     if (area && victory) {
       const rec = recordClear(progress.campaign, area.id);
       firstClear = rec.firstClear;
@@ -1584,7 +1602,7 @@ export class BattleScene extends Phaser.Scene {
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
     emitTutorial('battleEnd', this.registry);
     if (firstClear) emitTutorial('firstClear', this.registry);
-    result.reward = formatResources(settlement.reward);
+    result.reward = formatResources(settlement.reward) + (event ? `  (イベント: ${eventLabel(event)})` : '');
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }

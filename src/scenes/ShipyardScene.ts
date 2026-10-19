@@ -21,6 +21,7 @@ import techTree from '@/data/tech-tree.json';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { baseOfProgress, researchMultiplier, scaleCost } from '@/systems/BaseSystem';
+import { withQuestEvents } from '@/systems/QuestSystem';
 
 const TREE = techTree.tech as ITechNode[];
 const TECH_NAMES: Record<string, string> = Object.fromEntries(TREE.map((n) => [n.id, n.name]));
@@ -217,7 +218,7 @@ export class ShipyardScene extends Phaser.Scene {
     const progress = loadProgress();
     const next = buildShip(progress, DataLoader.getRegistry(this).byNation(progress.nation), ship);
     if (!next) return;
-    saveProgress(next);
+    saveProgress(withQuestEvents(next, [['build', 1]], Date.now()));
     this.status = `${ship.name.replace(/\s*\(.*\)\s*$/, '')} が艦隊に加わりました`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
@@ -227,7 +228,7 @@ export class ShipyardScene extends Phaser.Scene {
     const progress = loadProgress();
     const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
     if (!result) return;
-    saveProgress({ ...progress, research: result.done, resources: result.resources });
+    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()));
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.status = `${node.name}を研究しました`;
     this.refresh();

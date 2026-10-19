@@ -12,6 +12,7 @@ import { ResearchView } from '@/ui/components/ResearchView';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { baseOfProgress, researchMultiplier } from '@/systems/BaseSystem';
+import { withQuestEvents } from '@/systems/QuestSystem';
 
 const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, view: { x: 16, y: 282, w: CANVAS_W - 32, h: CANVAS_H - 282 - 24 } }
@@ -59,7 +60,7 @@ export class ArsenalScene extends Phaser.Scene {
     const progress = loadProgress();
     const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
     if (!result) return;
-    saveProgress({ ...progress, research: result.done, resources: result.resources });
+    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()));
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.bar.refresh(result.resources);
     this.view.refresh();

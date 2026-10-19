@@ -15,7 +15,7 @@ export interface IHomeMenuItem {
   variant: 'gold' | 'primary' | 'secondary';
   data?: Record<string, unknown>;
   /** Opens a sheet on the home screen instead of a scene */
-  action?: 'base';
+  action?: 'base' | 'quests';
 }
 
 export interface IHomeMenuTab {
@@ -30,6 +30,7 @@ export const HOME_MENU: IHomeMenuTab[] = [
       { label: '作戦', caption: '海域を攻略', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
       { label: '演習', caption: '無傷で練習', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
       { label: '史実', caption: '史実の海戦', scene: SceneKeys.SCENARIO, variant: 'primary' },
+      { label: '任務', caption: '日替わりの目標', scene: SceneKeys.HOME, variant: 'secondary', action: 'quests' },
     ],
   },
   {
