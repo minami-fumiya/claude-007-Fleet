@@ -298,6 +298,227 @@
       ],
       "spriteKey": "u_boat_xxi",
       "description": "XXI型Uボート。大容量の電池で長時間の水中高速航行ができた「エレクトロボート」。実戦投入は終戦直前だった。"
+    },
+    {
+      "id": "admiral_scheer",
+      "name": "アドミラル・シェーア (Admiral Scheer)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 430,
+      "armor": 38,
+      "speed": 160,
+      "weapons": [
+        "28cm_skc28",
+        "15cm_skc28"
+      ],
+      "spriteKey": "deutschland",
+      "description": "ドイッチュラント級装甲艦の同型艦。性能はドイッチュラントと同じ。",
+      "sisterOf": "deutschland"
+    },
+    {
+      "id": "z2",
+      "name": "Z2 ゲオルク・ティーレ (Z2)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z1",
+      "description": "1934 型駆逐艦の同型艦。性能はZ1 レーベレヒト・マースと同じ。",
+      "sisterOf": "z1"
+    },
+    {
+      "id": "z3",
+      "name": "Z3 マックス・シュルツ (Z3)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z1",
+      "description": "1934 型駆逐艦の同型艦。性能はZ1 レーベレヒト・マースと同じ。",
+      "sisterOf": "z1"
+    },
+    {
+      "id": "z4",
+      "name": "Z4 リヒャルト・バイツェン (Z4)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z1",
+      "description": "1934 型駆逐艦の同型艦。性能はZ1 レーベレヒト・マースと同じ。",
+      "sisterOf": "z1"
+    },
+    {
+      "id": "z17",
+      "name": "Z17 ディーター・フォン・レーダー (Z17)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z20",
+      "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
+      "sisterOf": "z20"
+    },
+    {
+      "id": "z18",
+      "name": "Z18 ハンス・リューデマン (Z18)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z20",
+      "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
+      "sisterOf": "z20"
+    },
+    {
+      "id": "z19",
+      "name": "Z19 ヘルマン・キュンネ (Z19)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z20",
+      "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
+      "sisterOf": "z20"
+    },
+    {
+      "id": "z21",
+      "name": "Z21 ヴィルヘルム・ハイドカンプ (Z21)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z20",
+      "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
+      "sisterOf": "z20"
+    },
+    {
+      "id": "z22",
+      "name": "Z22 アントン・シュミット (Z22)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z20",
+      "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
+      "sisterOf": "z20"
+    },
+    {
+      "id": "z24",
+      "name": "Z24 (Z24)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 15,
+      "speed": 230,
+      "weapons": [
+        "15cm_tbk_c36",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z23",
+      "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
+      "sisterOf": "z23"
+    },
+    {
+      "id": "z25",
+      "name": "Z25 (Z25)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 15,
+      "speed": 230,
+      "weapons": [
+        "15cm_tbk_c36",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z23",
+      "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
+      "sisterOf": "z23"
+    },
+    {
+      "id": "z26",
+      "name": "Z26 (Z26)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 15,
+      "speed": 230,
+      "weapons": [
+        "15cm_tbk_c36",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z23",
+      "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
+      "sisterOf": "z23"
+    },
+    {
+      "id": "z27",
+      "name": "Z27 (Z27)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 15,
+      "speed": 230,
+      "weapons": [
+        "15cm_tbk_c36",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z23",
+      "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
+      "sisterOf": "z23"
     }
   ]
 }
