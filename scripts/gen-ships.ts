@@ -109,7 +109,29 @@ const SU: Table = {
   gnevny: ['グネフヌイ級駆逐艦', [['grozny', 'グロズヌイ', 'Grozny'], ['gromky', 'グロムキー', 'Gromky'], ['gremyashchy', 'グレミャーシチー', 'Gremyashchy'], ['stremitelny', 'ストレミーチェリヌイ', 'Stremitelny']]],
 };
 
-const TABLES: Record<string, Table> = { ijn: IJN, usn: USN, fr: FR, rm: RM, su: SU };
+/** Britain and Germany (#85 stage 2): the sisters of the classes already in the data. */
+const RN: Table = {
+  king_george_v: ['キング・ジョージ5世級戦艦', [['prince_of_wales', 'プリンス・オブ・ウェールズ', 'Prince of Wales'], ['duke_of_york', 'デューク・オブ・ヨーク', 'Duke of York'], ['anson', 'アンソン', 'Anson'], ['howe', 'ハウ', 'Howe']]],
+  queen_elizabeth: ['クイーン・エリザベス級戦艦', [['valiant', 'ヴァリアント', 'Valiant'], ['barham', 'バーラム', 'Barham'], ['malaya', 'マレーヤ', 'Malaya']]],
+  renown: ['レナウン級巡洋戦艦', [['repulse', 'レパルス', 'Repulse']]],
+  illustrious: ['イラストリアス級航空母艦', [['victorious', 'ヴィクトリアス', 'Victorious'], ['formidable', 'フォーミダブル', 'Formidable']]],
+  southampton: ['タウン級軽巡洋艦', [['newcastle', 'ニューカッスル', 'Newcastle'], ['sheffield', 'シェフィールド', 'Sheffield'], ['glasgow', 'グラスゴー', 'Glasgow'], ['birmingham_rn', 'バーミンガム', 'Birmingham'], ['manchester', 'マンチェスター', 'Manchester'], ['liverpool', 'リヴァプール', 'Liverpool'], ['gloucester', 'グロスター', 'Gloucester']]],
+  belfast: ['エディンバラ級軽巡洋艦', [['edinburgh', 'エディンバラ', 'Edinburgh']]],
+  dorsetshire: ['ノーフォーク級重巡洋艦', [['norfolk', 'ノーフォーク', 'Norfolk']]],
+  dido: ['ダイドー級軽巡洋艦', [['naiad', 'ナイアド', 'Naiad'], ['phoebe', 'フィービ', 'Phoebe'], ['sirius', 'シリアス', 'Sirius'], ['euryalus', 'ユーライアラス', 'Euryalus'], ['cleopatra', 'クレオパトラ', 'Cleopatra']]],
+  cossack: ['トライバル級駆逐艦', [['afridi', 'アフリディ', 'Afridi'], ['ashanti', 'アシャンティ', 'Ashanti'], ['maori', 'マオリ', 'Maori'], ['sikh', 'シーク', 'Sikh'], ['zulu', 'ズールー', 'Zulu'], ['tartar', 'タータ', 'Tartar'], ['eskimo', 'エスキモー', 'Eskimo'], ['bedouin', 'ベドウィン', 'Bedouin']]],
+  javelin: ['J 級駆逐艦', [['jervis', 'ジャーヴィス', 'Jervis'], ['jupiter', 'ジュピター', 'Jupiter'], ['juno', 'ジュノー', 'Juno'], ['janus', 'ジェーナス', 'Janus'], ['jackal', 'ジャッカル', 'Jackal']]],
+  black_swan: ['ブラック・スワン級スループ', [['starling', 'スターリング', 'Starling'], ['wren', 'レン', 'Wren'], ['woodpecker', 'ウッドペッカー', 'Woodpecker']]],
+};
+
+const KM: Table = {
+  deutschland: ['ドイッチュラント級装甲艦', [['admiral_scheer', 'アドミラル・シェーア', 'Admiral Scheer']]],
+  z1: ['1934 型駆逐艦', [['z2', 'Z2 ゲオルク・ティーレ', 'Z2'], ['z3', 'Z3 マックス・シュルツ', 'Z3'], ['z4', 'Z4 リヒャルト・バイツェン', 'Z4']]],
+  z20: ['1936 型駆逐艦', [['z17', 'Z17 ディーター・フォン・レーダー', 'Z17'], ['z18', 'Z18 ハンス・リューデマン', 'Z18'], ['z19', 'Z19 ヘルマン・キュンネ', 'Z19'], ['z21', 'Z21 ヴィルヘルム・ハイドカンプ', 'Z21'], ['z22', 'Z22 アントン・シュミット', 'Z22']]],
+  z23: ['1936A 型駆逐艦', [['z24', 'Z24', 'Z24'], ['z25', 'Z25', 'Z25'], ['z26', 'Z26', 'Z26'], ['z27', 'Z27', 'Z27']]],
+};
+
+const TABLES: Record<string, Table> = { ijn: IJN, usn: USN, fr: FR, rm: RM, su: SU, rn: RN, km: KM };
 
 for (const [file, table] of Object.entries(TABLES)) {
   const path = join(process.cwd(), 'src', 'data', 'ships', `${file}.json`);

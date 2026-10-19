@@ -315,7 +315,7 @@
       "id": "su_light",
       "nation": "SU",
       "name": "ウラジオストク軍港",
-      "unlockRank": 2,
+      "unlockRank": 6,
       "build": {
         "classes": [
           "Destroyer",
@@ -331,7 +331,7 @@
       "id": "su_cruiser",
       "nation": "SU",
       "name": "セヴァストポリ軍港",
-      "unlockRank": 6,
+      "unlockRank": 2,
       "build": {
         "classes": [
           "Cruiser"
@@ -340,7 +340,8 @@
       },
       "research": 0.9,
       "theaters": [
-        "baltic"
+        "baltic",
+        "blacksea"
       ]
     },
     {

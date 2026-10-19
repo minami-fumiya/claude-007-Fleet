@@ -340,6 +340,685 @@
       ],
       "spriteKey": "upholder",
       "description": "U級潜水艦。地中海で活躍したエース潜水艦。1942年4月に消息を絶った。"
+    },
+    {
+      "id": "prince_of_wales",
+      "name": "プリンス・オブ・ウェールズ (Prince of Wales)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 735,
+      "armor": 60,
+      "speed": 140,
+      "weapons": [
+        "14in_mk7",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "king_george_v",
+      "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
+      "sisterOf": "king_george_v"
+    },
+    {
+      "id": "duke_of_york",
+      "name": "デューク・オブ・ヨーク (Duke of York)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 735,
+      "armor": 60,
+      "speed": 140,
+      "weapons": [
+        "14in_mk7",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "king_george_v",
+      "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
+      "sisterOf": "king_george_v"
+    },
+    {
+      "id": "anson",
+      "name": "アンソン (Anson)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 735,
+      "armor": 60,
+      "speed": 140,
+      "weapons": [
+        "14in_mk7",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "king_george_v",
+      "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
+      "sisterOf": "king_george_v"
+    },
+    {
+      "id": "howe",
+      "name": "ハウ (Howe)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 735,
+      "armor": 60,
+      "speed": 140,
+      "weapons": [
+        "14in_mk7",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "king_george_v",
+      "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
+      "sisterOf": "king_george_v"
+    },
+    {
+      "id": "valiant",
+      "name": "ヴァリアント (Valiant)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 690,
+      "armor": 56,
+      "speed": 128,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "queen_elizabeth",
+      "description": "クイーン・エリザベス級戦艦の同型艦。性能はクイーン・エリザベスと同じ。",
+      "sisterOf": "queen_elizabeth"
+    },
+    {
+      "id": "barham",
+      "name": "バーラム (Barham)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 690,
+      "armor": 56,
+      "speed": 128,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "queen_elizabeth",
+      "description": "クイーン・エリザベス級戦艦の同型艦。性能はクイーン・エリザベスと同じ。",
+      "sisterOf": "queen_elizabeth"
+    },
+    {
+      "id": "malaya",
+      "name": "マレーヤ (Malaya)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 690,
+      "armor": 56,
+      "speed": 128,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "queen_elizabeth",
+      "description": "クイーン・エリザベス級戦艦の同型艦。性能はクイーン・エリザベスと同じ。",
+      "sisterOf": "queen_elizabeth"
+    },
+    {
+      "id": "repulse",
+      "name": "レパルス (Repulse)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 640,
+      "armor": 46,
+      "speed": 165,
+      "weapons": [
+        "15in_mk1",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "renown",
+      "description": "レナウン級巡洋戦艦の同型艦。性能はレナウンと同じ。",
+      "sisterOf": "renown"
+    },
+    {
+      "id": "victorious",
+      "name": "ヴィクトリアス (Victorious)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "hp": 510,
+      "armor": 40,
+      "speed": 150,
+      "weapons": [
+        "4_5in_mk1"
+      ],
+      "spriteKey": "illustrious",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 4
+      },
+      "description": "イラストリアス級航空母艦の同型艦。性能はイラストリアスと同じ。",
+      "sisterOf": "illustrious"
+    },
+    {
+      "id": "formidable",
+      "name": "フォーミダブル (Formidable)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "hp": 510,
+      "armor": 40,
+      "speed": 150,
+      "weapons": [
+        "4_5in_mk1"
+      ],
+      "spriteKey": "illustrious",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 4
+      },
+      "description": "イラストリアス級航空母艦の同型艦。性能はイラストリアスと同じ。",
+      "sisterOf": "illustrious"
+    },
+    {
+      "id": "newcastle",
+      "name": "ニューカッスル (Newcastle)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "sheffield",
+      "name": "シェフィールド (Sheffield)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "glasgow",
+      "name": "グラスゴー (Glasgow)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "birmingham_rn",
+      "name": "バーミンガム (Birmingham)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "manchester",
+      "name": "マンチェスター (Manchester)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "liverpool",
+      "name": "リヴァプール (Liverpool)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "gloucester",
+      "name": "グロスター (Gloucester)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 385,
+      "armor": 36,
+      "speed": 178,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "southampton",
+      "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
+      "sisterOf": "southampton"
+    },
+    {
+      "id": "edinburgh",
+      "name": "エディンバラ (Edinburgh)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 410,
+      "armor": 38,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "belfast",
+      "description": "エディンバラ級軽巡洋艦の同型艦。性能はベルファストと同じ。",
+      "sisterOf": "belfast"
+    },
+    {
+      "id": "norfolk",
+      "name": "ノーフォーク (Norfolk)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dorsetshire",
+      "description": "ノーフォーク級重巡洋艦の同型艦。性能はドーセットシャーと同じ。",
+      "sisterOf": "dorsetshire"
+    },
+    {
+      "id": "naiad",
+      "name": "ナイアド (Naiad)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 182,
+      "weapons": [
+        "5_25in_mk1",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dido",
+      "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
+      "sisterOf": "dido"
+    },
+    {
+      "id": "phoebe",
+      "name": "フィービ (Phoebe)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 182,
+      "weapons": [
+        "5_25in_mk1",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dido",
+      "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
+      "sisterOf": "dido"
+    },
+    {
+      "id": "sirius",
+      "name": "シリアス (Sirius)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 182,
+      "weapons": [
+        "5_25in_mk1",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dido",
+      "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
+      "sisterOf": "dido"
+    },
+    {
+      "id": "euryalus",
+      "name": "ユーライアラス (Euryalus)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 182,
+      "weapons": [
+        "5_25in_mk1",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dido",
+      "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
+      "sisterOf": "dido"
+    },
+    {
+      "id": "cleopatra",
+      "name": "クレオパトラ (Cleopatra)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 182,
+      "weapons": [
+        "5_25in_mk1",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "dido",
+      "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
+      "sisterOf": "dido"
+    },
+    {
+      "id": "afridi",
+      "name": "アフリディ (Afridi)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "ashanti",
+      "name": "アシャンティ (Ashanti)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "maori",
+      "name": "マオリ (Maori)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "sikh",
+      "name": "シーク (Sikh)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "zulu",
+      "name": "ズールー (Zulu)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "tartar",
+      "name": "タータ (Tartar)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "eskimo",
+      "name": "エスキモー (Eskimo)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "bedouin",
+      "name": "ベドウィン (Bedouin)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "cossack",
+      "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
+      "sisterOf": "cossack"
+    },
+    {
+      "id": "jervis",
+      "name": "ジャーヴィス (Jervis)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "javelin",
+      "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
+      "sisterOf": "javelin"
+    },
+    {
+      "id": "jupiter",
+      "name": "ジュピター (Jupiter)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "javelin",
+      "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
+      "sisterOf": "javelin"
+    },
+    {
+      "id": "juno",
+      "name": "ジュノー (Juno)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "javelin",
+      "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
+      "sisterOf": "javelin"
+    },
+    {
+      "id": "janus",
+      "name": "ジェーナス (Janus)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "javelin",
+      "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
+      "sisterOf": "javelin"
+    },
+    {
+      "id": "jackal",
+      "name": "ジャッカル (Jackal)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "4_7in_mk12",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "javelin",
+      "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
+      "sisterOf": "javelin"
+    },
+    {
+      "id": "starling",
+      "name": "スターリング (Starling)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 205,
+      "armor": 11,
+      "speed": 180,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "black_swan",
+      "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
+      "sisterOf": "black_swan"
+    },
+    {
+      "id": "wren",
+      "name": "レン (Wren)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 205,
+      "armor": 11,
+      "speed": 180,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "black_swan",
+      "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
+      "sisterOf": "black_swan"
+    },
+    {
+      "id": "woodpecker",
+      "name": "ウッドペッカー (Woodpecker)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 205,
+      "armor": 11,
+      "speed": 180,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "black_swan",
+      "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
+      "sisterOf": "black_swan"
     }
   ]
 }

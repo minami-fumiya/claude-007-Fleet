@@ -70,7 +70,7 @@ import { addResources, formatResources, gainResources, lostNote } from '@/system
 import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
-import { campaignSide, recordClear } from '@/systems/CampaignSystem';
+import { campaignSide, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
 import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
@@ -605,7 +605,7 @@ export class BattleScene extends Phaser.Scene {
     return combineModifiers(
       upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
       researchModifiers(TECH_TREE, progress.research),
-      refitModifiers(REFIT_TABLE, shipData, stage),
+      refitModifiers(REFIT_TABLE, shipData, stage, progress.refitBranches[shipData.id]),
       // The captain's own speciality, learned skills, abilities and earned traits (#45), by aptitude for the ship (#131).
       captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass,
         captain ? progress.captainBonus[captain.id] ?? [] : []),
@@ -625,7 +625,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.scenario) return;
     const progress = loadProgress();
     ship.stats.proficiency = progress.proficiency[ship.dataId] ?? 0;
-    ship.stats.name = refitName(REFIT_TABLE, ship.stats.name, { id: ship.dataId, shipClass: ship.stats.shipClass }, progress.refits[ship.dataId] ?? 0);
+    ship.stats.name = refitName(REFIT_TABLE, ship.stats.name, { id: ship.dataId, shipClass: ship.stats.shipClass }, progress.refits[ship.dataId] ?? 0, progress.refitBranches[ship.dataId]);
     const f = startingHp(progress, ship.dataId, this.exercise);
     ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }
@@ -1587,7 +1587,7 @@ export class BattleScene extends Phaser.Scene {
       planesLost: this.playerAir.totalLost(),
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] });
+    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over.
       result.reward = undefined;
@@ -1607,7 +1607,7 @@ export class BattleScene extends Phaser.Scene {
     const proficiency = { ...progress.proficiency };
     for (const s of fleet) {
       const current = proficiency[s.dataId] ?? 0;
-      proficiency[s.dataId] = addProficiency(current, Math.round(proficiencyGain({ victory, enemiesSunk, survived: s.isAlive, current }) * this.battleEvent.xpMul));
+      proficiency[s.dataId] = addProficiency(current, Math.round(proficiencyGain({ victory, enemiesSunk, survived: s.isAlive, current }) * this.battleEvent.xpMul * (area?.training ? TRAINING_SCALE : 1)));
     }
     progress = { ...progress, proficiency };
     let firstClear = false;
@@ -1620,7 +1620,8 @@ export class BattleScene extends Phaser.Scene {
     const skirmish = area !== undefined && node !== undefined && !node.boss;
     // An S on the area's main fleet lets it be swept from now on (#57 / #149); the area keeps its best rank.
     if (area && !skirmish) {
-      if (rank === 'S' && victory && !progress.perfect.includes(area.id)) firstS = true;
+      // A training area's S rank brings no captain (#202).
+      if (rank === 'S' && victory && !progress.perfect.includes(area.id) && !area.training) firstS = true;
       if (rank === 'S' && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
       const best = betterRank(progress.areaRanks[area.id], rank);
       if (best && best !== progress.areaRanks[area.id]) progress = { ...progress, areaRanks: { ...progress.areaRanks, [area.id]: best } };
@@ -1630,7 +1631,7 @@ export class BattleScene extends Phaser.Scene {
     const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
     const night = this.conditions.time === TimeOfDay.Night;
     const won = (b: boolean): number => (victory && b ? 1 : 0);
-    const theaterWin: Partial<Record<string, QuestEvent>> = { pacific: 'winPacific', atlantic: 'winAtlantic', mediterranean: 'winMediterranean', baltic: 'winBaltic' };
+    const theaterWin: Partial<Record<string, QuestEvent>> = { pacific: 'winPacific', atlantic: 'winAtlantic', mediterranean: 'winMediterranean', baltic: 'winBaltic', blacksea: 'winBlackSea' };
     const theaterEvent = area ? theaterWin[area.theater] : undefined;
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
@@ -1640,7 +1641,8 @@ export class BattleScene extends Phaser.Scene {
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
       ['planesDown', this.enemyAir.totalLost()],
-      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
+      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
+      ['trainingWin', won(!!area?.training)],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
       // A win under each kind of event counts for the イベント巡り章 (#218).
@@ -1690,7 +1692,7 @@ export class BattleScene extends Phaser.Scene {
         objectiveWin: victory && campaignSide(area) ? 1 : 0, bigS: rank === 'S' && this.enemies.length >= 6 ? 1 : 0,
       });
     }
-    const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank]);
+    const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
     progress = addMerit(progress, merit).progress;
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };

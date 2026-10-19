@@ -1,5 +1,6 @@
+import { finalAreas } from '@/systems/RankSystem';
 import { describe, it, expect } from 'vitest';
-import { areaMode, areasOf, campaignSide, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, prerequisitesOf, recordClear, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
+import { areaMode, areasOf, campaignSide, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, prerequisitesOf, recordClear, theaterProgress, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -52,7 +53,8 @@ describe('CampaignSystem', () => {
 
   it('measures theater progress', () => {
     expect(theaterProgress(data, 'pacific', [])).toBe(0);
-    expect(theaterProgress(data, 'pacific', ['p1', 'p2', 'a1'])).toBeCloseTo(2 / areasOf(data, 'pacific').length);
+    // Training areas (#202) don't count.
+    expect(theaterProgress(data, 'pacific', ['p1', 'p2', 'a1', 'p0'])).toBeCloseTo(2 / areasOf(data, 'pacific').filter((a) => !a.training).length);
   });
 
   it('data: every area has known ships, maps, theaters and prerequisites, and is reachable', () => {
@@ -139,7 +141,8 @@ describe('more areas and branches (#40)', () => {
       expect(list.length, t.id).toBeGreaterThanOrEqual(8);
       expect(list.some((a) => (a.requiresAny ?? []).length >= 2), t.id).toBe(true);
     }
-    expect(data.theaters.map((t) => areasOf(data, t.id).pop()!.id)).toEqual(['p6', 'a5', 'm5', 'b5']);
+    // Training areas (#202) are listed after the finals and never count as one.
+    expect(data.theaters.map((t) => areasOf(data, t.id).filter((a) => !a.training).pop()!.id)).toEqual(['p6', 'a5', 'm5', 'b5', 'bs5']);
   });
 
   it('a merge opens after either route; a branch area is not free', () => {
@@ -173,5 +176,24 @@ describe('delay battles can be won (#40)', () => {
       expect(a.side?.arrivalSec, a.id).toBeGreaterThan(0);
       expect(a.side!.timeLimitSec!, a.id).toBeGreaterThan(a.side!.arrivalSec!);
     }
+  });
+});
+
+describe('more theaters and training areas (#202)', () => {
+  it('the USSR gets the Black Sea, reachable from Sevastopol by 少尉; its final is no promotion exam', () => {
+    expect(theatersFor(data, Nation.SU).map((t) => t.id)).toEqual(['baltic', 'blacksea']);
+    expect(areasOf(data, 'blacksea').filter((a) => !a.training)).toHaveLength(8);
+    expect(finalAreas('SU')).toEqual(['b5']);
+  });
+
+  it('every theater has one training area: free, one weak enemy, not counted toward the theater', () => {
+    for (const t of data.theaters) {
+      const tr = areasOf(data, t.id).filter((a) => a.training);
+      expect(tr, t.id).toHaveLength(1);
+      expect(isFreeArea(tr[0])).toBe(true);
+      expect(tr[0].enemy.ships).toHaveLength(1);
+      expect(theaterProgress(data, t.id, [tr[0].id])).toBe(0);
+    }
+    expect(TRAINING_SCALE).toBeLessThan(1);
   });
 });

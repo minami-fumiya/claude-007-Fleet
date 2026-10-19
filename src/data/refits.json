@@ -1,4 +1,29 @@
 {
+  "branches": {
+    "Battleship": [
+      { "id": "main_gun", "suffix": "改三甲", "label": "主砲換装: 砲身を新型に換えて火力を上げる", "effects": { "hpMul": 1.18, "armorAdd": 6, "gunPowerMul": 1.2, "gunReloadMul": 0.96, "aaMul": 1.3 } },
+      { "id": "anti_air", "suffix": "改三乙", "label": "防空強化: 副砲を減らし高角砲・機銃を増やす", "effects": { "hpMul": 1.22, "armorAdd": 7, "gunPowerMul": 1.08, "aaMul": 2.2 } },
+      { "id": "armor", "suffix": "改三丙", "label": "装甲増強: 水平・水中防御を厚くする", "effects": { "hpMul": 1.3, "armorAdd": 10, "gunPowerMul": 1.08, "aaMul": 1.4 } }
+    ],
+    "Carrier": [
+      { "id": "armored_deck", "suffix": "改三甲", "label": "装甲空母化: 飛行甲板に装甲を張る", "effects": { "hpMul": 1.3, "armorAdd": 12, "aaMul": 1.6, "airPowerMul": 1.05 } },
+      { "id": "more_planes", "suffix": "改三乙", "label": "搭載機増加: 格納庫を広げ、新型機を運用する", "effects": { "hpMul": 1.16, "armorAdd": 5, "aaMul": 1.4, "airPowerMul": 1.15, "planesAdd": 2 } }
+    ],
+    "Cruiser": [
+      { "id": "aa_cruiser", "suffix": "改三甲", "label": "防空巡洋艦化: 主砲を両用砲に改め、対空砲火を厚くする", "effects": { "hpMul": 1.2, "gunPowerMul": 1.1, "gunReloadMul": 0.94, "aaMul": 2.2 } },
+      { "id": "torpedo_cruiser", "suffix": "改三乙", "label": "重雷装艦化: 魚雷発射管を大きく増やす", "effects": { "hpMul": 1.18, "gunPowerMul": 1.05, "torpedoPowerMul": 1.35 } },
+      { "id": "flagship", "suffix": "改三丙", "label": "旗艦設備: 指揮・見張りの設備を整え、水雷戦隊を率いる", "effects": { "hpMul": 1.2, "gunPowerMul": 1.12, "torpedoPowerMul": 1.12, "visionMul": 1.2 } }
+    ],
+    "Destroyer": [
+      { "id": "aa_destroyer", "suffix": "改三甲", "label": "対空駆逐艦化: 高角砲と機銃を積み増す", "effects": { "hpMul": 1.24, "gunPowerMul": 1.12, "torpedoPowerMul": 1.1, "aaMul": 2 } },
+      { "id": "asw", "suffix": "改三乙", "label": "対潜特化: 聴音機と爆雷を強化する", "effects": { "hpMul": 1.26, "torpedoPowerMul": 1.1, "sonarMul": 1.3, "depthChargeMul": 1.3 } },
+      { "id": "fast", "suffix": "改三丙", "label": "高速化: 機関を強化し、雷撃の機動を磨く", "effects": { "hpMul": 1.22, "speedMul": 1.1, "torpedoPowerMul": 1.25 } }
+    ],
+    "Submarine": [
+      { "id": "snorkel", "suffix": "改三甲", "label": "シュノーケル: 潜航のまま長く走れる", "effects": { "hpMul": 1.28, "speedMul": 1.1, "torpedoPowerMul": 1.2, "visionMul": 1.1 } },
+      { "id": "heavy_torpedo", "suffix": "改三乙", "label": "大型魚雷: 威力の高い魚雷に換える", "effects": { "hpMul": 1.22, "torpedoPowerMul": 1.35 } }
+    ]
+  },
   "classes": {
     "Battleship": [
       { "suffix": "改", "cost": { "fuel": 400, "ammo": 400, "steel": 800 }, "minProficiency": 30, "effects": { "hpMul": 1.08, "armorAdd": 3, "gunPowerMul": 1.05 } },
