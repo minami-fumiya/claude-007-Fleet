@@ -1649,7 +1649,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
     const paid = paySortie(loadProgress(), ships, this.sortieOptions());
     if (!paid) return;
-    saveProgress(paid);
+    saveProgress(paid, 'sortie');
     this.saveSelection();
     const flagshipIndex = this.slots.findIndex((s) => s !== null);
 

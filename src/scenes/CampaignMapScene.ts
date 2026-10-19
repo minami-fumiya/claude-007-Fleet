@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { recordLedger } from '@/systems/LedgerSystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -262,7 +263,9 @@ export class CampaignMapScene extends Phaser.Scene {
     const event = activeEvent();
     const r = sweepArea(progress, a, enemy, Date.now(), eventEffects(event));
     if (!r) return;
-    saveProgress(r.progress);
+    // Ledger (#137): the sweep's reward in, its fuel and ammo out as a sortie.
+    const now = Date.now();
+    saveProgress({ ...r.progress, ledger: recordLedger(recordLedger(r.progress.ledger, 'sweep', r.reward, now), 'sortie', r.cost, now) });
     this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
     this.drawDetail();
   }

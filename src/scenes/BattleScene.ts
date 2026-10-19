@@ -59,6 +59,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
+import { recordLedger } from '@/systems/LedgerSystem';
 import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown } from '@/systems/BattleRank';
 import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
@@ -1573,7 +1574,9 @@ export class BattleScene extends Phaser.Scene {
       this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
       return;
     }
-    let progress = settlement.progress;
+    // Ledger (#137): the battle's reward in, replacement aircraft out.
+    const now = Date.now();
+    let progress: IProgress = { ...settlement.progress, ledger: recordLedger(recordLedger(settlement.progress.ledger, 'battle', settlement.reward, now), 'aircraft', settlement.aircraftCost, now) };
     const proficiency = { ...progress.proficiency };
     for (const s of fleet) {
       const current = proficiency[s.dataId] ?? 0;
@@ -1612,7 +1615,7 @@ export class BattleScene extends Phaser.Scene {
       progress = { ...progress, campaign: rec.cleared };
       let newShip = '';
       if (rec.firstClear) {
-        progress = { ...progress, resources: addResources(progress.resources, area.reward) };
+        progress = { ...progress, resources: addResources(progress.resources, area.reward), ledger: recordLedger(progress.ledger, 'firstClear', area.reward, Date.now()) };
         // First-clear ship (#18): one of this nation's ships of the area's reward class.
         const roster = DataLoader.getRegistry(this).byNation(progress.nation);
         const ship = rewardShipFor(area.rewardShip, roster, ownedIds(progress, roster), area.id);

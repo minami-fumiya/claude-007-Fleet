@@ -365,7 +365,7 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const r = claimQuest(progress.quests, id, Date.now());
     if (!r) return;
-    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) });
+    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) }, 'quest');
     this.refresh();
     this.openQuests();
   }
@@ -574,7 +574,7 @@ export class HomeScene extends Phaser.Scene {
   private buildDock(): void {
     const built = buildDock(loadProgress());
     if (!built) return;
-    saveProgress(built);
+    saveProgress(built, 'dock');
     this.refresh();
   }
 
@@ -585,7 +585,7 @@ export class HomeScene extends Phaser.Scene {
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
     const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass) : null;
     if (!paid || !docked) return;
-    saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();
   }
 
@@ -598,7 +598,7 @@ export class HomeScene extends Phaser.Scene {
     }
     const paid = pay(progress.resources, FAST_REPAIR_COST);
     if (!paid) return;
-    saveProgress({ ...progress, ...fastRepair(progress, shipId), resources: paid });
+    saveProgress({ ...progress, ...fastRepair(progress, shipId), resources: paid }, 'repair');
     this.refresh();
   }
 }

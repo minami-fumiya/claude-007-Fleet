@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
+import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { clampVolume, ISettings, stepVolume } from '@/systems/SettingsSystem';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
-import { backupStoredSave, emptySave, listBackups, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
+import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { backupLabel, ISaveBackup } from '@/utils/SaveBackup';
@@ -122,6 +123,8 @@ export class SettingsScene extends Phaser.Scene {
       ['セーブコードを読み込む', () => this.importSave(), 'secondary'],
       // First-visit help (#61) shows again on every screen.
       ['画面の説明をもう一度表示', () => this.resetHelp(), 'secondary'],
+      // The resource ledger as text (#137), for bug reports and balance work.
+      ['資源の収支をコピー', () => this.exportLedger(), 'secondary'],
       ['国を選んでリセット', () => {
         this.nationResetOpen = true;
         this.nationResetArmed = null;
@@ -208,6 +211,17 @@ export class SettingsScene extends Phaser.Scene {
     };
     if (!navigator.clipboard) return fallback();
     navigator.clipboard.writeText(code).then(() => this.say(`セーブコードをコピーしました (${code.length} 文字)`), fallback);
+  }
+
+  private exportLedger(): void {
+    this.resetArmed = false;
+    const text = ledgerText(loadProgress().ledger, Date.now());
+    const fallback = (): void => {
+      window.prompt('収支をコピーしてください', text);
+      this.say('収支を表示しました');
+    };
+    if (!navigator.clipboard) return fallback();
+    navigator.clipboard.writeText(text).then(() => this.say('資源の収支 (直近 24 時間) をコピーしました'), fallback);
   }
 
   private importSave(): void {

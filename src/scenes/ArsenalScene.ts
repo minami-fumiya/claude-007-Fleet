@@ -60,7 +60,7 @@ export class ArsenalScene extends Phaser.Scene {
     const progress = loadProgress();
     const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
     if (!result) return;
-    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.bar.refresh(result.resources);
     this.view.refresh();

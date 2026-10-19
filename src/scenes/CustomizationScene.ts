@@ -297,7 +297,7 @@ export class CustomizationScene extends Phaser.Scene {
     const stage = progress.refits[ship.id] ?? 0;
     const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
     if (!r) return;
-    saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } }, [['refit', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } }, [['refit', 1]], Date.now()), 'refit');
     this.refresh();
   }
 

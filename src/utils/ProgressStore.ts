@@ -12,6 +12,7 @@
 import { IDockJob, IItems, IResources } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
+import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
@@ -85,6 +86,8 @@ export interface INationProgress {
   areaRanks: Record<string, BattleRank>;
   /** What the promotion missions count (#142) */
   rankStats: Partial<Record<RankStat, number>>;
+  /** Resource income and spending by hour and category, last 24 hours (#137) */
+  ledger: Ledger;
 }
 
 /** The whole save (v2 and later). */
@@ -123,7 +126,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {},
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {},
   };
 }
 
@@ -156,7 +159,10 @@ export function progressView(save: ISave, now?: number): IProgress {
   const view: IProgress = { ...np, nation: save.current, record: save.record };
   if (now === undefined) return view;
   const r = regenerate(view.resources, view.regenAt, now);
-  const regen = r.resources === view.resources && r.regenAt === view.regenAt ? view : { ...view, resources: r.resources, regenAt: r.regenAt };
+  // Natural regeneration goes into the ledger (#137).
+  const regen = r.resources === view.resources && r.regenAt === view.regenAt
+    ? view
+    : { ...view, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(view.ledger, 'regen', resourceDelta(view.resources, r.resources).gained, now) };
   return finishBuilds(regen, now);
 }
 
@@ -257,7 +263,19 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     items: parseItems(data.items),
     areaRanks: parseAreaRanks(data.areaRanks),
     rankStats: numbers(data.rankStats),
+    ledger: parseLedger(data.ledger),
   };
+}
+
+function parseLedger(v: unknown): Ledger {
+  const out: Ledger = {};
+  if (!isObject(v)) return out;
+  for (const [key, r] of Object.entries(v)) {
+    if (!/^\d+:\w+$/.test(key) || !isObject(r)) continue;
+    const n = (x: unknown): number => (isNum(x) ? Math.max(0, x) : 0);
+    out[key] = { fuel: n(r.fuel), ammo: n(r.ammo), steel: n(r.steel), bauxite: n(r.bauxite) };
+  }
+  return out;
 }
 
 function parseAreaRanks(v: unknown): Record<string, BattleRank> {
@@ -471,13 +489,24 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger)) saveSave(withProgress(save, view));
   return view;
 }
 
-/** Saves a view into its own nation's slot (whichever nation is current). */
-export function saveProgress(progress: IProgress): void {
-  saveSave(withProgress(loadSave(), progress));
+/**
+ * Saves a view into its own nation's slot (whichever nation is current). With `category`, the change in resources
+ * against what was stored goes into the ledger (#137): a gain for an income category, a cost for a spending one.
+ */
+export function saveProgress(progress: IProgress, category?: LedgerCategory, now = Date.now()): void {
+  const save = loadSave();
+  const before = save.nations[progress.nation]?.resources;
+  saveSave(withProgress(save, category && before ? noteLedger(progress, category, before, now) : progress));
+}
+
+/** Records the change from `before` to the progress's resources under `category` (#137). */
+export function noteLedger<T extends { resources: IResources; ledger: Ledger }>(progress: T, category: LedgerCategory, before: IResources, now: number): T {
+  const d = resourceDelta(before, progress.resources);
+  return { ...progress, ledger: recordLedger(progress.ledger, category, INCOME.includes(category) ? d.gained : d.spent, now) };
 }
 
 /** Drops the in-memory copy so the next load reads storage again (tests). */

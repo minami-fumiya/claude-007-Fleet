@@ -257,7 +257,7 @@ export class ShipyardScene extends Phaser.Scene {
     const now = Date.now();
     const next = startBuild(progress, roster, ship, now);
     if (!next) return;
-    saveProgress(withQuestEvents(next, [['build', 1]], now));
+    saveProgress(withQuestEvents(next, [['build', 1]], now), 'build');
     this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship))})`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
@@ -267,7 +267,7 @@ export class ShipyardScene extends Phaser.Scene {
     const progress = loadProgress();
     const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
     if (!result) return;
-    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()));
+    saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
     this.status = `${node.name}を研究しました`;
     this.refresh();

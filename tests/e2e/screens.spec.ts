@@ -313,7 +313,7 @@ test.describe('screens', () => {
   });
 
   test('建造 takes time: lay down a ship, see the countdown, finish it with a 高速建造材 (#143)', async ({ page }, info) => {
-    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['ShipyardScene', 'HomeScene'] });
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['ShipyardScene', 'HomeScene', 'RecordScene'] });
     await open(page, 'ShipyardScene');
     const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { builds: Array<{ shipId: string }>; ships: string[]; items: { fastBuild: number } });
     await page.evaluate(() => {
@@ -336,6 +336,10 @@ test.describe('screens', () => {
     expect(np.items.fastBuild).toBe(1);
     await open(page, 'HomeScene');
     await page.screenshot({ path: info.outputPath('home-docks.png') });
+    // The build's cost shows in the ledger (#137).
+    await open(page, 'RecordScene', { view: 'ledger' });
+    await page.screenshot({ path: info.outputPath('ledger.png') });
+    expect(await overflowingTexts(page, 'RecordScene')).toEqual([]);
     expect(errors).toEqual([]);
   });
 
