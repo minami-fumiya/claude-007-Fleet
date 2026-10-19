@@ -96,6 +96,10 @@ export class CampaignMapScene extends Phaser.Scene {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, '作戦 — 戦略地図', displayStyle(24)).setOrigin(0.5);
+    // The bases the sorties leave from (#220): their docks, facilities and ships, then back to this map.
+    new UIButton(this, CANVAS_W - back.x, back.y, '軍港  ›', () => this.scene.start(SceneKeys.BASE, { returnTo: SceneKeys.CAMPAIGN }), {
+      variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
+    });
 
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;

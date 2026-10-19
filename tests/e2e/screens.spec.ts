@@ -188,22 +188,25 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the scenario list pages through 13 battles and a 7-vs-7 one starts (#71)', async ({ page }, info) => {
+  test('the scenario list pages through the nation\'s battles and a 7-vs-7 one starts from its side (#71 #224)', async ({ page }, info) => {
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ScenarioScene'] });
     await open(page, 'ScenarioScene');
     const listed = await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as {
-        scenarios: Array<{ id: string }>; selected: number; theater: string; page: number; drawList(): void; refresh(): void;
+        scenarios: Array<{ id: string; forces: Record<string, { nation: string }>; sides: Array<{ force: string }> }>; selected: number; side: number; theater: string; page: number; drawList(): void; refresh(): void;
       };
       s.theater = 'pacific';
       s.page = 1;
       s.selected = s.scenarios.findIndex((x) => x.id === 'leyte-gulf');
+      const sc = s.scenarios[s.selected];
+      s.side = sc.sides.findIndex((d) => sc.forces[d.force].nation === 'IJN');
       s.drawList();
       s.refresh();
       return s.scenarios.length;
     });
-    expect(listed).toBe(13);
+    // Only the battles Japan fought in (#224).
+    expect(listed).toBe(8);
     expect(await overflowingTexts(page, 'ScenarioScene'), `scenarios (${layout})`).toEqual([]);
     expect.soft(await overlappingTexts(page, 'ScenarioScene'), `scenarios overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('scenarios.png') });
@@ -444,6 +447,25 @@ test.describe('screens', () => {
       await page.screenshot({ path: info.outputPath(`events-${ahead}.png`) });
       expect(await overflowingTexts(page, 'HomeScene'), `day +${ahead}`).toEqual([]);
     }
+    expect(errors).toEqual([]);
+  });
+
+  test('the strategic map opens the base screen, whose back button returns to the map (#220)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CampaignMapScene', 'BaseScene'] });
+    await open(page, 'CampaignMapScene');
+    type G = { game: Phaser.Game };
+    const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
+      const scene = (window as unknown as G).game.scene.getScene(k);
+      const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((c) => (c as Phaser.GameObjects.Text).text?.includes(l)))!;
+      btn.emit('pointerdown');
+      btn.emit('pointerup');
+    }, [key, label] as const);
+    await press('CampaignMapScene', '軍港');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('BaseScene')?.sys.settings.active === true);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: info.outputPath('map-to-base.png') });
+    await press('BaseScene', '戦略地図');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('CampaignMapScene')?.sys.settings.active === true);
     expect(errors).toEqual([]);
   });
 

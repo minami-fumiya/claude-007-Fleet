@@ -45,9 +45,15 @@ export class BaseScene extends Phaser.Scene {
   private layer: Phaser.GameObjects.GameObject[] = [];
   private timer: { text: Phaser.GameObjects.Text; endsAt: number; label: string } | null = null;
   private status = '';
+  /** Where the back button goes: the home port, or the strategic map that opened this screen (#220) */
+  private returnTo: string = SceneKeys.HOME;
 
   constructor() {
     super({ key: SceneKeys.BASE });
+  }
+
+  init(data?: { returnTo?: string }): void {
+    this.returnTo = data?.returnTo ?? SceneKeys.HOME;
   }
 
   create(): void {
@@ -58,7 +64,8 @@ export class BaseScene extends Phaser.Scene {
     this.status = '';
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
-    new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
+    const backLabel = this.returnTo === SceneKeys.CAMPAIGN ? '‹  戦略地図' : '‹  鎮守府';
+    new UIButton(this, back.x, back.y, backLabel, () => this.scene.start(this.returnTo), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 56, `${NATION_INFO[loadProgress().nation].jaShort}の軍港`, displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, L.barCols);
     addPanel(this, L.list.x, L.list.y, L.list.w, L.list.h, { radius: 24, fillAlpha: 0.5 });

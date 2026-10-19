@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { forceLineup, forceShips, inZone, placeAt, scenarioMonth, scenariosIn, setupFor, sortScenarios } from '@/systems/ScenarioSystem';
+import { forceLineup, forceShips, playableScenarios, playableSides, inZone, placeAt, scenarioMonth, scenariosIn, setupFor, sortScenarios } from '@/systems/ScenarioSystem';
 import { ALL_SCENARIOS } from '@/data/scenarios';
 import { BATTLE_WORLD } from '@/systems/BattleLayout';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -123,5 +123,21 @@ describe('scenario lineups by kind (#196)', () => {
     const l = forceLineup({ nation: 'IJN', ships: ['fubuki', 'fubuki', 'fletcher'], positions: [] } as unknown as Parameters<typeof forceLineup>[0], registry);
     expect(l.lines.join('|')).toContain('吹雪 ×2');
     expect(l.lines.join('|')).toMatch(/フレッチャー※/);
+  });
+});
+
+describe('scenarios by nation (#224)', () => {
+  it('a nation plays only the battles it fought in, from its own side', () => {
+    expect(playableScenarios(SCENARIOS, 'IJN').length).toBeGreaterThan(0);
+    for (const nation of ['IJN', 'USN', 'KM', 'RN', 'RM']) {
+      for (const sc of playableScenarios(SCENARIOS, nation)) {
+        const sides = playableSides(sc, nation);
+        expect(sides.length, `${sc.id} ${nation}`).toBeGreaterThan(0);
+        for (const i of sides) expect(setupFor(sc, i)!.player.nation).toBe(nation);
+      }
+    }
+    // A battle Japan wasn't in isn't offered to Japan.
+    expect(playableScenarios(SCENARIOS, 'IJN').every((sc) => sc.forces.A.nation === 'IJN' || sc.forces.B.nation === 'IJN')).toBe(true);
+    expect(playableScenarios(SCENARIOS, 'IJN').length).toBeLessThan(SCENARIOS.length);
   });
 });
