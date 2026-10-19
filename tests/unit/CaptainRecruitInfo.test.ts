@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CAPTAINS, CAPTAIN_DROP_CHANCE, CAPTAIN_SOURCES, captainsLeft, nationCaptains, nextCaptain, OUTSIDER_EVERY } from '@/systems/CaptainRoster';
+import { ALL_CAPTAINS, CAPTAIN_DROP_CHANCE, CAPTAIN_SOURCES, captainsLeft, nationCaptains, nextCaptain, OUTSIDER_EVERY, recruitCaptains } from '@/systems/CaptainRoster';
+import { QUESTS } from '@/systems/QuestSystem';
 import { aptitudeFor } from '@/systems/CaptainSystem';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -38,10 +39,12 @@ describe('when captains join (#179 #215) and who comes (#210)', () => {
     expect(captainsLeft('IJN', [])).toBe(IJN.length);
   });
 
-  it('lists the three ways in: S ranks and promotions only (#215)', () => {
-    expect(CAPTAIN_SOURCES).toHaveLength(3);
+  it('lists the ways in: S ranks and promotions (#215), and some quests since there are 30 captains (#209)', () => {
+    expect(CAPTAIN_SOURCES).toHaveLength(4);
     expect(CAPTAIN_SOURCES.join('')).toContain('S 評価');
-    expect(CAPTAIN_SOURCES[2]).toContain(`${Math.round(CAPTAIN_DROP_CHANCE * 100)}%`);
+    expect(CAPTAIN_DROP_CHANCE).toBe(0.08);
+    expect(CAPTAIN_SOURCES[2]).toContain('8%');
+    expect(CAPTAIN_SOURCES[3]).toContain('任務');
   });
 });
 
@@ -49,5 +52,26 @@ describe('aptitude (#188)', () => {
   it('every captain of every nation suits at least one ship class at S', () => {
     const none = ALL_CAPTAINS.filter((c) => !Object.values(ShipClass).some((k) => aptitudeFor(c, k) === 'S')).map((c) => c.id);
     expect(none).toEqual([]);
+  });
+});
+
+describe('recruits from quests and battles (#209)', () => {
+  const IJN = nationCaptains('IJN');
+  it('recruitCaptains adds captains, then 艦長教本 once everyone has joined', () => {
+    const items = { fastRepair: 0, fastBuild: 0, captainBook: 0 };
+    const start = { nation: 'IJN', captains: [IJN[0].id], items };
+    const two = recruitCaptains(start, 2, [ShipClass.Destroyer]);
+    expect(two.joined).toHaveLength(2);
+    expect(two.progress.captains).toHaveLength(3);
+    const full = recruitCaptains({ ...start, captains: IJN.map((c) => c.id) }, 2, [ShipClass.Destroyer]);
+    expect(full.joined).toEqual([]);
+    expect(full.books).toBe(2);
+    expect(full.progress.items.captainBook).toBe(2);
+  });
+
+  it('a few weekly and one-time quests bring a captain', () => {
+    const withCaptain = QUESTS.filter((q) => (q.captains ?? 0) > 0);
+    expect(withCaptain.length).toBeGreaterThanOrEqual(4);
+    expect(withCaptain.every((q) => q.kind === 'weekly' || q.kind === 'once')).toBe(true);
   });
 });

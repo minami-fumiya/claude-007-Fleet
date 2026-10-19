@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, recruitCaptain } from '@/systems/CaptainRoster';
+import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, recruitCaptains } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
@@ -1698,23 +1698,14 @@ export class BattleScene extends Phaser.Scene {
     // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
     const sWin = victory && rank === 'S';
     const recruits = [firstS, promoted.promotedTo !== null, sWin && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
-    const joined: string[] = [];
-    let books = 0;
-    for (let i = 0; i < recruits; i++) {
-      // Captains go to the classes the fleet is shortest of (#159 #210): one class entry per owned ship.
-      const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-      const classes = ownedIds(progress, roster).map((id) => roster.find((s) => s.id === id)?.shipClass).filter((c): c is ShipClass => c !== undefined);
-      const r = recruitCaptain(progress.nation, progress.captains, classes);
-      if (!r.joined) {
-        // Everyone has joined (#131): the recruit becomes a 艦長教本 the player uses on a captain of their choice (#199).
-        if (progress.captains.length === 0) break;
-        progress = { ...progress, items: { ...progress.items, captainBook: (progress.items.captainBook ?? 0) + 1 } };
-        books++;
-        continue;
-      }
-      progress = { ...progress, captains: r.owned };
-      joined.push(`${r.joined.name} (${SKILL_LABEL[r.joined.skill]})`);
-    }
+    // Captains go to the classes the fleet is shortest of (#159 #210): one class entry per owned ship. Once everyone
+    // has joined (#131), a recruit becomes a 艦長教本 the player uses on a captain of their choice (#199).
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    const classes = ownedIds(progress, roster).map((id) => roster.find((s) => s.id === id)?.shipClass).filter((c): c is ShipClass => c !== undefined);
+    const rec = recruitCaptains(progress, recruits, classes);
+    progress = rec.progress;
+    const joined = rec.joined.map((c) => `${c.name} (${SKILL_LABEL[c.skill]})`);
+    const books = rec.books;
     if (joined.length > 0) progress = withQuestEvents(progress, [['captainJoin', joined.length]], Date.now());
     const recruitLines = [
       joined.length > 0 ? `新しい艦長: ${joined.join('・')}` : '',
