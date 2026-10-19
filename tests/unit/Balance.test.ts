@@ -17,8 +17,8 @@ import weapons from '@/data/weapons/weapons.json';
 
 const W = new Map((weapons.weapons as IWeaponData[]).map((w) => [w.id, w]));
 const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships, ...su.ships, ...rm.ships] as IShipData[];
-/** Historical ships; fictional ones are a research reward and are checked separately. */
-const ALL = EVERY.filter((s) => !s.fictional);
+/** Historical ships, one per class (sister ships share their lead's performance, #85); fictional ones are a research reward and are checked separately. */
+const ALL = EVERY.filter((s) => !s.fictional && !s.sisterOf);
 /** Fictional battleships; fictional carriers (USSR, Italy) only have to keep the hull order. */
 const FICTIONAL = EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Battleship);
 const loadout = (s: IShipData): IWeaponData[] => s.weapons.map((id) => W.get(id)!);
@@ -76,6 +76,19 @@ describe('balance', () => {
     for (const c of fictionalCarriers) {
       expect(c.hp, c.id).toBeLessThan(minBattleship);
       expect(c.hp, c.id).toBeGreaterThan(maxCruiser);
+    }
+  });
+
+  it('grows stronger with the year within each nation\'s class and type (#85)', () => {
+    // A ship ten years or more younger than another of its kind is not weaker (hull × firepower, 10% grace).
+    const refArmor: Partial<Record<ShipClass, number>> = { [ShipClass.Battleship]: 55, [ShipClass.Cruiser]: 35, [ShipClass.Destroyer]: 15, [ShipClass.Submarine]: 6 };
+    const power = (s: IShipData): number => s.hp * (1 + s.armor / 100) * shipDps(loadout(s), { shipClass: s.shipClass, armor: refArmor[s.shipClass] ?? 30 });
+    const dated = ALL.filter((s) => s.year !== undefined && s.shipClass !== ShipClass.Carrier);
+    for (const a of dated) {
+      for (const b of dated) {
+        if (a.nation !== b.nation || a.shipClass !== b.shipClass || a.subtype !== b.subtype || b.year! - a.year! < 10) continue;
+        expect(power(b) / power(a), `${b.id} (${b.year}) vs ${a.id} (${a.year})`).toBeGreaterThan(0.9);
+      }
     }
   });
 

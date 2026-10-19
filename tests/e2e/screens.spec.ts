@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.27.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.28.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -273,6 +273,49 @@ test.describe('screens', () => {
       expect.soft(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
       expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
     }
+    expect(errors).toEqual([]);
+  });
+
+  test('30 captains: the list filters and sorts, the fleet picks a captain from the best fits (#209 #185)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const ijn = (JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', 'captains.json'), 'utf8')) as { captains: Array<{ id: string; nation: string }> })
+      .captains.filter((c) => c.nation === 'IJN').map((c) => c.id);
+    const save = { ...SAVE, version: 15, seenHelp: ['CaptainScene', 'FleetBuilderScene'], nations: { IJN: { ...SAVE.nations.IJN, captains: ijn } } };
+    const errors = await boot(page, layout, save);
+    await open(page, 'CaptainScene');
+    type Cap = { openFilter(): void; filter: string; sort: string; refresh(): void };
+    const cap = (): Promise<void> => page.waitForTimeout(200);
+    expect(await overflowingTexts(page, 'CaptainScene'), `captains (${layout})`).toEqual([]);
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as Cap).openFilter());
+    await cap();
+    expect(await overflowingTexts(page, 'CaptainScene'), `filter sheet (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('captain-filter.png') });
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as Cap & { closeSheet(): void };
+      s.closeSheet();
+      s.filter = 'apt:Destroyer';
+      s.sort = 'level';
+      s.refresh();
+    });
+    await cap();
+    expect(await overflowingTexts(page, 'CaptainScene'), `filtered (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CaptainScene'), `filtered overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('captain-filtered.png') });
+    // The fleet builder: a sheet of the best fits instead of cycling through all 30.
+    await open(page, 'FleetBuilderScene');
+    const picked = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
+        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; openCaptainPicker(i: number): void;
+      };
+      s.openPicker(0);
+      s.pickShip(s.ships.find((x) => x.id === 'fubuki')!);
+      s.openCaptainPicker(0);
+      return true;
+    });
+    expect(picked).toBe(true);
+    await cap();
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `captain picker (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('fleet-captain-picker.png') });
     expect(errors).toEqual([]);
   });
 

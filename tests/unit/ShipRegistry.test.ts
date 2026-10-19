@@ -103,10 +103,11 @@ describe('ship data files', () => {
     expect(missing).toEqual([]);
   });
 
-  it('give every ship at least one weapon and a sprite key equal to its id', () => {
+  it('give every ship at least one weapon and a sprite key equal to its id (sister ships share their lead\'s, #85)', () => {
     for (const s of ALL) {
       expect(s.weapons.length, s.id).toBeGreaterThan(0);
-      expect(s.spriteKey).toBe(s.id);
+      expect(s.spriteKey, s.id).toBe(s.sisterOf ?? s.id);
+      if (s.sisterOf) expect(ALL.some((x) => x.id === s.sisterOf && !x.sisterOf), `${s.id} → ${s.sisterOf}`).toBe(true);
     }
   });
 });

@@ -23,7 +23,9 @@ export type QuestEvent =
   // 0.0.27: captains joining from S ranks and promotions (#215)
   | 'captainJoin'
   // wins under each kind of event (#218)
-  | `event_${EventKind}`;
+  | `event_${EventKind}`
+  // 0.0.29: enemy planes shot down (#185)
+  | 'planesDown';
 
 export interface IQuest {
   id: string;
@@ -37,6 +39,8 @@ export interface IQuest {
   items?: Partial<IItems>;
   /** Medal awarded with the reward (#158) */
   medal?: string;
+  /** Captains who join on claiming it (#209) */
+  captains?: number;
 }
 
 export interface IQuestState {
@@ -189,11 +193,11 @@ export function claimableCount(state: IQuestState, now: number): number {
 }
 
 /** Takes a finished quest's reward; null when it isn't finished, isn't on the board or was already taken. */
-export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems>; medal?: string } | null {
+export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems>; medal?: string; captains: number } | null {
   const s = refreshQuests(state, now);
   const q = QUESTS.find((x) => x.id === id);
   if (!q || !isActive(q, now) || !isClaimable(s, q)) return null;
-  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {}, medal: q.medal };
+  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {}, medal: q.medal, captains: q.captains ?? 0 };
 }
 
 /** Tolerant parse of a stored quest state. */

@@ -1453,7 +1453,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const btnY = h - (p ? (full ? 26 : tiny ? 19 : 22) : 18);
     const detailW = p ? 110 : 64;
     const captainW = Math.min(p ? 320 : 220, w - nameX - detailW - 24);
-    const captainBtn = new UIButton(this, nameX + captainW / 2, btnY, captainLabel, this.onTap(() => this.cycleCaptain(i)), {
+    const captainBtn = new UIButton(this, nameX + captainW / 2, btnY, captainLabel, this.onTap(() => this.openCaptainPicker(i)), {
       variant: captain ? 'primary' : 'secondary', width: captainW, height: btnH, fontSize: 11,
     });
     const detailBtn = new UIButton(this, nameX + captainW + 10 + detailW / 2, btnY, '詳細  ›', this.onTap(() => this.openDetail(ship, i)), {
@@ -1486,7 +1486,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const captain = this.captainOf(i);
     const btnH = Math.min(24, h - 70);
     const detailW = 48;
-    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level} ${aptitudeFor(captain, ship.shipClass)}` : '艦長 ›', this.onTap(() => this.cycleCaptain(i)), {
+    const captainBtn = new UIButton(this, (w - detailW - 6) / 2, h - btnH / 2 - 6, captain ? `${captain.name} Lv${captain.level} ${aptitudeFor(captain, ship.shipClass)}` : '艦長 ›', this.onTap(() => this.openCaptainPicker(i)), {
       variant: captain ? 'primary' : 'secondary', width: w - detailW - 22, height: btnH, fontSize: 10,
     });
     const detailBtn = new UIButton(this, w - 8 - detailW / 2, h - btnH / 2 - 6, '詳細', this.onTap(() => this.openDetail(ship, i)), {
@@ -1654,21 +1654,55 @@ export class FleetBuilderScene extends Phaser.Scene {
     return data ? withProgress(data, loadProgress().captainXp[data.id] ?? 0) : null;
   }
 
-  /** Tap: next captain of this nation not commanding another slot, then none. */
-  private cycleCaptain(slot: number): void {
+  /** Captains shown in the picker: the best fits for the ship (#209: 30 per nation are too many to cycle through). */
+  static readonly PICKER_CAPTAINS = 8;
+
+  /**
+   * Tap: a sheet of this nation's free captains, the best fit for this ship first (#164 #209), plus 外す. Only captains
+   * the nation has (#44); one commanding another slot is left out.
+   */
+  openCaptainPicker(slot: number): void {
+    this.closeDetail();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      this.detail.push(o);
+      return o;
+    };
     const taken = new Set(this.captainIds.filter((id, i) => id && i !== slot));
     const ship = this.slots[slot];
-    const options: (string | null)[] = [
-      null,
-      // Only captains this nation has (#44), the best fit for this ship first (#164).
-      ...this.ownedCaptains()
-        .filter((c) => !taken.has(c.id))
-        .sort((a, b) => (ship ? captainFit(b, ship.shipClass) - captainFit(a, ship.shipClass) : 0))
-        .map((c) => c.id),
-    ];
-    const at = options.indexOf(this.captainIds[slot]);
-    this.captainIds[slot] = options[(at + 1) % options.length];
-    this.refreshSlots();
+    const free = this.ownedCaptains()
+      .filter((c) => !taken.has(c.id))
+      .sort((a, b) => (ship ? captainFit(b, ship.shipClass) - captainFit(a, ship.shipClass) : b.level - a.level));
+    const shown = free.slice(0, FleetBuilderScene.PICKER_CAPTAINS);
+    const current = free.find((c) => c.id === this.captainIds[slot]);
+    if (current && !shown.includes(current)) shown.push(current);
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive()).on('pointerup', () => this.closeDetail());
+    const rowH = IS_PORTRAIT ? 56 : 40;
+    const w = IS_PORTRAIT ? CANVAS_W - 48 : 640;
+    const h = 120 + (shown.length + 1) * (rowH + 6) + 60;
+    const d = { x: (CANVAS_W - w) / 2, y: Math.max(16, (CANVAS_H - h) / 2), w, h };
+    add(addPanel(this, d.x, d.y, d.w, d.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 })).setInteractive();
+    add(this.add.text(d.x + 26, d.y + 22, ship ? `${ship.name.replace(/\s*\(.*\)\s*$/, '')} の艦長` : '艦長', eyebrowStyle(11, Css.cyan)));
+    add(this.add.text(d.x + 26, d.y + 44, '適性の高い順', displayStyle(20)));
+    const more = free.length - shown.length;
+    add(this.add.text(d.x + d.w - 26, d.y + 50, more > 0 ? `ほか ${more} 名 (艦長画面で絞り込み)` : `${free.length} 名`, textStyle(12, Css.muted)).setOrigin(1, 0));
+    let y = d.y + 92;
+    const pick = (id: string | null): void => {
+      this.captainIds[slot] = id;
+      this.closeDetail();
+      this.refreshSlots();
+    };
+    for (const c of shown) {
+      const apt = ship ? aptitudeFor(c, ship.shipClass) : 'A';
+      const label = `${c.name}  Lv${c.level}  ${SKILL_LABEL[c.skill]}  ·  適性 ${apt}${c.id === this.captainIds[slot] ? '  (配属中)' : ''}`;
+      add(new UIButton(this, d.x + d.w / 2, y + rowH / 2, label, () => pick(c.id), {
+        variant: c.id === this.captainIds[slot] ? 'primary' : apt === 'S' ? 'gold' : 'secondary', width: d.w - 52, height: rowH, fontSize: IS_PORTRAIT ? 14 : 13,
+      }));
+      y += rowH + 6;
+    }
+    add(new UIButton(this, d.x + d.w / 2, y + rowH / 2, '艦長を外す', () => pick(null), { variant: 'secondary', width: d.w - 52, height: rowH, fontSize: 13 }));
+    add(new UIButton(this, d.x + d.w / 2, d.y + d.h - 34, '閉じる', () => this.closeDetail(), { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15 }));
   }
 
   /** This nation's captains the player has, with their levels. */

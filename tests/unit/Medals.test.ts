@@ -18,7 +18,7 @@ describe('medals (#92)', () => {
 
   it('new features bring medals and none is ever removed (0.0.25: convoy escort, captain instruction; 0.0.26: captain sinks)', () => {
     // Raise this floor whenever medals are added; it never goes down.
-    expect(MEDALS.length).toBeGreaterThanOrEqual(142);
+    expect(MEDALS.length).toBeGreaterThanOrEqual(159);
     for (const id of ['convoy', 'convoy_2', 'convoy_3', 'instructor', 'instructor_2', 'instructor_3', 'captain_ace', 'captain_ace_2', 'captain_ace_3', 'task_force', 'task_force_2', 'task_force_3', 'veteran_player', 'veteran_player_2', 'veteran_player_3', 'dock_expansion', 'dock_expansion_2', 'dock_expansion_3', 'rush_work', 'rush_work_2', 's_recruiter', 's_recruiter_2', 'event_tour', 'event_tour_2']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
     const r = emptyRecord();
     expect(newMedals(r, { clearedTheaters: [], totals: { convoyWin: 3, learnSkill: 1 } }).map((m) => m.id)).toEqual(expect.arrayContaining(['convoy', 'instructor']));
@@ -59,5 +59,21 @@ describe('medals (#92)', () => {
     expect(awarded.medals.map((m) => m.id)).toContain('night_fighter');
     expect(awarded.save.record.medals).toContain('nations');
     expect(awardEarnedMedals(awarded.save).medals).toEqual([]);
+  });
+});
+
+describe('medals of 0.0.29 (#85 #185 #209, 築港章 #217)', () => {
+  it('counts open bases and complete classes', () => {
+    const np = { ...emptyNationProgress(['kongo', 'hiei', 'haruna', 'kirishima', 'fubuki']), basesOpen: ['ijn_light', 'ijn_cruiser'] };
+    const ctx = medalContext({ ...emptySave(), nations: { [Nation.IJN]: np } });
+    expect(ctx.basesOpen).toBe(3);
+    expect(ctx.classesComplete).toBe(1);
+    for (const id of ['harbor_works_2', 'class_set', 'anti_air_3', 'captains_5']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
+  });
+});
+
+describe('ladder names', () => {
+  it('every rung of every ladder has a rank name', () => {
+    expect(MEDALS.filter((m) => m.name.includes('undefined')).map((m) => m.id)).toEqual([]);
   });
 });

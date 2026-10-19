@@ -104,3 +104,11 @@ export function modifierBreakdown(sources: ReadonlyArray<{ mods: IShipModifiers 
   }
   return rows;
 }
+
+/** The other ships of `ship`'s class (#85): its lead and the lead's sisters, short names, in data order. */
+export function sisterNames(roster: readonly IShipData[], ship: IShipData): string[] {
+  const lead = ship.sisterOf ?? ship.id;
+  return roster
+    .filter((s) => s.id !== ship.id && (s.id === lead || s.sisterOf === lead))
+    .map((s) => s.name.replace(/\s*\(.*\)\s*$/, ''));
+}

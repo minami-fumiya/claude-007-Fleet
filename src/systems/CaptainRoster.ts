@@ -12,8 +12,8 @@ import { aptitudeFor } from './CaptainSystem';
 
 export const ALL_CAPTAINS = (captainData as { captains: ICaptainData[] }).captains;
 
-/** Chance a won battle brings a new captain. */
-export const CAPTAIN_DROP_CHANCE = 0.05;
+/** Chance an S-rank win brings a new captain: 5% → 8% with 30 captains per nation (#209). */
+export const CAPTAIN_DROP_CHANCE = 0.08;
 
 /**
  * The order captains join in (#159): destroyer specialists first, since a new nation owns only a destroyer; the
@@ -21,7 +21,7 @@ export const CAPTAIN_DROP_CHANCE = 0.05;
  */
 export const RECRUIT_ORDER: CaptainSkill[] = [
   CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Recon,
-  CaptainSkill.Engineering, CaptainSkill.Gunnery, CaptainSkill.Damecon, CaptainSkill.Aviation,
+  CaptainSkill.Engineering, CaptainSkill.AntiAir, CaptainSkill.Gunnery, CaptainSkill.Damecon, CaptainSkill.Aviation,
 ];
 
 /** The nation's captains, in the order they join. */
@@ -84,7 +84,31 @@ export const CAPTAIN_SOURCES: readonly string[] = [
   '作戦の海域で初めて S 評価を取ると 1 名',
   '昇進するたびに 1 名',
   `S 評価で勝つと ${Math.round(CAPTAIN_DROP_CHANCE * 100)}% の確率で 1 名`,
+  '一部のウィークリー任務・戦果任務の報酬で 1 名',
 ];
+
+/**
+ * `count` recruits for a nation (#44 #209): each joins by nextCaptain; once everyone has joined, a recruit becomes a
+ * 艦長教本 instead (#199). `shipClasses` has one entry per owned ship.
+ */
+export function recruitCaptains<T extends { nation: string; captains: string[]; items: IItems }>(
+  progress: T, count: number, shipClasses: readonly ShipClass[],
+): { progress: T; joined: ICaptainData[]; books: number } {
+  let out = progress;
+  const joined: ICaptainData[] = [];
+  let books = 0;
+  for (let i = 0; i < count; i++) {
+    const r = recruitCaptain(out.nation, out.captains, shipClasses);
+    if (r.joined) {
+      out = { ...out, captains: r.owned };
+      joined.push(r.joined);
+    } else if (out.captains.length > 0) {
+      out = { ...out, items: { ...out.items, captainBook: (out.items.captainBook ?? 0) + 1 } };
+      books++;
+    }
+  }
+  return { progress: out, joined, books };
+}
 
 /** Captains of the nation not joined yet (#179). */
 export function captainsLeft(nation: string, owned: readonly string[]): number {

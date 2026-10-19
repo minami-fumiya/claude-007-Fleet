@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
   ABILITY_MAX, APTITUDE_SCALE, aptitudeFor, assignCaptains, recommendedShips, awardXp, battleXp, captainAbilities, captainModifiers, inherentLabel, inherentTier, levelForXp, MAX_LEVEL,
-  nextInherentTier, scaleModifiers, SKILL_LABEL, skillModifiers, withProgress, xpForLevel,
+  nextInherentTier, scaleModifiers, SKILL_LABEL, skillModifiers, withProgress, xpForLevel, bonusScale, LEARNED_SKILL_SCALE, validBonus,
 } from '@/systems/CaptainSystem';
+import { nationCaptains } from '@/systems/CaptainRoster';
+import { parseSave } from '@/utils/ProgressStore';
 import { ShipClass } from '@/types/ShipClass';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { Nation } from '@/types/Nation';
 import { NO_MODIFIERS } from '@/types/Modifiers';
 import captains from '@/data/captains.json';
+
+const CLASS_LIST = [ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer, ShipClass.Carrier, ShipClass.Submarine];
 
 const data = (skill: CaptainSkill): ICaptainData => ({ id: 'c', name: 'c', nation: Nation.IJN, skill });
 
@@ -66,7 +70,11 @@ describe('captainModifiers', () => {
   it('maps the new specialities to their modifiers', () => {
     const lv5 = (skill: CaptainSkill) => skillModifiers(skill, 5);
     expect(lv5(CaptainSkill.Aviation).airPowerMul).toBeCloseTo(1.2);
-    expect(lv5(CaptainSkill.Aviation).aaMul).toBeGreaterThan(1);
+    // Air defence moved from 航空 to 対空 (#185); aviators rearm faster instead.
+    expect(lv5(CaptainSkill.Aviation).aaMul).toBe(1);
+    expect(lv5(CaptainSkill.Aviation).rearmMul).toBeCloseTo(0.925);
+    expect(lv5(CaptainSkill.AntiAir).aaMul).toBeCloseTo(1.25);
+    expect(lv5(CaptainSkill.AntiAir).airPowerMul).toBe(1);
     expect(lv5(CaptainSkill.ASW).depthChargeMul).toBeCloseTo(1.25);
     expect(lv5(CaptainSkill.Recon).visionMul).toBeCloseTo(1.2);
     expect(lv5(CaptainSkill.Damecon).hpMul).toBeCloseTo(1.1);
@@ -89,13 +97,31 @@ describe('captainModifiers', () => {
     for (const skill of Object.values(CaptainSkill)) expect(SKILL_LABEL[skill], skill).toMatch(/^.{2}$/);
   });
 
-  it('has eight captains per nation, one of each skill, with unique ids', () => {
+  it('has 30 captains per nation (#209), every speciality three times or more, unique ids and names', () => {
     const all = captains.captains as ICaptainData[];
     expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
+    expect(new Set(all.map((c) => c.name)).size).toBe(all.length);
     for (const nation of Object.values(Nation)) {
       const mine = all.filter((c) => c.nation === nation);
-      expect(mine.map((c) => c.skill).sort(), nation).toEqual(Object.values(CaptainSkill).sort());
+      expect(mine, nation).toHaveLength(30);
+      for (const skill of Object.values(CaptainSkill)) expect(mine.filter((c) => c.skill === skill).length, `${nation} ${skill}`).toBeGreaterThanOrEqual(3);
+      // The same speciality comes in different flavours: not every captain of it suits the same classes.
+      const flavours = new Set(mine.filter((c) => c.skill === CaptainSkill.Torpedo).map((c) => JSON.stringify(c.aptitude ?? {})));
+      expect(flavours.size, nation).toBeGreaterThanOrEqual(3);
+      for (const c of mine) {
+        expect(c.bio, c.id).toBeTruthy();
+        expect(CLASS_LIST.some((k) => aptitudeFor(c, k) === 'S'), c.id).toBe(true);
+      }
     }
+  });
+
+  it('growth types reach the same top at Lv100 but differ on the way (#209)', () => {
+    const base = { id: 'x', name: 'x', nation: Nation.IJN, skill: CaptainSkill.Gunnery } as ICaptainData;
+    const at = (growth: ICaptainData['growth'], level: number): number => captainAbilities({ ...base, growth, level }).gunnery;
+    expect(at('early', 100)).toBe(at(undefined, 100));
+    expect(at('late', 100)).toBe(at(undefined, 100));
+    expect(at('early', 30)).toBeGreaterThan(at(undefined, 30));
+    expect(at('late', 30)).toBeLessThan(at(undefined, 30));
   });
 });
 
@@ -173,5 +199,41 @@ describe('recommended ships and automatic assignment (#164)', () => {
     expect(assignCaptains([ShipClass.Destroyer, ShipClass.Destroyer], [aviation])).toEqual(['a', null]);
     // The same aptitude: the higher level wins.
     expect(assignCaptains([ShipClass.Destroyer], [cap('low', CaptainSkill.Night, 2), cap('high', CaptainSkill.Night, 9)])).toEqual(['high']);
+  });
+});
+
+describe('航空 and 対空 split (#185)', () => {
+  const aviator = withProgress(nationCaptains('IJN').find((c) => c.skill === CaptainSkill.Aviation)!, xpForLevel(50));
+  const gunner = withProgress(nationCaptains('IJN').find((c) => c.skill === CaptainSkill.Gunnery)!, xpForLevel(10));
+
+  it('a carried-over 対空 gives an aviator exactly the air defence 航空 gave before', () => {
+    // Before 0.0.29: 航空 gave aaMul 1 + 0.03 × level (up to 10) × inherent tier.
+    const old = 1 + 0.03 * 10 * inherentTier(aviator.level).mul;
+    expect(captainModifiers(aviator, {}, [], undefined, undefined, [CaptainSkill.AntiAir]).aaMul).toBeGreaterThanOrEqual(old - 1e-9);
+    expect(skillModifiers(CaptainSkill.AntiAir, aviator.level, {}, bonusScale(aviator)).aaMul).toBeCloseTo(old);
+  });
+
+  it('a learned 航空 carried over as 対空 is no weaker than before', () => {
+    const old = 1 + 0.03 * 10 * LEARNED_SKILL_SCALE;
+    expect(skillModifiers(CaptainSkill.AntiAir, gunner.level, {}, bonusScale(gunner)).aaMul).toBeGreaterThanOrEqual(old);
+    // Not twice: learning 対空 again replaces the carried-over one.
+    expect(validBonus(gunner, [CaptainSkill.AntiAir], [CaptainSkill.AntiAir])).toEqual([]);
+    expect(validBonus(gunner, [CaptainSkill.AntiAir, 'nope'])).toEqual([CaptainSkill.AntiAir]);
+  });
+
+  it('the save keeps it: v16 gives 対空 to owned aviators and captains who learned 航空', () => {
+    const avId = nationCaptains('IJN').find((c) => c.skill === CaptainSkill.Aviation)!.id;
+    const raw = { version: 15, current: 'IJN', record: {}, tutorial: { step: 0, done: true }, nations: { IJN: { ships: ['fubuki'], captains: ['ijn_sakai', avId], captainSkills: { ijn_sakai: ['Aviation'] } } } };
+    const save = parseSave(JSON.stringify(raw));
+    expect(save.nations.IJN!.captainBonus).toEqual({ ijn_sakai: [CaptainSkill.AntiAir], [avId]: [CaptainSkill.AntiAir] });
+  });
+
+  it('every nation has an AA specialist who suits destroyers and cruisers', () => {
+    for (const n of ['IJN', 'USN', 'KM', 'RN', 'FR', 'SU', 'RM']) {
+      const aa = nationCaptains(n).filter((c) => c.skill === CaptainSkill.AntiAir);
+      expect(aa.length, n).toBeGreaterThanOrEqual(1);
+      expect(aptitudeFor(aa[0], ShipClass.Destroyer)).toBe('S');
+      expect(aptitudeFor(aa[0], ShipClass.Cruiser)).toBe('S');
+    }
   });
 });

@@ -7,6 +7,7 @@ import { fleetSlots } from '@/systems/RankSystem';
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { validLearned, withProgress } from '@/systems/CaptainSystem';
 import { Nation } from '@/types/Nation';
+import { CaptainSkill } from '@/types/Captain';
 import { EXISTING_PLAYER_HELP } from '@/utils/SaveMigration';
 import { baseRankMet, currentBase, isBaseOpen, nationBases } from '@/systems/BaseSystem';
 
@@ -47,6 +48,12 @@ describe('every released save loads without losing progress', () => {
         expect(np!.captains).toEqual(expect.arrayContaining(ownedBefore));
         expect(np!.captainSkills).toEqual(expect.objectContaining((old.captainSkills as Record<string, string[]>) ?? {}));
         if (typeof old.base === 'string') expect(np!.base, `${nation} base`).toBe(old.base);
+        // 対空 (#185): every captain whose 航空 covered air defence keeps it as a carried-over skill.
+        if (rawVersion(raw) < 16) {
+          const aviators = np!.captains.filter((id) => nationCaptains(nation).find((c) => c.id === id)?.skill === CaptainSkill.Aviation);
+          const learnedAv = Object.entries(np!.captainSkills).filter(([, v]) => v.includes(CaptainSkill.Aviation)).map(([id]) => id);
+          for (const id of [...aviators, ...learnedAv]) expect(np!.captainBonus[id], `${nation} ${id} 対空`).toContain(CaptainSkill.AntiAir);
+        }
         // Bases (#217): every base the rank had opened before 0.0.28 counts as built, the current one included.
         if (rawVersion(raw) < 15) {
           for (const b of nationBases(nation)) if (baseRankMet(b, { ...np!, nation })) expect(isBaseOpen(b, np!), `${nation} ${b.id}`).toBe(true);

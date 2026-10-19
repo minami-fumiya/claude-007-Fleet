@@ -11,7 +11,9 @@ import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveP
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources } from '@/systems/ResourceSystem';
-import { captainsLeft } from '@/systems/CaptainRoster';
+import { captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
+import { ShipClass } from '@/types/ShipClass';
+import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
@@ -104,6 +106,8 @@ export class HomeScene extends Phaser.Scene {
   private questTab: QuestTab = 'daily';
   /** A quest whose reward overflows the holding cap, pressed once: the next press takes it anyway (#221). */
   private confirmClaim: string | null = null;
+  /** What the last claim brought beyond resources (captains, #209), shown once on the quest board */
+  private questNote = '';
   private eventText!: Phaser.GameObjects.Text;
 
   constructor() {
@@ -307,7 +311,7 @@ export class HomeScene extends Phaser.Scene {
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
       // A reward that would overflow the holding cap (#221) waits unclaimed until there is room, or is taken anyway.
       const lost = status === 'claimable' ? gainResources(progress.resources, q.reward, cap).lost : resources();
-      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・') + lostNote(lost);
+      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), q.captains ? `艦長 +${q.captains}` : '', medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・') + lostNote(lost);
       return { id: q.id, name: q.name, text: q.text, value: questProgress(state, q), goal: q.goal, reward, status, overflow: lostNote(lost) !== '' };
     });
     const cols = IS_PORTRAIT ? 1 : 2;
@@ -326,6 +330,12 @@ export class HomeScene extends Phaser.Scene {
       : tab === 'rank' ? (next ? `次の階級: ${next.rank.name}` : '最高の階級です')
         : `更新まで ${longClock(nextReset(tab, now) - now)}`;
     add(this.add.text(x + w - 28, y + 22, note, textStyle(12, Css.muted)).setOrigin(1, 0));
+    // Captains a claim just brought (#209), once.
+    if (this.questNote) {
+      const t = add(this.add.text(x + 28, y + 40, this.questNote, textStyle(12, Css.gold)));
+      if (t.width > w - 56) t.setScale((w - 56) / t.width);
+      this.questNote = '';
+    }
     const tabs: QuestTab[] = [...QUEST_KINDS, 'rank'];
     const tw = (w - 56 - 8 * (tabs.length - 1)) / tabs.length;
     const tabH = IS_PORTRAIT ? 52 : 40;
@@ -456,7 +466,19 @@ export class HomeScene extends Phaser.Scene {
     if (!r) return;
     // A ladder quest's medal (#158) goes into the shared record with the reward.
     const record = r.medal && !progress.record.medals.includes(r.medal) ? { ...progress.record, medals: [...progress.record.medals, r.medal] } : progress.record;
-    saveProgress({ ...progress, record, quests: r.state, resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) }, 'quest');
+    let next: IProgress = { ...progress, record, quests: r.state, resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
+    // Some quests bring a captain (#209), chosen like any recruit: for the classes the fleet is short of.
+    if (r.captains > 0) {
+      const roster = this.registryShips.byNation(next.nation);
+      const classes = ownedIds(next, roster).map((sid) => roster.find((s) => s.id === sid)?.shipClass).filter((c): c is ShipClass => c !== undefined);
+      const rec = recruitCaptains(next, r.captains, classes);
+      next = rec.joined.length > 0 ? withQuestEvents(rec.progress, [['captainJoin', rec.joined.length]], Date.now()) : rec.progress;
+      this.questNote = [
+        rec.joined.length > 0 ? `新しい艦長: ${rec.joined.map((c) => `${c.name} (${SKILL_LABEL[c.skill]})`).join('・')}` : '',
+        rec.books > 0 ? `艦長教本 +${rec.books}` : '',
+      ].filter((t) => t).join('  ·  ');
+    }
+    saveProgress(next, 'quest');
     this.refresh();
     this.openQuests();
   }
