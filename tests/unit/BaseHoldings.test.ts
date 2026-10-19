@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assignShips, BASES, baseReaches, basesFor, currentBaseId, isAtCurrentBase, nationBases, recallShips, shipBaseOf } from '@/systems/BaseSystem';
-import { baseDockView, dockCount, mergeBaseDocks, startRepair, setDamage } from '@/systems/DockSystem';
+import { START_DOCKS, baseDockView, dockCount, mergeBaseDocks, startRepair, setDamage } from '@/systems/DockSystem';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { buildsHere, startBuild } from '@/systems/ShipyardSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
@@ -55,12 +55,12 @@ describe('ships, docks and builds by base (#145)', () => {
     let p = admiral({ baseDocks: { ijn_home: 2 }, docks: [{ shipId: 'fubuki', endsAt: T0 + 1000, base: 'ijn_home' }] });
     p = { ...p, ...setDamage(p, 'nagato', 0.5) };
     const here = baseDockView(p, 'ijn_heavy');
-    expect(dockCount(here)).toBe(1);
+    expect(dockCount(here)).toBe(START_DOCKS);
     expect(here.docks).toEqual([]);
     const docked = startRepair(here, 'nagato', 690, T0)!;
     const merged = mergeBaseDocks(p, 'ijn_heavy', { ...p, ...docked });
     expect(merged.docks.map((d) => [d.shipId, d.base])).toEqual([['fubuki', 'ijn_home'], ['nagato', 'ijn_heavy']]);
-    expect(merged.baseDocks).toEqual({ ijn_home: 2, ijn_heavy: 1 });
+    expect(merged.baseDocks).toEqual({ ijn_home: 2, ijn_heavy: START_DOCKS });
     expect(dockCount(baseDockView(merged, 'ijn_home'))).toBe(2);
   });
 
@@ -88,7 +88,8 @@ describe('ships, docks and builds by base (#145)', () => {
       nations: { IJN: { ships: ['fubuki', 'nagato'], base: 'ijn_light', merit: 200, rankFloor: 2, docksOwned: 3, docks: [{ shipId: 'nagato', endsAt: 5 }], builds: [{ shipId: 'kongo', endsAt: 9 }] } },
     }) as { nations: { IJN: { shipBases: object; baseDocks: object; docks: Array<{ base: string }>; builds: Array<{ base: string }> } } };
     expect(out.nations.IJN.shipBases).toEqual({ fubuki: 'ijn_light', nagato: 'ijn_light' });
-    expect(out.nations.IJN.baseDocks).toEqual({ ijn_light: 3 });
+    // 3 docks, plus the one building slip it had (#211: builds share the docks since v14).
+    expect(out.nations.IJN.baseDocks).toEqual({ ijn_light: 4 });
     expect(out.nations.IJN.docks[0].base).toBe('ijn_light');
     expect(out.nations.IJN.builds[0].base).toBe('ijn_light');
   });

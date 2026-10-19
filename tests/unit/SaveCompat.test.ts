@@ -120,3 +120,13 @@ describe('v13 (#199): 艦長教本 and captains own sinkings', () => {
     expect(np.captainStats.ijn_sakai).toEqual({ ...before, sinks: 0 });
   });
 });
+
+describe('v14 (#211): builds share the docks', () => {
+  it('a 0.0.26 base keeps room for as many jobs as it ran before (docks + slips)', () => {
+    const { save } = parseSaveChecked(readFileSync(join(DIR, 'save-0.0.26.json'), 'utf8'));
+    const np = save.nations.IJN!;
+    // Two docks before; one slip at its rank: three jobs at once, now all in docks.
+    expect(np.baseDocks.ijn_light).toBeGreaterThanOrEqual(3);
+    expect(np.builds.map((b) => b.shipId)).toEqual(['i19']);
+  });
+});

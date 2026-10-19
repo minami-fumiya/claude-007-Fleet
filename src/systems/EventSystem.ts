@@ -1,14 +1,15 @@
 import campaignData from '@/data/campaign.json';
 import { IResources } from '@/types/Progression';
 import { RESOURCE_KEYS } from './ResourceSystem';
+import { DAY_START_UTC } from './QuestSystem';
 
 /**
  * Limited-time events (#89, pure). There is no server, so the event running at any moment comes from a fixed table
- * of the date (the game day starts at 05:00 JST) and a three-hour window: every player sees the same event at the
- * same time, offline too.
+ * of the date (the game day starts at 00:00 JST, #219) and a three-hour window: every player sees the same event at
+ * the same time, offline too. Since #218 every window has an event, and 報酬 2 倍 comes at most twice a day.
  */
 
-export type EventKind = 'double' | 'steel' | 'training' | 'repair';
+export type EventKind = 'double' | 'steel' | 'training' | 'repair' | 'fuel' | 'ammo' | 'bauxite';
 
 export interface IGameEvent {
   kind: EventKind;
@@ -24,21 +25,25 @@ export interface IEventEffects {
   theater?: string;
   /** Extra multiplier on the steel of every battle reward (鋼材祭り) */
   steelMul: number;
+  /** The same for fuel, ammo and bauxite (燃料・弾薬・ボーキ祭り, #218) */
+  fuelMul: number;
+  ammoMul: number;
+  bauxiteMul: number;
   /** Proficiency and captain XP multiplier (熟練度ブースト) */
   xpMul: number;
   /** Repair cost and time multiplier (入渠半額) */
   repairMul: number;
 }
 
-export const NO_EVENT: IEventEffects = { theaterRewardMul: 1, steelMul: 1, xpMul: 1, repairMul: 1 };
+export const NO_EVENT: IEventEffects = { theaterRewardMul: 1, steelMul: 1, fuelMul: 1, ammoMul: 1, bauxiteMul: 1, xpMul: 1, repairMul: 1 };
 
 const HOUR = 3_600_000;
-/** 05:00 JST = 20:00 UTC: the game day's start, as an offset from UTC midnight. */
-const DAY_START_UTC = 20 * HOUR;
 export const EVENT_WINDOW_MS = 3 * HOUR;
-const WINDOWS_PER_DAY = 8;
-/** Out of 10 windows: 6 have no event. */
-const KINDS: Array<EventKind | null> = ['double', 'double', 'steel', 'training', 'repair', null, null, null, null, null];
+export const WINDOWS_PER_DAY = 8;
+/** What a window can hold (#218: never nothing); 報酬 2 倍 is weighted but capped at MAX_DOUBLE a day. */
+const KINDS: EventKind[] = ['double', 'double', 'steel', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite'];
+const OTHER_KINDS: EventKind[] = KINDS.filter((k) => k !== 'double');
+export const MAX_DOUBLE = 2;
 export const THEATERS = (campaignData as { theaters: Array<{ id: string; name: string }> }).theaters;
 
 export const EVENT_NAME: Record<EventKind, string> = {
@@ -46,6 +51,9 @@ export const EVENT_NAME: Record<EventKind, string> = {
   steel: '鋼材祭り',
   training: '熟練度ブースト',
   repair: '入渠半額',
+  fuel: '燃料祭り',
+  ammo: '弾薬祭り',
+  bauxite: 'ボーキ祭り',
 };
 
 /** Small integer hash (mulberry-style), the same on every device. */
@@ -61,26 +69,34 @@ export function windowIndex(now: number): number {
   return Math.floor((now - DAY_START_UTC) / EVENT_WINDOW_MS);
 }
 
-/** The event running at `now`, if any. */
-export function eventAt(now: number): IGameEvent | null {
-  const w = windowIndex(now);
-  const h = hash(w);
-  const kind = KINDS[h % KINDS.length];
-  if (!kind) return null;
-  const startsAt = DAY_START_UTC + w * EVENT_WINDOW_MS;
-  const event: IGameEvent = { kind, startsAt, endsAt: startsAt + EVENT_WINDOW_MS };
-  if (kind === 'double') event.theater = THEATERS[(h >>> 8) % THEATERS.length]?.id;
-  return event;
+/** A game day's eight events, 00:00〜24:00 JST (#218): one per window, 報酬 2 倍 at most MAX_DOUBLE times. */
+export function daySchedule(day: number): IGameEvent[] {
+  let doubles = 0;
+  const out: IGameEvent[] = [];
+  for (let i = 0; i < WINDOWS_PER_DAY; i++) {
+    const w = day * WINDOWS_PER_DAY + i;
+    const h = hash(w);
+    let kind = KINDS[h % KINDS.length];
+    if (kind === 'double' && doubles >= MAX_DOUBLE) kind = OTHER_KINDS[(h >>> 4) % OTHER_KINDS.length];
+    if (kind === 'double') doubles++;
+    const startsAt = DAY_START_UTC + w * EVENT_WINDOW_MS;
+    const event: IGameEvent = { kind, startsAt, endsAt: startsAt + EVENT_WINDOW_MS };
+    if (kind === 'double') event.theater = THEATERS[(h >>> 8) % THEATERS.length]?.id;
+    out.push(event);
+  }
+  return out;
 }
 
-/** The next event after the current window (for "次のイベント"), looking at most a day ahead. */
-export function nextEvent(now: number): IGameEvent | null {
+/** The event running at `now` (since #218 there always is one; null is kept for the clock-rollback guard). */
+export function eventAt(now: number): IGameEvent | null {
   const w = windowIndex(now);
-  for (let i = 1; i <= WINDOWS_PER_DAY; i++) {
-    const e = eventAt(DAY_START_UTC + (w + i) * EVENT_WINDOW_MS);
-    if (e) return e;
-  }
-  return null;
+  const day = Math.floor(w / WINDOWS_PER_DAY);
+  return daySchedule(day)[w - day * WINDOWS_PER_DAY];
+}
+
+/** The event of the next window (for "次のイベント"). */
+export function nextEvent(now: number): IGameEvent | null {
+  return eventAt(DAY_START_UTC + (windowIndex(now) + 1) * EVENT_WINDOW_MS);
 }
 
 export function eventEffects(event: IGameEvent | null): IEventEffects {
@@ -90,15 +106,19 @@ export function eventEffects(event: IGameEvent | null): IEventEffects {
     case 'steel': return { ...NO_EVENT, steelMul: 1.5 };
     case 'training': return { ...NO_EVENT, xpMul: 1.5 };
     case 'repair': return { ...NO_EVENT, repairMul: 0.5 };
+    case 'fuel': return { ...NO_EVENT, fuelMul: 1.5 };
+    case 'ammo': return { ...NO_EVENT, ammoMul: 1.5 };
+    case 'bauxite': return { ...NO_EVENT, bauxiteMul: 1.5 };
   }
 }
 
 /** A battle reward with the event applied; `theater` is the campaign area's theater (none for exercises). */
 export function applyEventReward(reward: IResources, effects: IEventEffects, theater?: string): IResources {
   const mul = theater && theater === effects.theater ? effects.theaterRewardMul : 1;
-  if (mul === 1 && effects.steelMul === 1) return reward;
+  const per = { fuel: effects.fuelMul, ammo: effects.ammoMul, steel: effects.steelMul, bauxite: effects.bauxiteMul };
+  if (mul === 1 && Object.values(per).every((m) => m === 1)) return reward;
   const out = { ...reward };
-  for (const k of RESOURCE_KEYS) out[k] = Math.round(reward[k] * mul * (k === 'steel' ? effects.steelMul : 1));
+  for (const k of RESOURCE_KEYS) out[k] = Math.round(reward[k] * mul * (per[k] ?? 1));
   return out;
 }
 
@@ -106,7 +126,7 @@ export function applyEventReward(reward: IResources, effects: IEventEffects, the
 export function eventAppliesToBattle(event: IGameEvent | null, theater?: string): event is IGameEvent {
   if (!event) return false;
   if (event.kind === 'double') return theater !== undefined && theater === event.theater;
-  return event.kind === 'steel' || event.kind === 'training';
+  return event.kind !== 'repair';
 }
 
 /** "報酬 2 倍 (太平洋)" */

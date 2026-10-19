@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.25.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.26.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -188,22 +188,25 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the scenario list pages through 13 battles and a 7-vs-7 one starts (#71)', async ({ page }, info) => {
+  test('the scenario list pages through the nation\'s battles and a 7-vs-7 one starts from its side (#71 #224)', async ({ page }, info) => {
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ScenarioScene'] });
     await open(page, 'ScenarioScene');
     const listed = await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as {
-        scenarios: Array<{ id: string }>; selected: number; theater: string; page: number; drawList(): void; refresh(): void;
+        scenarios: Array<{ id: string; forces: Record<string, { nation: string }>; sides: Array<{ force: string }> }>; selected: number; side: number; theater: string; page: number; drawList(): void; refresh(): void;
       };
       s.theater = 'pacific';
       s.page = 1;
       s.selected = s.scenarios.findIndex((x) => x.id === 'leyte-gulf');
+      const sc = s.scenarios[s.selected];
+      s.side = sc.sides.findIndex((d) => sc.forces[d.force].nation === 'IJN');
       s.drawList();
       s.refresh();
       return s.scenarios.length;
     });
-    expect(listed).toBe(13);
+    // Only the battles Japan fought in (#224).
+    expect(listed).toBe(8);
     expect(await overflowingTexts(page, 'ScenarioScene'), `scenarios (${layout})`).toEqual([]);
     expect.soft(await overlappingTexts(page, 'ScenarioScene'), `scenarios overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('scenarios.png') });
@@ -364,7 +367,7 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the captain screen tells how captains join and who is next (#179)', async ({ page }, info) => {
+  test('the captain screen tells how captains join, without naming who is next (#179 #215)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CaptainScene'] });
     await open(page, 'CaptainScene');
     await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as { openRecruitInfo(): void }).openRecruitInfo());
@@ -432,6 +435,37 @@ test.describe('screens', () => {
     await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScene('MainMenuScene')?.sys.settings.active === true);
     await page.waitForTimeout(500);
     expect(await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M).changesLayer.length)).toBe(0);
+    expect(errors).toEqual([]);
+  });
+
+  test("today's and tomorrow's event schedule opens from the home banner and fits (#218)", async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HomeScene'] });
+    await open(page, 'HomeScene');
+    for (const ahead of [0, 1]) {
+      await page.evaluate((a) => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openEventSchedule(n: number): void }).openEventSchedule(a), ahead);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: info.outputPath(`events-${ahead}.png`) });
+      expect(await overflowingTexts(page, 'HomeScene'), `day +${ahead}`).toEqual([]);
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('the strategic map opens the base screen, whose back button returns to the map (#220)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['CampaignMapScene', 'BaseScene'] });
+    await open(page, 'CampaignMapScene');
+    type G = { game: Phaser.Game };
+    const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
+      const scene = (window as unknown as G).game.scene.getScene(k);
+      const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((c) => (c as Phaser.GameObjects.Text).text?.includes(l)))!;
+      btn.emit('pointerdown');
+      btn.emit('pointerup');
+    }, [key, label] as const);
+    await press('CampaignMapScene', '軍港');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('BaseScene')?.sys.settings.active === true);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: info.outputPath('map-to-base.png') });
+    await press('BaseScene', '戦略地図');
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('CampaignMapScene')?.sys.settings.active === true);
     expect(errors).toEqual([]);
   });
 

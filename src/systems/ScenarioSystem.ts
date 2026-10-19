@@ -68,3 +68,13 @@ export function forceLineup(force: IScenarioForce, registry: ShipRegistry): { he
   });
   return { headline: `${ships.length} 隻 — ${kindBreakdown(ships)}`, lines };
 }
+
+/** The scenarios a nation fought in (#224): only those can be played, from that nation's side. */
+export function playableScenarios(list: readonly IScenario[], nation: string): IScenario[] {
+  return list.filter((sc) => sc.forces.A.nation === nation || sc.forces.B.nation === nation);
+}
+
+/** The side indices of `sc` the nation can take (#224): those whose force is its own navy. */
+export function playableSides(sc: IScenario, nation: string): number[] {
+  return sc.sides.map((side, i) => ({ side, i })).filter(({ side }) => sc.forces[side.force].nation === nation).map(({ i }) => i);
+}

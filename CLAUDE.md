@@ -76,6 +76,11 @@ When starting a new sprint, read in this order:
 - 勲章は `src/systems/RecordSystem.ts` の `MEDALS` に表で追加する (分類・条件・目標)。数える値が要るときは `IMedalContext` か任務の累計 (`quests.totals`) に足す。
 - 勲章のテスト (`tests/unit/Medals.test.ts`) が通ること、勲章の総数が減らないこと。
 
+## 版ごとのバランス確認 (Balance review at every release, #223)
+どの版のリリースでも、リリース PR の前に全体のゲームバランスを確かめて調整する。
+- 艦の強さ (艦種ごとに年代・格の順か)、作戦の難しさ (海域の敵と推奨艦隊の戦力比)、資源の収支 (序盤・中盤・終盤の 1 時間)、建造・入渠・施設の時間、育成と昇進の速さ、任務・イベント・S 評価の報酬を確かめる。
+- 結果は `docs/balance/<版>.md` に残し、前の版との差と、調整した値を書く。目安から外れた値はその版で直すか、issue にして次の版で直す。
+
 ## Conventions
 - **Branches**: `feature/sprint<N>-<slug>` → develop → main
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `chore:`, `test:`, `docs:`)

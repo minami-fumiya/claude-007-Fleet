@@ -5,7 +5,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
+import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
 import { buildTimeMul } from '@/systems/FacilitySystem';
 import { currentBaseId } from '@/systems/BaseSystem';
@@ -145,7 +145,8 @@ export class ShipyardScene extends Phaser.Scene {
     const techs = this.shipClass === ShipClass.Cruiser ? [BUILD_TECH[ShipClass.Cruiser], HEAVY_CRUISER_TECH] : [BUILD_TECH[this.shipClass]];
     const techId = techs.find((t) => t && !progress.research.includes(t)) ?? techs[techs.length - 1];
     const node = techId ? TREE.find((n) => n.id === techId) : undefined;
-    const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで  ·  建造ドック ${buildsHere(progress).length} / ${buildDockCount(progress)}`;
+    // Builds share the base's docks with repairs (#211).
+    const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで  ·  ドック ${docksInUse(progress)} / ${buildDockCount(progress)} (建造 ${buildsHere(progress).length})`;
     // Portrait: the rank line on top and the research button below it; landscape: side by side (#182).
     const bw = IS_PORTRAIT ? info.w - 32 : 440;
     const lineY = IS_PORTRAIT ? info.y + 26 : info.y + info.h / 2;

@@ -1606,6 +1606,8 @@ export class BattleScene extends Phaser.Scene {
     }
     progress = { ...progress, proficiency };
     let firstClear = false;
+    // The area's first S rank brings a captain (#215), like its reward-only ship.
+    let firstS = false;
     const routeNotes = takeSortieNotes(this);
     if (routeNotes.length > 0) result.route = routeNotes.join('  ·  ');
     // A skirmish before the boss (#53) never clears the area; a win lets the fleet advance.
@@ -1613,6 +1615,7 @@ export class BattleScene extends Phaser.Scene {
     const skirmish = area !== undefined && node !== undefined && !node.boss;
     // An S on the area's main fleet lets it be swept from now on (#57 / #149); the area keeps its best rank.
     if (area && !skirmish) {
+      if (rank === 'S' && victory && !progress.perfect.includes(area.id)) firstS = true;
       if (rank === 'S' && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
       const best = betterRank(progress.areaRanks[area.id], rank);
       if (best && best !== progress.areaRanks[area.id]) progress = { ...progress, areaRanks: { ...progress.areaRanks, [area.id]: best } };
@@ -1633,6 +1636,8 @@ export class BattleScene extends Phaser.Scene {
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
+      // A win under each kind of event counts for the イベント巡り章 (#218).
+      ...(event ? [[`event_${event.kind}`, won(true)] as [QuestEvent, number]] : []),
     ], Date.now());
     if (skirmish) {
       result.campaign = `${area.name}  ${NODE_LABEL.battle} ${victory ? '勝利' : '敗北'} (${node.node} / ${node.battles})`;
@@ -1681,14 +1686,15 @@ export class BattleScene extends Phaser.Scene {
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };
     if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
-    // New captains (#44): one per first clear, one per promotion, now and then after a win.
-    const recruits = [firstClear, promoted.promotedTo !== null, victory && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
+    // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
+    const sWin = victory && rank === 'S';
+    const recruits = [firstS, promoted.promotedTo !== null, sWin && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
     const joined: string[] = [];
     let books = 0;
     for (let i = 0; i < recruits; i++) {
-      // Captains suited to the classes the nation owns come first (#159).
+      // Captains go to the classes the fleet is shortest of (#159 #210): one class entry per owned ship.
       const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-      const classes = [...new Set(ownedIds(progress, roster).map((id) => roster.find((s) => s.id === id)?.shipClass).filter((c): c is ShipClass => c !== undefined))];
+      const classes = ownedIds(progress, roster).map((id) => roster.find((s) => s.id === id)?.shipClass).filter((c): c is ShipClass => c !== undefined);
       const r = recruitCaptain(progress.nation, progress.captains, classes);
       if (!r.joined) {
         // Everyone has joined (#131): the recruit becomes a 艦長教本 the player uses on a captain of their choice (#199).
@@ -1700,6 +1706,7 @@ export class BattleScene extends Phaser.Scene {
       progress = { ...progress, captains: r.owned };
       joined.push(`${r.joined.name} (${SKILL_LABEL[r.joined.skill]})`);
     }
+    if (joined.length > 0) progress = withQuestEvents(progress, [['captainJoin', joined.length]], Date.now());
     const recruitLines = [
       joined.length > 0 ? `新しい艦長: ${joined.join('・')}` : '',
       books > 0 ? `艦長教本 +${books} (艦長画面で好きな艦長に使えます: 経験値 +${DUPLICATE_CAPTAIN_XP})` : '',

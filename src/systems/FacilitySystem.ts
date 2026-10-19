@@ -59,20 +59,27 @@ export function facilityCost(id: FacilityId, level: number): IResources {
 }
 
 /** Minutes to raise a facility to `level`. */
+/** Minutes to raise a facility to `level`: about half of 0.0.20's (#212). */
 export function facilityMinutes(id: FacilityId, level: number): number {
-  return (id === 'unique' ? 30 : 10) * Math.max(1, level);
+  return (id === 'unique' ? 15 : 5) * Math.max(1, level);
+}
+
+/** Facilities a base can raise at once (#216): two, three once its own facility is Lv2. */
+export function facilitySlots(facilities: Facilities, base: string): number {
+  return facilityLevel(facilities, base, 'unique') >= 2 ? 3 : 2;
 }
 
 export type FacilityState = 'max' | 'busy' | 'medal' | 'resources' | 'ready';
 
 /**
- * Whether the facility can be raised now: one job per base at a time, and the upper levels need a medal (#169) when
- * `medals` is given.
+ * Whether the facility can be raised now: a base raises up to facilitySlots facilities at once but never the same one
+ * twice (#216), and the upper levels need a medal (#169) when `medals` is given.
  */
 export function facilityState(facilities: Facilities, jobs: readonly IFacilityJob[], base: string, id: FacilityId, have: IResources, medals?: readonly string[]): FacilityState {
   const lv = facilityLevel(facilities, base, id);
   if (lv >= maxLevelOf(id)) return 'max';
-  if (jobs.some((j) => j.base === base)) return 'busy';
+  const here = jobs.filter((j) => j.base === base);
+  if (here.some((j) => j.id === id) || here.length >= facilitySlots(facilities, base)) return 'busy';
   const need = facilityMedal(base, id, lv + 1);
   if (medals && need && !medals.includes(need)) return 'medal';
   return canAfford(have, facilityCost(id, lv + 1)) ? 'ready' : 'resources';
