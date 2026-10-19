@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { clock } from '@/utils/TimeFormat';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -21,7 +22,7 @@ import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseBonusLines, baseLockText, baseOfProgress, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
-import { claimableCount, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
+import { addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
 import { eventLabel, nextEvent } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { rankTable } from '@/systems/RankTable';
@@ -61,11 +62,6 @@ const OVERLAY_DEPTH = 200;
 function longClock(ms: number): string {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-}
-
-function clock(ms: number): string {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
 /**
@@ -293,7 +289,7 @@ export class HomeScene extends Phaser.Scene {
       add(addPanel(this, x + 28, ry, w - 56, rowH, { radius: 14, fillAlpha: 0.5, rim: claimable ? Colors.gold : undefined }));
       add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 14 : 10), q.name, textStyle(IS_PORTRAIT ? 16 : 15, done ? Css.dim : Css.text, { fontStyle: 'bold' })));
       add(this.add.text(x + 44, ry + (IS_PORTRAIT ? 44 : 34), `${q.text}  ${questProgress(state, q)} / ${q.goal}`, textStyle(12, done ? Css.dim : Css.muted)));
-      add(this.add.text(x + 44, ry + rowH - (IS_PORTRAIT ? 12 : 8), formatResources(q.reward), textStyle(11, Css.gold)).setOrigin(0, 1));
+      add(this.add.text(x + 44, ry + rowH - (IS_PORTRAIT ? 12 : 8), [formatResources(q.reward), formatItems(q.items ?? {})].filter((t) => t).join('・'), textStyle(11, Css.gold)).setOrigin(0, 1));
       add(new UIButton(this, x + w - 28 - 12 - bw / 2, ry + rowH / 2, done ? '受取済' : claimable ? '受け取る' : '未達成', () => this.claimQuest(q.id), {
         variant: claimable ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
       })).setEnabled(claimable);
@@ -361,7 +357,7 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const r = claimQuest(progress.quests, id, Date.now());
     if (!r) return;
-    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward) });
+    saveProgress({ ...progress, quests: r.state, resources: addResources(progress.resources, r.reward), items: addItems(progress.items, r.items) });
     this.refresh();
     this.openQuests();
   }
@@ -499,7 +495,7 @@ export class HomeScene extends Phaser.Scene {
         const ship = this.registryShips.byId(job.shipId);
         if (ship) {
           add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul);
+          const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass);
           const meterX = d.x + pad + 110;
           const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
           const g = add(this.add.graphics());
@@ -511,9 +507,11 @@ export class HomeScene extends Phaser.Scene {
               : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
           );
           this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
-          const affordable = canAfford(progress.resources, FAST_REPAIR_COST);
+          // A 高速修理材 (#143) is used first; without one the repair is paid in resources.
+          const items = progress.items.fastRepair;
+          const affordable = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
           const btn = add(
-            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), '高速修理', () => this.fastRepair(ship.id), {
+            new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速修理材 (${items})` : '高速修理', () => this.fastRepair(ship.id), {
               variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
             }),
           );
@@ -533,7 +531,7 @@ export class HomeScene extends Phaser.Scene {
       }
       y += IS_PORTRAIT ? 48 : 30;
     }
-    add(this.add.text(d.x + pad, y, `高速修理: ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
+    add(this.add.text(d.x + pad, y, `高速修理: 高速修理材 1 個 (所持 ${progress.items.fastRepair})、なければ ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
     y += IS_PORTRAIT ? 40 : 28;
 
     // Damaged ships waiting for a dock
@@ -550,7 +548,7 @@ export class HomeScene extends Phaser.Scene {
       const f = hpFraction(progress, ship.id);
       const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
       add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul, ship.shipClass))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
       const btn = add(
         new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 14, '入渠', () => this.dock(ship), {
           variant: 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 52 : 34, fontSize: 14,
@@ -576,7 +574,7 @@ export class HomeScene extends Phaser.Scene {
     const f = hpFraction(progress, ship.id);
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
-    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul) : null;
+    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass) : null;
     if (!paid || !docked) return;
     saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()));
     this.refresh();
@@ -584,6 +582,11 @@ export class HomeScene extends Phaser.Scene {
 
   private fastRepair(shipId: string): void {
     const progress = loadProgress();
+    if (progress.items.fastRepair > 0) {
+      saveProgress({ ...progress, ...fastRepair(progress, shipId), items: { ...progress.items, fastRepair: progress.items.fastRepair - 1 } });
+      this.refresh();
+      return;
+    }
     const paid = pay(progress.resources, FAST_REPAIR_COST);
     if (!paid) return;
     saveProgress({ ...progress, ...fastRepair(progress, shipId), resources: paid });

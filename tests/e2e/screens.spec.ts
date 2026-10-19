@@ -312,6 +312,33 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('建造 takes time: lay down a ship, see the countdown, finish it with a 高速建造材 (#143)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['ShipyardScene', 'HomeScene'] });
+    await open(page, 'ShipyardScene');
+    const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { builds: Array<{ shipId: string }>; ships: string[]; items: { fastBuild: number } });
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
+      const target = s.classShips().find((x) => x.id === 'shimakaze');
+      s.build(target);
+    });
+    let np = await read();
+    expect(np.builds.map((b) => b.shipId)).toEqual(['shimakaze']);
+    expect(np.ships).not.toContain('shimakaze');
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('shipyard-building.png') });
+    // Tapping it again spends a 高速建造材 (migrated saves get two).
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
+      s.build(s.classShips().find((x) => x.id === 'shimakaze'));
+    });
+    np = await read();
+    expect(np.ships).toContain('shimakaze');
+    expect(np.items.fastBuild).toBe(1);
+    await open(page, 'HomeScene');
+    await page.screenshot({ path: info.outputPath('home-docks.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));

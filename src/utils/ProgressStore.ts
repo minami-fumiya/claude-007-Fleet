@@ -9,7 +9,7 @@
  * are step-by-step migrations in SaveMigration (#60).
  */
 
-import { IDockJob, IResources } from '@/types/Progression';
+import { IDockJob, IItems, IResources } from '@/types/Progression';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
@@ -28,6 +28,8 @@ export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
 export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
 export const SAVE_VERSION = LATEST_VERSION;
+/** A new nation starts with one of each time-saving item (#143). */
+export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1 };
 
 /** Everything one nation's admiral has built up. */
 export interface INationProgress {
@@ -73,6 +75,10 @@ export interface INationProgress {
   sweeps: { day: number; counts: Record<string, number> };
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
+  /** Ships under construction (#143): they join `ships` when finished */
+  builds: IDockJob[];
+  /** 高速修理材・高速建造材 (#143) */
+  items: IItems;
 }
 
 /** The whole save (v2 and later). */
@@ -111,6 +117,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
+    builds: [], items: { ...STARTING_ITEMS },
   };
 }
 
@@ -143,7 +150,15 @@ export function progressView(save: ISave, now?: number): IProgress {
   const view: IProgress = { ...np, nation: save.current, record: save.record };
   if (now === undefined) return view;
   const r = regenerate(view.resources, view.regenAt, now);
-  return r.resources === view.resources && r.regenAt === view.regenAt ? view : { ...view, resources: r.resources, regenAt: r.regenAt };
+  const regen = r.resources === view.resources && r.regenAt === view.regenAt ? view : { ...view, resources: r.resources, regenAt: r.regenAt };
+  return finishBuilds(regen, now);
+}
+
+/** Ships whose construction has finished join the fleet (#143), even if the game was closed meanwhile. */
+export function finishBuilds<T extends Pick<INationProgress, 'builds' | 'ships'>>(np: T, now: number): T {
+  const done = np.builds.filter((b) => b.endsAt <= now);
+  if (done.length === 0) return np;
+  return { ...np, builds: np.builds.filter((b) => b.endsAt > now), ships: [...new Set([...np.ships, ...done.map((b) => b.shipId)])] };
 }
 
 /** Writes a view back into its nation's slot (and the shared record). */
@@ -207,9 +222,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     : { ...defaultResources };
   const damage: Record<string, number> = {};
   for (const [id, f] of Object.entries(numbers(data.damage))) damage[id] = Math.min(1, Math.max(0, f));
-  const docks = (Array.isArray(data.docks) ? data.docks : []).filter(
-    (d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt),
-  );
+  const docks = parseJobs(data.docks);
   return {
     resources: res,
     regenAt: isNum(data.regenAt) ? data.regenAt : 0,
@@ -234,7 +247,19 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     quests: parseQuestState(data.quests),
     perfect: [...new Set(strings(data.perfect))],
     sweeps: parseSweeps(data.sweeps),
+    builds: parseJobs(data.builds),
+    items: parseItems(data.items),
   };
+}
+
+function parseJobs(v: unknown): IDockJob[] {
+  return (Array.isArray(v) ? v : []).filter((d): d is IDockJob => isObject(d) && typeof d.shipId === 'string' && isNum(d.endsAt));
+}
+
+function parseItems(v: unknown): IItems {
+  const o = isObject(v) ? v : {};
+  const n = (x: unknown): number => (isNum(x) ? Math.max(0, Math.floor(x)) : 0);
+  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild) };
 }
 
 function parseSweeps(v: unknown): { day: number; counts: Record<string, number> } {
@@ -432,7 +457,7 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds)) saveSave(withProgress(save, view));
   return view;
 }
 

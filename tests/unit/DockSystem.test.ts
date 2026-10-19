@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ShipClass } from '@/types/ShipClass';
 import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
 
 const empty = (): IDockState => ({ damage: {}, docks: [] });
@@ -15,6 +16,14 @@ describe('DockSystem', () => {
     expect(repairTimeMs(500, 0.5)).toBe(250 * MS_PER_HP);
     expect(repairCost(500, 0.5)).toEqual({ fuel: 63, ammo: 0, steel: 38, bauxite: 0 });
     expect(repairTimeMs(500, 1)).toBe(0);
+  });
+
+  it('repair time depends on the class (#143): seconds for a scratched destroyer, half an hour for a battleship 大破', () => {
+    expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer) / 1000).toBeLessThan(60);
+    const bb = repairTimeMs(800, 0.1, 1, ShipClass.Battleship) / 60_000;
+    expect(bb).toBeGreaterThanOrEqual(20);
+    expect(bb).toBeLessThanOrEqual(35);
+    expect(repairTimeMs(500, 0.5, 0.5, ShipClass.Cruiser)).toBe(repairTimeMs(500, 0.5, 1, ShipClass.Cruiser) / 2);
   });
 
   it('fills at most the owned docks with damaged ships (#38)', () => {
