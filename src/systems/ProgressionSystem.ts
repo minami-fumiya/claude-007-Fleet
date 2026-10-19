@@ -89,9 +89,11 @@ export function paySortie(progress: IProgress, ships: IShipData[], opts: ISortie
  * Applies a battle's outcome: rewards, aircraft replacement cost and each ship's damage.
  * An exercise pays half the reward and keeps neither damage nor aircraft losses.
  */
-export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean; event?: IEventEffects; theater?: string } = {}): ISettlement {
-  // A running event (#89) raises the reward: 2x in its theater, more steel.
-  const full = applyEventReward(battleReward(outcome.victory, outcome.enemiesSunk, outcome.sunkClasses), opts.event ?? NO_EVENT, opts.theater);
+export function settleBattle(progress: IProgress, outcome: IBattleOutcome, opts: { exercise?: boolean; event?: IEventEffects; theater?: string; rankMul?: number } = {}): ISettlement {
+  // A running event (#89) raises the reward: 2x in its theater, more steel. The battle rank (#149) scales it too.
+  const earned = battleReward(outcome.victory, outcome.enemiesSunk, outcome.sunkClasses);
+  const ranked = opts.rankMul !== undefined && opts.rankMul !== 1 ? addResources(resources(), earned, opts.rankMul) : earned;
+  const full = applyEventReward(ranked, opts.event ?? NO_EVENT, opts.theater);
   const reward = opts.exercise ? addResources(resources(), full, EXERCISE_REWARD_SCALE) : full;
   const aircraftCost = opts.exercise ? resources() : resources({ bauxite: Math.max(0, outcome.planesLost) * BAUXITE_PER_PLANE });
   let next: IProgress = {
@@ -125,7 +127,7 @@ export function sweepsLeft(progress: Pick<IProgress, 'sweeps'>, areaId: string, 
   return Math.max(0, SWEEPS_PER_DAY - used);
 }
 
-/** True when `area` may be swept: cleared, and once won without losing a ship (#57). */
+/** True when `area` may be swept: cleared, and once won with an S rank (#57 / #149; perfect wins from before count). */
 export function canSweep(progress: Pick<IProgress, 'campaign' | 'perfect'>, area: ICampaignArea): boolean {
   return progress.campaign.includes(area.id) && progress.perfect.includes(area.id);
 }

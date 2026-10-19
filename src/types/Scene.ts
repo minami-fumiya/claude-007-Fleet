@@ -43,6 +43,9 @@ export interface IBattleResultData {
   fleetSize: number;
   durationSec: number;
   captainReports?: ICaptainReport[];
+  /** Battle rank S〜D (#149) and what it came from */
+  rank?: string;
+  rankNote?: string;
   /** Resources gained / spent replacing aircraft, already formatted */
   reward?: string;
   /** The event that changed this battle's reward (#89), shown on its own line */

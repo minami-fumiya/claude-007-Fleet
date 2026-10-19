@@ -59,6 +59,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
+import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown } from '@/systems/BattleRank';
 import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -1543,13 +1544,25 @@ export class BattleScene extends Phaser.Scene {
       durationSec: this.elapsedSec(),
       captainReports: this.awardCaptains(victory, enemiesSunk),
     };
+    // Battle rank (#149): losses, damage taken and time.
+    const maxHp = fleet.reduce((sum, s) => sum + s.stats.maxHp, 0);
+    const rankInput = {
+      victory,
+      fleetSize: fleet.length,
+      shipsLost: fleet.filter((s) => !s.isAlive).length,
+      hpRatio: maxHp > 0 ? fleet.reduce((sum, s) => sum + (s.isAlive ? Math.max(0, s.stats.currentHp) : 0), 0) / maxHp : 0,
+      durationSec: this.elapsedSec(),
+    };
+    const rank = battleRank(rankInput);
+    result.rank = rank;
+    result.rankNote = rankBreakdown(rankInput);
     const settlement = settleBattle(loadProgress(), {
       victory,
       enemiesSunk,
       planesLost: this.playerAir.totalLost(),
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater });
+    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over.
       result.reward = undefined;
@@ -1573,8 +1586,12 @@ export class BattleScene extends Phaser.Scene {
     // A skirmish before the boss (#53) never clears the area; a win lets the fleet advance.
     const node = this.battleData?.sortie;
     const skirmish = area !== undefined && node !== undefined && !node.boss;
-    // A campaign win without losing a ship lets the area be swept from now on (#57).
-    if (area && !skirmish && victory && fleet.every((s) => s.isAlive) && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
+    // An S on the area's main fleet lets it be swept from now on (#57 / #149); the area keeps its best rank.
+    if (area && !skirmish) {
+      if (rank === 'S' && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
+      const best = betterRank(progress.areaRanks[area.id], rank);
+      if (best && best !== progress.areaRanks[area.id]) progress = { ...progress, areaRanks: { ...progress.areaRanks, [area.id]: best } };
+    }
     // 任務 (#52): the sortie, the win and what was sunk.
     const sunk = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy);
     const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
@@ -1614,7 +1631,7 @@ export class BattleScene extends Phaser.Scene {
     }
     // Merit (戦功, #36): first clears count most; the rank (and slots, docks, ship grades) follow from it.
     const before = rankOf(progress);
-    const merit = meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk });
+    const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank]);
     const promoted = addMerit(progress, merit);
     progress = promoted.progress;
     if (merit > 0) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;

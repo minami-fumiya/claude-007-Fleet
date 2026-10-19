@@ -158,7 +158,9 @@ export class CampaignMapScene extends Phaser.Scene {
       node.fillCircle(x, y, NODE_R);
       node.lineStyle(a === this.selected ? 4 : 2, color, open ? 1 : 0.4);
       node.strokeCircle(x, y, NODE_R);
-      const label = this.add.text(x, y, done ? '✓' : String(i + 1), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
+      // A cleared area shows its best battle rank (#149), or ✓ when it has none yet.
+      const best = done ? loadProgress().areaRanks[a.id] : undefined;
+      const label = this.add.text(x, y, best ?? (done ? '✓' : String(i + 1)), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
       const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5, 0);
       const hit = this.add.zone(x, y, NODE_R * 3, NODE_R * 3).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => this.selectArea(a.id));
@@ -216,7 +218,8 @@ export class CampaignMapScene extends Phaser.Scene {
       this.detailLayer.push(o);
       return o;
     };
-    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? '攻略済' : open ? '作戦' : '未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
+    const bestRank = progress.areaRanks[a.id];
+    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? `攻略済${bestRank ? `  ·  最高評価 ${bestRank}` : ''}` : open ? '作戦' : '未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
     const title = add(this.add.text(x, d.y + 44, a.name, displayStyle(24)));
     const desc = add(this.add.text(x, title.y + title.height + 10, a.description, textStyle(13, Css.muted, wrap)));
     let y = desc.y + desc.height + 18;
@@ -232,7 +235,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const left = sweepsLeft(progress, a.id, Date.now());
     const sweepNote = sweepable
       ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎朝 5 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
-      : isCleared(a, cleared) ? '掃討: 1 隻も失わずに勝利すると使えます' : '';
+      : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
     if (this.status || sweepNote) {
       add(this.add.text(x, y, this.status ? `${this.status}\n${sweepNote}` : sweepNote, textStyle(12, this.status ? Css.success : Css.muted, { ...wrap, lineSpacing: 2 })));

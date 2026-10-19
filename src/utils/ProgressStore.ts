@@ -10,6 +10,7 @@
  */
 
 import { IDockJob, IItems, IResources } from '@/types/Progression';
+import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
@@ -79,6 +80,8 @@ export interface INationProgress {
   builds: IDockJob[];
   /** 高速修理材・高速建造材 (#143) */
   items: IItems;
+  /** Best battle rank per campaign area (#149) */
+  areaRanks: Record<string, BattleRank>;
 }
 
 /** The whole save (v2 and later). */
@@ -117,7 +120,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
-    builds: [], items: { ...STARTING_ITEMS },
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {},
   };
 }
 
@@ -249,7 +252,14 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     sweeps: parseSweeps(data.sweeps),
     builds: parseJobs(data.builds),
     items: parseItems(data.items),
+    areaRanks: parseAreaRanks(data.areaRanks),
   };
+}
+
+function parseAreaRanks(v: unknown): Record<string, BattleRank> {
+  const out: Record<string, BattleRank> = {};
+  if (isObject(v)) for (const [id, r] of Object.entries(v)) if (isBattleRank(r)) out[id] = r;
+  return out;
 }
 
 function parseJobs(v: unknown): IDockJob[] {

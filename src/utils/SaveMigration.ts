@@ -82,9 +82,14 @@ export const MIGRATIONS: MigrationStep[] = [
   (data) => mapNations({ ...data, lastSeenAt: 0 }, (nation) => ({ ...nation, quests: { day: 0, week: 0, progress: {}, claimed: [] }, perfect: [] })),
   // v8 → v9 (#57): sweeps are counted per area and game day; nothing used yet.
   (data) => mapNations(data, (nation) => ({ ...nation, sweeps: { day: 0, counts: {} } })),
-  // v9 → v10 (0.0.19, #143): building takes time now (nothing under construction yet); repairs and builds got
-  // slower, so every nation gets two of each time-saving item.
-  (data) => mapNations(data, (nation) => ({ ...nation, builds: [], items: { fastRepair: 2, fastBuild: 2 } })),
+  // v9 → v10 (0.0.19): building takes time now (#143; nothing under construction yet) and repairs got slower, so
+  // every nation gets two of each time-saving item. Areas get a best battle rank (#149): a perfect win counts as S.
+  (data) => mapNations(data, (nation) => ({
+    ...nation,
+    builds: [],
+    items: { fastRepair: 2, fastBuild: 2 },
+    areaRanks: Object.fromEntries((Array.isArray(nation.perfect) ? nation.perfect : []).filter((id) => typeof id === 'string').map((id) => [id, 'S'])),
+  })),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */
