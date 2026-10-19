@@ -8,6 +8,7 @@ import { IShipData } from '@/types/Ship';
 import { BattleMode } from '@/types/Battle';
 import { ShipClass } from '@/types/ShipClass';
 import campaign from '@/data/campaign.json';
+import { goalThrottle } from '@/systems/ObjectiveSystem';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
@@ -159,5 +160,18 @@ describe('more areas and branches (#40)', () => {
       if (a.objective !== Objective.Breakthrough) expect(side.targetLead, a.id).toBe(true);
     }
     expect(campaignSide(byId('p1'))).toBeNull();
+  });
+});
+
+describe('delay battles can be won (#40)', () => {
+  it('the target heads for the zone slowly enough to intercept; the time limit outlasts its unhindered run', () => {
+    expect(goalThrottle(1800, 200, 90)).toBeCloseTo(0.1);
+    expect(goalThrottle(1800, 100, 90)).toBeCloseTo(0.2);
+    expect(goalThrottle(1800, 10, 90)).toBe(1);
+    expect(goalThrottle(1800, 200)).toBe(1);
+    for (const a of (campaign as unknown as ICampaignData).areas.filter((x) => x.objective === Objective.Delay)) {
+      expect(a.side?.arrivalSec, a.id).toBeGreaterThan(0);
+      expect(a.side!.timeLimitSec!, a.id).toBeGreaterThan(a.side!.arrivalSec!);
+    }
   });
 });

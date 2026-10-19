@@ -66,7 +66,7 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
 import { campaignSide, recordClear, theaterProgress } from '@/systems/CampaignSystem';
 import { awardMedals, newMedals, recordBattle } from '@/systems/RecordSystem';
-import { evaluateObjective, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
+import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
 import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
@@ -179,7 +179,7 @@ export class BattleScene extends Phaser.Scene {
   private exercise = false;
   private scenarioSetup: IScenarioSetup | null = null;
   /** Objective details: the scenario side's, or the campaign area's (#40) */
-  private side: (IScenarioSide & { targetLead?: boolean }) | null = null;
+  private side: (IScenarioSide & { targetLead?: boolean; arrivalSec?: number }) | null = null;
   private scenarioTargets: BaseShip[] = [];
   private convoy: BaseShip[] = [];
   private convoyEscaped = 0;
@@ -682,7 +682,11 @@ export class BattleScene extends Phaser.Scene {
       const side = this.side;
       if (side?.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
       const target = (side?.targets ?? []).includes(shipData.id) || (side?.targetLead === true && i === 0);
-      if (side?.zone && side.enemyGoesForZone && target && side.targetLead) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
+      if (side?.zone && side.enemyGoesForZone && target && side.targetLead) {
+        ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
+        // Slow enough to reach the zone in `arrivalSec` at the earliest, so intercepting it matters (#40).
+        ai.goalThrottle = goalThrottle(Math.hypot(ai.goal.x - enemy.x, ai.goal.y - enemy.y), enemy.currentSpeed, side.arrivalSec);
+      }
       if (target) this.scenarioTargets.push(enemy);
       this.aiSystems.push(ai);
     });
@@ -1626,7 +1630,9 @@ export class BattleScene extends Phaser.Scene {
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
     emitTutorial('battleEnd', this.registry);
     if (firstClear) emitTutorial('firstClear', this.registry);
-    result.reward = formatResources(settlement.reward) + (eventAppliesToBattle(event, area?.theater) ? `  (イベント: ${eventLabel(event)})` : '');
+    result.reward = formatResources(settlement.reward);
+    // On its own line under the reward (it ran into the reward and wrapped mid-word).
+    if (eventAppliesToBattle(event, area?.theater)) result.event = `イベント: ${eventLabel(event)}`;
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }

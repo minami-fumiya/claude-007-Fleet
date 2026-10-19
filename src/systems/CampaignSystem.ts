@@ -115,8 +115,8 @@ export function theaterProgress(data: ICampaignData, theater: string, cleared: s
 }
 
 /** A campaign area's objective set up like a scenario side (#40), so the battle reads both the same way. */
-export function campaignSide(area: ICampaignArea | undefined): (IScenarioSide & { targetLead?: boolean }) | null {
+export function campaignSide(area: ICampaignArea | undefined): (IScenarioSide & { targetLead?: boolean; arrivalSec?: number }) | null {
   if (!area?.side) return null;
-  const { targetLead, zone, timeLimitSec, enemyGoesForZone } = area.side;
-  return { force: 'A', label: area.name, brief: area.description, objective: area.objective, targetLead, zone, timeLimitSec, enemyGoesForZone };
+  const { targetLead, zone, timeLimitSec, enemyGoesForZone, arrivalSec } = area.side;
+  return { force: 'A', label: area.name, brief: area.description, objective: area.objective, targetLead, zone, timeLimitSec, enemyGoesForZone, arrivalSec };
 }

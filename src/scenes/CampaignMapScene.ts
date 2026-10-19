@@ -257,7 +257,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const r = sweepArea(progress, a, enemy, Date.now(), eventEffects(event));
     if (!r) return;
     saveProgress(r.progress);
-    this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `  (${eventLabel(event)})` : ''}`;
+    this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
     this.drawDetail();
   }
 
