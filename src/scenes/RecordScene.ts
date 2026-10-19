@@ -4,6 +4,8 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { MEDAL_CATEGORY_LABEL, MedalCategory, medalProgress, MEDALS, totalSunk } from '@/systems/RecordSystem';
 import { medalContext } from '@/utils/MedalContext';
+import { unlocksOf } from '@/systems/MedalGate';
+import { TECH_TREE } from '@/systems/ResearchSystem';
 import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
 import { awardPendingMedals, loadProgress, loadSave } from '@/utils/ProgressStore';
 import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerTotals, SPENDING } from '@/systems/LedgerSystem';
@@ -191,7 +193,7 @@ export class RecordScene extends Phaser.Scene {
       }, { variant: c === this.medalCategory ? 'primary' : 'secondary', width: ctw, height: cth, fontSize: IS_PORTRAIT ? 13 : 11 }));
     });
     const list = MEDALS.filter((m) => m.category === this.medalCategory);
-    const rowsPerPage = IS_PORTRAIT ? 6 : 5;
+    const rowsPerPage = 5;
     const perPage = rowsPerPage * L.medalCols;
     const pages = Math.max(1, Math.ceil(list.length / perPage));
     this.medalPage = Math.min(this.medalPage, pages - 1);
@@ -217,11 +219,21 @@ export class RecordScene extends Phaser.Scene {
       const tx = x + 52;
       const tw = cw - 62;
       this.track(this.add.text(tx, y + 8, m.name, textStyle(14, on ? Css.text : Css.muted, { fontStyle: 'bold' })));
-      this.track(this.add.text(tx, y + 30, m.description, textStyle(11, on ? Css.muted : Css.dim)));
+      this.track(this.add.text(tx, y + (IS_PORTRAIT ? 34 : 30), m.description, textStyle(11, on ? Css.muted : Css.dim)));
+      // What the medal opens (#169): as many as fit the card, then "ほか n 件".
+      const opens = unlocksOf(m.id);
+      const items = [...opens.research.map((id) => TECH_TREE.find((n) => n.id === id)?.name ?? id), ...opens.other];
+      if (items.length > 0) {
+        const t = this.track(this.add.text(tx, y + (IS_PORTRAIT ? 54 : 48), '', textStyle(10, on ? Css.gold : Css.muted)));
+        for (let n = items.length; n >= 1; n--) {
+          t.setText(`解放: ${items.slice(0, n).join('・')}${n < items.length ? ` ほか ${items.length - n} 件` : ''}`);
+          if (t.width <= tw) break;
+        }
+      }
       if (!on) {
         const [value, goal] = medalProgress(m.id, record, ctx);
-        drawMeter(this.track(this.add.graphics()), tx, y + ch - 14, tw - 70, 4, value / goal, Colors.cyan);
-        this.track(this.add.text(x + cw - 10, y + ch - 20, `${value.toLocaleString()} / ${goal.toLocaleString()}`, textStyle(10, Css.cyan)).setOrigin(1, 0));
+        drawMeter(this.track(this.add.graphics()), tx, y + ch - 10, tw - 70, 4, value / goal, Colors.cyan);
+        this.track(this.add.text(x + cw - 10, y + ch - 6, `${value.toLocaleString()} / ${goal.toLocaleString()}`, textStyle(10, Css.cyan)).setOrigin(1, 1));
       }
     });
     if (pages > 1) {
