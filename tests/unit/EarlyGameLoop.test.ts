@@ -6,7 +6,7 @@ import {
 import { paySortie, settleBattle, sortieBlockers } from '@/systems/ProgressionSystem';
 import { repairCost, startRepair, completeRepairs, SUNK_HP_FRACTION } from '@/systems/DockSystem';
 import { buildCost, buildShip, grantShip, ownedIds, ownedShips, rewardShipFor, starterShip } from '@/systems/ShipyardSystem';
-import { addMerit, fleetSlots, meritFor, rankOf } from '@/systems/RankSystem';
+import { addMerit, addRankStats, fleetSlots, meritFor, rankOf } from '@/systems/RankSystem';
 import { areasOf, enemyShips, isFreeArea, recordClear } from '@/systems/CampaignSystem';
 import { addResources, battleReward, resources, sortieCost } from '@/systems/ResourceSystem';
 import { IResources } from '@/types/Progression';
@@ -95,6 +95,8 @@ function clear(p: IProgress, a: ICampaignArea, roster: IShipData[]): IProgress {
   const settled = settleBattle(p, { victory: true, enemiesSunk: a.enemy.ships.length, planesLost: 0, ships: [] }).progress;
   const rec = recordClear(settled.campaign, a.id);
   let next = { ...settled, campaign: rec.cleared, resources: addResources(settled.resources, a.reward) };
+  // BattleScene counts the win for the promotion missions (#142) before adding merit.
+  next = addRankStats(next, { campaignWin: 1, sink: a.enemy.ships.length });
   next = addMerit(next, meritFor({ victory: true, campaign: true, firstClear: rec.firstClear, enemiesSunk: a.enemy.ships.length })).progress;
   const ship = rewardShipFor(a.rewardShip, roster, ownedIds(next, roster), a.id);
   if (ship) next = grantShip(next, roster, ship.id);

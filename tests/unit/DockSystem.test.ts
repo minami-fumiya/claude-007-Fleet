@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ShipClass } from '@/types/ShipClass';
+import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
 
 const empty = (): IDockState => ({ damage: {}, docks: [] });
@@ -56,7 +57,7 @@ describe('DockSystem', () => {
 
   it('a new admiral has one dock and builds more with rank and resources, up to four (#38)', () => {
     const rich = { fuel: 9999, ammo: 9999, steel: 9999, bauxite: 9999 };
-    const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich };
+    const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich, rankStats: ALL_MISSIONS_DONE };
     expect(dockCount(base)).toBe(START_DOCKS);
     expect(nextDock(base)?.state).toBe('rank');
     expect(buildDock(base)).toBeNull();

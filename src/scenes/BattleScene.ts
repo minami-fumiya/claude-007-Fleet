@@ -27,7 +27,7 @@ import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
 import { IResolvedMap } from '@/types/Map';
-import { addMerit, meritFor, rankOf } from '@/systems/RankSystem';
+import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
 import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
@@ -1631,10 +1631,19 @@ export class BattleScene extends Phaser.Scene {
     }
     // Merit (戦功, #36): first clears count most; the rank (and slots, docks, ship grades) follow from it.
     const before = rankOf(progress);
+    // Promotion missions (#142) count campaign battles; finishing one can promote as surely as merit.
+    if (area) {
+      progress = addRankStats(progress, {
+        campaignWin: victory ? 1 : 0, sink: sunk.length, nightWin: victory && this.conditions.time === TimeOfDay.Night ? 1 : 0,
+        sinkCarrier: sunkOf(ShipClass.Carrier), sinkSubmarine: sunkOf(ShipClass.Submarine), sinkBattleship: sunkOf(ShipClass.Battleship),
+        objectiveWin: victory && campaignSide(area) ? 1 : 0, bigS: rank === 'S' && this.enemies.length >= 6 ? 1 : 0,
+      });
+    }
     const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank]);
-    const promoted = addMerit(progress, merit);
-    progress = promoted.progress;
-    if (merit > 0) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
+    progress = addMerit(progress, merit).progress;
+    const after = rankOf(progress);
+    const promoted = { promotedTo: after.index > before.index ? after : null };
+    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
     // New captains (#44): one per first clear, one per promotion, now and then after a win.
     const recruits = [firstClear, promoted.promotedTo !== null, victory && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
     const joined: string[] = [];

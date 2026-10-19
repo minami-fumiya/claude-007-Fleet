@@ -60,6 +60,68 @@ export interface IRankProgress {
   rankFloor?: number;
   /** The nation, for the promotion exams (its theaters' final areas) */
   nation?: string;
+  /** What the promotion missions count (#142) */
+  rankStats?: Partial<Record<RankStat, number>>;
+}
+
+// ---------------------------------------------------------------------------
+// Promotion missions (昇進任務, #142)
+// ---------------------------------------------------------------------------
+
+/** What promotion missions count, per nation, in campaign battles (and sweeps). */
+export type RankStat =
+  | 'campaignWin' | 'sink' | 'nightWin' | 'sinkCarrier' | 'objectiveWin' | 'bigS' | 'sinkSubmarine' | 'sinkBattleship' | 'sweep';
+
+export interface IRankMission {
+  stat: RankStat;
+  goal: number;
+  /** "作戦で 1 回勝利" */
+  text: string;
+}
+
+/** Missions a rank needs on top of its merit (and exam); every one must be done. */
+export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
+  2: [{ stat: 'campaignWin', goal: 1, text: '作戦で 1 回勝利' }],
+  3: [{ stat: 'sink', goal: 20, text: '作戦で敵艦を 20 隻撃沈' }],
+  4: [{ stat: 'nightWin', goal: 1, text: '作戦の夜戦で勝利' }],
+  6: [{ stat: 'sinkCarrier', goal: 1, text: '作戦で空母を撃沈' }],
+  7: [{ stat: 'objectiveWin', goal: 1, text: '目的のある海域 (遅滞・突入・護衛など) で勝利' }],
+  8: [{ stat: 'bigS', goal: 1, text: '6 隻以上の敵艦隊に S 評価で勝利' }],
+  10: [{ stat: 'sinkSubmarine', goal: 10, text: '作戦で潜水艦を 10 隻撃沈' }],
+  11: [{ stat: 'sinkBattleship', goal: 5, text: '作戦で戦艦を 5 隻撃沈' }],
+  12: [{ stat: 'sweep', goal: 20, text: '掃討を 20 回' }],
+};
+
+/** Every mission's counter at its goal (a granted promotion, tests). */
+export const ALL_MISSIONS_DONE: Record<RankStat, number> = Object.values(RANK_MISSIONS).flat().reduce(
+  (out, m) => (m ? { ...out, [m.stat]: Math.max(out[m.stat] ?? 0, m.goal) } : out),
+  {} as Record<RankStat, number>,
+);
+
+export function missionCount(progress: IRankProgress, stat: RankStat): number {
+  return progress.rankStats?.[stat] ?? 0;
+}
+
+/** The rank's missions not done yet. */
+export function openMissions(rank: IRank, progress: IRankProgress): IRankMission[] {
+  return (RANK_MISSIONS[rank.index] ?? []).filter((m) => missionCount(progress, m.stat) < m.goal);
+}
+
+/** "作戦で敵艦を 20 隻撃沈 (12 / 20)" */
+export function missionText(m: IRankMission, progress: IRankProgress): string {
+  return m.goal > 1 ? `${m.text} (${Math.min(m.goal, missionCount(progress, m.stat))} / ${m.goal})` : m.text;
+}
+
+/** Adds to the mission counters (zeros are skipped). */
+export function addRankStats<T extends IRankProgress>(progress: T, add: Partial<Record<RankStat, number>>): T {
+  const stats = { ...(progress.rankStats ?? {}) };
+  let changed = false;
+  for (const [k, v] of Object.entries(add) as Array<[RankStat, number]>) {
+    if (!v) continue;
+    stats[k] = (stats[k] ?? 0) + v;
+    changed = true;
+  }
+  return changed ? { ...progress, rankStats: stats } : progress;
 }
 
 /** Kept for callers that only count areas. */
@@ -96,12 +158,12 @@ export function examText(exam: RankExam): string {
   return exam === 'theaterFinal' ? '戦域の最終海域を 1 つ攻略' : '全戦域の最終海域を攻略';
 }
 
-export function rankOf(progress: IRankProgress): IRank {
+export function rankOf(progress: IRankProgress, missions = true): IRank {
   const merit = progress.merit ?? 0;
   let rank = RANKS[0];
   for (const r of RANKS) {
-    // Ranks are climbed in order: a failed exam stops the climb there.
-    if (merit < r.minMerit || !examPassed(r, progress)) break;
+    // Ranks are climbed in order: a failed exam or an open promotion mission (#142) stops the climb there.
+    if (merit < r.minMerit || !examPassed(r, progress) || (missions && openMissions(r, progress).length > 0)) break;
     rank = r;
   }
   const floor = RANKS[Math.min(RANKS.length - 1, Math.max(START_RANK, progress.rankFloor ?? 0))];
@@ -119,6 +181,8 @@ export interface INextRank {
   meritNeeded: number;
   /** The exam still to pass, if any */
   exam?: RankExam;
+  /** Promotion missions still open (#142) */
+  missions: IRankMission[];
 }
 
 function nextOf(progress: IRankProgress, target: IRank): INextRank {
@@ -126,6 +190,7 @@ function nextOf(progress: IRankProgress, target: IRank): INextRank {
     rank: target,
     meritNeeded: Math.max(0, target.minMerit - (progress.merit ?? 0)),
     exam: target.exam && !examPassed(target, progress) ? target.exam : undefined,
+    missions: openMissions(target, progress),
   };
 }
 
@@ -142,18 +207,19 @@ export function nextSlotRank(progress: IRankProgress): INextRank | null {
   return next ? nextOf(progress, next) : null;
 }
 
-/** "戦功 あと 70" / "戦功 あと 70 + 戦域の最終海域を 1 つ攻略" / "全戦域の最終海域を攻略". */
-export function needText(next: INextRank): string {
+/** "戦功 あと 70" / "戦功 あと 70 + 戦域の最終海域を 1 つ攻略" / "作戦の夜戦で勝利" (a mission, #142). */
+export function needText(next: INextRank, progress?: IRankProgress): string {
   const parts: string[] = [];
   if (next.meritNeeded > 0) parts.push(`戦功 あと ${next.meritNeeded}`);
   if (next.exam) parts.push(examText(next.exam));
+  for (const m of next.missions) parts.push(progress ? missionText(m, progress) : m.text);
   return parts.join(' + ');
 }
 
 /** "次の昇進: 中尉 (戦功 あと 70)" / "最高位に到達". */
 export function promotionText(progress: IRankProgress): string {
   const next = nextRank(progress);
-  return next ? `次の昇進: ${next.rank.name} (${needText(next)})` : '最高位に到達';
+  return next ? `次の昇進: ${next.rank.name} (${needText(next, progress)})` : '最高位に到達';
 }
 
 // ---------------------------------------------------------------------------
@@ -192,10 +258,13 @@ export function addMerit<T extends IRankProgress>(progress: T, merit: number): {
   return { progress: next, promotedTo: after.index > before.index ? after : null };
 }
 
-/** Raises merit to at least the given rank's threshold (the tutorial's promotion to 少尉, #90). */
+/** Raises merit to at least the given rank's threshold and completes the missions up to it (the tutorial's promotion to 少尉, #90 / #142). */
 export function grantRankMerit<T extends IRankProgress>(progress: T, rankIndex: number): T {
-  const need = RANKS[Math.min(RANKS.length - 1, Math.max(0, rankIndex))].minMerit;
-  return (progress.merit ?? 0) >= need ? progress : { ...progress, merit: need };
+  const index = Math.min(RANKS.length - 1, Math.max(0, rankIndex));
+  const need = RANKS[index].minMerit;
+  const stats = { ...(progress.rankStats ?? {}) };
+  for (let i = 0; i <= index; i++) for (const m of RANK_MISSIONS[i] ?? []) stats[m.stat] = Math.max(stats[m.stat] ?? 0, m.goal);
+  return { ...progress, merit: Math.max(progress.merit ?? 0, need), rankStats: stats };
 }
 
 // ---------------------------------------------------------------------------

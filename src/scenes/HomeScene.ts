@@ -10,7 +10,7 @@ import { isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { nextRegenMs, REGEN_CAP, REGEN_PER_TICK, regenFull } from '@/systems/ResourceSystem';
-import { clearCount, fleetSlots, promotionText, rankOf } from '@/systems/RankSystem';
+import { clearCount, fleetSlots, missionCount, missionText, promotionText, RANK_MISSIONS, rankOf } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
@@ -345,9 +345,12 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[1], ry + 4, String(r.minMerit), textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
-      if (r.unlocks) {
+      // Promotion missions (#142) first: done (✓) or how far along.
+      const missions = (RANK_MISSIONS[r.index] ?? []).map((m) => (missionCount(progress, m.stat) >= m.goal || r.index <= current.index ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`));
+      const extra = [...missions, r.unlocks].filter((t) => t).join('  ·  ');
+      if (extra) {
         const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
-        const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, r.unlocks, textStyle(11, css)));
+        const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, extra, textStyle(11, missions.some((m) => m.startsWith('任務')) ? Css.cyan : css)));
         const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[4];
         if (t.width > room) t.setScale(room / t.width);
       }

@@ -6,7 +6,7 @@ import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, pay, resource
 import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } from './DockSystem';
 import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
-import { addMerit, IRank, meritFor } from './RankSystem';
+import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
 import { gameDay, withQuestEvents } from './QuestSystem';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -157,7 +157,11 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const won = applyEventReward(battleReward(true, enemy.length, enemy.map((s) => s.shipClass)), event, area.theater);
   const reward = addResources(resources(), won, SWEEP_REWARD_SCALE);
   const merit = meritFor({ victory: true, campaign: true, firstClear: false, enemiesSunk: enemy.length });
-  const promoted = addMerit({ ...progress, resources: addResources(paid, reward) }, merit);
+  // A sweep counts toward the 大将 promotion mission (#142), and may complete it.
+  const before = rankOf(progress);
+  const merited = addMerit(addRankStats({ ...progress, resources: addResources(paid, reward) }, { sweep: 1 }), merit).progress;
+  const after = rankOf(merited);
+  const promoted = { progress: merited, promotedTo: after.index > before.index ? after : null };
   const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
   const day = gameDay(now);
   const counts = progress.sweeps.day === day ? progress.sweeps.counts : {};

@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { firstNation, nationLocks, newlyUnlocked, STARTER_NATIONS, theaterFinal } from '@/systems/NationUnlock';
 import { Nation } from '@/types/Nation';
+import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 
-const p = (merit: number, campaign: string[] = []) => ({ merit, campaign, rankFloor: 0 });
+const p = (merit: number, campaign: string[] = []) => ({ merit, campaign, rankFloor: 0, rankStats: ALL_MISSIONS_DONE });
 const open = (locks: ReturnType<typeof nationLocks>): Nation[] => PLAYABLE_NATIONS.filter((n) => locks[n].unlocked);
 
 describe('nations open step by step (#134)', () => {
