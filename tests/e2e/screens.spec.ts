@@ -123,16 +123,20 @@ test.describe('screens', () => {
     const fleet = await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
         ships: Array<{ id: string }>; slots: Array<{ id: string } | null>;
-        openPicker(i: number): void; pickShip(s: { id: string }): void; refresh(): void;
+        openPicker(i: number): void; pickShip(s: { id: string }): void; refresh(): void; moveUp(i: number): void;
       };
-      s.openPicker(0);
-      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
-      s.openPicker(1);
-      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
-      s.pickShip(s.ships.find((x) => x.id === 'fubuki')!);
-      return s.slots.map((x) => x?.id ?? null);
+      const pick = (slot: number, id: string): void => { s.openPicker(slot); s.pickShip(s.ships.find((x) => x.id === id)!); };
+      pick(0, 'yamato');
+      pick(1, 'fubuki');
+      // Picking a ship already in the fleet swaps the two slots (#147).
+      pick(1, 'yamato');
+      const swapped = s.slots.map((x) => x?.id ?? null);
+      // ▲ moves a ship one slot up.
+      s.moveUp(1);
+      return { swapped, after: s.slots.map((x) => x?.id ?? null) };
     });
-    expect(fleet.slice(0, 2)).toEqual(['yamato', 'fubuki']);
+    expect(fleet.swapped.slice(0, 2)).toEqual(['fubuki', 'yamato']);
+    expect(fleet.after.slice(0, 2)).toEqual(['yamato', 'fubuki']);
     await page.screenshot({ path: info.outputPath('builder.png') });
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { startBattle(): void };
