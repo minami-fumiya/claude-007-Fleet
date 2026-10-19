@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { clock } from '@/utils/TimeFormat';
+import { nationLocks } from '@/systems/NationUnlock';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -191,14 +192,18 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 52 : 42), closable ? '鎮守府を切り替える' : '着任する国を選んでください', displayStyle(22)));
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '国ごとに資源・保有艦・研究・作戦の進み具合が別々に記録されます。\n新しい国は駆逐艦 1 隻・資源 0 から始まり、資源は時間で回復します。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
     let ry = y + (IS_PORTRAIT ? 210 : 136);
+    // Nations open step by step (#134): locked ones show what opens them.
+    const locks = nationLocks(save.nations);
     for (const n of PLAYABLE_NATIONS) {
       const np = save.nations[n];
+      const lock = locks[n];
       const label = np
         ? `${NATION_INFO[n].jaShort}   ${rankOf(np).name} · 攻略 ${clearCount(np)} · 保有艦 ${ownedIds(np, this.registryShips.byNation(n)).length}`
-        : `${NATION_INFO[n].jaShort}   新規着任`;
+        : lock.unlocked ? `${NATION_INFO[n].jaShort}   新規着任` : `${NATION_INFO[n].jaShort}   未解放`;
       add(new UIButton(this, x + w / 2, ry + rowH / 2, label, () => this.selectNation(n), {
         variant: n === save.current && np ? 'gold' : np ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: 16,
-      }));
+        caption: lock.unlocked ? undefined : [lock.condition, lock.progress].filter((t) => t).join('  ·  '),
+      })).setEnabled(lock.unlocked);
       ry += rowH + gap;
     }
     if (closable) {
@@ -376,6 +381,7 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private selectNation(nation: Nation): void {
+    if (!nationLocks(loadSave().nations)[nation].unlocked) return;
     const starter = starterShip(this.registryShips.byNation(nation));
     saveSave(switchNation(loadSave(), nation, starter?.id, Date.now()));
     // The fleet selection belongs to the previous nation.

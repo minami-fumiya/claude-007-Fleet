@@ -339,6 +339,22 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('nations open step by step: the others wait for the first nation (#134)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HomeScene'] });
+    await open(page, 'HomeScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openNationPicker(closable: boolean): void; selectNation(n: string): void };
+      s.openNationPicker(true);
+      // A locked nation can't be picked.
+      s.selectNation('USN');
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('nations-locked.png') });
+    const current = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).current);
+    expect(current).toBe('IJN');
+    expect(errors).toEqual([]);
+  });
+
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));

@@ -57,7 +57,9 @@ import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, levelUpNotes, MAX_LEVEL, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { ShipClass } from '@/types/ShipClass';
-import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { IProgress, loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
+import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
+import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/ResearchSystem';
@@ -1639,7 +1641,14 @@ export class BattleScene extends Phaser.Scene {
     ].filter((l) => l);
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
+    // Nations opened by this battle (#134) are announced with the recruits.
+    const locksBefore = nationLocks(loadSave().nations);
     saveProgress(progress);
+    const opened = newlyUnlocked(locksBefore, nationLocks(loadSave().nations));
+    if (opened.length > 0) {
+      const line = `新しい国が着任可能: ${opened.map((n) => NATION_INFO[n].jaShort).join('・')}`;
+      result.recruits = result.recruits ? `${result.recruits}\n${line}` : line;
+    }
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
     emitTutorial('battleEnd', this.registry);
     if (firstClear) emitTutorial('firstClear', this.registry);
