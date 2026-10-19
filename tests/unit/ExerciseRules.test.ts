@@ -37,7 +37,7 @@ describe('演習 (free battle, #15) and free sorties (#28)', () => {
     const fleet = [ship('yamato'), ship('fubuki')];
     expect(isFreeSortie({ exercise: true })).toBe(true);
     expect(sortieCostFor(fleet, { exercise: true })).toEqual(resources());
-    for (const a of areas.filter((x) => x.requires.length === 0)) expect(sortieCostFor(fleet, { area: a })).toEqual(resources());
+    for (const a of areas.filter((x) => x.requires.length === 0 && !x.requiresAny?.length)) expect(sortieCostFor(fleet, { area: a })).toEqual(resources());
     expect(sortieCostFor(fleet, { area: area('p2') }).fuel).toBeGreaterThan(0);
     expect(paySortie(broke, fleet, { exercise: true })).not.toBeNull();
     expect(paySortie(broke, fleet, { area: area('p1') })).not.toBeNull();

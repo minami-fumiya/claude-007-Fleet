@@ -64,14 +64,14 @@ import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/Resear
 import { addResources, formatResources } from '@/systems/ResourceSystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
-import { recordClear, theaterProgress } from '@/systems/CampaignSystem';
+import { campaignSide, recordClear, theaterProgress } from '@/systems/CampaignSystem';
 import { awardMedals, newMedals, recordBattle } from '@/systems/RecordSystem';
 import { evaluateObjective, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
 import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
-import { IScenario } from '@/types/Scenario';
+import { IScenario, IScenarioSide } from '@/types/Scenario';
 import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
@@ -176,6 +176,8 @@ export class BattleScene extends Phaser.Scene {
   /** Free battle (演習, #15): starts at full HP and keeps no damage */
   private exercise = false;
   private scenarioSetup: IScenarioSetup | null = null;
+  /** Objective details: the scenario side's, or the campaign area's (#40) */
+  private side: (IScenarioSide & { targetLead?: boolean }) | null = null;
   private scenarioTargets: BaseShip[] = [];
   private convoy: BaseShip[] = [];
   private convoyEscaped = 0;
@@ -310,8 +312,11 @@ export class BattleScene extends Phaser.Scene {
     const scenario = sc ? DataLoader.getScenarios(this).find((s) => s.id === sc.id) : undefined;
     this.scenario = scenario ?? null;
     this.scenarioSetup = scenario && sc ? setupFor(scenario, sc.side) : null;
+    // Zone, time limit and target: the scenario side's, or a campaign area's (#40).
+    const battleArea = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
+    this.side = this.scenarioSetup?.side ?? campaignSide(battleArea);
     this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
-    this.objective = this.scenarioSetup?.side.objective ?? this.battleData?.objective ?? Objective.Annihilate;
+    this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);
     this.spawnEnemyFleet(enemyFleet);
@@ -456,7 +461,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Breakthrough / escape zone of a scenario: a dashed gold ring with its name. */
   private drawObjectiveZone(): void {
-    const zone = this.scenarioSetup?.side.zone;
+    const zone = this.side?.zone;
     if (!zone) return;
     const c = placeAt(zone, WORLD.w, WORLD.h);
     const r = zoneRadius(zone.r, WORLD.w, WORLD.h);
@@ -670,9 +675,11 @@ export class BattleScene extends Phaser.Scene {
       const ai = new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS);
       // Searching ships sweep towards the middle in their own lane instead of all meeting at one point.
       ai.patrol = { x: enemy.x, y: WORLD.h / 2 };
-      const side = this.scenarioSetup?.side;
+      const side = this.side;
       if (side?.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
-      if ((side?.targets ?? []).includes(shipData.id)) this.scenarioTargets.push(enemy);
+      const target = (side?.targets ?? []).includes(shipData.id) || (side?.targetLead === true && i === 0);
+      if (side?.zone && side.enemyGoesForZone && target && side.targetLead) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
+      if (target) this.scenarioTargets.push(enemy);
       this.aiSystems.push(ai);
     });
   }
@@ -1201,7 +1208,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    const zone = this.scenarioSetup?.side.zone;
+    const zone = this.side?.zone;
     if (this.autoMode && zone && this.objective === Objective.Breakthrough) {
       // Breakthrough: AUTO makes for the zone and fights on the way.
       const goal = placeAt(zone, WORLD.w, WORLD.h);
@@ -1393,7 +1400,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private objectiveState(): IObjectiveState {
-    const zone = this.scenarioSetup?.side.zone;
+    const zone = this.side?.zone;
     const warships = this.enemies.filter((e) => !e.isLand);
     return {
       flagshipAlive: this.flagship.isAlive,
@@ -1407,7 +1414,7 @@ export class BattleScene extends Phaser.Scene {
       flagshipInZone: zone ? inZone(this.flagship.x, this.flagship.y, zone, WORLD.w, WORLD.h) : false,
       enemyInZone: zone ? this.scenarioTargets.some((t) => t.isAlive && inZone(t.x, t.y, zone, WORLD.w, WORLD.h)) : false,
       elapsedSec: this.elapsedSec(),
-      timeLimitSec: this.scenarioSetup?.side.timeLimitSec ?? 0,
+      timeLimitSec: this.side?.timeLimitSec ?? 0,
     };
   }
 
