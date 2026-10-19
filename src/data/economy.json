@@ -1,0 +1,101 @@
+{
+  "_comment": "Typical hour of play by stage, for the economy model (#222). Edit these to rebalance; tests/unit/Economy.test.ts holds the targets.",
+  "playHoursPerDay": 2,
+  "playHoursPerWeek": 10,
+  "rankRewardMul": 1.1,
+  "phases": [
+    {
+      "id": "early",
+      "label": "序盤 (准尉〜少尉)",
+      "fleet": [
+        "fubuki",
+        "yukikaze",
+        "shimakaze",
+        "sendai"
+      ],
+      "enemies": [
+        "Destroyer",
+        "Destroyer",
+        "Cruiser"
+      ],
+      "battlesPerHour": 6,
+      "damagePerBattle": 0.3,
+      "planesLostPerBattle": 0,
+      "researchPerHour": 0.5,
+      "researchLevel": 1,
+      "regenMinutes": 60,
+      "facilityLevels": 0,
+      "sweepsPerHour": 0,
+      "build": "fubuki",
+      "refitsPerHour": 0.3,
+      "refitClass": "Destroyer",
+      "facilitiesPerHour": 0,
+      "facilityLevel": 1
+    },
+    {
+      "id": "mid",
+      "label": "中盤 (大尉〜少佐)",
+      "fleet": [
+        "takao",
+        "atago",
+        "sendai",
+        "fubuki",
+        "yukikaze",
+        "shimakaze"
+      ],
+      "enemies": [
+        "Cruiser",
+        "Cruiser",
+        "Destroyer",
+        "Destroyer"
+      ],
+      "battlesPerHour": 5,
+      "damagePerBattle": 0.3,
+      "planesLostPerBattle": 0,
+      "researchPerHour": 0.7,
+      "researchLevel": 2,
+      "regenMinutes": 20,
+      "facilityLevels": 2,
+      "sweepsPerHour": 1,
+      "build": "takao",
+      "refitsPerHour": 0.5,
+      "refitClass": "Cruiser",
+      "facilitiesPerHour": 0.5,
+      "facilityLevel": 2
+    },
+    {
+      "id": "late",
+      "label": "終盤 (大佐〜)",
+      "fleet": [
+        "nagato",
+        "mutsu",
+        "kaga",
+        "takao",
+        "atago",
+        "yukikaze"
+      ],
+      "enemies": [
+        "Battleship",
+        "Carrier",
+        "Cruiser",
+        "Cruiser",
+        "Destroyer",
+        "Destroyer"
+      ],
+      "battlesPerHour": 4,
+      "damagePerBattle": 0.3,
+      "planesLostPerBattle": 4,
+      "researchPerHour": 0.7,
+      "researchLevel": 4,
+      "regenMinutes": 0,
+      "facilityLevels": 5,
+      "sweepsPerHour": 2,
+      "build": "nagato",
+      "refitsPerHour": 0.5,
+      "refitClass": "Battleship",
+      "facilitiesPerHour": 0.5,
+      "facilityLevel": 4
+    }
+  ],
+  "winRate": 0.85
+}

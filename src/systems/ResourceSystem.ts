@@ -120,7 +120,7 @@ export function sortieCost(ships: IShipData[]): IResources {
  */
 export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses: ShipClass[] = []): IResources {
   const perSunk = resources({ fuel: 80, ammo: 70, steel: 0, bauxite: 20 });
-  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 130, bauxite: 50 }) : resources();
+  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 170, bauxite: 50 }) : resources();
   const scale = victory ? 1 : 0.5;
   const out = addResources(bonus, perSunk, Math.max(0, enemiesSunk) * scale);
   // Steel comes from the wrecks (#132): big ships give more. Sinks without a known class count as average.
@@ -129,15 +129,15 @@ export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses:
   return { ...out, steel: Math.round(out.steel + steel * scale) };
 }
 
-/** Steel salvaged per enemy sunk, by class (#132). */
+/** Steel salvaged per enemy sunk, by class (#132); a quarter more since 0.0.28 (#222): builds burn steel fastest. */
 export const SINK_STEEL: Partial<Record<ShipClass, number>> = {
-  [ShipClass.Battleship]: 150,
-  [ShipClass.Carrier]: 120,
-  [ShipClass.Cruiser]: 80,
-  [ShipClass.Destroyer]: 45,
-  [ShipClass.Submarine]: 35,
+  [ShipClass.Battleship]: 190,
+  [ShipClass.Carrier]: 150,
+  [ShipClass.Cruiser]: 100,
+  [ShipClass.Destroyer]: 55,
+  [ShipClass.Submarine]: 45,
 };
-const SINK_STEEL_DEFAULT = 60;
+const SINK_STEEL_DEFAULT = 75;
 
 export function formatResources(r: Partial<IResources>, onlyNonZero = true): string {
   const x = resources(r);
@@ -154,7 +154,7 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
  * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Fuel regenerates fastest (every sortie
  * and repair spends it), then ammo and steel (0.0.12: steel led after #35 and fuel became the bottleneck).
  */
-export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 4, bauxite: 1 };
+export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 5, bauxite: 1 };
 export const REGEN_INTERVAL_MS = 60_000;
 /** Regeneration stops at this amount; rewards can still take a resource above it. */
 export const REGEN_CAP = 1500;

@@ -41,7 +41,8 @@ describe('ResearchSystem', () => {
   it('pays and records research', () => {
     const r = research(node('armor_1'), [], rich)!;
     expect(r.done).toEqual(['armor_1']);
-    expect(r.resources.steel).toBe(9999 - 500);
+    // Research steel was cut by a fifth in 0.0.28 (#222): armor_1 costs 400.
+    expect(r.resources.steel).toBe(9999 - 400);
     expect(research(node('armor_1'), r.done, r.resources)).toBeNull();
   });
 

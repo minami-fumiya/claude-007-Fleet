@@ -1,0 +1,36 @@
+import { describe, it, expect } from 'vitest';
+import { ECONOMY, hourBudget, steelBuildsPerHour } from '@/systems/EconomyModel';
+import { RESOURCE_KEYS } from '@/systems/ResourceSystem';
+
+/**
+ * Economy targets (#222), checked at every release's balance review (#223, `npm run balance` prints the figures).
+ * A typical hour of each stage comes from src/data/economy.json.
+ */
+describe('economy (#222)', () => {
+  for (const phase of ECONOMY.phases) {
+    describe(phase.label, () => {
+      const b = hourBudget(phase);
+
+      it('earns at least 80% of what it spends, in every resource (before building)', () => {
+        for (const k of RESOURCE_KEYS) {
+          if (b.totalOut[k] === 0) continue;
+          expect(b.totalIn[k], `${phase.id} ${k}`).toBeGreaterThanOrEqual(b.totalOut[k] * 0.8);
+        }
+      });
+
+      it("saves the steel for at least one of the stage's ships an hour", () => {
+        expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(1);
+      });
+
+      it('steel is not the resource that stops building (it was, at half of fuel, in 0.0.27)', () => {
+        // Builds per hour each resource's surplus pays for; steel must keep up with at least half of the others.
+        const builds = (k: 'fuel' | 'ammo'): number => (b.buildCost[k] > 0 ? b.net[k] / b.buildCost[k] : Infinity);
+        expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(0.5 * Math.min(builds('fuel'), builds('ammo')));
+      });
+    });
+  }
+
+  it('covers the early, middle and late game', () => {
+    expect(ECONOMY.phases.map((p) => p.id)).toEqual(['early', 'mid', 'late']);
+  });
+});

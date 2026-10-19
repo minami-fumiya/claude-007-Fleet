@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "balance": "vite-node scripts/balance.ts"
   },
   "dependencies": {
     "phaser": "^3.88.0"

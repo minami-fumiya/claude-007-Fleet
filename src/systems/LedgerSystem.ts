@@ -75,6 +75,13 @@ export function ledgerTotals(ledger: Ledger, now: number): Partial<Record<Ledger
   return out;
 }
 
+/** Hours of the last LEDGER_HOURS that have any entry (at least 1): what per-hour figures divide by (#222). */
+export function ledgerHours(ledger: Ledger, now: number): number {
+  const hour = hourOf(now);
+  const hours = new Set(Object.keys(ledger).map((key) => Number(key.split(':')[0])).filter((h) => h > hour - LEDGER_HOURS));
+  return Math.max(1, hours.size);
+}
+
 /** The ledger as text, one line per category, for 設定 → 収支を書き出す (bug reports and balance work). */
 export function ledgerText(ledger: Ledger, now: number): string {
   const totals = ledgerTotals(ledger, now);

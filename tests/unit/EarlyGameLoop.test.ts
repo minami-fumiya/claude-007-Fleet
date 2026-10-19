@@ -27,9 +27,9 @@ const T0 = 1_700_000_000_000;
 const MIN = REGEN_INTERVAL_MS;
 
 describe('natural regeneration (#28)', () => {
-  it('+6 fuel, +4 ammo, +4 steel and +1 bauxite per minute', () => {
+  it('+6 fuel, +4 ammo, +5 steel and +1 bauxite per minute', () => {
     const r = regenerate(resources(), T0, T0 + 5 * MIN + 30_000);
-    expect(r.resources).toEqual({ fuel: 30, ammo: 20, steel: 20, bauxite: 5 });
+    expect(r.resources).toEqual({ fuel: 30, ammo: 20, steel: 25, bauxite: 5 });
     // The partial minute carries over.
     expect(r.regenAt).toBe(T0 + 5 * MIN);
     expect(nextRegenMs(r.regenAt, T0 + 5 * MIN + 30_000)).toBe(30_000);
@@ -184,17 +184,18 @@ describe('fuel, ammo and steel stay in balance (#35 / 0.0.12)', () => {
       const net = addResources(addResources(reward, sortie, -1), repair, -1);
       const raw = (k: keyof IResources): number => reward[k] - sortie[k] - repair[k];
       for (const k of ['fuel', 'ammo', 'steel'] as const) expect(raw(k), `${fleet.map((s) => s.id)} ${k}`).toBeGreaterThan(0);
-      // No resource lags far behind another (fuel was short in 0.0.12, steel in 0.0.16, #132).
-      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') * 0.5);
-      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') * 0.5);
+      // No resource lags far behind another (fuel was short in 0.0.12, steel in 0.0.16 and 0.0.27, #132 #222).
+      // Builds take about twice as much steel as fuel, so steel may lead by up to 2.5×.
+      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') * 0.4);
+      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') * 0.4);
       expect(raw('steel')).toBeGreaterThanOrEqual(Math.max(raw('fuel'), raw('ammo')) * 0.6);
       expect(net.fuel).toBeGreaterThanOrEqual(0);
     }
   });
 
-  it('fuel regenerates fastest, then ammo and steel', () => {
-    expect(REGEN_PER_TICK.fuel).toBeGreaterThan(REGEN_PER_TICK.ammo);
-    expect(REGEN_PER_TICK.ammo).toBeGreaterThanOrEqual(REGEN_PER_TICK.steel);
+  it('fuel regenerates fastest, then steel (builds burn it, #222) and ammo', () => {
+    expect(REGEN_PER_TICK.fuel).toBeGreaterThan(REGEN_PER_TICK.steel);
+    expect(REGEN_PER_TICK.steel).toBeGreaterThanOrEqual(REGEN_PER_TICK.ammo);
   });
 
   it('a repair costs no more steel than fuel', () => {
