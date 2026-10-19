@@ -28,7 +28,7 @@ for (const p of ECONOMY.phases) {
 }
 
 out.push('## 建造と入渠 (日本艦)', '', '| 艦 | 格 | 建造 (分) | 建造費 燃/弾/鋼/ボ | 大破からの入渠 (分) | 入渠の鋼材 |', '|---|---|---|---|---|---|');
-for (const s of (ijn.ships as IShipData[]).filter((x) => !x.fictional)) {
+for (const s of (ijn.ships as IShipData[]).filter((x) => !x.fictional && !x.sisterOf)) {
   const name = s.name.replace(/\s*\(.*\)\s*$/, '');
   const repair = repairTimeMs(s.hp, SUNK_HP_FRACTION, 1, s.shipClass) / 60_000;
   out.push(`| ${name} | ${shipGrade(s)} | ${(buildTimeMs(s) / 60_000).toFixed(1)} | ${fmt(buildCost(s)).replace(/ \/ /g, '/')} | ${repair.toFixed(1)} | ${repairCost(s.hp, SUNK_HP_FRACTION).steel} |`);

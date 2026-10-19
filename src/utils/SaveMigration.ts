@@ -7,7 +7,8 @@
  * ProgressStore.migrateV1 and then run through the same steps.
  */
 
-import { nationCaptains } from '@/systems/CaptainRoster';
+import { ALL_CAPTAINS, nationCaptains } from '@/systems/CaptainRoster';
+import { CaptainSkill } from '@/types/Captain';
 import { rankOf } from '@/systems/RankSystem';
 import { currentBase, nationBases } from '@/systems/BaseSystem';
 
@@ -178,6 +179,21 @@ export const MIGRATIONS: MigrationStep[] = [
     const list = nationBases(key);
     const opened = list.slice(1).filter((b) => rank >= b.unlockRank || b.id === nation.base).map((b) => b.id);
     return { ...nation, basesOpen: opened, baseWork: null };
+  }),
+  // v15 → v16 (0.0.29, #185): 航空 no longer covers air defence, which became the 対空 skill. Captains whose 航空
+  // (their speciality or a learned skill) gave them air defence get 対空 carried over outside their learn slots, so
+  // nobody's ships shoot down fewer planes than before.
+  (data) => mapNations(data, (nation) => {
+    const owned = Array.isArray(nation.captains) ? (nation.captains as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+    const learned = typeof nation.captainSkills === 'object' && nation.captainSkills !== null ? nation.captainSkills as Record<string, unknown> : {};
+    const aviators = new Set([
+      ...owned.filter((id) => ALL_CAPTAINS.find((c) => c.id === id)?.skill === CaptainSkill.Aviation),
+      ...Object.entries(learned).filter(([, v]) => Array.isArray(v) && v.includes(CaptainSkill.Aviation)).map(([id]) => id),
+    ]);
+    const before = typeof nation.captainBonus === 'object' && nation.captainBonus !== null ? nation.captainBonus as Record<string, unknown> : {};
+    const captainBonus: Record<string, unknown> = { ...before };
+    for (const id of aviators) captainBonus[id] = [...new Set([...(Array.isArray(before[id]) ? before[id] as string[] : []), CaptainSkill.AntiAir])];
+    return { ...nation, captainBonus };
   }),
 ];
 

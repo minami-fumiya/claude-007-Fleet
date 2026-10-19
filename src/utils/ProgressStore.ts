@@ -70,6 +70,8 @@ export interface INationProgress {
   captains: string[];
   /** Captain id → learned skills (#45), on top of the captain's own speciality */
   captainSkills: Record<string, string[]>;
+  /** Skills carried over outside the learn slots (#185): 対空 for captains whose 航空 used to cover air defence */
+  captainBonus: Record<string, string[]>;
   /** Captain id → what traits count (#45) */
   captainStats: Record<string, ICaptainStats>;
   /** Home port in use (#88); '' or unknown = the nation's first (see BaseSystem.currentBase) */
@@ -142,7 +144,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
-    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
+    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null,
   };
 }
@@ -283,6 +285,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     // A save without the list keeps every captain (filled in per nation by the caller).
     captains: Array.isArray(data.captains) ? [...new Set(strings(data.captains))] : [],
     captainSkills: stringLists(data.captainSkills),
+    captainBonus: stringLists(data.captainBonus),
     captainStats: parseCaptainStats(data.captainStats),
     base: typeof data.base === 'string' ? data.base : '',
     quests: parseQuestState(data.quests),

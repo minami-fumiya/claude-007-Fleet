@@ -30,7 +30,7 @@
     {"id": "aa_3", "name": "対空研究 III", "description": "全艦の対空 +8%", "branch": "aa", "level": 3, "cost": {"ammo": 1000, "steel": 150, "bauxite": 900}, "requires": ["aa_2"], "effects": {"aaMul": 1.08}},
     {"id": "aa_4", "name": "対空研究 IV", "description": "全艦の対空 +7%", "branch": "aa", "level": 4, "cost": {"ammo": 1300, "steel": 250, "bauxite": 1200}, "requires": ["aa_3"], "effects": {"aaMul": 1.07}},
     {"id": "aa_5", "name": "対空研究 V", "description": "全艦の対空 +7%", "branch": "aa", "level": 5, "cost": {"ammo": 1500, "steel": 400, "bauxite": 1500}, "requires": ["aa_4", "radar_1"], "effects": {"aaMul": 1.07}},
-    {"id": "aviation_1", "name": "航空研究 I", "description": "艦載機の攻撃力 +5%", "branch": "aviation", "level": 1, "cost": {"fuel": 300, "bauxite": 400}, "requires": [], "effects": {"airPowerMul": 1.05}},
+    {"id": "aviation_1", "name": "航空研究 I", "description": "艦載機の攻撃力 +5%", "branch": "aviation", "level": 1, "cost": {"fuel": 300, "bauxite": 400}, "requires": ["build_carrier"], "effects": {"airPowerMul": 1.05}},
     {"id": "aviation_2", "name": "航空研究 II", "description": "艦載機の再装備時間 -10%", "branch": "aviation", "level": 2, "cost": {"fuel": 600, "bauxite": 700}, "requires": ["aviation_1"], "effects": {"rearmMul": 0.9}},
     {"id": "aviation_3", "name": "航空研究 III", "description": "艦載機の攻撃力 +5%", "branch": "aviation", "level": 3, "cost": {"fuel": 900, "steel": 150, "bauxite": 1000}, "requires": ["aviation_2"], "effects": {"airPowerMul": 1.05}},
     {"id": "aviation_4", "name": "航空研究 IV", "description": "搭載機 +1 (戦闘機・艦爆・艦攻)", "branch": "aviation", "level": 4, "cost": {"fuel": 1100, "steel": 300, "bauxite": 1300}, "requires": ["aviation_3"], "effects": {"planesAdd": 1}},

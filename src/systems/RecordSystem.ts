@@ -50,6 +50,10 @@ export interface IMedalContext {
   fullStock?: number;
   /** Highest steel holding cap of any nation (#221) */
   steelCap?: number;
+  /** Most bases one nation has open (built, #217) */
+  basesOpen?: number;
+  /** Classes (lead + sisters, #85) one nation owns every ship of, best nation */
+  classesComplete?: number;
   /** Lowest level among the four resource facilities (all bases summed), best nation (#190) */
   supplyLevel?: number;
   /** Most carriers one nation owns (#204) */
@@ -122,9 +126,11 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
   ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),
-  ...ladder('fleet', '艦隊章', 'growth', [5, 15, 30], (g) => `艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.shipsOwned ?? 0),
+  ...ladder('class_set', '同型艦章', 'growth', [1, 3, 10], (g) => `1 か国で ${g} つの級の艦をすべてそろえる (例: 金剛型 4 隻)`, (_r, c) => c.classesComplete ?? 0),
+  ...ladder('fleet', '艦隊章', 'growth', [5, 15, 30, 60, 100], (g) => `艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.shipsOwned ?? 0),
   ...ladder('science', '技術章', 'growth', [5, 15, 30], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
-  ...ladder('captains', '艦長章', 'growth', [3, 6, 9], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
+  ...ladder('captains', '艦長章', 'growth', [3, 6, 9, 20, 30], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
+  ...ladder('anti_air', '対空射撃章', 'battle', [20, 100, 500], (g) => `敵機を ${g} 機撃墜する`, (_r, c) => total(c, 'planesDown')),
   ...ladder('captain_ace', '撃沈王章', 'growth', [10, 50, 150], (g) => `1 人の艦長の艦で ${g} 隻撃沈する`, (_r, c) => c.captainSinks ?? 0),
   ...ladder('mentor', '名艦長章', 'growth', [10, 30, 60, 100], (g) => `艦長を Lv${g} に育てる`, (_r, c) => c.captainLevel ?? 0),
   ...ladder('s_recruiter', '完勝の将章', 'growth', [5, 15], (g) => `S 評価と昇進で艦長を ${g} 名迎える`, (_r, c) => total(c, 'captainJoin')),
@@ -137,6 +143,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `1 つの軍港のドックを ${g} 本にする`, (_r, c) => c.maxDocks ?? 0),
   { id: 'stockpile', name: '大備蓄章', description: '4 つの資源をすべて保有上限まで貯める', category: 'base', value: (_r, c) => c.fullStock ?? 0, goal: 1 },
   ...ladder('warehouse', '備蓄拡張章', 'base', [20000, 40000], (g) => `製鋼所で鋼材の保有上限を ${g.toLocaleString()} にする`, (_r, c) => c.steelCap ?? 0),
+  ...ladder('harbor_works', '築港章', 'base', [2, 4], (g) => `1 か国で軍港を ${g} つ開く (工事で開港)`, (_r, c) => c.basesOpen ?? 0),
   ...ladder('supply_depot', '補給基地章', 'base', [3, 5], (g) => `燃料タンク・弾薬庫・製鋼所・航空基地をすべて Lv${g} 以上にする`, (_r, c) => c.supplyLevel ?? 0),
   ...ladder('dockyard', '船渠章', 'base', [10, 100, 300], (g) => `損傷艦を ${g} 隻入渠させる`, (_r, c) => total(c, 'repair')),
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),

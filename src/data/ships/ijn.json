@@ -13,7 +13,8 @@
         "15_5cm_triple"
       ],
       "spriteKey": "yamato",
-      "description": "大和型戦艦1番艦。史上最大の46cm砲を搭載した戦艦。1945年4月、沖縄へ向かう途中の坊ノ岬沖で米艦載機の攻撃を受け沈没。"
+      "description": "大和型戦艦1番艦。史上最大の46cm砲を搭載した戦艦。1945年4月、沖縄へ向かう途中の坊ノ岬沖で米艦載機の攻撃を受け沈没。",
+      "year": 1941
     },
     {
       "id": "musashi",
@@ -28,7 +29,8 @@
         "15_5cm_triple"
       ],
       "spriteKey": "musashi",
-      "description": "大和型戦艦2番艦。1944年10月のレイテ沖海戦 (シブヤン海) で多数の魚雷と爆弾を受けて沈没。"
+      "description": "大和型戦艦2番艦。1944年10月のレイテ沖海戦 (シブヤン海) で多数の魚雷と爆弾を受けて沈没。",
+      "year": 1942
     },
     {
       "id": "nagato",
@@ -43,7 +45,8 @@
         "12cm_gun"
       ],
       "spriteKey": "nagato",
-      "description": "長門型戦艦1番艦。41cm砲を搭載し、長く連合艦隊旗艦を務めた。終戦まで生き残り、1946年のビキニ環礁の原爆実験で沈没。"
+      "description": "長門型戦艦1番艦。41cm砲を搭載し、長く連合艦隊旗艦を務めた。終戦まで生き残り、1946年のビキニ環礁の原爆実験で沈没。",
+      "year": 1920
     },
     {
       "id": "mutsu",
@@ -58,7 +61,8 @@
         "12cm_gun"
       ],
       "spriteKey": "mutsu",
-      "description": "長門型戦艦2番艦。1943年6月、柱島泊地で原因不明の爆発事故により沈没。"
+      "description": "長門型戦艦2番艦。1943年6月、柱島泊地で原因不明の爆発事故により沈没。",
+      "year": 1921
     },
     {
       "id": "kongo",
@@ -74,7 +78,8 @@
         "12cm_gun"
       ],
       "spriteKey": "kongo",
-      "description": "金剛型戦艦1番艦。英ヴィッカース社で建造された巡洋戦艦を改装した高速戦艦。1944年11月、米潜水艦の雷撃で沈没。"
+      "description": "金剛型戦艦1番艦。英ヴィッカース社で建造された巡洋戦艦を改装した高速戦艦。1944年11月、米潜水艦の雷撃で沈没。",
+      "year": 1913
     },
     {
       "id": "ise",
@@ -90,7 +95,8 @@
         "14cm_gun"
       ],
       "spriteKey": "ise",
-      "description": "伊勢型戦艦1番艦。ミッドウェー海戦の後、後部の砲塔2基を撤去して飛行甲板を設けた航空戦艦に改装され、1944年10月のエンガノ岬沖海戦に参加した。"
+      "description": "伊勢型戦艦1番艦。ミッドウェー海戦の後、後部の砲塔2基を撤去して飛行甲板を設けた航空戦艦に改装され、1944年10月のエンガノ岬沖海戦に参加した。",
+      "year": 1917
     },
     {
       "id": "a150",
@@ -122,7 +128,8 @@
         "torpedo_type93"
       ],
       "spriteKey": "takao",
-      "description": "高雄型重巡洋艦1番艦。大きな艦橋が特徴。レイテ沖海戦で米潜水艦の雷撃により大破し、シンガポールで終戦を迎えた。"
+      "description": "高雄型重巡洋艦1番艦。大きな艦橋が特徴。レイテ沖海戦で米潜水艦の雷撃により大破し、シンガポールで終戦を迎えた。",
+      "year": 1932
     },
     {
       "id": "atago",
@@ -138,7 +145,8 @@
         "torpedo_type93"
       ],
       "spriteKey": "atago",
-      "description": "高雄型重巡洋艦2番艦。レイテ沖海戦で栗田艦隊の旗艦を務めたが、1944年10月に米潜水艦ダーターの雷撃で沈没。"
+      "description": "高雄型重巡洋艦2番艦。レイテ沖海戦で栗田艦隊の旗艦を務めたが、1944年10月に米潜水艦ダーターの雷撃で沈没。",
+      "year": 1932
     },
     {
       "id": "tone",
@@ -154,7 +162,8 @@
         "torpedo_type93"
       ],
       "spriteKey": "tone",
-      "description": "利根型重巡洋艦1番艦。主砲を前部に集中し、後部を水上偵察機の運用に充てた。1945年7月、呉付近で空襲を受け大破着底。"
+      "description": "利根型重巡洋艦1番艦。主砲を前部に集中し、後部を水上偵察機の運用に充てた。1945年7月、呉付近で空襲を受け大破着底。",
+      "year": 1938
     },
     {
       "id": "myoko",
@@ -170,7 +179,8 @@
         "torpedo_type93"
       ],
       "spriteKey": "myoko",
-      "description": "妙高型重巡洋艦1番艦。20cm砲10門と魚雷を備え、スラバヤ沖海戦やレイテ沖海戦などで戦った。"
+      "description": "妙高型重巡洋艦1番艦。20cm砲10門と魚雷を備え、スラバヤ沖海戦やレイテ沖海戦などで戦った。",
+      "year": 1929
     },
     {
       "id": "mogami",
@@ -186,7 +196,8 @@
         "torpedo_type93"
       ],
       "spriteKey": "mogami",
-      "description": "最上型巡洋艦1番艦。15.5cm砲の軽巡洋艦として竣工し、のちに20cm砲へ換装された。1944年10月、スリガオ海峡の戦いで大破し沈没した。"
+      "description": "最上型巡洋艦1番艦。15.5cm砲の軽巡洋艦として竣工し、のちに20cm砲へ換装された。1944年10月、スリガオ海峡の戦いで大破し沈没した。",
+      "year": 1935
     },
     {
       "id": "sendai",
@@ -202,7 +213,8 @@
         "torpedo_type93"
       ],
       "spriteKey": "sendai",
-      "description": "川内型軽巡洋艦1番艦。水雷戦隊の旗艦として夜戦で活躍したが、1943年11月のブーゲンビル島沖海戦で撃沈された。"
+      "description": "川内型軽巡洋艦1番艦。水雷戦隊の旗艦として夜戦で活躍したが、1943年11月のブーゲンビル島沖海戦で撃沈された。",
+      "year": 1924
     },
     {
       "id": "fubuki",
@@ -218,7 +230,8 @@
         "depth_charge"
       ],
       "spriteKey": "fubuki",
-      "description": "特型駆逐艦 (吹雪型) 1番艦。重武装の新型駆逐艦として列強に衝撃を与えた。1942年10月、サボ島沖海戦で沈没。"
+      "description": "特型駆逐艦 (吹雪型) 1番艦。重武装の新型駆逐艦として列強に衝撃を与えた。1942年10月、サボ島沖海戦で沈没。",
+      "year": 1928
     },
     {
       "id": "shimakaze",
@@ -234,7 +247,8 @@
         "depth_charge"
       ],
       "spriteKey": "shimakaze",
-      "description": "島風型駆逐艦。40ノットを超える高速と5連装魚雷発射管3基を備えた。1944年11月、オルモック湾で空襲により沈没。"
+      "description": "島風型駆逐艦。40ノットを超える高速と5連装魚雷発射管3基を備えた。1944年11月、オルモック湾で空襲により沈没。",
+      "year": 1943
     },
     {
       "id": "yukikaze",
@@ -250,7 +264,8 @@
         "depth_charge"
       ],
       "spriteKey": "yukikaze",
-      "description": "陽炎型駆逐艦。数多くの激戦を生き抜いた「幸運艦」。戦後は中華民国に引き渡され「丹陽」となった。"
+      "description": "陽炎型駆逐艦。数多くの激戦を生き抜いた「幸運艦」。戦後は中華民国に引き渡され「丹陽」となった。",
+      "year": 1940
     },
     {
       "id": "etorofu",
@@ -266,7 +281,8 @@
         "depth_charge"
       ],
       "spriteKey": "etorofu",
-      "description": "択捉型海防艦1番艦。船団護衛のために爆雷を多く積んだ小型の護衛艦で、終戦まで生き残った。"
+      "description": "択捉型海防艦1番艦。船団護衛のために爆雷を多く積んだ小型の護衛艦で、終戦まで生き残った。",
+      "year": 1943
     },
     {
       "id": "shokaku",
@@ -285,7 +301,8 @@
         "diveBombers": 4,
         "torpedoBombers": 4
       },
-      "description": "翔鶴型航空母艦1番艦。真珠湾攻撃に参加した主力空母。1944年6月、マリアナ沖海戦で米潜水艦の雷撃により沈没。"
+      "description": "翔鶴型航空母艦1番艦。真珠湾攻撃に参加した主力空母。1944年6月、マリアナ沖海戦で米潜水艦の雷撃により沈没。",
+      "year": 1941
     },
     {
       "id": "akagi",
@@ -304,7 +321,8 @@
         "diveBombers": 5,
         "torpedoBombers": 4
       },
-      "description": "巡洋戦艦から改造された航空母艦。真珠湾攻撃では機動部隊の旗艦を務めた。1942年6月、ミッドウェー海戦で沈没。"
+      "description": "巡洋戦艦から改造された航空母艦。真珠湾攻撃では機動部隊の旗艦を務めた。1942年6月、ミッドウェー海戦で沈没。",
+      "year": 1927
     },
     {
       "id": "kaga",
@@ -323,7 +341,8 @@
         "diveBombers": 5,
         "torpedoBombers": 5
       },
-      "description": "戦艦から改造された航空母艦。多くの艦載機を搭載できた。1942年6月、ミッドウェー海戦で沈没。"
+      "description": "戦艦から改造された航空母艦。多くの艦載機を搭載できた。1942年6月、ミッドウェー海戦で沈没。",
+      "year": 1928
     },
     {
       "id": "zuikaku",
@@ -342,7 +361,8 @@
         "diveBombers": 4,
         "torpedoBombers": 4
       },
-      "description": "翔鶴型航空母艦2番艦。真珠湾攻撃から多くの海戦に参加した歴戦の空母。1944年10月、エンガノ岬沖海戦で沈没した。"
+      "description": "翔鶴型航空母艦2番艦。真珠湾攻撃から多くの海戦に参加した歴戦の空母。1944年10月、エンガノ岬沖海戦で沈没した。",
+      "year": 1941
     },
     {
       "id": "taiho",
@@ -361,7 +381,8 @@
         "diveBombers": 5,
         "torpedoBombers": 3
       },
-      "description": "装甲飛行甲板を持つ航空母艦。1944年6月のマリアナ沖海戦で米潜水艦アルバコアの魚雷を受け、漏れた燃料の気化ガスが爆発して沈没した。"
+      "description": "装甲飛行甲板を持つ航空母艦。1944年6月のマリアナ沖海戦で米潜水艦アルバコアの魚雷を受け、漏れた燃料の気化ガスが爆発して沈没した。",
+      "year": 1944
     },
     {
       "id": "ryujo",
@@ -381,7 +402,8 @@
         "diveBombers": 2,
         "torpedoBombers": 2
       },
-      "description": "小型の航空母艦。1942年8月の第二次ソロモン海戦で米空母機の攻撃を受けて沈没した。"
+      "description": "小型の航空母艦。1942年8月の第二次ソロモン海戦で米空母機の攻撃を受けて沈没した。",
+      "year": 1933
     },
     {
       "id": "i19",
@@ -395,7 +417,8 @@
         "type95_torpedo"
       ],
       "spriteKey": "i19",
-      "description": "乙型潜水艦。1942年9月、一度の雷撃で空母ワスプを撃沈し、戦艦ノースカロライナにも損傷を与えた。"
+      "description": "乙型潜水艦。1942年9月、一度の雷撃で空母ワスプを撃沈し、戦艦ノースカロライナにも損傷を与えた。",
+      "year": 1941
     },
     {
       "id": "i400",
@@ -409,7 +432,3282 @@
         "type95_torpedo"
       ],
       "spriteKey": "i400",
-      "description": "伊四百型潜水艦。攻撃機「晴嵐」3機を搭載できる当時最大の潜水艦。終戦後に米軍に接収された。"
+      "description": "伊四百型潜水艦。攻撃機「晴嵐」3機を搭載できる当時最大の潜水艦。終戦後に米軍に接収された。",
+      "year": 1944
+    },
+    {
+      "id": "fuso",
+      "name": "扶桑 (Fuso)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 640,
+      "armor": 50,
+      "speed": 115,
+      "weapons": [
+        "36cm_main_gun",
+        "15_5cm_triple"
+      ],
+      "spriteKey": "fuso",
+      "description": "扶桑型戦艦1番艦。日本で初めて設計された超弩級戦艦。1944年10月、スリガオ海峡で沈没した。",
+      "year": 1915
+    },
+    {
+      "id": "soryu",
+      "name": "蒼龍 (Soryu)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 480,
+      "armor": 25,
+      "speed": 170,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "soryu",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "description": "中型の航空母艦。真珠湾攻撃に参加し、1942年6月のミッドウェー海戦で沈没した。",
+      "year": 1937
+    },
+    {
+      "id": "hiryu",
+      "name": "飛龍 (Hiryu)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 485,
+      "armor": 26,
+      "speed": 170,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "hiryu",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "description": "蒼龍を改良した中型空母。ミッドウェー海戦で最後まで反撃を続けたが、被弾して沈没した。",
+      "year": 1939
+    },
+    {
+      "id": "unryu",
+      "name": "雲龍 (Unryu)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 490,
+      "armor": 27,
+      "speed": 165,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "unryu",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "description": "飛龍の設計をもとに量産を目指した雲龍型航空母艦の1番艦。1944年12月、米潜水艦の雷撃で沈没した。",
+      "year": 1944
+    },
+    {
+      "id": "shinano",
+      "name": "信濃 (Shinano)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 570,
+      "armor": 50,
+      "speed": 135,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "shinano",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "description": "大和型戦艦3番艦を空母に改めた艦。完成直後の1944年11月、回航中に米潜水艦の雷撃で沈没した。",
+      "year": 1944
+    },
+    {
+      "id": "junyo",
+      "name": "隼鷹 (Junyo)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 470,
+      "armor": 20,
+      "speed": 125,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "junyo",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "description": "大型客船として建造中に空母へ改装された隼鷹型の1番艦。終戦まで生き残った。",
+      "year": 1942
+    },
+    {
+      "id": "zuiho",
+      "name": "瑞鳳 (Zuiho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 458,
+      "armor": 18,
+      "speed": 165,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "zuiho",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "description": "潜水母艦として計画され、建造中に軽空母へ改められた。1944年10月、エンガノ岬沖海戦で沈没した。",
+      "year": 1940
+    },
+    {
+      "id": "hosho",
+      "name": "鳳翔 (Hosho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 145,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "hosho",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "最初から空母として設計・完成した世界初期の航空母艦。終戦まで生き残った。",
+      "year": 1922
+    },
+    {
+      "id": "chitose",
+      "name": "千歳 (Chitose)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 460,
+      "armor": 18,
+      "speed": 170,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "chitose",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "description": "水上機母艦から軽空母に改装された千歳型の1番艦。1944年10月、エンガノ岬沖海戦で沈没した。",
+      "year": 1944
+    },
+    {
+      "id": "furutaka",
+      "name": "古鷹 (Furutaka)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 365,
+      "armor": 30,
+      "speed": 175,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "furutaka",
+      "description": "古鷹型重巡洋艦1番艦。小さな船体に重武装を収めた。1942年10月、サボ島沖海戦で沈没した。",
+      "year": 1926
+    },
+    {
+      "id": "aoba",
+      "name": "青葉 (Aoba)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 370,
+      "armor": 32,
+      "speed": 175,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "aoba",
+      "description": "古鷹型を改良した青葉型重巡洋艦の1番艦。数々の海戦を生き抜き、呉で終戦を迎えた。",
+      "year": 1927
+    },
+    {
+      "id": "tenryu",
+      "name": "天龍 (Tenryu)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 300,
+      "armor": 20,
+      "speed": 180,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "tenryu",
+      "description": "日本で最初の近代的な軽巡洋艦。駆逐艦隊の旗艦として造られた。1942年12月、米潜水艦の雷撃で沈没した。",
+      "year": 1919
+    },
+    {
+      "id": "kuma",
+      "name": "球磨 (Kuma)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 325,
+      "armor": 25,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "kuma",
+      "description": "5,500トン級軽巡洋艦の最初の型、球磨型の1番艦。1944年1月、英潜水艦の雷撃で沈没した。",
+      "year": 1920
+    },
+    {
+      "id": "nagara",
+      "name": "長良 (Nagara)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "nagara",
+      "description": "球磨型を改良した長良型軽巡洋艦の1番艦。水雷戦隊の旗艦を務めた。",
+      "year": 1922
+    },
+    {
+      "id": "yubari",
+      "name": "夕張 (Yubari)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 310,
+      "armor": 24,
+      "speed": 180,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "yubari",
+      "description": "小さな船体に 5,500 トン級並みの武装を積んだ実験的な軽巡洋艦。1944年4月に沈没した。",
+      "year": 1923
+    },
+    {
+      "id": "agano",
+      "name": "阿賀野 (Agano)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 30,
+      "speed": 190,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "agano",
+      "description": "水雷戦隊の新しい旗艦として造られた阿賀野型軽巡洋艦の1番艦。1944年2月、米潜水艦の雷撃で沈没した。",
+      "year": 1942
+    },
+    {
+      "id": "oyodo",
+      "name": "大淀 (Oyodo)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 32,
+      "speed": 180,
+      "weapons": [
+        "15_5cm_triple",
+        "12cm_gun"
+      ],
+      "spriteKey": "oyodo",
+      "description": "潜水艦隊の旗艦として計画された軽巡洋艦。のちに連合艦隊の旗艦も務めた。",
+      "year": 1943
+    },
+    {
+      "id": "mutsuki",
+      "name": "睦月 (Mutsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "description": "睦月型駆逐艦1番艦。61cm魚雷を初めて積んだ駆逐艦。1942年8月、米軍機の攻撃で沈没した。",
+      "year": 1926
+    },
+    {
+      "id": "akatsuki",
+      "name": "暁 (Akatsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akatsuki",
+      "description": "特型駆逐艦の最後の型、暁型の1番艦。1942年11月、第三次ソロモン海戦で沈没した。",
+      "year": 1932
+    },
+    {
+      "id": "hatsuharu",
+      "name": "初春 (Hatsuharu)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "hatsuharu",
+      "description": "小さな船体に特型並みの武装を求めた初春型駆逐艦の1番艦。",
+      "year": 1933
+    },
+    {
+      "id": "shiratsuyu",
+      "name": "白露 (Shiratsuyu)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "description": "初春型を改良した白露型駆逐艦の1番艦。4連装の魚雷発射管を初めて積んだ。",
+      "year": 1936
+    },
+    {
+      "id": "asashio",
+      "name": "朝潮 (Asashio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "description": "条約の制限を離れて造られた朝潮型駆逐艦の1番艦。のちの甲型駆逐艦の原型となった。",
+      "year": 1937
+    },
+    {
+      "id": "yugumo",
+      "name": "夕雲 (Yugumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "description": "陽炎型を改良した夕雲型駆逐艦の1番艦。甲型駆逐艦の最終型。",
+      "year": 1941
+    },
+    {
+      "id": "akizuki",
+      "name": "秋月 (Akizuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "description": "空母の護衛のために造られた防空駆逐艦、秋月型の1番艦。長砲身10cm高角砲を積んだ。",
+      "year": 1942
+    },
+    {
+      "id": "matsu",
+      "name": "松 (Matsu)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "description": "戦時の量産を目指して簡略化した丁型駆逐艦、松型の1番艦。",
+      "year": 1944
+    },
+    {
+      "id": "i168",
+      "name": "伊168 (I-168)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 160,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i168",
+      "description": "海大型潜水艦。1942年6月、ミッドウェー海戦で損傷した空母ヨークタウンを撃沈した。",
+      "year": 1934
+    },
+    {
+      "id": "hiei",
+      "name": "比叡 (Hiei)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 610,
+      "armor": 45,
+      "speed": 170,
+      "weapons": [
+        "36cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "kongo",
+      "year": 1913,
+      "description": "金剛型戦艦の同型艦。性能は金剛と同じ。",
+      "sisterOf": "kongo"
+    },
+    {
+      "id": "haruna",
+      "name": "榛名 (Haruna)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 610,
+      "armor": 45,
+      "speed": 170,
+      "weapons": [
+        "36cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "kongo",
+      "year": 1913,
+      "description": "金剛型戦艦の同型艦。性能は金剛と同じ。",
+      "sisterOf": "kongo"
+    },
+    {
+      "id": "kirishima",
+      "name": "霧島 (Kirishima)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 610,
+      "armor": 45,
+      "speed": 170,
+      "weapons": [
+        "36cm_main_gun",
+        "12cm_gun"
+      ],
+      "spriteKey": "kongo",
+      "year": 1913,
+      "description": "金剛型戦艦の同型艦。性能は金剛と同じ。",
+      "sisterOf": "kongo"
+    },
+    {
+      "id": "yamashiro",
+      "name": "山城 (Yamashiro)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 640,
+      "armor": 50,
+      "speed": 115,
+      "weapons": [
+        "36cm_main_gun",
+        "15_5cm_triple"
+      ],
+      "spriteKey": "fuso",
+      "year": 1915,
+      "description": "扶桑型戦艦の同型艦。性能は扶桑と同じ。",
+      "sisterOf": "fuso"
+    },
+    {
+      "id": "hyuga",
+      "name": "日向 (Hyuga)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "AviationBattleship",
+      "hp": 650,
+      "armor": 52,
+      "speed": 130,
+      "weapons": [
+        "36cm_main_gun",
+        "14cm_gun"
+      ],
+      "spriteKey": "ise",
+      "year": 1917,
+      "description": "伊勢型戦艦の同型艦。性能は伊勢と同じ。",
+      "sisterOf": "ise"
+    },
+    {
+      "id": "amagi",
+      "name": "天城 (Amagi)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 490,
+      "armor": 27,
+      "speed": 165,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "unryu",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "year": 1944,
+      "description": "雲龍型航空母艦の同型艦。性能は雲龍と同じ。",
+      "sisterOf": "unryu"
+    },
+    {
+      "id": "katsuragi",
+      "name": "葛城 (Katsuragi)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 490,
+      "armor": 27,
+      "speed": 165,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "unryu",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "year": 1944,
+      "description": "雲龍型航空母艦の同型艦。性能は雲龍と同じ。",
+      "sisterOf": "unryu"
+    },
+    {
+      "id": "hiyo",
+      "name": "飛鷹 (Hiyo)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "hp": 470,
+      "armor": 20,
+      "speed": 125,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "junyo",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 3,
+        "torpedoBombers": 3
+      },
+      "year": 1942,
+      "description": "隼鷹型航空母艦の同型艦。性能は隼鷹と同じ。",
+      "sisterOf": "junyo"
+    },
+    {
+      "id": "shoho",
+      "name": "祥鳳 (Shoho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 458,
+      "armor": 18,
+      "speed": 165,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "zuiho",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1940,
+      "description": "祥鳳型航空母艦の同型艦。性能は瑞鳳と同じ。",
+      "sisterOf": "zuiho"
+    },
+    {
+      "id": "chiyoda",
+      "name": "千代田 (Chiyoda)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 460,
+      "armor": 18,
+      "speed": 170,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "chitose",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1944,
+      "description": "千歳型航空母艦の同型艦。性能は千歳と同じ。",
+      "sisterOf": "chitose"
+    },
+    {
+      "id": "maya",
+      "name": "摩耶 (Maya)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 40,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "takao",
+      "year": 1932,
+      "description": "高雄型重巡洋艦の同型艦。性能は高雄と同じ。",
+      "sisterOf": "takao"
+    },
+    {
+      "id": "chokai",
+      "name": "鳥海 (Chokai)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 40,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "takao",
+      "year": 1932,
+      "description": "高雄型重巡洋艦の同型艦。性能は高雄と同じ。",
+      "sisterOf": "takao"
+    },
+    {
+      "id": "nachi",
+      "name": "那智 (Nachi)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 39,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "myoko",
+      "year": 1929,
+      "description": "妙高型重巡洋艦の同型艦。性能は妙高と同じ。",
+      "sisterOf": "myoko"
+    },
+    {
+      "id": "ashigara",
+      "name": "足柄 (Ashigara)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 39,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "myoko",
+      "year": 1929,
+      "description": "妙高型重巡洋艦の同型艦。性能は妙高と同じ。",
+      "sisterOf": "myoko"
+    },
+    {
+      "id": "haguro",
+      "name": "羽黒 (Haguro)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 395,
+      "armor": 39,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "myoko",
+      "year": 1929,
+      "description": "妙高型重巡洋艦の同型艦。性能は妙高と同じ。",
+      "sisterOf": "myoko"
+    },
+    {
+      "id": "mikuma",
+      "name": "三隈 (Mikuma)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 37,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "mogami",
+      "year": 1935,
+      "description": "最上型重巡洋艦の同型艦。性能は最上と同じ。",
+      "sisterOf": "mogami"
+    },
+    {
+      "id": "suzuya",
+      "name": "鈴谷 (Suzuya)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 37,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "mogami",
+      "year": 1935,
+      "description": "最上型重巡洋艦の同型艦。性能は最上と同じ。",
+      "sisterOf": "mogami"
+    },
+    {
+      "id": "kumano",
+      "name": "熊野 (Kumano)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 37,
+      "speed": 180,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "mogami",
+      "year": 1935,
+      "description": "最上型重巡洋艦の同型艦。性能は最上と同じ。",
+      "sisterOf": "mogami"
+    },
+    {
+      "id": "chikuma",
+      "name": "筑摩 (Chikuma)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "tone",
+      "year": 1938,
+      "description": "利根型重巡洋艦の同型艦。性能は利根と同じ。",
+      "sisterOf": "tone"
+    },
+    {
+      "id": "kako",
+      "name": "加古 (Kako)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 365,
+      "armor": 30,
+      "speed": 175,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "furutaka",
+      "year": 1926,
+      "description": "古鷹型重巡洋艦の同型艦。性能は古鷹と同じ。",
+      "sisterOf": "furutaka"
+    },
+    {
+      "id": "kinugasa",
+      "name": "衣笠 (Kinugasa)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 370,
+      "armor": 32,
+      "speed": 175,
+      "weapons": [
+        "20cm_twin_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "aoba",
+      "year": 1927,
+      "description": "青葉型重巡洋艦の同型艦。性能は青葉と同じ。",
+      "sisterOf": "aoba"
+    },
+    {
+      "id": "tatsuta",
+      "name": "龍田 (Tatsuta)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 300,
+      "armor": 20,
+      "speed": 180,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "tenryu",
+      "year": 1919,
+      "description": "天龍型軽巡洋艦の同型艦。性能は天龍と同じ。",
+      "sisterOf": "tenryu"
+    },
+    {
+      "id": "tama",
+      "name": "多摩 (Tama)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 325,
+      "armor": 25,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "kuma",
+      "year": 1920,
+      "description": "球磨型軽巡洋艦の同型艦。性能は球磨と同じ。",
+      "sisterOf": "kuma"
+    },
+    {
+      "id": "kitakami",
+      "name": "北上 (Kitakami)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 325,
+      "armor": 25,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "kuma",
+      "year": 1920,
+      "description": "球磨型軽巡洋艦の同型艦。性能は球磨と同じ。",
+      "sisterOf": "kuma"
+    },
+    {
+      "id": "oi",
+      "name": "大井 (Oi)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 325,
+      "armor": 25,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "kuma",
+      "year": 1920,
+      "description": "球磨型軽巡洋艦の同型艦。性能は球磨と同じ。",
+      "sisterOf": "kuma"
+    },
+    {
+      "id": "kiso",
+      "name": "木曾 (Kiso)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 325,
+      "armor": 25,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "kuma",
+      "year": 1920,
+      "description": "球磨型軽巡洋艦の同型艦。性能は球磨と同じ。",
+      "sisterOf": "kuma"
+    },
+    {
+      "id": "isuzu",
+      "name": "五十鈴 (Isuzu)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "nagara",
+      "year": 1922,
+      "description": "長良型軽巡洋艦の同型艦。性能は長良と同じ。",
+      "sisterOf": "nagara"
+    },
+    {
+      "id": "natori",
+      "name": "名取 (Natori)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "nagara",
+      "year": 1922,
+      "description": "長良型軽巡洋艦の同型艦。性能は長良と同じ。",
+      "sisterOf": "nagara"
+    },
+    {
+      "id": "yura",
+      "name": "由良 (Yura)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "nagara",
+      "year": 1922,
+      "description": "長良型軽巡洋艦の同型艦。性能は長良と同じ。",
+      "sisterOf": "nagara"
+    },
+    {
+      "id": "kinu",
+      "name": "鬼怒 (Kinu)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "nagara",
+      "year": 1922,
+      "description": "長良型軽巡洋艦の同型艦。性能は長良と同じ。",
+      "sisterOf": "nagara"
+    },
+    {
+      "id": "abukuma",
+      "name": "阿武隈 (Abukuma)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 330,
+      "armor": 26,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "nagara",
+      "year": 1922,
+      "description": "長良型軽巡洋艦の同型艦。性能は長良と同じ。",
+      "sisterOf": "nagara"
+    },
+    {
+      "id": "jintsu",
+      "name": "神通 (Jintsu)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 30,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "sendai",
+      "year": 1924,
+      "description": "川内型軽巡洋艦の同型艦。性能は川内と同じ。",
+      "sisterOf": "sendai"
+    },
+    {
+      "id": "naka",
+      "name": "那珂 (Naka)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 30,
+      "speed": 185,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "sendai",
+      "year": 1924,
+      "description": "川内型軽巡洋艦の同型艦。性能は川内と同じ。",
+      "sisterOf": "sendai"
+    },
+    {
+      "id": "noshiro",
+      "name": "能代 (Noshiro)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 30,
+      "speed": 190,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "agano",
+      "year": 1942,
+      "description": "阿賀野型軽巡洋艦の同型艦。性能は阿賀野と同じ。",
+      "sisterOf": "agano"
+    },
+    {
+      "id": "yahagi",
+      "name": "矢矧 (Yahagi)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 30,
+      "speed": 190,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "agano",
+      "year": 1942,
+      "description": "阿賀野型軽巡洋艦の同型艦。性能は阿賀野と同じ。",
+      "sisterOf": "agano"
+    },
+    {
+      "id": "sakawa",
+      "name": "酒匂 (Sakawa)",
+      "nation": "IJN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 30,
+      "speed": 190,
+      "weapons": [
+        "14cm_gun",
+        "torpedo_type93"
+      ],
+      "spriteKey": "agano",
+      "year": 1942,
+      "description": "阿賀野型軽巡洋艦の同型艦。性能は阿賀野と同じ。",
+      "sisterOf": "agano"
+    },
+    {
+      "id": "kisaragi",
+      "name": "如月 (Kisaragi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "yayoi",
+      "name": "弥生 (Yayoi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "uzuki",
+      "name": "卯月 (Uzuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "satsuki",
+      "name": "皐月 (Satsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "minazuki",
+      "name": "水無月 (Minazuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "fumizuki",
+      "name": "文月 (Fumizuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "nagatsuki",
+      "name": "長月 (Nagatsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "kikuzuki",
+      "name": "菊月 (Kikuzuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "mikazuki",
+      "name": "三日月 (Mikazuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "mochizuki",
+      "name": "望月 (Mochizuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "yuzuki",
+      "name": "夕月 (Yuzuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 195,
+      "armor": 12,
+      "speed": 230,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "mutsuki",
+      "year": 1926,
+      "description": "睦月型駆逐艦の同型艦。性能は睦月と同じ。",
+      "sisterOf": "mutsuki"
+    },
+    {
+      "id": "shirayuki",
+      "name": "白雪 (Shirayuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "hatsuyuki",
+      "name": "初雪 (Hatsuyuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "miyuki",
+      "name": "深雪 (Miyuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "murakumo",
+      "name": "叢雲 (Murakumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "shinonome",
+      "name": "東雲 (Shinonome)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "usugumo",
+      "name": "薄雲 (Usugumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "shirakumo",
+      "name": "白雲 (Shirakumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "isonami",
+      "name": "磯波 (Isonami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "uranami",
+      "name": "浦波 (Uranami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "ayanami",
+      "name": "綾波 (Ayanami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "shikinami",
+      "name": "敷波 (Shikinami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "asagiri",
+      "name": "朝霧 (Asagiri)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "yugiri",
+      "name": "夕霧 (Yugiri)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "amagiri",
+      "name": "天霧 (Amagiri)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "sagiri",
+      "name": "狭霧 (Sagiri)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "oboro",
+      "name": "朧 (Oboro)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "akebono",
+      "name": "曙 (Akebono)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "sazanami",
+      "name": "漣 (Sazanami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "ushio",
+      "name": "潮 (Ushio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "fubuki",
+      "year": 1928,
+      "description": "吹雪型駆逐艦の同型艦。性能は吹雪と同じ。",
+      "sisterOf": "fubuki"
+    },
+    {
+      "id": "hibiki",
+      "name": "響 (Hibiki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akatsuki",
+      "year": 1932,
+      "description": "暁型駆逐艦の同型艦。性能は暁と同じ。",
+      "sisterOf": "akatsuki"
+    },
+    {
+      "id": "ikazuchi",
+      "name": "雷 (Ikazuchi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akatsuki",
+      "year": 1932,
+      "description": "暁型駆逐艦の同型艦。性能は暁と同じ。",
+      "sisterOf": "akatsuki"
+    },
+    {
+      "id": "inazuma",
+      "name": "電 (Inazuma)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akatsuki",
+      "year": 1932,
+      "description": "暁型駆逐艦の同型艦。性能は暁と同じ。",
+      "sisterOf": "akatsuki"
+    },
+    {
+      "id": "nenohi",
+      "name": "子日 (Nenohi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "hatsuharu",
+      "year": 1933,
+      "description": "初春型駆逐艦の同型艦。性能は初春と同じ。",
+      "sisterOf": "hatsuharu"
+    },
+    {
+      "id": "wakaba",
+      "name": "若葉 (Wakaba)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "hatsuharu",
+      "year": 1933,
+      "description": "初春型駆逐艦の同型艦。性能は初春と同じ。",
+      "sisterOf": "hatsuharu"
+    },
+    {
+      "id": "hatsushimo",
+      "name": "初霜 (Hatsushimo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "hatsuharu",
+      "year": 1933,
+      "description": "初春型駆逐艦の同型艦。性能は初春と同じ。",
+      "sisterOf": "hatsuharu"
+    },
+    {
+      "id": "ariake",
+      "name": "有明 (Ariake)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "hatsuharu",
+      "year": 1933,
+      "description": "初春型駆逐艦の同型艦。性能は初春と同じ。",
+      "sisterOf": "hatsuharu"
+    },
+    {
+      "id": "yugure",
+      "name": "夕暮 (Yugure)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "hatsuharu",
+      "year": 1933,
+      "description": "初春型駆逐艦の同型艦。性能は初春と同じ。",
+      "sisterOf": "hatsuharu"
+    },
+    {
+      "id": "shigure",
+      "name": "時雨 (Shigure)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "murasame",
+      "name": "村雨 (Murasame)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "yudachi",
+      "name": "夕立 (Yudachi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "harusame",
+      "name": "春雨 (Harusame)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "samidare",
+      "name": "五月雨 (Samidare)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "umikaze",
+      "name": "海風 (Umikaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "yamakaze",
+      "name": "山風 (Yamakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "kawakaze",
+      "name": "江風 (Kawakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "suzukaze",
+      "name": "涼風 (Suzukaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "shiratsuyu",
+      "year": 1936,
+      "description": "白露型駆逐艦の同型艦。性能は白露と同じ。",
+      "sisterOf": "shiratsuyu"
+    },
+    {
+      "id": "oshio",
+      "name": "大潮 (Oshio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "michishio",
+      "name": "満潮 (Michishio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "arashio",
+      "name": "荒潮 (Arashio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "asagumo",
+      "name": "朝雲 (Asagumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "yamagumo",
+      "name": "山雲 (Yamagumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "minegumo",
+      "name": "峯雲 (Minegumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "natsugumo",
+      "name": "夏雲 (Natsugumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "arare",
+      "name": "霰 (Arare)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "kasumi",
+      "name": "霞 (Kasumi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "asashio",
+      "year": 1937,
+      "description": "朝潮型駆逐艦の同型艦。性能は朝潮と同じ。",
+      "sisterOf": "asashio"
+    },
+    {
+      "id": "kagero",
+      "name": "陽炎 (Kagero)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "shiranui",
+      "name": "不知火 (Shiranui)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "kuroshio",
+      "name": "黒潮 (Kuroshio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "oyashio",
+      "name": "親潮 (Oyashio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "hayashio",
+      "name": "早潮 (Hayashio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "natsushio",
+      "name": "夏潮 (Natsushio)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "hatsukaze",
+      "name": "初風 (Hatsukaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "amatsukaze",
+      "name": "天津風 (Amatsukaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "tokitsukaze",
+      "name": "時津風 (Tokitsukaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "urakaze",
+      "name": "浦風 (Urakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "isokaze",
+      "name": "磯風 (Isokaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "hamakaze",
+      "name": "浜風 (Hamakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "tanikaze",
+      "name": "谷風 (Tanikaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "nowaki",
+      "name": "野分 (Nowaki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "arashi",
+      "name": "嵐 (Arashi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "hagikaze",
+      "name": "萩風 (Hagikaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "maikaze",
+      "name": "舞風 (Maikaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "akigumo",
+      "name": "秋雲 (Akigumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 15,
+      "speed": 240,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yukikaze",
+      "year": 1940,
+      "description": "陽炎型駆逐艦の同型艦。性能は雪風と同じ。",
+      "sisterOf": "yukikaze"
+    },
+    {
+      "id": "makigumo",
+      "name": "巻雲 (Makigumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "kazagumo",
+      "name": "風雲 (Kazagumo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "naganami",
+      "name": "長波 (Naganami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "takanami",
+      "name": "高波 (Takanami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "onami",
+      "name": "大波 (Onami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "kiyonami",
+      "name": "清波 (Kiyonami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "tamanami",
+      "name": "玉波 (Tamanami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "suzunami",
+      "name": "涼波 (Suzunami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "fujinami",
+      "name": "藤波 (Fujinami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "hayanami",
+      "name": "早波 (Hayanami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "hamanami",
+      "name": "浜波 (Hamanami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "okinami",
+      "name": "沖波 (Okinami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "kishinami",
+      "name": "岸波 (Kishinami)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "asashimo",
+      "name": "朝霜 (Asashimo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "hayashimo",
+      "name": "早霜 (Hayashimo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "akishimo",
+      "name": "秋霜 (Akishimo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "kiyoshimo",
+      "name": "清霜 (Kiyoshimo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 218,
+      "armor": 15,
+      "speed": 245,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "yugumo",
+      "year": 1941,
+      "description": "夕雲型駆逐艦の同型艦。性能は夕雲と同じ。",
+      "sisterOf": "yugumo"
+    },
+    {
+      "id": "teruzuki",
+      "name": "照月 (Teruzuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "suzutsuki",
+      "name": "涼月 (Suzutsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "hatsuzuki",
+      "name": "初月 (Hatsuzuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "niizuki",
+      "name": "新月 (Niizuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "wakatsuki",
+      "name": "若月 (Wakatsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "shimotsuki",
+      "name": "霜月 (Shimotsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "fuyutsuki",
+      "name": "冬月 (Fuyutsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "harutsuki",
+      "name": "春月 (Harutsuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "yoizuki",
+      "name": "宵月 (Yoizuki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 16,
+      "speed": 230,
+      "weapons": [
+        "10cm_type98",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "akizuki",
+      "year": 1942,
+      "description": "秋月型駆逐艦の同型艦。性能は秋月と同じ。",
+      "sisterOf": "akizuki"
+    },
+    {
+      "id": "take",
+      "name": "竹 (Take)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "year": 1944,
+      "description": "松型駆逐艦の同型艦。性能は松と同じ。",
+      "sisterOf": "matsu"
+    },
+    {
+      "id": "ume",
+      "name": "梅 (Ume)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "year": 1944,
+      "description": "松型駆逐艦の同型艦。性能は松と同じ。",
+      "sisterOf": "matsu"
+    },
+    {
+      "id": "momo",
+      "name": "桃 (Momo)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "year": 1944,
+      "description": "松型駆逐艦の同型艦。性能は松と同じ。",
+      "sisterOf": "matsu"
+    },
+    {
+      "id": "kiri",
+      "name": "桐 (Kiri)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "year": 1944,
+      "description": "松型駆逐艦の同型艦。性能は松と同じ。",
+      "sisterOf": "matsu"
+    },
+    {
+      "id": "sugi",
+      "name": "杉 (Sugi)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "year": 1944,
+      "description": "松型駆逐艦の同型艦。性能は松と同じ。",
+      "sisterOf": "matsu"
+    },
+    {
+      "id": "kaya",
+      "name": "榧 (Kaya)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 200,
+      "armor": 12,
+      "speed": 205,
+      "weapons": [
+        "12cm_kaibokan",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "matsu",
+      "year": 1944,
+      "description": "松型駆逐艦の同型艦。性能は松と同じ。",
+      "sisterOf": "matsu"
+    },
+    {
+      "id": "matsuwa",
+      "name": "松輪 (Matsuwa)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "year": 1943,
+      "description": "択捉型海防艦の同型艦。性能は択捉と同じ。",
+      "sisterOf": "etorofu"
+    },
+    {
+      "id": "sado",
+      "name": "佐渡 (Sado)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "year": 1943,
+      "description": "択捉型海防艦の同型艦。性能は択捉と同じ。",
+      "sisterOf": "etorofu"
+    },
+    {
+      "id": "oki",
+      "name": "隠岐 (Oki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "year": 1943,
+      "description": "択捉型海防艦の同型艦。性能は択捉と同じ。",
+      "sisterOf": "etorofu"
+    },
+    {
+      "id": "mutsure",
+      "name": "六連 (Mutsure)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "year": 1943,
+      "description": "択捉型海防艦の同型艦。性能は択捉と同じ。",
+      "sisterOf": "etorofu"
+    },
+    {
+      "id": "iki",
+      "name": "壱岐 (Iki)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "year": 1943,
+      "description": "択捉型海防艦の同型艦。性能は択捉と同じ。",
+      "sisterOf": "etorofu"
+    },
+    {
+      "id": "tsushima",
+      "name": "対馬 (Tsushima)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 200,
+      "armor": 12,
+      "speed": 195,
+      "weapons": [
+        "12cm_kaibokan",
+        "depth_charge"
+      ],
+      "spriteKey": "etorofu",
+      "year": 1943,
+      "description": "択捉型海防艦の同型艦。性能は択捉と同じ。",
+      "sisterOf": "etorofu"
+    },
+    {
+      "id": "i15",
+      "name": "伊15 (I-15)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19",
+      "year": 1941,
+      "description": "乙型潜水艦の同型艦。性能は伊19と同じ。",
+      "sisterOf": "i19"
+    },
+    {
+      "id": "i17",
+      "name": "伊17 (I-17)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19",
+      "year": 1941,
+      "description": "乙型潜水艦の同型艦。性能は伊19と同じ。",
+      "sisterOf": "i19"
+    },
+    {
+      "id": "i21",
+      "name": "伊21 (I-21)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19",
+      "year": 1941,
+      "description": "乙型潜水艦の同型艦。性能は伊19と同じ。",
+      "sisterOf": "i19"
+    },
+    {
+      "id": "i25",
+      "name": "伊25 (I-25)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19",
+      "year": 1941,
+      "description": "乙型潜水艦の同型艦。性能は伊19と同じ。",
+      "sisterOf": "i19"
+    },
+    {
+      "id": "i26",
+      "name": "伊26 (I-26)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 155,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i19",
+      "year": 1941,
+      "description": "乙型潜水艦の同型艦。性能は伊19と同じ。",
+      "sisterOf": "i19"
+    },
+    {
+      "id": "i169",
+      "name": "伊169 (I-169)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 160,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i168",
+      "year": 1934,
+      "description": "海大型潜水艦の同型艦。性能は伊168と同じ。",
+      "sisterOf": "i168"
+    },
+    {
+      "id": "i171",
+      "name": "伊171 (I-171)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 160,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i168",
+      "year": 1934,
+      "description": "海大型潜水艦の同型艦。性能は伊168と同じ。",
+      "sisterOf": "i168"
+    },
+    {
+      "id": "i401",
+      "name": "伊401 (I-401)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "hp": 175,
+      "armor": 7,
+      "speed": 140,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "i400",
+      "year": 1944,
+      "description": "伊400型潜水艦の同型艦。性能は伊400と同じ。",
+      "sisterOf": "i400"
     }
   ]
 }

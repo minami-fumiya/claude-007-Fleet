@@ -14,12 +14,21 @@ import { theaterProgress } from '@/systems/CampaignSystem';
 import { levelForXp } from '@/systems/CaptainSystem';
 import { rankOf } from '@/systems/RankSystem';
 import { holdCap } from '@/systems/FacilitySystem';
+import { openBaseCount } from '@/systems/BaseSystem';
 import { atHoldCap } from '@/systems/ResourceSystem';
 import { awardMedals, IMedalContext, newMedals } from '@/systems/RecordSystem';
 import type { ISave } from './ProgressStore';
 
 const CAMPAIGN = campaignData as ICampaignData;
 /** Carrier ids of every navy, for the 機動部隊編成章 (#204) */
+/** Each class with sister ships (#85), per nation: lead id → every ship id of the class. */
+const CLASSES: Record<string, string[][]> = {};
+for (const d of [ijn, usn, km, rn, fr, su, rm]) {
+  const ships = d.ships as IShipData[];
+  for (const lead of ships.filter((s) => !s.sisterOf && ships.some((x) => x.sisterOf === s.id))) {
+    (CLASSES[lead.nation] ??= []).push([lead.id, ...ships.filter((x) => x.sisterOf === lead.id).map((x) => x.id)]);
+  }
+}
 const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships as IShipData[]).filter((s) => s.shipClass === ShipClass.Carrier).map((s) => s.id)));
 
 /**
@@ -31,7 +40,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, classesComplete: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -51,6 +60,8 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     // The four resource facilities together (#190): the weakest one counts.
     const supply = (['fuelTank', 'ammoDepot', 'steelMill', 'airBase'] as const).map((id) => Object.values(np.facilities ?? {}).reduce((s, lv) => s + (lv?.[id] ?? 0), 0));
     ctx.supplyLevel = Math.max(ctx.supplyLevel, Math.min(...supply));
+    ctx.basesOpen = Math.max(ctx.basesOpen, openBaseCount(nation, { ...np, nation }));
+    ctx.classesComplete = Math.max(ctx.classesComplete, (CLASSES[nation] ?? []).filter((ids) => ids.every((id) => np.ships.includes(id))).length);
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);

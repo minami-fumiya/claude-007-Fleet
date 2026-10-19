@@ -13,7 +13,8 @@
         "5in_38"
       ],
       "spriteKey": "iowa",
-      "description": "アイオワ級戦艦1番艦。33ノットの高速と16インチ砲9門を備える。朝鮮戦争や冷戦期にも現役を務め、1990年に退役した。"
+      "description": "アイオワ級戦艦1番艦。33ノットの高速と16インチ砲9門を備える。朝鮮戦争や冷戦期にも現役を務め、1990年に退役した。",
+      "year": 1943
     },
     {
       "id": "north_carolina",
@@ -28,7 +29,8 @@
         "5in_38"
       ],
       "spriteKey": "north_carolina",
-      "description": "ノースカロライナ級戦艦1番艦。軍縮条約明けに建造された最初の米新戦艦。1942年9月、伊19の雷撃で損傷した。"
+      "description": "ノースカロライナ級戦艦1番艦。軍縮条約明けに建造された最初の米新戦艦。1942年9月、伊19の雷撃で損傷した。",
+      "year": 1941
     },
     {
       "id": "missouri",
@@ -43,7 +45,8 @@
         "5in_38"
       ],
       "spriteKey": "missouri",
-      "description": "アイオワ級戦艦3番艦。1945年9月2日、東京湾に停泊した本艦の艦上で日本の降伏文書調印式が行われた。"
+      "description": "アイオワ級戦艦3番艦。1945年9月2日、東京湾に停泊した本艦の艦上で日本の降伏文書調印式が行われた。",
+      "year": 1944
     },
     {
       "id": "new_jersey",
@@ -58,7 +61,8 @@
         "5in_38"
       ],
       "spriteKey": "new_jersey",
-      "description": "アイオワ級戦艦2番艦。第二次大戦後も朝鮮戦争、ベトナム戦争、レバノン沖に投入された。"
+      "description": "アイオワ級戦艦2番艦。第二次大戦後も朝鮮戦争、ベトナム戦争、レバノン沖に投入された。",
+      "year": 1943
     },
     {
       "id": "south_dakota",
@@ -73,7 +77,8 @@
         "5in_38"
       ],
       "spriteKey": "south_dakota",
-      "description": "サウスダコタ級戦艦1番艦。1942年11月の第三次ソロモン海戦で日本艦隊の集中砲火を浴びながらも生き残った。"
+      "description": "サウスダコタ級戦艦1番艦。1942年11月の第三次ソロモン海戦で日本艦隊の集中砲火を浴びながらも生き残った。",
+      "year": 1942
     },
     {
       "id": "montana",
@@ -105,7 +110,8 @@
         "5in_38"
       ],
       "spriteKey": "baltimore",
-      "description": "ボルチモア級重巡洋艦1番艦。大戦後半、空母機動部隊の護衛として活躍した。"
+      "description": "ボルチモア級重巡洋艦1番艦。大戦後半、空母機動部隊の護衛として活躍した。",
+      "year": 1943
     },
     {
       "id": "des_moines",
@@ -121,7 +127,8 @@
         "5in_38"
       ],
       "spriteKey": "des_moines",
-      "description": "デ・モイン級重巡洋艦1番艦。自動装填式の8インチ砲を備えた最後の重巡洋艦。完成は大戦後の1948年。"
+      "description": "デ・モイン級重巡洋艦1番艦。自動装填式の8インチ砲を備えた最後の重巡洋艦。完成は大戦後の1948年。",
+      "year": 1948
     },
     {
       "id": "cleveland",
@@ -137,7 +144,8 @@
         "5in_38"
       ],
       "spriteKey": "cleveland",
-      "description": "クリーブランド級軽巡洋艦1番艦。6インチ砲12門を持つ。同級は米海軍で最も多く建造された巡洋艦となった。"
+      "description": "クリーブランド級軽巡洋艦1番艦。6インチ砲12門を持つ。同級は米海軍で最も多く建造された巡洋艦となった。",
+      "year": 1942
     },
     {
       "id": "atlanta",
@@ -153,7 +161,8 @@
         "mk15_torpedo"
       ],
       "spriteKey": "atlanta",
-      "description": "防空巡洋艦。5インチ両用砲16門を搭載した。1942年11月、第三次ソロモン海戦の夜戦で大破し、自沈処分された。"
+      "description": "防空巡洋艦。5インチ両用砲16門を搭載した。1942年11月、第三次ソロモン海戦の夜戦で大破し、自沈処分された。",
+      "year": 1941
     },
     {
       "id": "fletcher",
@@ -169,7 +178,8 @@
         "depth_charge"
       ],
       "spriteKey": "fletcher",
-      "description": "フレッチャー級駆逐艦1番艦。同級は175隻が建造され、米海軍の主力駆逐艦となった。"
+      "description": "フレッチャー級駆逐艦1番艦。同級は175隻が建造され、米海軍の主力駆逐艦となった。",
+      "year": 1942
     },
     {
       "id": "gearing",
@@ -185,7 +195,8 @@
         "depth_charge"
       ],
       "spriteKey": "gearing",
-      "description": "ギアリング級駆逐艦1番艦。フレッチャー級を発展させた大型駆逐艦で、1945年に就役した。"
+      "description": "ギアリング級駆逐艦1番艦。フレッチャー級を発展させた大型駆逐艦で、1945年に就役した。",
+      "year": 1945
     },
     {
       "id": "sumner",
@@ -201,7 +212,8 @@
         "depth_charge"
       ],
       "spriteKey": "sumner",
-      "description": "アレン・M・サムナー級駆逐艦1番艦。5インチ連装砲3基を備え、フレッチャー級より対空火力を強化した。"
+      "description": "アレン・M・サムナー級駆逐艦1番艦。5インチ連装砲3基を備え、フレッチャー級より対空火力を強化した。",
+      "year": 1944
     },
     {
       "id": "buckley",
@@ -218,7 +230,8 @@
         "depth_charge"
       ],
       "spriteKey": "buckley",
-      "description": "バックレイ級護衛駆逐艦1番艦。船団を守る対潜艦として量産された。1944年5月、Uボート U-66 に体当たりして撃沈した。"
+      "description": "バックレイ級護衛駆逐艦1番艦。船団を守る対潜艦として量産された。1944年5月、Uボート U-66 に体当たりして撃沈した。",
+      "year": 1943
     },
     {
       "id": "essex",
@@ -237,7 +250,8 @@
         "diveBombers": 5,
         "torpedoBombers": 4
       },
-      "description": "エセックス級航空母艦1番艦。同級は24隻が建造され、太平洋戦争後半の米機動部隊の中核となった。"
+      "description": "エセックス級航空母艦1番艦。同級は24隻が建造され、太平洋戦争後半の米機動部隊の中核となった。",
+      "year": 1942
     },
     {
       "id": "enterprise",
@@ -256,7 +270,8 @@
         "diveBombers": 5,
         "torpedoBombers": 4
       },
-      "description": "ヨークタウン級航空母艦2番艦。ミッドウェー海戦をはじめ太平洋戦争の主要な海戦の多くに参加し、生き残った。"
+      "description": "ヨークタウン級航空母艦2番艦。ミッドウェー海戦をはじめ太平洋戦争の主要な海戦の多くに参加し、生き残った。",
+      "year": 1938
     },
     {
       "id": "midway",
@@ -275,7 +290,8 @@
         "diveBombers": 6,
         "torpedoBombers": 5
       },
-      "description": "ミッドウェイ級航空母艦1番艦。装甲飛行甲板を持つ大型空母で、完成は終戦直後の1945年9月。"
+      "description": "ミッドウェイ級航空母艦1番艦。装甲飛行甲板を持つ大型空母で、完成は終戦直後の1945年9月。",
+      "year": 1945
     },
     {
       "id": "yorktown",
@@ -294,7 +310,8 @@
         "diveBombers": 5,
         "torpedoBombers": 3
       },
-      "description": "ヨークタウン級航空母艦1番艦。珊瑚海海戦で損傷したが急いで修理され、ミッドウェー海戦に参加して沈没した。"
+      "description": "ヨークタウン級航空母艦1番艦。珊瑚海海戦で損傷したが急いで修理され、ミッドウェー海戦に参加して沈没した。",
+      "year": 1937
     },
     {
       "id": "independence",
@@ -314,7 +331,8 @@
         "diveBombers": 2,
         "torpedoBombers": 2
       },
-      "description": "クリーブランド級軽巡洋艦の船体を流用した軽空母。高速のため正規空母と行動をともにできた。"
+      "description": "クリーブランド級軽巡洋艦の船体を流用した軽空母。高速のため正規空母と行動をともにできた。",
+      "year": 1943
     },
     {
       "id": "casablanca",
@@ -334,7 +352,8 @@
         "diveBombers": 1,
         "torpedoBombers": 2
       },
-      "description": "カサブランカ級護衛空母1番艦。商船の設計を元に50隻が量産され、船団護衛や上陸支援に使われた。"
+      "description": "カサブランカ級護衛空母1番艦。商船の設計を元に50隻が量産され、船団護衛や上陸支援に使われた。",
+      "year": 1943
     },
     {
       "id": "gato",
@@ -348,7 +367,8 @@
         "mk14_torpedo"
       ],
       "spriteKey": "gato",
-      "description": "ガトー級潜水艦1番艦。同級は太平洋で日本の商船と艦艇に大きな打撃を与えた。"
+      "description": "ガトー級潜水艦1番艦。同級は太平洋で日本の商船と艦艇に大きな打撃を与えた。",
+      "year": 1941
     },
     {
       "id": "balao",
@@ -362,7 +382,3378 @@
         "mk14_torpedo"
       ],
       "spriteKey": "balao",
-      "description": "バラオ級潜水艦1番艦。ガトー級の改良型で、より深く潜航できる。"
+      "description": "バラオ級潜水艦1番艦。ガトー級の改良型で、より深く潜航できる。",
+      "year": 1943
+    },
+    {
+      "id": "new_york",
+      "name": "ニューヨーク (New York)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 630,
+      "armor": 48,
+      "speed": 105,
+      "weapons": [
+        "14in_45",
+        "5in_38"
+      ],
+      "spriteKey": "new_york",
+      "description": "ニューヨーク級戦艦1番艦。米国で初めて14インチ砲を積んだ戦艦。大西洋と太平洋の両方で上陸支援に当たった。",
+      "year": 1914
+    },
+    {
+      "id": "nevada",
+      "name": "ネヴァダ (Nevada)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 640,
+      "armor": 50,
+      "speed": 105,
+      "weapons": [
+        "14in_45",
+        "5in_38"
+      ],
+      "spriteKey": "nevada",
+      "description": "ネヴァダ級戦艦1番艦。真珠湾攻撃で座礁しながらも復帰し、ノルマンディー上陸作戦を支援した。",
+      "year": 1916
+    },
+    {
+      "id": "pennsylvania",
+      "name": "ペンシルヴェニア (Pennsylvania)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 650,
+      "armor": 52,
+      "speed": 105,
+      "weapons": [
+        "14in_45",
+        "5in_38"
+      ],
+      "spriteKey": "pennsylvania",
+      "description": "ペンシルヴェニア級戦艦1番艦。太平洋艦隊の旗艦を務め、スリガオ海峡海戦にも参加した。",
+      "year": 1916
+    },
+    {
+      "id": "new_mexico",
+      "name": "ニューメキシコ (New Mexico)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 655,
+      "armor": 53,
+      "speed": 110,
+      "weapons": [
+        "14in_50",
+        "5in_38"
+      ],
+      "spriteKey": "new_mexico",
+      "description": "ニューメキシコ級戦艦1番艦。50口径の14インチ砲を積み、太平洋の上陸作戦を支援した。",
+      "year": 1918
+    },
+    {
+      "id": "tennessee",
+      "name": "テネシー (Tennessee)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 665,
+      "armor": 55,
+      "speed": 110,
+      "weapons": [
+        "14in_50",
+        "5in_38"
+      ],
+      "spriteKey": "tennessee",
+      "description": "テネシー級戦艦1番艦。真珠湾で損傷したのち大改装を受け、スリガオ海峡海戦で砲撃した。",
+      "year": 1920
+    },
+    {
+      "id": "colorado",
+      "name": "コロラド (Colorado)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 680,
+      "armor": 56,
+      "speed": 110,
+      "weapons": [
+        "16in_45_mk5",
+        "5in_38"
+      ],
+      "spriteKey": "colorado",
+      "description": "コロラド級戦艦1番艦。16インチ砲を積んだ米国最初の戦艦の一つ。",
+      "year": 1923
+    },
+    {
+      "id": "lexington",
+      "name": "レキシントン (Lexington)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 545,
+      "armor": 30,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "lexington",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "description": "巡洋戦艦から空母に改められたレキシントン級の1番艦。1942年5月、珊瑚海海戦で沈没した。",
+      "year": 1927
+    },
+    {
+      "id": "ranger",
+      "name": "レンジャー (Ranger)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 470,
+      "armor": 18,
+      "speed": 150,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "ranger",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 2
+      },
+      "description": "米国で最初から空母として設計された艦。主に大西洋で行動した。",
+      "year": 1934
+    },
+    {
+      "id": "wasp",
+      "name": "ワスプ (Wasp)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 475,
+      "armor": 20,
+      "speed": 155,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "wasp",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 2
+      },
+      "description": "条約の残り枠で造られた中型空母。1942年9月、伊19の雷撃で沈没した。",
+      "year": 1940
+    },
+    {
+      "id": "bogue",
+      "name": "ボーグ (Bogue)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 12,
+      "speed": 110,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "bogue",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "description": "ボーグ級護衛空母の1番艦。大西洋で U ボート狩りの部隊を率いた。",
+      "year": 1942
+    },
+    {
+      "id": "pensacola",
+      "name": "ペンサコーラ (Pensacola)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 380,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "pensacola",
+      "description": "ペンサコーラ級重巡洋艦1番艦。条約型重巡の最初の型。",
+      "year": 1930
+    },
+    {
+      "id": "northampton",
+      "name": "ノーザンプトン (Northampton)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "northampton",
+      "description": "ノーザンプトン級重巡洋艦1番艦。1942年11月、タサファロング沖海戦で沈没した。",
+      "year": 1930
+    },
+    {
+      "id": "portland",
+      "name": "ポートランド (Portland)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "portland",
+      "description": "ポートランド級重巡洋艦1番艦。太平洋の主な海戦の多くに参加した。",
+      "year": 1933
+    },
+    {
+      "id": "new_orleans",
+      "name": "ニューオーリンズ (New Orleans)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "description": "防御を強めたニューオーリンズ級重巡洋艦の1番艦。",
+      "year": 1934
+    },
+    {
+      "id": "wichita",
+      "name": "ウィチタ (Wichita)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 405,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "wichita",
+      "description": "ブルックリン級の船体に8インチ砲を積んだ重巡洋艦。のちのボルチモア級の原型となった。",
+      "year": 1939
+    },
+    {
+      "id": "omaha",
+      "name": "オマハ (Omaha)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "description": "オマハ級軽巡洋艦1番艦。駆逐艦隊の嚮導を目的に造られた高速の軽巡洋艦。",
+      "year": 1923
+    },
+    {
+      "id": "brooklyn",
+      "name": "ブルックリン (Brooklyn)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "description": "6インチ砲15門を積んだブルックリン級軽巡洋艦の1番艦。",
+      "year": 1937
+    },
+    {
+      "id": "farragut",
+      "name": "ファラガット (Farragut)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "description": "第一次大戦後に初めて造られた米駆逐艦、ファラガット級の1番艦。",
+      "year": 1934
+    },
+    {
+      "id": "porter",
+      "name": "ポーター (Porter)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "description": "駆逐艦隊の嚮導艦として造られた大型駆逐艦、ポーター級の1番艦。",
+      "year": 1936
+    },
+    {
+      "id": "mahan",
+      "name": "マハン (Mahan)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "description": "高圧缶を初めて採用したマハン級駆逐艦の1番艦。",
+      "year": 1936
+    },
+    {
+      "id": "sims",
+      "name": "シムス (Sims)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "description": "シムス級駆逐艦1番艦。1942年5月、珊瑚海海戦で日本機の攻撃を受けて沈没した。",
+      "year": 1939
+    },
+    {
+      "id": "benson",
+      "name": "ベンソン (Benson)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "description": "ベンソン級駆逐艦1番艦。大戦初期の主力駆逐艦として量産された。",
+      "year": 1940
+    },
+    {
+      "id": "tench",
+      "name": "テンチ (Tench)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 152,
+      "armor": 7,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "tench",
+      "description": "バラオ級をさらに改良したテンチ級潜水艦の1番艦。",
+      "year": 1944
+    },
+    {
+      "id": "texas",
+      "name": "テキサス (Texas)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 630,
+      "armor": 48,
+      "speed": 105,
+      "weapons": [
+        "14in_45",
+        "5in_38"
+      ],
+      "spriteKey": "new_york",
+      "year": 1914,
+      "description": "ニューヨーク級戦艦の同型艦。性能はニューヨークと同じ。",
+      "sisterOf": "new_york"
+    },
+    {
+      "id": "oklahoma",
+      "name": "オクラホマ (Oklahoma)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 640,
+      "armor": 50,
+      "speed": 105,
+      "weapons": [
+        "14in_45",
+        "5in_38"
+      ],
+      "spriteKey": "nevada",
+      "year": 1916,
+      "description": "ネヴァダ級戦艦の同型艦。性能はネヴァダと同じ。",
+      "sisterOf": "nevada"
+    },
+    {
+      "id": "arizona",
+      "name": "アリゾナ (Arizona)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 650,
+      "armor": 52,
+      "speed": 105,
+      "weapons": [
+        "14in_45",
+        "5in_38"
+      ],
+      "spriteKey": "pennsylvania",
+      "year": 1916,
+      "description": "ペンシルヴェニア級戦艦の同型艦。性能はペンシルヴェニアと同じ。",
+      "sisterOf": "pennsylvania"
+    },
+    {
+      "id": "mississippi",
+      "name": "ミシシッピ (Mississippi)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 655,
+      "armor": 53,
+      "speed": 110,
+      "weapons": [
+        "14in_50",
+        "5in_38"
+      ],
+      "spriteKey": "new_mexico",
+      "year": 1918,
+      "description": "ニューメキシコ級戦艦の同型艦。性能はニューメキシコと同じ。",
+      "sisterOf": "new_mexico"
+    },
+    {
+      "id": "idaho",
+      "name": "アイダホ (Idaho)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 655,
+      "armor": 53,
+      "speed": 110,
+      "weapons": [
+        "14in_50",
+        "5in_38"
+      ],
+      "spriteKey": "new_mexico",
+      "year": 1918,
+      "description": "ニューメキシコ級戦艦の同型艦。性能はニューメキシコと同じ。",
+      "sisterOf": "new_mexico"
+    },
+    {
+      "id": "california",
+      "name": "カリフォルニア (California)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 665,
+      "armor": 55,
+      "speed": 110,
+      "weapons": [
+        "14in_50",
+        "5in_38"
+      ],
+      "spriteKey": "tennessee",
+      "year": 1920,
+      "description": "テネシー級戦艦の同型艦。性能はテネシーと同じ。",
+      "sisterOf": "tennessee"
+    },
+    {
+      "id": "maryland",
+      "name": "メリーランド (Maryland)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 680,
+      "armor": 56,
+      "speed": 110,
+      "weapons": [
+        "16in_45_mk5",
+        "5in_38"
+      ],
+      "spriteKey": "colorado",
+      "year": 1923,
+      "description": "コロラド級戦艦の同型艦。性能はコロラドと同じ。",
+      "sisterOf": "colorado"
+    },
+    {
+      "id": "west_virginia",
+      "name": "ウェストヴァージニア (West Virginia)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 680,
+      "armor": 56,
+      "speed": 110,
+      "weapons": [
+        "16in_45_mk5",
+        "5in_38"
+      ],
+      "spriteKey": "colorado",
+      "year": 1923,
+      "description": "コロラド級戦艦の同型艦。性能はコロラドと同じ。",
+      "sisterOf": "colorado"
+    },
+    {
+      "id": "washington",
+      "name": "ワシントン (Washington)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 705,
+      "armor": 56,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "north_carolina",
+      "year": 1941,
+      "description": "ノースカロライナ級戦艦の同型艦。性能はノースカロライナと同じ。",
+      "sisterOf": "north_carolina"
+    },
+    {
+      "id": "indiana",
+      "name": "インディアナ (Indiana)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 725,
+      "armor": 58,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "south_dakota",
+      "year": 1942,
+      "description": "サウスダコタ級戦艦の同型艦。性能はサウスダコタと同じ。",
+      "sisterOf": "south_dakota"
+    },
+    {
+      "id": "massachusetts",
+      "name": "マサチューセッツ (Massachusetts)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 725,
+      "armor": 58,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "south_dakota",
+      "year": 1942,
+      "description": "サウスダコタ級戦艦の同型艦。性能はサウスダコタと同じ。",
+      "sisterOf": "south_dakota"
+    },
+    {
+      "id": "alabama",
+      "name": "アラバマ (Alabama)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 725,
+      "armor": 58,
+      "speed": 135,
+      "weapons": [
+        "16in_mk6",
+        "5in_38"
+      ],
+      "spriteKey": "south_dakota",
+      "year": 1942,
+      "description": "サウスダコタ級戦艦の同型艦。性能はサウスダコタと同じ。",
+      "sisterOf": "south_dakota"
+    },
+    {
+      "id": "wisconsin",
+      "name": "ウィスコンシン (Wisconsin)",
+      "nation": "USN",
+      "shipClass": "Battleship",
+      "hp": 750,
+      "armor": 58,
+      "speed": 160,
+      "weapons": [
+        "16in_mk7",
+        "5in_38"
+      ],
+      "spriteKey": "iowa",
+      "year": 1943,
+      "description": "アイオワ級戦艦の同型艦。性能はアイオワと同じ。",
+      "sisterOf": "iowa"
+    },
+    {
+      "id": "saratoga",
+      "name": "サラトガ (Saratoga)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 545,
+      "armor": 30,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "lexington",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1927,
+      "description": "レキシントン級航空母艦の同型艦。性能はレキシントンと同じ。",
+      "sisterOf": "lexington"
+    },
+    {
+      "id": "hornet",
+      "name": "ホーネット (Hornet)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 505,
+      "armor": 27,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "yorktown",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 5,
+        "torpedoBombers": 3
+      },
+      "year": 1937,
+      "description": "ヨークタウン級航空母艦の同型艦。性能はヨークタウンと同じ。",
+      "sisterOf": "yorktown"
+    },
+    {
+      "id": "intrepid",
+      "name": "イントレピッド (Intrepid)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "franklin",
+      "name": "フランクリン (Franklin)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "bunker_hill",
+      "name": "バンカー・ヒル (Bunker Hill)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "hancock",
+      "name": "ハンコック (Hancock)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "ticonderoga",
+      "name": "タイコンデロガ (Ticonderoga)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "bennington",
+      "name": "ベニントン (Bennington)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "randolph",
+      "name": "ランドルフ (Randolph)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "shangri_la",
+      "name": "シャングリラ (Shangri-La)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "bon_homme_richard",
+      "name": "ボノム・リシャール (Bon Homme Richard)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "antietam",
+      "name": "アンティータム (Antietam)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 530,
+      "armor": 28,
+      "speed": 165,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "essex",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
+      },
+      "year": 1942,
+      "description": "エセックス級航空母艦の同型艦。性能はエセックスと同じ。",
+      "sisterOf": "essex"
+    },
+    {
+      "id": "franklin_d_roosevelt",
+      "name": "フランクリン・D・ルーズベルト (Franklin D. Roosevelt)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "hp": 575,
+      "armor": 36,
+      "speed": 155,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "midway",
+      "airWing": {
+        "fighters": 6,
+        "diveBombers": 6,
+        "torpedoBombers": 5
+      },
+      "year": 1945,
+      "description": "ミッドウェイ級航空母艦の同型艦。性能はミッドウェイと同じ。",
+      "sisterOf": "midway"
+    },
+    {
+      "id": "princeton",
+      "name": "プリンストン (Princeton)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "belleau_wood",
+      "name": "ベロー・ウッド (Belleau Wood)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "cowpens",
+      "name": "カウペンス (Cowpens)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "monterey",
+      "name": "モントレー (Monterey)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "cabot",
+      "name": "カボット (Cabot)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "bataan",
+      "name": "バターン (Bataan)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "san_jacinto",
+      "name": "サン・ジャシント (San Jacinto)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 465,
+      "armor": 22,
+      "speed": 170,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "independence",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "インディペンデンス級航空母艦の同型艦。性能はインディペンデンスと同じ。",
+      "sisterOf": "independence"
+    },
+    {
+      "id": "liscome_bay",
+      "name": "リスカム・ベイ (Liscome Bay)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "casablanca",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "カサブランカ級護衛空母の同型艦。性能はカサブランカと同じ。",
+      "sisterOf": "casablanca"
+    },
+    {
+      "id": "gambier_bay",
+      "name": "ガンビア・ベイ (Gambier Bay)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "casablanca",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "カサブランカ級護衛空母の同型艦。性能はカサブランカと同じ。",
+      "sisterOf": "casablanca"
+    },
+    {
+      "id": "st_lo",
+      "name": "セント・ロー (St. Lo)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "casablanca",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "カサブランカ級護衛空母の同型艦。性能はカサブランカと同じ。",
+      "sisterOf": "casablanca"
+    },
+    {
+      "id": "kalinin_bay",
+      "name": "カリニン・ベイ (Kalinin Bay)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "casablanca",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1943,
+      "description": "カサブランカ級護衛空母の同型艦。性能はカサブランカと同じ。",
+      "sisterOf": "casablanca"
+    },
+    {
+      "id": "card",
+      "name": "カード (Card)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 12,
+      "speed": 110,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "bogue",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1942,
+      "description": "ボーグ級護衛空母の同型艦。性能はボーグと同じ。",
+      "sisterOf": "bogue"
+    },
+    {
+      "id": "core",
+      "name": "コア (Core)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 12,
+      "speed": 110,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "bogue",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1942,
+      "description": "ボーグ級護衛空母の同型艦。性能はボーグと同じ。",
+      "sisterOf": "bogue"
+    },
+    {
+      "id": "block_island",
+      "name": "ブロック・アイランド (Block Island)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "EscortCarrier",
+      "hp": 455,
+      "armor": 12,
+      "speed": 110,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "bogue",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 1,
+        "torpedoBombers": 2
+      },
+      "year": 1942,
+      "description": "ボーグ級護衛空母の同型艦。性能はボーグと同じ。",
+      "sisterOf": "bogue"
+    },
+    {
+      "id": "salt_lake_city",
+      "name": "ソルトレイクシティ (Salt Lake City)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 380,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "pensacola",
+      "year": 1930,
+      "description": "ペンサコーラ級重巡洋艦の同型艦。性能はペンサコーラと同じ。",
+      "sisterOf": "pensacola"
+    },
+    {
+      "id": "chester",
+      "name": "チェスター (Chester)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "northampton",
+      "year": 1930,
+      "description": "ノーザンプトン級重巡洋艦の同型艦。性能はノーザンプトンと同じ。",
+      "sisterOf": "northampton"
+    },
+    {
+      "id": "louisville",
+      "name": "ルイビル (Louisville)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "northampton",
+      "year": 1930,
+      "description": "ノーザンプトン級重巡洋艦の同型艦。性能はノーザンプトンと同じ。",
+      "sisterOf": "northampton"
+    },
+    {
+      "id": "chicago",
+      "name": "シカゴ (Chicago)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "northampton",
+      "year": 1930,
+      "description": "ノーザンプトン級重巡洋艦の同型艦。性能はノーザンプトンと同じ。",
+      "sisterOf": "northampton"
+    },
+    {
+      "id": "houston",
+      "name": "ヒューストン (Houston)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "northampton",
+      "year": 1930,
+      "description": "ノーザンプトン級重巡洋艦の同型艦。性能はノーザンプトンと同じ。",
+      "sisterOf": "northampton"
+    },
+    {
+      "id": "augusta",
+      "name": "オーガスタ (Augusta)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 385,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "northampton",
+      "year": 1930,
+      "description": "ノーザンプトン級重巡洋艦の同型艦。性能はノーザンプトンと同じ。",
+      "sisterOf": "northampton"
+    },
+    {
+      "id": "indianapolis",
+      "name": "インディアナポリス (Indianapolis)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 180,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "portland",
+      "year": 1933,
+      "description": "ポートランド級重巡洋艦の同型艦。性能はポートランドと同じ。",
+      "sisterOf": "portland"
+    },
+    {
+      "id": "astoria",
+      "name": "アストリア (Astoria)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "year": 1934,
+      "description": "ニューオーリンズ級重巡洋艦の同型艦。性能はニューオーリンズと同じ。",
+      "sisterOf": "new_orleans"
+    },
+    {
+      "id": "minneapolis",
+      "name": "ミネアポリス (Minneapolis)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "year": 1934,
+      "description": "ニューオーリンズ級重巡洋艦の同型艦。性能はニューオーリンズと同じ。",
+      "sisterOf": "new_orleans"
+    },
+    {
+      "id": "tuscaloosa",
+      "name": "タスカルーサ (Tuscaloosa)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "year": 1934,
+      "description": "ニューオーリンズ級重巡洋艦の同型艦。性能はニューオーリンズと同じ。",
+      "sisterOf": "new_orleans"
+    },
+    {
+      "id": "san_francisco",
+      "name": "サンフランシスコ (San Francisco)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "year": 1934,
+      "description": "ニューオーリンズ級重巡洋艦の同型艦。性能はニューオーリンズと同じ。",
+      "sisterOf": "new_orleans"
+    },
+    {
+      "id": "quincy",
+      "name": "クインシー (Quincy)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "year": 1934,
+      "description": "ニューオーリンズ級重巡洋艦の同型艦。性能はニューオーリンズと同じ。",
+      "sisterOf": "new_orleans"
+    },
+    {
+      "id": "vincennes",
+      "name": "ヴィンセンス (Vincennes)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 38,
+      "speed": 178,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "new_orleans",
+      "year": 1934,
+      "description": "ニューオーリンズ級重巡洋艦の同型艦。性能はニューオーリンズと同じ。",
+      "sisterOf": "new_orleans"
+    },
+    {
+      "id": "boston",
+      "name": "ボストン (Boston)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "canberra",
+      "name": "キャンベラ (Canberra)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "pittsburgh",
+      "name": "ピッツバーグ (Pittsburgh)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "saint_paul",
+      "name": "セントポール (Saint Paul)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "bremerton",
+      "name": "ブレマートン (Bremerton)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "fall_river",
+      "name": "フォールリバー (Fall River)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "macon",
+      "name": "メイコン (Macon)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 415,
+      "armor": 42,
+      "speed": 175,
+      "weapons": [
+        "8in_mk12",
+        "5in_38"
+      ],
+      "spriteKey": "baltimore",
+      "year": 1943,
+      "description": "ボルチモア級重巡洋艦の同型艦。性能はボルチモアと同じ。",
+      "sisterOf": "baltimore"
+    },
+    {
+      "id": "salem",
+      "name": "セーラム (Salem)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 450,
+      "armor": 44,
+      "speed": 170,
+      "weapons": [
+        "8in_mk16",
+        "5in_38"
+      ],
+      "spriteKey": "des_moines",
+      "year": 1948,
+      "description": "デ・モイン級重巡洋艦の同型艦。性能はデ・モインと同じ。",
+      "sisterOf": "des_moines"
+    },
+    {
+      "id": "milwaukee",
+      "name": "ミルウォーキー (Milwaukee)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "cincinnati",
+      "name": "シンシナティ (Cincinnati)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "raleigh",
+      "name": "ローリー (Raleigh)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "detroit",
+      "name": "デトロイト (Detroit)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "richmond",
+      "name": "リッチモンド (Richmond)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "concord",
+      "name": "コンコード (Concord)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "trenton",
+      "name": "トレントン (Trenton)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "marblehead",
+      "name": "マーブルヘッド (Marblehead)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "memphis",
+      "name": "メンフィス (Memphis)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "6in_47",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "omaha",
+      "year": 1923,
+      "description": "オマハ級軽巡洋艦の同型艦。性能はオマハと同じ。",
+      "sisterOf": "omaha"
+    },
+    {
+      "id": "philadelphia",
+      "name": "フィラデルフィア (Philadelphia)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "savannah",
+      "name": "サバンナ (Savannah)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "nashville",
+      "name": "ナッシュビル (Nashville)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "phoenix",
+      "name": "フェニックス (Phoenix)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "boise",
+      "name": "ボイシ (Boise)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "honolulu",
+      "name": "ホノルル (Honolulu)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "helena",
+      "name": "ヘレナ (Helena)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "st_louis",
+      "name": "セントルイス (St. Louis)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 395,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "brooklyn",
+      "year": 1937,
+      "description": "ブルックリン級軽巡洋艦の同型艦。性能はブルックリンと同じ。",
+      "sisterOf": "brooklyn"
+    },
+    {
+      "id": "columbia",
+      "name": "コロンビア (Columbia)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "montpelier",
+      "name": "モントピリア (Montpelier)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "denver",
+      "name": "デンバー (Denver)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "santa_fe",
+      "name": "サンタフェ (Santa Fe)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "birmingham",
+      "name": "バーミングハム (Birmingham)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "mobile",
+      "name": "モービル (Mobile)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "biloxi",
+      "name": "ビロクシ (Biloxi)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "miami",
+      "name": "マイアミ (Miami)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 36,
+      "speed": 172,
+      "weapons": [
+        "6in_47",
+        "5in_38"
+      ],
+      "spriteKey": "cleveland",
+      "year": 1942,
+      "description": "クリーブランド級軽巡洋艦の同型艦。性能はクリーブランドと同じ。",
+      "sisterOf": "cleveland"
+    },
+    {
+      "id": "juneau",
+      "name": "ジュノー (Juneau)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 182,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "atlanta",
+      "year": 1941,
+      "description": "アトランタ級軽巡洋艦の同型艦。性能はアトランタと同じ。",
+      "sisterOf": "atlanta"
+    },
+    {
+      "id": "san_diego",
+      "name": "サンディエゴ (San Diego)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 182,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "atlanta",
+      "year": 1941,
+      "description": "アトランタ級軽巡洋艦の同型艦。性能はアトランタと同じ。",
+      "sisterOf": "atlanta"
+    },
+    {
+      "id": "san_juan",
+      "name": "サンファン (San Juan)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 182,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "atlanta",
+      "year": 1941,
+      "description": "アトランタ級軽巡洋艦の同型艦。性能はアトランタと同じ。",
+      "sisterOf": "atlanta"
+    },
+    {
+      "id": "oakland",
+      "name": "オークランド (Oakland)",
+      "nation": "USN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 182,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo"
+      ],
+      "spriteKey": "atlanta",
+      "year": 1941,
+      "description": "アトランタ級軽巡洋艦の同型艦。性能はアトランタと同じ。",
+      "sisterOf": "atlanta"
+    },
+    {
+      "id": "dewey",
+      "name": "デューイ (Dewey)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "hull",
+      "name": "ハル (Hull)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "macdonough",
+      "name": "マクドノー (Macdonough)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "worden",
+      "name": "ウォーデン (Worden)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "dale",
+      "name": "デイル (Dale)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "monaghan",
+      "name": "モナハン (Monaghan)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "aylwin",
+      "name": "エイルウィン (Aylwin)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 13,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "farragut",
+      "year": 1934,
+      "description": "ファラガット級駆逐艦の同型艦。性能はファラガットと同じ。",
+      "sisterOf": "farragut"
+    },
+    {
+      "id": "selfridge",
+      "name": "セルフリッジ (Selfridge)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "mcdougal",
+      "name": "マクドゥガル (McDougal)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "winslow",
+      "name": "ウィンスロー (Winslow)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "phelps",
+      "name": "フェルプス (Phelps)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "clark",
+      "name": "クラーク (Clark)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "moffett",
+      "name": "モフェット (Moffett)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "balch",
+      "name": "バルチ (Balch)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "porter",
+      "year": 1936,
+      "description": "ポーター級駆逐艦の同型艦。性能はポーターと同じ。",
+      "sisterOf": "porter"
+    },
+    {
+      "id": "cummings",
+      "name": "カミングス (Cummings)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "drayton",
+      "name": "ドレイトン (Drayton)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "lamson",
+      "name": "ラムソン (Lamson)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "flusser",
+      "name": "フラッサー (Flusser)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "reid",
+      "name": "リード (Reid)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "case",
+      "name": "ケース (Case)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "cassin",
+      "name": "カッシン (Cassin)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "shaw",
+      "name": "ショー (Shaw)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "tucker",
+      "name": "タッカー (Tucker)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "downes",
+      "name": "ダウンズ (Downes)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "cushing",
+      "name": "カッシング (Cushing)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "perkins",
+      "name": "パーキンス (Perkins)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "smith",
+      "name": "スミス (Smith)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "preston",
+      "name": "プレストン (Preston)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 208,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mahan",
+      "year": 1936,
+      "description": "マハン級駆逐艦の同型艦。性能はマハンと同じ。",
+      "sisterOf": "mahan"
+    },
+    {
+      "id": "hughes",
+      "name": "ヒューズ (Hughes)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "anderson",
+      "name": "アンダーソン (Anderson)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "hammann",
+      "name": "ハムマン (Hammann)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "mustin",
+      "name": "マスティン (Mustin)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "russell",
+      "name": "ラッセル (Russell)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "obrien",
+      "name": "オブライエン (O'Brien)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "walke",
+      "name": "ウォーク (Walke)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "morris",
+      "name": "モリス (Morris)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "roe",
+      "name": "ロー (Roe)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "wainwright",
+      "name": "ウェインライト (Wainwright)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "buck",
+      "name": "バック (Buck)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 212,
+      "armor": 14,
+      "speed": 235,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sims",
+      "year": 1939,
+      "description": "シムス級駆逐艦の同型艦。性能はシムスと同じ。",
+      "sisterOf": "sims"
+    },
+    {
+      "id": "mayo",
+      "name": "メイヨー (Mayo)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "gleaves",
+      "name": "グリーブス (Gleaves)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "niblack",
+      "name": "ニブラック (Niblack)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "laffey",
+      "name": "ラフィー (Laffey)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "woodworth",
+      "name": "ウッドワース (Woodworth)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "livermore",
+      "name": "リバモア (Livermore)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "eberle",
+      "name": "エバール (Eberle)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "benson",
+      "year": 1940,
+      "description": "ベンソン級駆逐艦の同型艦。性能はベンソンと同じ。",
+      "sisterOf": "benson"
+    },
+    {
+      "id": "obannon",
+      "name": "オバノン (O'Bannon)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "nicholas",
+      "name": "ニコラス (Nicholas)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "de_haven",
+      "name": "デヘイヴン (De Haven)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "johnston",
+      "name": "ジョンストン (Johnston)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "hoel",
+      "name": "ホーエル (Hoel)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "heermann",
+      "name": "ヒーアマン (Heermann)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "kidd",
+      "name": "キッド (Kidd)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "the_sullivans",
+      "name": "ザ・サリヴァンズ (The Sullivans)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "radford",
+      "name": "ラドフォード (Radford)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "jenkins",
+      "name": "ジェンキンス (Jenkins)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "5in_38",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "fletcher",
+      "year": 1942,
+      "description": "フレッチャー級駆逐艦の同型艦。性能はフレッチャーと同じ。",
+      "sisterOf": "fletcher"
+    },
+    {
+      "id": "laffey_dd724",
+      "name": "ラフィー (2 代目) (Laffey (DD-724))",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sumner",
+      "year": 1944,
+      "description": "アレン・M・サムナー級駆逐艦の同型艦。性能はアレン・M・サムナーと同じ。",
+      "sisterOf": "sumner"
+    },
+    {
+      "id": "english",
+      "name": "イングリッシュ (English)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sumner",
+      "year": 1944,
+      "description": "アレン・M・サムナー級駆逐艦の同型艦。性能はアレン・M・サムナーと同じ。",
+      "sisterOf": "sumner"
+    },
+    {
+      "id": "ingraham",
+      "name": "イングラハム (Ingraham)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sumner",
+      "year": 1944,
+      "description": "アレン・M・サムナー級駆逐艦の同型艦。性能はアレン・M・サムナーと同じ。",
+      "sisterOf": "sumner"
+    },
+    {
+      "id": "moale",
+      "name": "モール (Moale)",
+      "nation": "USN",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "5in_38_twin",
+        "mk15_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "sumner",
+      "year": 1944,
+      "description": "アレン・M・サムナー級駆逐艦の同型艦。性能はアレン・M・サムナーと同じ。",
+      "sisterOf": "sumner"
+    },
+    {
+      "id": "wahoo",
+      "name": "ワフー (Wahoo)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "flasher",
+      "name": "フラッシャー (Flasher)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "harder",
+      "name": "ハーダー (Harder)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "silversides",
+      "name": "シルバーサイズ (Silversides)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "growler",
+      "name": "グロウラー (Growler)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "trigger",
+      "name": "トリガー (Trigger)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "barb",
+      "name": "バーブ (Barb)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "drum",
+      "name": "ドラム (Drum)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 145,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "gato",
+      "year": 1941,
+      "description": "ガトー級潜水艦の同型艦。性能はガトーと同じ。",
+      "sisterOf": "gato"
+    },
+    {
+      "id": "tang",
+      "name": "タング (Tang)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 7,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "balao",
+      "year": 1943,
+      "description": "バラオ級潜水艦の同型艦。性能はバラオと同じ。",
+      "sisterOf": "balao"
+    },
+    {
+      "id": "archerfish",
+      "name": "アーチャーフィッシュ (Archerfish)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 7,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "balao",
+      "year": 1943,
+      "description": "バラオ級潜水艦の同型艦。性能はバラオと同じ。",
+      "sisterOf": "balao"
+    },
+    {
+      "id": "batfish",
+      "name": "バットフィッシュ (Batfish)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 7,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "balao",
+      "year": 1943,
+      "description": "バラオ級潜水艦の同型艦。性能はバラオと同じ。",
+      "sisterOf": "balao"
+    },
+    {
+      "id": "spadefish",
+      "name": "スペードフィッシュ (Spadefish)",
+      "nation": "USN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 7,
+      "speed": 150,
+      "weapons": [
+        "mk14_torpedo"
+      ],
+      "spriteKey": "balao",
+      "year": 1943,
+      "description": "バラオ級潜水艦の同型艦。性能はバラオと同じ。",
+      "sisterOf": "balao"
     }
   ]
 }

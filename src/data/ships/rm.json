@@ -158,6 +158,345 @@
       ],
       "spriteKey": "marcello",
       "description": "マルチェロ級潜水艦1番艦。大西洋に進出してボルドーの基地から通商破壊を行い、1941年に消息を絶った。"
+    },
+    {
+      "id": "montecuccoli",
+      "name": "ライモンド・モンテクッコリ (Raimondo Montecuccoli)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 24,
+      "speed": 185,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "montecuccoli",
+      "description": "コンドッティエーリ級軽巡洋艦の第 3 群、モンテクッコリ級の1番艦。防御を強めた高速の軽巡洋艦で、戦争を生き延びた。",
+      "year": 1935
+    },
+    {
+      "id": "littorio",
+      "name": "リットリオ (Littorio)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 760,
+      "armor": 61,
+      "speed": 150,
+      "weapons": [
+        "381mm_m1934",
+        "152mm_m1934"
+      ],
+      "spriteKey": "vittorio_veneto",
+      "description": "リットリオ級戦艦の同型艦。性能はヴィットリオ・ヴェネトと同じ。",
+      "sisterOf": "vittorio_veneto"
+    },
+    {
+      "id": "giulio_cesare",
+      "name": "ジュリオ・チェーザレ (Giulio Cesare)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 630,
+      "armor": 48,
+      "speed": 135,
+      "weapons": [
+        "320mm_m1936",
+        "120mm_m1926"
+      ],
+      "spriteKey": "conte_di_cavour",
+      "description": "コンテ・ディ・カヴール級戦艦の同型艦。性能はコンテ・ディ・カヴールと同じ。",
+      "sisterOf": "conte_di_cavour"
+    },
+    {
+      "id": "fiume",
+      "name": "フィウメ (Fiume)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 425,
+      "armor": 43,
+      "speed": 168,
+      "weapons": [
+        "203mm_ansaldo",
+        "100mm_m1928"
+      ],
+      "spriteKey": "zara",
+      "description": "ザラ級重巡洋艦の同型艦。性能はザラと同じ。",
+      "sisterOf": "zara"
+    },
+    {
+      "id": "gorizia",
+      "name": "ゴリツィア (Gorizia)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 425,
+      "armor": 43,
+      "speed": 168,
+      "weapons": [
+        "203mm_ansaldo",
+        "100mm_m1928"
+      ],
+      "spriteKey": "zara",
+      "description": "ザラ級重巡洋艦の同型艦。性能はザラと同じ。",
+      "sisterOf": "zara"
+    },
+    {
+      "id": "pola",
+      "name": "ポーラ (Pola)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 425,
+      "armor": 43,
+      "speed": 168,
+      "weapons": [
+        "203mm_ansaldo",
+        "100mm_m1928"
+      ],
+      "spriteKey": "zara",
+      "description": "ザラ級重巡洋艦の同型艦。性能はザラと同じ。",
+      "sisterOf": "zara"
+    },
+    {
+      "id": "trieste",
+      "name": "トリエステ (Trieste)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "203mm_ansaldo",
+        "533mm_si270"
+      ],
+      "spriteKey": "trento",
+      "description": "トレント級重巡洋艦の同型艦。性能はトレントと同じ。",
+      "sisterOf": "trento"
+    },
+    {
+      "id": "duca_degli_abruzzi",
+      "name": "ドゥカ・デッリ・アブルッツィ (Duca degli Abruzzi)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "garibaldi",
+      "description": "ドゥカ・デッリ・アブルッツィ級軽巡洋艦の同型艦。性能はジュゼッペ・ガリバルディと同じ。",
+      "sisterOf": "garibaldi"
+    },
+    {
+      "id": "muzio_attendolo",
+      "name": "ムツィオ・アッテンドーロ (Muzio Attendolo)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 24,
+      "speed": 185,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "montecuccoli",
+      "year": 1935,
+      "description": "モンテクッコリ級軽巡洋艦の同型艦。性能はライモンド・モンテクッコリと同じ。",
+      "sisterOf": "montecuccoli"
+    },
+    {
+      "id": "libeccio",
+      "name": "リベッチオ (Libeccio)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "maestrale",
+      "description": "マエストラーレ級駆逐艦の同型艦。性能はマエストラーレと同じ。",
+      "sisterOf": "maestrale"
+    },
+    {
+      "id": "grecale",
+      "name": "グレカーレ (Grecale)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "maestrale",
+      "description": "マエストラーレ級駆逐艦の同型艦。性能はマエストラーレと同じ。",
+      "sisterOf": "maestrale"
+    },
+    {
+      "id": "scirocco",
+      "name": "シロッコ (Scirocco)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "maestrale",
+      "description": "マエストラーレ級駆逐艦の同型艦。性能はマエストラーレと同じ。",
+      "sisterOf": "maestrale"
+    },
+    {
+      "id": "artigliere",
+      "name": "アルティリエーレ (Artigliere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "ascari",
+      "name": "アスカリ (Ascari)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "bersagliere",
+      "name": "ベルサリエーレ (Bersagliere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "carabiniere",
+      "name": "カラビニエーレ (Carabiniere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "corazziere",
+      "name": "コラッツィエーレ (Corazziere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "granatiere",
+      "name": "グラナティエーレ (Granatiere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "lanciere",
+      "name": "ランチエーレ (Lanciere)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
+    },
+    {
+      "id": "alpino",
+      "name": "アルピーノ (Alpino)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "aviere",
+      "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
+      "sisterOf": "aviere"
     }
   ]
 }

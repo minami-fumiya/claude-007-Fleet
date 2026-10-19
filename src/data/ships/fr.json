@@ -159,6 +159,260 @@
       ],
       "spriteKey": "surcouf",
       "description": "20.3cm連装砲を備えた大型潜水艦 (潜水巡洋艦)。自由フランス海軍に加わったが、1942年2月にカリブ海で消息を絶った。"
+    },
+    {
+      "id": "jean_bart",
+      "name": "ジャン・バール (Jean Bart)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "hp": 765,
+      "armor": 62,
+      "speed": 150,
+      "weapons": [
+        "380mm_m1935",
+        "152mm_m1930"
+      ],
+      "spriteKey": "richelieu",
+      "description": "リシュリュー級戦艦の同型艦。性能はリシュリューと同じ。",
+      "sisterOf": "richelieu"
+    },
+    {
+      "id": "suffren",
+      "name": "シュフラン (Suffren)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 178,
+      "weapons": [
+        "203mm_m1924",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "dupleix",
+      "description": "シュフラン級重巡洋艦の同型艦。性能はデュプレクスと同じ。",
+      "sisterOf": "dupleix"
+    },
+    {
+      "id": "colbert",
+      "name": "コルベール (Colbert)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 178,
+      "weapons": [
+        "203mm_m1924",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "dupleix",
+      "description": "シュフラン級重巡洋艦の同型艦。性能はデュプレクスと同じ。",
+      "sisterOf": "dupleix"
+    },
+    {
+      "id": "foch",
+      "name": "フォッシュ (Foch)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 178,
+      "weapons": [
+        "203mm_m1924",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "dupleix",
+      "description": "シュフラン級重巡洋艦の同型艦。性能はデュプレクスと同じ。",
+      "sisterOf": "dupleix"
+    },
+    {
+      "id": "jean_de_vienne",
+      "name": "ジャン・ド・ヴィエンヌ (Jean de Vienne)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "la_galissonniere",
+      "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
+      "sisterOf": "la_galissonniere"
+    },
+    {
+      "id": "marseillaise",
+      "name": "マルセイエーズ (Marseillaise)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "la_galissonniere",
+      "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
+      "sisterOf": "la_galissonniere"
+    },
+    {
+      "id": "gloire",
+      "name": "グロワール (Gloire)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "la_galissonniere",
+      "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
+      "sisterOf": "la_galissonniere"
+    },
+    {
+      "id": "montcalm",
+      "name": "モンカルム (Montcalm)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "la_galissonniere",
+      "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
+      "sisterOf": "la_galissonniere"
+    },
+    {
+      "id": "georges_leygues",
+      "name": "ジョルジュ・レイグ (Georges Leygues)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 350,
+      "armor": 30,
+      "speed": 180,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "la_galissonniere",
+      "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
+      "sisterOf": "la_galissonniere"
+    },
+    {
+      "id": "le_terrible",
+      "name": "ル・テリブル (Le Terrible)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_fantasque",
+      "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
+      "sisterOf": "le_fantasque"
+    },
+    {
+      "id": "le_triomphant",
+      "name": "ル・トリオンファン (Le Triomphant)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_fantasque",
+      "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
+      "sisterOf": "le_fantasque"
+    },
+    {
+      "id": "l_indomptable",
+      "name": "ランドンターブル (L'Indomptable)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_fantasque",
+      "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
+      "sisterOf": "le_fantasque"
+    },
+    {
+      "id": "le_malin",
+      "name": "ル・マラン (Le Malin)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_fantasque",
+      "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
+      "sisterOf": "le_fantasque"
+    },
+    {
+      "id": "l_audacieux",
+      "name": "ロダシュー (L'Audacieux)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_fantasque",
+      "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
+      "sisterOf": "le_fantasque"
+    },
+    {
+      "id": "volta",
+      "name": "ヴォルタ (Volta)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 240,
+      "armor": 14,
+      "speed": 255,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "mogador",
+      "description": "モガドール級駆逐艦の同型艦。性能はモガドールと同じ。",
+      "sisterOf": "mogador"
     }
   ]
 }

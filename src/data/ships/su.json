@@ -158,6 +158,142 @@
       ],
       "spriteKey": "s13",
       "description": "S型潜水艦。1945年1月、マリネスコ艦長のもとでドイツの客船ヴィルヘルム・グストロフを撃沈した。"
+    },
+    {
+      "id": "voroshilov",
+      "name": "ヴォロシーロフ (Voroshilov)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 400,
+      "armor": 34,
+      "speed": 180,
+      "weapons": [
+        "180mm_b1p",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "kirov",
+      "description": "キーロフ級軽巡洋艦の同型艦。性能はキーロフと同じ。",
+      "sisterOf": "kirov"
+    },
+    {
+      "id": "molotov",
+      "name": "モロトフ (Molotov)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 405,
+      "armor": 35,
+      "speed": 178,
+      "weapons": [
+        "180mm_b1p",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "maxim_gorky",
+      "description": "マクシム・ゴーリキー級軽巡洋艦の同型艦。性能はマクシム・ゴーリキーと同じ。",
+      "sisterOf": "maxim_gorky"
+    },
+    {
+      "id": "kalinin",
+      "name": "カリーニン (Kalinin)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 405,
+      "armor": 35,
+      "speed": 178,
+      "weapons": [
+        "180mm_b1p",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "maxim_gorky",
+      "description": "マクシム・ゴーリキー級軽巡洋艦の同型艦。性能はマクシム・ゴーリキーと同じ。",
+      "sisterOf": "maxim_gorky"
+    },
+    {
+      "id": "kaganovich",
+      "name": "カガノーヴィチ (Kaganovich)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 405,
+      "armor": 35,
+      "speed": 178,
+      "weapons": [
+        "180mm_b1p",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "maxim_gorky",
+      "description": "マクシム・ゴーリキー級軽巡洋艦の同型艦。性能はマクシム・ゴーリキーと同じ。",
+      "sisterOf": "maxim_gorky"
+    },
+    {
+      "id": "grozny",
+      "name": "グロズヌイ (Grozny)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "gnevny",
+      "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
+      "sisterOf": "gnevny"
+    },
+    {
+      "id": "gromky",
+      "name": "グロムキー (Gromky)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "gnevny",
+      "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
+      "sisterOf": "gnevny"
+    },
+    {
+      "id": "gremyashchy",
+      "name": "グレミャーシチー (Gremyashchy)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "gnevny",
+      "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
+      "sisterOf": "gnevny"
+    },
+    {
+      "id": "stremitelny",
+      "name": "ストレミーチェリヌイ (Stremitelny)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "gnevny",
+      "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
+      "sisterOf": "gnevny"
     }
   ]
 }

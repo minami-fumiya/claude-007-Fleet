@@ -177,6 +177,8 @@ const SUBTYPE_SCALE: Partial<Record<ShipSubtype, number>> = {
 export function generateShipTextures(scene: Phaser.Scene, ships: IShipData[]): void {
   const perClassIndex = new Map<string, number>();
   for (const ship of ships) {
+    // Sister ships (#85) use their lead's texture.
+    if (ship.sisterOf) continue;
     const spec = CLASS_SPRITES[ship.shipClass] ?? CLASS_SPRITES[ShipClass.Cruiser];
     // Sister-ship shading counts per nation and class, so every navy starts from its base colour.
     const key = `${ship.nation}:${ship.shipClass}`;
