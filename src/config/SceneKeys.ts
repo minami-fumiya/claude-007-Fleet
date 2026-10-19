@@ -12,6 +12,7 @@ export const SceneKeys = {
   SCENARIO: 'ScenarioScene',
   ENCYCLOPEDIA: 'EncyclopediaScene',
   CAPTAIN: 'CaptainScene',
+  BASE: 'BaseScene',
   RECORD: 'RecordScene',
   SETTINGS: 'SettingsScene',
   HELP: 'HelpScene',

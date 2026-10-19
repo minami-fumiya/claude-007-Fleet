@@ -9,6 +9,7 @@
 
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { rankOf } from '@/systems/RankSystem';
+import { currentBase } from '@/systems/BaseSystem';
 
 export type RawSave = Record<string, unknown>;
 /** Turns a raw save of version `n` into version `n + 1` (the version field is set by the runner). */
@@ -101,6 +102,28 @@ export const MIGRATIONS: MigrationStep[] = [
       rankFloor: Math.max(floor, held),
       ledger: {},
       sortie: null,
+    };
+  }),
+  // v10 → v11 (0.0.20, #145 / #146): ships, repair docks and builds belong to a base. Everything goes to the base in use, so
+  // the fleet, the docks built and the ships under repair or construction stay where the player left them.
+  (data) => mapNations(data, (nation, key) => {
+    const campaign = (Array.isArray(nation.campaign) ? nation.campaign : []).filter((id): id is string => typeof id === 'string');
+    const rankStats = typeof nation.rankStats === 'object' && nation.rankStats !== null ? nation.rankStats as Record<string, number> : {};
+    const here = currentBase(key, {
+      campaign, merit: typeof nation.merit === 'number' ? nation.merit : 0, rankFloor: typeof nation.rankFloor === 'number' ? nation.rankFloor : 0,
+      rankStats, nation: key, base: typeof nation.base === 'string' ? nation.base : '',
+    })?.id ?? '';
+    const ships = (Array.isArray(nation.ships) ? nation.ships : []).filter((id): id is string => typeof id === 'string');
+    const atHere = (jobs: unknown): unknown => (Array.isArray(jobs) ? jobs.map((j) => (typeof j === 'object' && j !== null ? { ...j, base: here } : j)) : jobs);
+    return {
+      ...nation,
+      shipBases: Object.fromEntries(ships.map((id) => [id, here])),
+      baseDocks: { [here]: typeof nation.docksOwned === 'number' ? nation.docksOwned : 1 },
+      docks: atHere(nation.docks),
+      builds: atHere(nation.builds),
+      // Base facilities (#146) start unbuilt: regeneration stays as it was.
+      facilities: {},
+      facilityJobs: [],
     };
   }),
 ];

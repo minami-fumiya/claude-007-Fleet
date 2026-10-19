@@ -134,7 +134,7 @@ describe('ProgressStore.parseProgress', () => {
     const q = parseProgress('{"resources":{"fuel":5,"ammo":"x"},"damage":{"a":2,"b":0.5,"c":"x"},"docks":[{"shipId":"b","endsAt":10},{"shipId":3}],"research":["x",1]}');
     expect(q.resources).toEqual({ fuel: 5, ammo: 0, steel: 0, bauxite: 0 });
     expect(q.damage).toEqual({ a: 1, b: 0.5 });
-    expect(q.docks).toEqual([{ shipId: 'b', endsAt: 10 }]);
+    expect(q.docks).toEqual([{ shipId: 'b', endsAt: 10, base: 'ijn_home' }]);
     expect(q.research).toEqual(['x']);
   });
 });

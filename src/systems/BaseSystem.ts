@@ -3,6 +3,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { CLASS_JA } from './EncyclopediaSystem';
 export { scaleCost } from './ResourceSystem';
 import { RANKS, rankOf, IRankProgress } from './RankSystem';
+import { boostedBase, Facilities } from './FacilitySystem';
 
 /**
  * 軍港 (#88, pure): each nation has four home ports. The admiral works from one at a time; each gives one or two
@@ -21,6 +22,8 @@ export interface IBase {
   research?: number;
   /** Repairs take this many times as long */
   repairTime?: number;
+  /** Theaters a sortie can leave from here for (#145); all of the nation's when absent */
+  theaters?: string[];
 }
 
 export const BASES = (baseData as { bases: IBase[] }).bases;
@@ -40,9 +43,9 @@ export function currentBase(nation: string, progress: IRankProgress & { base?: s
   return stored && isBaseOpen(stored, progress) ? stored : list[0];
 }
 
-/** The base of a progress view (its own nation). */
-export function baseOfProgress(progress: IRankProgress & { nation: string; base?: string }): IBase | undefined {
-  return currentBase(progress.nation, progress);
+/** The base of a progress view (its own nation), its bonus raised by its own facility and workshop (#146). */
+export function baseOfProgress(progress: IRankProgress & { nation: string; base?: string; facilities?: Facilities }): IBase | undefined {
+  return boostedBase(currentBase(progress.nation, progress), progress.facilities ?? {});
 }
 
 /** Moves to `id` (null when it isn't this nation's or not open yet). */
@@ -76,4 +79,51 @@ export function baseBonusLines(base: IBase): string[] {
 
 export function baseLockText(base: IBase): string {
   return `${RANKS[base.unlockRank]?.name ?? '?'}に昇進で解放`;
+}
+
+// ---------------------------------------------------------------------------
+// Ships, docks and theaters by base (#145)
+// ---------------------------------------------------------------------------
+
+/** What a nation keeps per base. */
+export interface IBaseHoldings {
+  /** Ship id → base id (ships without an entry are at the current base) */
+  shipBases: Record<string, string>;
+}
+
+/** The current base's id ('' when the nation has none). */
+export function currentBaseId(progress: IRankProgress & { nation: string; base?: string }): string {
+  return baseOfProgress(progress)?.id ?? '';
+}
+
+/** Where a ship is based. */
+export function shipBaseOf(progress: IRankProgress & IBaseHoldings & { nation: string; base?: string }, shipId: string): string {
+  return progress.shipBases[shipId] ?? currentBaseId(progress);
+}
+
+export function isAtCurrentBase(progress: IRankProgress & IBaseHoldings & { nation: string; base?: string }, shipId: string): boolean {
+  return shipBaseOf(progress, shipId) === currentBaseId(progress);
+}
+
+/** Assigns ships to a base (new ships go to the base the admiral is at). */
+export function assignShips<T extends IBaseHoldings>(progress: T, shipIds: readonly string[], baseId: string): T {
+  if (!baseId || shipIds.length === 0) return progress;
+  const shipBases = { ...progress.shipBases };
+  for (const id of shipIds) shipBases[id] = baseId;
+  return { ...progress, shipBases };
+}
+
+/** Fuel to bring a ship over from another base: more for bigger ships. */
+export function relocationCost(ship: { hp: number }): number {
+  return Math.max(20, Math.round(ship.hp / 10 / 10) * 10);
+}
+
+/** Whether a sortie into `theater` can leave from `base`. */
+export function baseReaches(base: IBase | undefined, theater: string): boolean {
+  return !base?.theaters || base.theaters.includes(theater);
+}
+
+/** The nation's bases that reach `theater` ("呉鎮守府・佐世保鎮守府から出撃"). */
+export function basesFor(nation: string, theater: string): IBase[] {
+  return nationBases(nation).filter((b) => baseReaches(b, theater));
 }

@@ -71,7 +71,7 @@ describe('ProgressStore v2 (per-nation save, #27)', () => {
     expect(np.campaign).toEqual(v1.campaign);
     expect(np.research).toEqual(v1.research);
     expect(np.upgrades).toEqual(v1.upgrades);
-    expect(np.docks).toEqual(v1.docks);
+    expect(np.docks).toEqual(v1.docks.map((d) => ({ ...d, base: 'ijn_home' })));
     expect(np.refits).toEqual(v1.refits);
     expect(np.captainXp).toEqual(v1.captainXp);
     // Every IJN ship, fictional ones included (they stay gated by research in the Fleet Builder).
