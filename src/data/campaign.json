@@ -62,7 +62,7 @@
       "x": 0.8, "y": 0.68, "requires": ["p8"],
       "enemy": { "nation": "USN", "ships": ["essex", "baltimore", "fletcher", "gearing", "sumner", "buckley"] },
       "objective": "Delay", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方泊地" }, "timeLimitSec": 240 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方泊地" }, "timeLimitSec": 150, "arrivalSec": 90 },
       "reward": { "fuel": 700, "ammo": 600, "steel": 800, "bauxite": 500 }, "rewardShip": "Carrier"
     },
     {
@@ -121,7 +121,7 @@
       "x": 0.84, "y": 0.7, "requires": ["a7"],
       "enemy": { "nation": "KM", "ships": ["gneisenau", "admiral_hipper", "z23", "z20", "z1"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 240 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 150, "arrivalSec": 90 },
       "reward": { "fuel": 800, "ammo": 800, "steel": 1000, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
@@ -180,7 +180,7 @@
       "x": 0.8, "y": 0.7, "requires": ["m7"],
       "enemy": { "nation": "RN", "ships": ["warspite", "belfast", "cossack", "javelin", "southampton"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方の港" }, "timeLimitSec": 240 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方の港" }, "timeLimitSec": 150, "arrivalSec": 90 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
@@ -239,7 +239,7 @@
       "x": 0.8, "y": 0.7, "requires": ["b7"],
       "enemy": { "nation": "KM", "ships": ["scharnhorst", "prinz_eugen", "z1", "z23"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "レニングラード" }, "timeLimitSec": 240 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "レニングラード" }, "timeLimitSec": 150, "arrivalSec": 90 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {

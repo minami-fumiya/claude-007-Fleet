@@ -72,7 +72,8 @@ export function missingHp(maxHp: number, fraction: number): number {
 /** Fuel and steel for the missing HP; steel was lowered from 0.4 per HP because it ran out first (#35). */
 export function repairCost(maxHp: number, fraction: number): IResources {
   const missing = missingHp(maxHp, fraction);
-  return resources({ fuel: Math.ceil(missing * 0.25), steel: Math.ceil(missing * 0.25) });
+  // Steel was the scarce one (#132): repairs take less of it.
+  return resources({ fuel: Math.ceil(missing * 0.25), steel: Math.ceil(missing * 0.15) });
 }
 
 /** `timeMul` is the current base's repair-time multiplier (#88). */

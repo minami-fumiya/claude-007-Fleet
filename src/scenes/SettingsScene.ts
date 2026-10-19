@@ -4,7 +4,9 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { clampVolume, ISettings, stepVolume } from '@/systems/SettingsSystem';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
-import { backupStoredSave, emptySave, listBackups, loadSave, restoreBackup, saveSave } from '@/utils/ProgressStore';
+import { backupStoredSave, emptySave, listBackups, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
+import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
+import { Nation } from '@/types/Nation';
 import { backupLabel, ISaveBackup } from '@/utils/SaveBackup';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
@@ -16,11 +18,17 @@ const ROW_H = IS_PORTRAIT ? 84 : 64;
 const BTN_H = IS_PORTRAIT ? 64 : 48;
 
 /** 設定: sound volumes and mute, and save data transfer / reset. */
+/** Sheets drawn over the settings (nation reset). */
+const SHEET_DEPTH = 300;
+
 export class SettingsScene extends Phaser.Scene {
   private returnTo: string = SceneKeys.HOME;
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private resetArmed = false;
   private backupsOpen = false;
+  /** Nation reset (#129): the list is open, and which nation was tapped once */
+  private nationResetOpen = false;
+  private nationResetArmed: Nation | null = null;
   private status = '';
   private statusCss: string = Css.muted;
 
@@ -99,7 +107,7 @@ export class SettingsScene extends Phaser.Scene {
     );
     y += BTN_H + 6;
     this.track(this.add.text(x, y, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回 標準」にすると、編成画面を開くたびに標準 (戦域の相手国・水上戦・晴天・昼・同数) から始まります。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
-    y += IS_PORTRAIT ? 60 : 32;
+    y += IS_PORTRAIT ? 84 : 32;
 
     if (!IS_PORTRAIT) {
       x = P.x + 28 + colW + COL_GAP;
@@ -107,16 +115,22 @@ export class SettingsScene extends Phaser.Scene {
     }
     this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
-    this.track(this.add.text(x, y, 'セーブコードで別の端末やブラウザへ進行状況を移せます。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    this.track(this.add.text(x, y, `セーブコードで別の端末やブラウザへ進行状況を移せます。  (v${__APP_VERSION__})`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 48 : 30;
     const buttons: Array<[string, () => void, 'primary' | 'secondary' | 'danger']> = [
       ['セーブコードをコピー', () => this.exportSave(), 'primary'],
       ['セーブコードを読み込む', () => this.importSave(), 'secondary'],
       // First-visit help (#61) shows again on every screen.
       ['画面の説明をもう一度表示', () => this.resetHelp(), 'secondary'],
-      [this.resetArmed ? 'もう一度押すとリセット' : '進行データをリセット', () => this.resetSave(), this.resetArmed ? 'danger' : 'secondary'],
+      ['国を選んでリセット', () => {
+        this.nationResetOpen = true;
+        this.nationResetArmed = null;
+        this.refresh();
+      }, 'secondary'],
+      [this.resetArmed ? 'もう一度押すと全部リセット' : '全部リセット', () => this.resetSave(), this.resetArmed ? 'danger' : 'secondary'],
     ];
-    const cols = 1;
+    // Two per row so the section fits (and the backups below it) on a phone.
+    const cols = 2;
     const gap = 12;
     const bw = (w - gap * (cols - 1)) / cols;
     buttons.forEach(([label, fn, variant], i) => {
@@ -125,6 +139,7 @@ export class SettingsScene extends Phaser.Scene {
       this.track(new UIButton(this, bx, by, label, fn, { variant, width: bw, height: BTN_H, fontSize: 14 }));
     });
     y += Math.ceil(buttons.length / cols) * (BTN_H + gap) + 10;
+    if (this.nationResetOpen) this.drawNationReset();
     // Backups taken before updates, imports and resets: tap one to restore it (#114).
     const backups = listBackups();
     this.track(new UIButton(this, x + w / 2, y + BTN_H / 2, this.backupsOpen ? 'バックアップを閉じる' : `バックアップから復元 (${backups.length})`, () => {
@@ -211,6 +226,59 @@ export class SettingsScene extends Phaser.Scene {
     this.backupsOpen = false;
     if (!restoreBackup(b)) return this.say('このバックアップは読み込めませんでした。', Css.danger);
     this.say(`バックアップ (${backupLabel(b)}) を復元しました`);
+  }
+
+  /** Sheet listing the started nations; tapping one twice resets just that nation (#129). */
+  private drawNationReset(): void {
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      return this.track(o);
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const save = loadSave();
+    const started = PLAYABLE_NATIONS.filter((n) => save.nations[n] !== undefined);
+    const cols = IS_PORTRAIT ? 1 : 2;
+    const bh = BTN_H - 4;
+    const gap = 10;
+    const w = IS_PORTRAIT ? CANVAS_W - 64 : 640;
+    const rows = Math.max(1, Math.ceil(started.length / cols));
+    const h = (IS_PORTRAIT ? 200 : 160) + rows * (bh + gap) + bh + 40;
+    const x = (CANVAS_W - w) / 2;
+    const y = Math.max(16, (CANVAS_H - h) / 2);
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 28, y + 22, '国を選んでリセット', eyebrowStyle(11)));
+    const note = this.nationResetArmed
+      ? `もう一度押すと${NATION_INFO[this.nationResetArmed].jaShort}の資源・保有艦・研究・攻略・艦長・任務が消えます。`
+      : '選んだ国だけを最初からやり直します。戦績 (勲章) と他の国は残り、リセット前のデータはバックアップから戻せます。';
+    add(this.add.text(x + 28, y + 52, note, textStyle(13, this.nationResetArmed ? Css.danger : Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
+    const top = y + (IS_PORTRAIT ? 150 : 116);
+    if (started.length === 0) add(this.add.text(x + 28, top, 'リセットできる国がありません。', textStyle(13, Css.muted)));
+    const bw = (w - 56 - gap * (cols - 1)) / cols;
+    started.forEach((n, i) => {
+      const armed = this.nationResetArmed === n;
+      add(new UIButton(this, x + 28 + (i % cols) * (bw + gap) + bw / 2, top + Math.floor(i / cols) * (bh + gap) + bh / 2,
+        armed ? `もう一度で ${NATION_INFO[n].jaShort} をリセット` : `${NATION_INFO[n].jaShort} をリセット`, () => this.resetOneNation(n), {
+          variant: armed ? 'danger' : 'secondary', width: bw, height: bh, fontSize: 14,
+        }));
+    });
+    add(new UIButton(this, x + w / 2, y + h - 20 - bh / 2, '閉じる', () => {
+      this.nationResetOpen = false;
+      this.nationResetArmed = null;
+      this.refresh();
+    }, { variant: 'primary', width: IS_PORTRAIT ? 260 : 200, height: bh, fontSize: 15 }));
+  }
+
+  private resetOneNation(nation: Nation): void {
+    if (this.nationResetArmed !== nation) {
+      this.nationResetArmed = nation;
+      this.refresh();
+      return;
+    }
+    this.nationResetArmed = null;
+    this.nationResetOpen = false;
+    backupStoredSave('reset');
+    saveSave(resetNation(loadSave(), nation));
+    this.say(`${NATION_INFO[nation].jaShort}をリセットしました (バックアップから戻せます)`);
   }
 
   private resetSave(): void {

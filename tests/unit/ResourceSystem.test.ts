@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addResources, battleReward, canAfford, formatResources, pay, RESOURCE_CAP, resources, sortieCost } from '@/systems/ResourceSystem';
+import { addResources, battleReward, canAfford, formatResources, pay, RESOURCE_CAP, resources, SINK_STEEL, sortieCost } from '@/systems/ResourceSystem';
 import { IShipData, ShipSubtype } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
@@ -38,6 +38,11 @@ describe('ResourceSystem', () => {
     expect(win.steel).toBeGreaterThan(loss.steel);
     expect(battleReward(false, 0)).toEqual(resources());
     expect(battleReward(true, 0).fuel).toBeGreaterThan(0);
+    // Steel by the class sunk (#132): a battleship's wreck gives more than a destroyer's.
+    const bb = battleReward(true, 1, [ShipClass.Battleship]).steel;
+    const dd = battleReward(true, 1, [ShipClass.Destroyer]).steel;
+    expect(bb - dd).toBe(SINK_STEEL[ShipClass.Battleship]! - SINK_STEEL[ShipClass.Destroyer]!);
+    expect(battleReward(false, 1, [ShipClass.Battleship]).steel).toBe(SINK_STEEL[ShipClass.Battleship]! / 2);
   });
 
   it('formats non-zero resources', () => {

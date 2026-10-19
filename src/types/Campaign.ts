@@ -30,6 +30,9 @@ export interface ICampaignSide {
   timeLimitSec?: number;
   /** The target heads for the zone instead of hunting */
   enemyGoesForZone?: boolean;
+  /** Seconds the target takes to reach the zone if nobody stops it (full speed when absent): a Delay must leave
+   *  time to intercept it, whatever the target's speed */
+  arrivalSec?: number;
 }
 
 export interface ICampaignArea {

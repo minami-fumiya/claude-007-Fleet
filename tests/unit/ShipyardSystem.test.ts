@@ -94,8 +94,8 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('sendai'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'] }, IJN, byId('takao'))).toBe('rank');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], merit: 100 }, IJN, byId('takao'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 6 }, IJN, byId('nagato'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 7 }, IJN, byId('nagato'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 6 }, IJN, byId('ise'))).toBe('rank');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 7 }, IJN, byId('ise'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 11 }, IJN, byId('a150'))).toBe('fictional');
     expect(buildState({ ...p, resources: resources() }, IJN, byId('yukikaze'))).toBe('resources');
     expect(buildStateLabel('research', byId('sendai'), { build_cruiser: '軽巡洋艦建造' })).toBe('要研究: 軽巡洋艦建造');
@@ -158,18 +158,18 @@ describe('reward-only ships (#39)', () => {
 
   it('cannot be built; the shipyard names the area instead', () => {
     const p = player({ resources: rich, research: ['build_cruiser', 'build_battleship'], rankFloor: 13 });
-    expect(isRewardOnly(byId('yamato'))).toBe(true);
-    expect(buildState(p, IJN, byId('yamato'))).toBe('reward');
-    expect(buildShip(p, IJN, byId('yamato'))).toBeNull();
-    expect(buildState(p, IJN, byId('nagato'))).toBe('ready');
-    expect(buildStateLabel('reward', byId('yamato'), {}, { p6: '坊ノ岬沖' })).toBe('作戦報酬: 坊ノ岬沖');
+    expect(isRewardOnly(byId('nagato'))).toBe(true);
+    expect(buildState(p, IJN, byId('nagato'))).toBe('reward');
+    expect(buildShip(p, IJN, byId('nagato'))).toBeNull();
+    expect(buildState(p, IJN, byId('yamato'))).toBe('ready');
+    expect(buildStateLabel('reward', byId('nagato'), {}, { p6: '坊ノ岬沖' })).toBe('作戦報酬: 坊ノ岬沖');
     // An owned reward ship stays owned.
-    expect(buildState({ ...p, ships: [...p.ships, 'yamato'] }, IJN, byId('yamato'))).toBe('owned');
+    expect(buildState({ ...p, ships: [...p.ships, 'nagato'] }, IJN, byId('nagato'))).toBe('owned');
   });
 
   it("the area's first clear grants its reward ship; other areas never hand one out", () => {
-    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], 'p6')?.id).toBe('yamato');
-    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki', 'yamato'], 'p6')?.id).not.toBe('yamato');
+    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], 'p6')?.id).toBe('nagato');
+    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki', 'nagato'], 'p6')?.id).not.toBe('nagato');
     for (const area of ['p1', 'p4', 'p5']) {
       const ship = rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], area);
       expect(ship && isRewardOnly(ship)).toBe(false);

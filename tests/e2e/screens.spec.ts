@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.15.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.16.1.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -299,6 +299,28 @@ test.describe('screens', () => {
     await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
     const second = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown } }).battleData.sortie);
     expect(second).toEqual({ node: 2, battles: 2, boss: true });
+    expect(errors).toEqual([]);
+  });
+
+  test('rank list, nation reset and the version on the title (#128 #129 #136)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout);
+    await open(page, 'HomeScene');
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openRanks(): void }).openRanks());
+    expect(await overflowingTexts(page, 'HomeScene'), `ranks (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('ranks.png') });
+    await open(page, 'SettingsScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('SettingsScene') as unknown as { nationResetOpen: boolean; resetOneNation(n: string): void };
+      s.nationResetOpen = true;
+      s.resetOneNation('IJN');
+    });
+    expect(await overflowingTexts(page, 'SettingsScene'), `nation reset (${layout})`).toEqual([]);
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('SettingsScene') as unknown as { resetOneNation(n: string): void }).resetOneNation('IJN'));
+    const left = await page.evaluate(() => Object.keys((JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: object }).nations));
+    expect(left).not.toContain('IJN');
+    await open(page, 'MainMenuScene');
+    expect(await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene').children.list.some((o) => /^v\d/.test((o as Phaser.GameObjects.Text).text ?? '')))).toBe(true);
     expect(errors).toEqual([]);
   });
 });

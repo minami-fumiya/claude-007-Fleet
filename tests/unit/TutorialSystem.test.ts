@@ -27,7 +27,7 @@ describe('TutorialSystem (#90)', () => {
   it('finishing promotes to 少尉 with the reward; the research step brings its supply', () => {
     const s = fresh();
     const before = s.nations.IJN!;
-    expect(rankOf(before).name).toBe('士官候補生');
+    expect(rankOf(before).name).toBe('准尉');
     const done = play(s);
     const np = done.nations.IJN!;
     expect(done.tutorial.done).toBe(true);
@@ -39,7 +39,7 @@ describe('TutorialSystem (#90)', () => {
   it('skipping ends it without the promotion; a replay pays nothing twice', () => {
     const skipped = skipTutorial(fresh());
     expect(currentStep(skipped.tutorial)).toBeNull();
-    expect(rankOf(skipped.nations.IJN!).name).toBe('士官候補生');
+    expect(rankOf(skipped.nations.IJN!).name).toBe('准尉');
     const done = play(fresh());
     const again = play(restartTutorial(done));
     expect(again.tutorial.done).toBe(true);
