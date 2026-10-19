@@ -126,6 +126,28 @@ export const MIGRATIONS: MigrationStep[] = [
       facilityJobs: [],
     };
   }),
+  // v11 → v12 (0.0.22, #158): quests gain an hourly period and lifetime event totals. Totals start from what the save
+  // already counts (promotion-mission stats and the one-time quests' progress), so long-running goals keep their count.
+  (data) => mapNations(data, (nation) => {
+    const quests = typeof nation.quests === 'object' && nation.quests !== null ? nation.quests as RawSave : {};
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+    const stats = typeof nation.rankStats === 'object' && nation.rankStats !== null ? nation.rankStats as RawSave : {};
+    const progress = typeof quests.progress === 'object' && quests.progress !== null ? quests.progress as RawSave : {};
+    const totals: Record<string, number> = {};
+    const seed = (event: string, n: number): void => {
+      if (n > (totals[event] ?? 0)) totals[event] = n;
+    };
+    seed('sink', num(stats.sink));
+    seed('campaignWin', num(stats.campaignWin));
+    seed('nightWin', num(stats.nightWin));
+    seed('win', num(progress.a_win50));
+    seed('build', num(progress.a_build));
+    seed('research', num(progress.a_research));
+    seed('refit', num(progress.a_refit));
+    seed('sweep', Math.max(num(progress.a_sweep), num(stats.sweep)));
+    seed('sinkBattleship', num(progress.a_battleship));
+    return { ...nation, quests: { ...quests, hour: 0, totals } };
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

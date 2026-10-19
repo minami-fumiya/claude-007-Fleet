@@ -174,6 +174,7 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const counted = { ...promoted.progress, sweeps: { day, counts: { ...counts, [area.id]: (counts[area.id] ?? 0) + 1 } } };
   const next = withQuestEvents(counted, [
     ['sortie', 1], ['win', 1], ['sink', enemy.length], ['sweep', 1],
+    ['sinkDestroyer', of(ShipClass.Destroyer)], ['sinkCruiser', of(ShipClass.Cruiser)],
     ['sinkCarrier', of(ShipClass.Carrier)], ['sinkSubmarine', of(ShipClass.Submarine)], ['sinkBattleship', of(ShipClass.Battleship)],
   ], now);
   return { progress: next, reward, cost, merit, promotedTo: promoted.promotedTo };

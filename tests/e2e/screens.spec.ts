@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.20.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.21.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -316,14 +316,16 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
-  test('quests, sweeping a won area and the event line (#52 #57 #89)', async ({ page }, info) => {
+  test('quests, sweeping a won area and the event line (#52 #57 #89 #158)', async ({ page }, info) => {
     const layout = info.project.metadata.layout as string;
     const save = { ...SAVE, version: 8, nations: { IJN: { ...SAVE.nations.IJN, perfect: ['p2'] } } };
     const errors = await boot(page, layout, save);
     await open(page, 'HomeScene');
-    for (const kind of ['daily', 'weekly', 'once']) {
+    for (const kind of ['hourly', 'daily', 'weekly', 'once', 'rank']) {
       await page.evaluate((k) => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openQuests(k: string): void }).openQuests(k), kind);
       expect(await overflowingTexts(page, 'HomeScene'), `${kind} (${layout})`).toEqual([]);
+      expect.soft(await overlappingTexts(page, 'HomeScene'), `${kind} overlaps (${layout})`).toEqual([]);
+      await page.screenshot({ path: info.outputPath(`quests-${kind}.png`) });
     }
     await page.screenshot({ path: info.outputPath('quests.png') });
     await open(page, 'CampaignMapScene');
@@ -331,8 +333,8 @@ test.describe('screens', () => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { selectArea(id: string): void; sweep(a: unknown): void; selected: unknown; status: string };
       s.selectArea('p2');
       s.sweep(s.selected);
-      const stored = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { quests: { progress: Record<string, number> } } } };
-      return { status: s.status, sweeps: stored.nations.IJN.quests.progress.a_sweep };
+      const stored = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { quests: { totals: Record<string, number> } } } };
+      return { status: s.status, sweeps: stored.nations.IJN.quests.totals.sweep };
     });
     expect(swept.status).toContain('掃討完了');
     expect(swept.sweeps).toBe(1);
