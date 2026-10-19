@@ -27,6 +27,11 @@ describe(`release checklist for ${VERSION} (#207)`, () => {
     expect(doc, `docs/VERSIONS.md の一覧に ${VERSION} の行を追加してください`).toContain(`| ${VERSION} |`);
   });
 
+  it('has its balance review (#223), from 0.0.27 on', () => {
+    if (compareVersions(VERSION, '0.0.27-alpha') < 0) return;
+    expect(existsSync(join(ROOT, 'docs', 'balance', `${SHORT}.md`)), `docs/balance/${SHORT}.md にバランス確認の結果を書いてください (CLAUDE.md「版ごとのバランス確認」)`).toBe(true);
+  });
+
   it('the E2E reads the previous version\'s save', () => {
     const versions = readdirSync(SAVES).map((f) => /^save-(.+)\.json$/.exec(f)?.[1]).filter((v): v is string => !!v).sort(compareVersions);
     const previous = versions[versions.indexOf(SHORT) - 1];
