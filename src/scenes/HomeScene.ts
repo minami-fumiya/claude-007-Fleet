@@ -299,9 +299,11 @@ export class HomeScene extends Phaser.Scene {
       const textW = colW - 32 - bw - 12;
       add(this.add.text(tx, ry + 8, r.name, textStyle(15, claimed ? Css.dim : r.status === 'idle' ? Css.muted : Css.text, { fontStyle: 'bold' })));
       add(this.add.text(tx + textW, ry + 12, `${Math.min(r.goal, r.value)} / ${r.goal}`, textStyle(12, color)).setOrigin(1, 0));
-      add(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted)));
+      // Description and reward stay left of the status button (long weekly rewards ran under it in portrait).
+      const fit = <T extends Phaser.GameObjects.Text>(t: T): T => (t.width > textW ? t.setScale(textW / t.width) : t);
+      add(fit(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted))));
       drawMeter(add(this.add.graphics()), tx, ry + rowH - (IS_PORTRAIT ? 30 : 27), textW, 4, r.value / r.goal, r.status === 'claimable' ? Colors.gold : claimed ? Colors.muted : Colors.cyan);
-      if (r.reward) add(this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : Css.gold)).setOrigin(0, 1));
+      if (r.reward) add(fit(this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : Css.gold)).setOrigin(0, 1)));
       const label = { claimable: '受け取る', progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
       const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
         variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
