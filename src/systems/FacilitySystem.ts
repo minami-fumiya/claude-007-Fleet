@@ -20,10 +20,11 @@ export interface IFacility {
 }
 
 export const COMMON_FACILITIES: IFacility[] = [
-  { id: 'fuelTank', name: '燃料タンク', effect: '燃料の回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
-  { id: 'ammoDepot', name: '弾薬庫', effect: '弾薬の回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
-  { id: 'steelMill', name: '製鋼所', effect: '鋼材の回復 +1 / 分・保有上限 +5,000', maxLevel: 5 },
-  { id: 'airBase', name: '航空基地', effect: 'ボーキの回復 +1 / 分・保有上限 +5,000', maxLevel: 5 },
+  // The four resource facilities work alike (#190): each level adds regeneration speed and cap, and holding cap (#221).
+  { id: 'fuelTank', name: '燃料タンク', effect: '燃料の回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
+  { id: 'ammoDepot', name: '弾薬庫', effect: '弾薬の回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
+  { id: 'steelMill', name: '製鋼所', effect: '鋼材の回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
+  { id: 'airBase', name: '航空基地', effect: 'ボーキの回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
   { id: 'workshop', name: '工作部', effect: 'この軍港の研究費・建造時間 −5%', maxLevel: 5 },
 ];
 
@@ -118,16 +119,44 @@ export interface IRegenRules {
   cap: IResources;
 }
 
-/** Regeneration with every base's facilities: tanks raise caps, the mill and the air base speed steel and bauxite. */
+/** What one level of a resource facility adds (#190): the same for all four resources. */
+export const REGEN_CAP_PER_LEVEL = 1000;
+export const REGEN_RATE_PER_LEVEL = 1;
+/** Each level of a base's own facility above 1 adds this to all four regeneration caps (#190). */
+export const UNIQUE_REGEN_CAP = 500;
+
+/**
+ * Regeneration with every base's facilities (#146 #190): each resource's facility raises both its rate and its cap,
+ * and the bases' own facilities raise every cap a little. 0.0.27's tanks (cap only) and mills (rate only) keep what
+ * they gave and gain the other half.
+ */
 export function regenRules(facilities: Facilities): IRegenRules {
+  const unique = Object.keys(facilities).reduce((sum, base) => sum + Math.max(0, facilityLevel(facilities, base, 'unique') - 1), 0);
   const cap = resources();
-  for (const k of RESOURCE_KEYS) cap[k] = REGEN_CAP;
-  cap.fuel += 1000 * totalLevel(facilities, 'fuelTank');
-  cap.ammo += 1000 * totalLevel(facilities, 'ammoDepot');
   const perTick = { ...REGEN_PER_TICK };
-  perTick.steel += totalLevel(facilities, 'steelMill');
-  perTick.bauxite += totalLevel(facilities, 'airBase');
+  for (const k of RESOURCE_KEYS) {
+    const lv = totalLevel(facilities, HOLD_FACILITY[k]);
+    cap[k] = REGEN_CAP + REGEN_CAP_PER_LEVEL * lv + UNIQUE_REGEN_CAP * unique;
+    perTick[k] += REGEN_RATE_PER_LEVEL * lv;
+  }
   return { perTick, cap };
+}
+
+/**
+ * "回復 5 → 6 / 分・回復上限 2,500 → 3,500・保有上限 15,000 → 20,000" for a resource facility's next level (#190), or
+ * its current values once it is at the top. Undefined for the workshop and the unique facility.
+ */
+export function facilityPreview(facilities: Facilities, base: string, id: FacilityId): string | undefined {
+  const k = RESOURCE_KEYS.find((r) => HOLD_FACILITY[r] === id);
+  if (!k) return undefined;
+  const now = regenRules(facilities);
+  const hold = holdCap(facilities);
+  const n = (v: number): string => v.toLocaleString('en-US');
+  if (facilityLevel(facilities, base, id) >= maxLevelOf(id)) return `回復 ${now.perTick[k]} / 分・回復上限 ${n(now.cap[k])}・保有上限 ${n(hold[k])}`;
+  const raised: Facilities = { ...facilities, [base]: { ...(facilities[base] ?? {}), [id]: facilityLevel(facilities, base, id) + 1 } };
+  const next = regenRules(raised);
+  const nextHold = holdCap(raised);
+  return `回復 ${now.perTick[k]} → ${next.perTick[k]} / 分・回復上限 ${n(now.cap[k])} → ${n(next.cap[k])}・保有上限 ${n(hold[k])} → ${n(nextHold[k])}`;
 }
 
 /** Which facility raises each resource's holding cap (#221). */

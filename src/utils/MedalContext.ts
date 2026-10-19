@@ -31,7 +31,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -48,6 +48,9 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     const cap = holdCap(np.facilities ?? {});
     ctx.steelCap = Math.max(ctx.steelCap, cap.steel);
     if (np.resources && atHoldCap(np.resources, cap)) ctx.fullStock = 1;
+    // The four resource facilities together (#190): the weakest one counts.
+    const supply = (['fuelTank', 'ammoDepot', 'steelMill', 'airBase'] as const).map((id) => Object.values(np.facilities ?? {}).reduce((s, lv) => s + (lv?.[id] ?? 0), 0));
+    ctx.supplyLevel = Math.max(ctx.supplyLevel, Math.min(...supply));
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);
