@@ -345,6 +345,22 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('help lists every formation, and the title copy fits (#197)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HelpScene'] });
+    expect(await overflowingTexts(page, 'MainMenuScene')).toEqual([]);
+    await open(page, 'HelpScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HelpScene') as unknown as { tab: string; refresh(): void };
+      s.tab = 'formations';
+      s.refresh();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: info.outputPath('help-formations.png') });
+    expect(await overflowingTexts(page, 'HelpScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'HelpScene')).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('編成 from the menu moves on to 作戦 or 演習 instead of a sortie (#109)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene', { organize: true });

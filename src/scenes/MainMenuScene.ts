@@ -6,6 +6,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import { addHeroShip } from '@/ui/components/HeroShip';
+import { titleTiles } from '@/systems/TitleCopy';
 
 const CARD = IS_PORTRAIT
   ? { x: 32, y: 48, w: CANVAS_W - 64, h: CANVAS_H - 96 }
@@ -19,14 +20,7 @@ const SUBTITLE = '第二次世界大戦  ×  艦隊戦術';
 const TAGLINE = '艦隊を編成し、七つの海の制海権を握れ。';
 const NATIONS = '日本 · 米国 · ドイツ · 英国 · フランス · イタリア · ソ連';
 
-// Portrait means a phone (see Layout.ts), so the copy describes that device's controls.
-const INFO_TILES: Array<{ title: string; body: string }> = [
-  IS_PORTRAIT
-    ? { title: '◎ 自動砲撃', body: '射程内の敵へ自動で撃つ' }
-    : { title: '◎ 砲撃', body: '狙った地点へ主砲を放つ' },
-  { title: '⚓ 陣形', body: '単縦陣・輪形陣ほか 6 種' },
-  { title: '★ 勝利条件', body: '敵艦隊をすべて撃沈' },
-];
+const INFO_TILES = titleTiles(IS_PORTRAIT);
 
 /** "v0.0.17-alpha", plus "preview" on a Vercel PR preview (its own saves). */
 export function versionLabel(host: string): string {

@@ -8,6 +8,8 @@ import { audio } from '@/systems/AudioSystem';
 import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
 import { OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
 import { Objective } from '@/types/Campaign';
+import { FORMATION_ORDER, FORMATION_RULES } from '@/systems/FormationRules';
+import { RANKS } from '@/systems/RankSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
@@ -33,8 +35,16 @@ const OBJECTIVE_HELP: Record<Objective, string> = {
   [Objective.Delay]: '制限時間まで敵を目標海域に入れない (撃沈しても勝利)。',
 };
 
-type Tab = 'controls' | 'classes' | 'objectives';
-const TABS: Array<[Tab, string]> = [['controls', '操作'], ['classes', '艦種'], ['objectives', '作戦目標']];
+/** The formations (#197, from #61): every one, what it does and the rank that opens it. */
+function formationHelp(): Array<[string, string]> {
+  return FORMATION_ORDER.map((f) => {
+    const r = FORMATION_RULES[f];
+    return [r.ja, `${r.summary}${r.minRank > 0 ? `  (${RANKS[r.minRank]?.name ?? ''}から)` : ''}`];
+  });
+}
+
+type Tab = 'controls' | 'classes' | 'formations' | 'objectives';
+const TABS: Array<[Tab, string]> = [['controls', '操作'], ['classes', '艦種'], ['formations', '陣形'], ['objectives', '作戦目標']];
 
 /** ヘルプ: controls, ship classes and operation objectives at a glance. Every battle also ends with the flagship rule. */
 export class HelpScene extends Phaser.Scene {
@@ -82,7 +92,9 @@ export class HelpScene extends Phaser.Scene {
         ? CONTROLS.map((c) => [c.label, c.text])
         : this.tab === 'classes'
           ? CLASS_ORDER.map((c) => [CLASS_JA[c], CLASS_HELP[c]])
-          : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];
+          : this.tab === 'formations'
+            ? formationHelp()
+            : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];
     const x = P.x + 28;
     const w = P.w - 56;
     const labelW = IS_PORTRAIT ? 0 : 150;
