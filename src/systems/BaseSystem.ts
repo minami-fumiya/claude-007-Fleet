@@ -3,6 +3,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { CLASS_JA } from './EncyclopediaSystem';
 export { scaleCost } from './ResourceSystem';
 import { RANKS, rankOf, IRankProgress } from './RankSystem';
+import { boostedBase, Facilities } from './FacilitySystem';
 
 /**
  * 軍港 (#88, pure): each nation has four home ports. The admiral works from one at a time; each gives one or two
@@ -42,9 +43,9 @@ export function currentBase(nation: string, progress: IRankProgress & { base?: s
   return stored && isBaseOpen(stored, progress) ? stored : list[0];
 }
 
-/** The base of a progress view (its own nation). */
-export function baseOfProgress(progress: IRankProgress & { nation: string; base?: string }): IBase | undefined {
-  return currentBase(progress.nation, progress);
+/** The base of a progress view (its own nation), its bonus raised by its own facility and workshop (#146). */
+export function baseOfProgress(progress: IRankProgress & { nation: string; base?: string; facilities?: Facilities }): IBase | undefined {
+  return boostedBase(currentBase(progress.nation, progress), progress.facilities ?? {});
 }
 
 /** Moves to `id` (null when it isn't this nation's or not open yet). */

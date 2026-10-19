@@ -7,6 +7,8 @@ import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
+import { buildTimeMul } from '@/systems/FacilitySystem';
+import { currentBaseId } from '@/systems/BaseSystem';
 import { availableShips, canResearch, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
@@ -211,7 +213,7 @@ export class ShipyardScene extends Phaser.Scene {
       this.add.text(pad, 10 + lineH + 4, `${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
       this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
       // Reward-only ships (#39) show where they come from instead of a build cost.
-      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
     const job = progress.builds.find((b) => b.shipId === ship.id);
     if (job) {
@@ -255,10 +257,11 @@ export class ShipyardScene extends Phaser.Scene {
       return;
     }
     const now = Date.now();
-    const next = startBuild(progress, roster, ship, now);
+    // The base's workshop (#146) shortens construction.
+    const next = startBuild(progress, roster, ship, now, buildTimeMul(progress.facilities, currentBaseId(progress)));
     if (!next) return;
     saveProgress(withQuestEvents(next, [['build', 1]], now), 'build');
-    this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship))})`;
+    this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))})`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
   }

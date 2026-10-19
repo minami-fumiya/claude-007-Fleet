@@ -15,7 +15,7 @@ export interface IHomeMenuItem {
   variant: 'gold' | 'primary' | 'secondary';
   data?: Record<string, unknown>;
   /** Opens a sheet on the home screen instead of a scene */
-  action?: 'base' | 'quests' | 'ranks';
+  action?: 'quests' | 'ranks';
 }
 
 export interface IHomeMenuTab {
@@ -39,7 +39,7 @@ export const HOME_MENU: IHomeMenuTab[] = [
       { label: '編成', caption: '艦と艦長', scene: SceneKeys.FLEET_BUILDER, variant: 'gold', data: { organize: true } },
       { label: '改装', caption: '改造と部品', scene: SceneKeys.CUSTOMIZATION, variant: 'primary' },
       { label: '艦長', caption: 'スキルと成長', scene: SceneKeys.CAPTAIN, variant: 'primary' },
-      { label: '軍港', caption: '拠点の移動', scene: SceneKeys.HOME, variant: 'secondary', action: 'base' },
+      { label: '軍港', caption: '移動と施設', scene: SceneKeys.BASE, variant: 'secondary' },
     ],
   },
   {

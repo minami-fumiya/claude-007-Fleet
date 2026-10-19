@@ -1,9 +1,7 @@
 import Phaser from 'phaser';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
-import campaignTheaters from '@/data/campaign.json';
-
-const THEATER_NAME: Record<string, string> = Object.fromEntries(campaignTheaters.theaters.map((t) => [t.id, t.name]));
+import { regenRules } from '@/systems/FacilitySystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -12,7 +10,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation } from '@/utils/ProgressStore';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
-import { nextRegenMs, REGEN_CAP, REGEN_PER_TICK, regenFull } from '@/systems/ResourceSystem';
+import { nextRegenMs, regenFull } from '@/systems/ResourceSystem';
 import { clearCount, fleetSlots, missionCount, missionText, promotionText, RANK_MISSIONS, rankOf } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
@@ -25,7 +23,7 @@ import { ResourceBar } from '@/ui/components/ResourceBar';
 import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
-import { baseBonusLines, baseLockText, baseOfProgress, currentBaseId, isAtCurrentBase, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
+import { baseOfProgress, currentBaseId, isAtCurrentBase, repairTimeMultiplier } from '@/systems/BaseSystem';
 import { addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
 import { eventLabel, nextEvent } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
@@ -157,11 +155,13 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     this.bar.refresh(progress.resources);
     // Each resource regenerates at its own rate (0.0.12: fuel fastest).
-    const r = REGEN_PER_TICK;
+    // Base facilities (#146) raise the rates and caps.
+    const { perTick: r, cap } = regenRules(progress.facilities);
+    const caps = cap.fuel === cap.ammo && cap.ammo === cap.steel ? String(cap.fuel) : `燃${cap.fuel} 弾${cap.ammo} 鋼${cap.steel}`;
     const rate = IS_PORTRAIT
-      ? `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}・上限 ${REGEN_CAP}`
-      : `自然回復/分 燃料 +${r.fuel} 弾薬 +${r.ammo} 鋼材 +${r.steel} ボーキ +${r.bauxite}・上限 ${REGEN_CAP}`;
-    this.regenText.setText(regenFull(progress.resources) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
+      ? `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}・上限 ${caps}`
+      : `自然回復/分 燃料 +${r.fuel} 弾薬 +${r.ammo} 鋼材 +${r.steel} ボーキ +${r.bauxite}・上限 ${caps}`;
+    this.regenText.setText(regenFull(progress.resources, cap) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
   }
 
   private refreshEvent(now: number): void {
@@ -214,47 +214,6 @@ export class HomeScene extends Phaser.Scene {
         variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: rowH - 8, fontSize: 15,
       }));
     }
-  }
-
-  /** The nation's bases (#88): bonuses, which are open, and moving (free). */
-  private openBasePicker(): void {
-    if (this.overlay.length > 0) return;
-    const progress = loadProgress();
-    const bases = nationBases(progress.nation);
-    const current = baseOfProgress(progress);
-    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
-      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
-      this.overlay.push(o);
-      return o;
-    };
-    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
-    const rowH = IS_PORTRAIT ? 96 : 64;
-    const gap = IS_PORTRAIT ? 12 : 8;
-    const w = IS_PORTRAIT ? CANVAS_W - 64 : 680;
-    const head = IS_PORTRAIT ? 170 : 120;
-    const h = head + bases.length * (rowH + gap) + rowH + 20;
-    const x = (CANVAS_W - w) / 2;
-    const y = Math.max(20, (CANVAS_H - h) / 2);
-    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
-    add(this.add.text(x + 28, y + 22, '軍港', eyebrowStyle(11)));
-    add(this.add.text(x + 28, y + (IS_PORTRAIT ? 52 : 42), '拠点を移す', displayStyle(22)));
-    add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '軍港ごとに出撃できる戦域と得意分野があります。艦とドックは軍港ごとで、他の軍港の艦は編成画面で燃料を払って呼び寄せます。移動は無料、昇進すると選べる軍港が増えます。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
-    let ry = y + head;
-    for (const b of bases) {
-      const open = isBaseOpen(b, progress);
-      const here = b.id === current?.id;
-      // Where sorties from here can go (#145), then the bonuses.
-      const reach = (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・');
-      const detail = open ? [reach ? `出撃: ${reach}` : '', ...baseBonusLines(b)].filter((x) => x).join('  ·  ') : baseLockText(b);
-      add(new UIButton(this, x + w / 2, ry + rowH / 2, b.name, () => this.moveBase(b.id), {
-        variant: here ? 'gold' : open ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: IS_PORTRAIT ? 17 : 16,
-        caption: here ? `在籍中 · ${detail}` : detail,
-      })).setEnabled(open && !here);
-      ry += rowH + gap;
-    }
-    add(new UIButton(this, x + w / 2, ry + rowH / 2 - 4, '閉じる', () => this.closeNationPicker(), {
-      variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: rowH - 16, fontSize: 15,
-    }));
   }
 
   /** 任務 (#52): one kind at a time; finished ones are claimed here. */
@@ -375,14 +334,6 @@ export class HomeScene extends Phaser.Scene {
     this.openQuests();
   }
 
-  private moveBase(id: string): void {
-    const progress = loadProgress();
-    const moved = moveBase(progress.nation, progress, id);
-    if (!moved) return;
-    saveProgress(moved);
-    this.scene.restart();
-  }
-
   private closeNationPicker(): void {
     for (const o of this.overlay) o.destroy();
     this.overlay = [];
@@ -459,10 +410,6 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private openMenuItem(item: IHomeMenuItem): void {
-    if (item.action === 'base') {
-      this.openBasePicker();
-      return;
-    }
     if (item.action === 'quests') {
       this.openQuests();
       return;

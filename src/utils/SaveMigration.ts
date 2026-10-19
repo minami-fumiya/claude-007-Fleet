@@ -104,7 +104,7 @@ export const MIGRATIONS: MigrationStep[] = [
       sortie: null,
     };
   }),
-  // v10 → v11 (0.0.20, #145): ships, repair docks and builds belong to a base. Everything goes to the base in use, so
+  // v10 → v11 (0.0.20, #145 / #146): ships, repair docks and builds belong to a base. Everything goes to the base in use, so
   // the fleet, the docks built and the ships under repair or construction stay where the player left them.
   (data) => mapNations(data, (nation, key) => {
     const campaign = (Array.isArray(nation.campaign) ? nation.campaign : []).filter((id): id is string => typeof id === 'string');
@@ -121,6 +121,9 @@ export const MIGRATIONS: MigrationStep[] = [
       baseDocks: { [here]: typeof nation.docksOwned === 'number' ? nation.docksOwned : 1 },
       docks: atHere(nation.docks),
       builds: atHere(nation.builds),
+      // Base facilities (#146) start unbuilt: regeneration stays as it was.
+      facilities: {},
+      facilityJobs: [],
     };
   }),
 ];

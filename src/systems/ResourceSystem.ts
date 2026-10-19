@@ -116,13 +116,17 @@ export interface IRegenResult {
  * above REGEN_CAP is left alone; one below it rises to at most the cap. `regenAt <= 0` (never started) or a clock
  * that went backwards just restarts the timer. Returns the input object unchanged when nothing happened.
  */
-export function regenerate(have: IResources, regenAt: number, now: number): IRegenResult {
+export function regenerate(
+  have: IResources, regenAt: number, now: number,
+  rules: { perTick: IResources; cap: IResources } = { perTick: REGEN_PER_TICK, cap: resources({ fuel: REGEN_CAP, ammo: REGEN_CAP, steel: REGEN_CAP, bauxite: REGEN_CAP }) },
+): IRegenResult {
   if (regenAt <= 0 || now < regenAt) return { resources: have, regenAt: now };
   const ticks = Math.floor((now - regenAt) / REGEN_INTERVAL_MS);
   if (ticks <= 0) return { resources: have, regenAt };
   const out = resources(have);
+  // Base facilities (#146) raise the rates and caps; without any, these are REGEN_PER_TICK and REGEN_CAP.
   for (const k of RESOURCE_KEYS) {
-    if (out[k] < REGEN_CAP) out[k] = Math.min(REGEN_CAP, out[k] + REGEN_PER_TICK[k] * ticks);
+    if (out[k] < rules.cap[k]) out[k] = Math.min(rules.cap[k], out[k] + rules.perTick[k] * ticks);
   }
   return { resources: out, regenAt: regenAt + ticks * REGEN_INTERVAL_MS };
 }
@@ -134,8 +138,8 @@ export function nextRegenMs(regenAt: number, now: number): number {
 }
 
 /** True when every resource has reached the regeneration cap. */
-export function regenFull(have: IResources): boolean {
-  return RESOURCE_KEYS.every((k) => have[k] >= REGEN_CAP);
+export function regenFull(have: IResources, cap?: IResources): boolean {
+  return RESOURCE_KEYS.every((k) => have[k] >= (cap ? cap[k] : REGEN_CAP));
 }
 
 /** Cost scaled by `mul` (a base bonus, #88), rounded up to whole units. */
