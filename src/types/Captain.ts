@@ -9,8 +9,10 @@ export enum CaptainSkill {
   Torpedo = 'Torpedo',
   /** 機関: speed and hull (HP) */
   Engineering = 'Engineering',
-  /** 航空: carrier air wing strike power and air defence */
+  /** 航空: carrier air wing strike power and rearming (air defence moved to 対空, #185) */
   Aviation = 'Aviation',
+  /** 対空: anti-aircraft fire (#185) */
+  AntiAir = 'AntiAir',
   /** 対潜: depth charges and sonar watch (vision) */
   ASW = 'ASW',
   /** 夜戦: vision, guns and torpedoes at night */
@@ -36,7 +38,7 @@ export interface ICaptainData {
 /** How well a captain commands a ship class (#131): S 120%, A 100%, B 80%, C 60% of their skills and abilities. */
 export type Aptitude = 'S' | 'A' | 'B' | 'C';
 
-/** The four abilities every captain grows with level (#131). */
+/** The abilities every captain grows with level (#131; 対空 split from 航空 in #185). */
 export enum CaptainAbility {
   /** 砲術: gun firepower */
   Gunnery = 'gunnery',
@@ -44,6 +46,8 @@ export enum CaptainAbility {
   Torpedo = 'torpedo',
   /** 航空: air wing strike power */
   Aviation = 'aviation',
+  /** 対空: anti-aircraft fire (#185) */
+  AntiAir = 'antiAir',
   /** 操艦: evasion */
   Handling = 'handling',
 }

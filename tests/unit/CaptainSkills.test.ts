@@ -74,8 +74,8 @@ describe('captain roster (#44)', () => {
     const r = recruitCaptain('USN', [first.id]);
     expect(r.joined?.id).toBe(nationCaptains('USN')[1].id);
     // Destroyers only: the next destroyer specialists; a carrier brings the aviator forward.
-    // The engineer suits destroyers at S too (#188).
-    const dd = nationCaptains('USN').filter((c) => [CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Engineering].includes(c.skill)).map((c) => c.id);
+    // The engineer suits destroyers at S too (#188), and so does the AA specialist (#185).
+    const dd = nationCaptains('USN').filter((c) => [CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Engineering, CaptainSkill.AntiAir].includes(c.skill)).map((c) => c.id);
     expect(nextCaptain('USN', [first.id], [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.ASW);
     expect(nextCaptain('USN', dd, [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.Recon);
     expect(nextCaptain('USN', [first.id], [ShipClass.Carrier])?.skill).toBe(CaptainSkill.Aviation);

@@ -89,7 +89,10 @@ export function skillModifiers(skill: CaptainSkill, level: number, ctx: ICaptain
     case CaptainSkill.Engineering:
       return { ...NO_MODIFIERS, speedMul: 1 + 0.02 * lv, hpMul: 1 + 0.01 * lv };
     case CaptainSkill.Aviation:
-      return { ...NO_MODIFIERS, airPowerMul: 1 + 0.04 * lv, aaMul: 1 + 0.03 * lv };
+      // Air defence went to 対空 (#185); aviators rearm their planes faster instead.
+      return { ...NO_MODIFIERS, airPowerMul: 1 + 0.04 * lv, rearmMul: 1 - 0.015 * lv };
+    case CaptainSkill.AntiAir:
+      return { ...NO_MODIFIERS, aaMul: 1 + 0.05 * lv };
     case CaptainSkill.ASW:
       return { ...NO_MODIFIERS, depthChargeMul: 1 + 0.05 * lv, visionMul: 1 + 0.01 * lv };
     case CaptainSkill.Night:
@@ -147,6 +150,8 @@ const SKILL_APTITUDE: Record<CaptainSkill, Record<ShipClass, Aptitude>> = {
   // Every speciality suits at least one class at S (#188): fast ships for the engine room.
   [CaptainSkill.Engineering]: { Battleship: 'A', Cruiser: 'S', Destroyer: 'S', Carrier: 'B', Submarine: 'B' },
   [CaptainSkill.Aviation]: { Battleship: 'C', Cruiser: 'B', Destroyer: 'C', Carrier: 'S', Submarine: 'C' },
+  // Air defence suits the escorts' guns: AA destroyers and cruisers (#185).
+  [CaptainSkill.AntiAir]: { Battleship: 'A', Cruiser: 'S', Destroyer: 'S', Carrier: 'B', Submarine: 'C' },
   [CaptainSkill.ASW]: { Battleship: 'C', Cruiser: 'B', Destroyer: 'S', Carrier: 'B', Submarine: 'A' },
   [CaptainSkill.Night]: { Battleship: 'B', Cruiser: 'A', Destroyer: 'S', Carrier: 'C', Submarine: 'B' },
   [CaptainSkill.Recon]: { Battleship: 'B', Cruiser: 'S', Destroyer: 'B', Carrier: 'A', Submarine: 'A' },
@@ -187,6 +192,7 @@ export const ABILITY_LABEL: Record<CaptainAbility, string> = {
   [CaptainAbility.Gunnery]: '砲術',
   [CaptainAbility.Torpedo]: '雷撃',
   [CaptainAbility.Aviation]: '航空',
+  [CaptainAbility.AntiAir]: '対空',
   [CaptainAbility.Handling]: '操艦',
 };
 
@@ -195,14 +201,15 @@ export const ABILITY_MAX = 20;
 
 /** How each speciality's abilities grow (share of ABILITY_MAX); every captain grows a little in everything. */
 const GROWTH: Record<CaptainSkill, Record<CaptainAbility, number>> = {
-  [CaptainSkill.Gunnery]: { gunnery: 1, torpedo: 0.3, aviation: 0.2, handling: 0.5 },
-  [CaptainSkill.Torpedo]: { gunnery: 0.4, torpedo: 1, aviation: 0.2, handling: 0.7 },
-  [CaptainSkill.Engineering]: { gunnery: 0.5, torpedo: 0.5, aviation: 0.3, handling: 1 },
-  [CaptainSkill.Aviation]: { gunnery: 0.2, torpedo: 0.3, aviation: 1, handling: 0.5 },
-  [CaptainSkill.ASW]: { gunnery: 0.4, torpedo: 0.5, aviation: 0.3, handling: 0.9 },
-  [CaptainSkill.Night]: { gunnery: 0.7, torpedo: 0.8, aviation: 0.2, handling: 0.6 },
-  [CaptainSkill.Recon]: { gunnery: 0.5, torpedo: 0.4, aviation: 0.7, handling: 0.6 },
-  [CaptainSkill.Damecon]: { gunnery: 0.7, torpedo: 0.3, aviation: 0.3, handling: 0.7 },
+  [CaptainSkill.Gunnery]: { gunnery: 1, torpedo: 0.3, aviation: 0.2, antiAir: 0.4, handling: 0.5 },
+  [CaptainSkill.Torpedo]: { gunnery: 0.4, torpedo: 1, aviation: 0.2, antiAir: 0.2, handling: 0.7 },
+  [CaptainSkill.Engineering]: { gunnery: 0.5, torpedo: 0.5, aviation: 0.3, antiAir: 0.3, handling: 1 },
+  [CaptainSkill.Aviation]: { gunnery: 0.2, torpedo: 0.3, aviation: 1, antiAir: 0.4, handling: 0.5 },
+  [CaptainSkill.AntiAir]: { gunnery: 0.5, torpedo: 0.2, aviation: 0.3, antiAir: 1, handling: 0.6 },
+  [CaptainSkill.ASW]: { gunnery: 0.4, torpedo: 0.5, aviation: 0.3, antiAir: 0.3, handling: 0.9 },
+  [CaptainSkill.Night]: { gunnery: 0.7, torpedo: 0.8, aviation: 0.2, antiAir: 0.2, handling: 0.6 },
+  [CaptainSkill.Recon]: { gunnery: 0.5, torpedo: 0.4, aviation: 0.7, antiAir: 0.3, handling: 0.6 },
+  [CaptainSkill.Damecon]: { gunnery: 0.7, torpedo: 0.3, aviation: 0.3, antiAir: 0.4, handling: 0.7 },
 };
 
 /**
@@ -224,6 +231,7 @@ export function abilityModifiers(abilities: Record<CaptainAbility, number>): ISh
     gunPowerMul: 1 + abilities.gunnery / 100,
     torpedoPowerMul: 1 + abilities.torpedo / 100,
     airPowerMul: 1 + abilities.aviation / 100,
+    aaMul: 1 + abilities.antiAir / 100,
     evadeAdd: abilities.handling / 400,
   };
 }
@@ -382,14 +390,19 @@ export function captainSources(
   learned: readonly string[] = [],
   stats?: ICaptainStats,
   shipClass?: ShipClass,
+  bonus: readonly string[] = [],
 ): ICaptainSource[] {
   if (!captain) return [];
   const f = shipClass ? APTITUDE_SCALE[aptitudeFor(captain, shipClass)] : 1;
   const scaled = (m: IShipModifiers): IShipModifiers => (f === 1 ? m : scaleModifiers(m, f));
+  const learnedNow = validLearned(captain, learned);
   return [
     { kind: 'inherent', label: inherentLabel(captain), skill: captain.skill, mods: scaled(skillModifiers(captain.skill, captain.level, ctx, inherentTier(captain.level).mul)) },
-    ...validLearned(captain, learned).map((s): ICaptainSource => ({
+    ...learnedNow.map((s): ICaptainSource => ({
       kind: 'learned', label: `${SKILL_LABEL[s]} (習得)`, skill: s, mods: scaled(skillModifiers(s, captain.level, ctx, LEARNED_SKILL_SCALE)),
+    })),
+    ...validBonus(captain, bonus, learnedNow).map((s): ICaptainSource => ({
+      kind: 'learned', label: `${SKILL_LABEL[s]} (引継ぎ)`, skill: s, mods: scaled(skillModifiers(s, captain.level, ctx, bonusScale(captain))),
     })),
     { kind: 'ability', label: '能力', mods: scaled(abilityModifiers(captainAbilities(captain))) },
     ...earnedTraits(stats).map((t): ICaptainSource => ({ kind: 'trait', label: t.name, mods: combineModifiers(t.modifiers(ctx)) })),
@@ -403,9 +416,27 @@ export function captainModifiers(
   learned: readonly string[] = [],
   stats?: ICaptainStats,
   shipClass?: ShipClass,
+  bonus: readonly string[] = [],
 ): IShipModifiers {
   if (!captain) return NO_MODIFIERS;
-  return combineModifiers(...captainSources(captain, ctx, learned, stats, shipClass).map((s) => s.mods));
+  return combineModifiers(...captainSources(captain, ctx, learned, stats, shipClass, bonus).map((s) => s.mods));
+}
+
+/**
+ * Skills a save carried over outside the learn slots (#185): 対空 for captains whose 航空 used to include air
+ * defence. Unknown ones, the inherent skill and skills learned again are left out.
+ */
+export function validBonus(captain: ICaptainData, bonus: readonly string[], learned: readonly CaptainSkill[] = []): CaptainSkill[] {
+  const known = new Set<string>(Object.values(CaptainSkill));
+  return [...new Set(bonus)].filter((s): s is CaptainSkill => known.has(s) && s !== captain.skill && !learned.includes(s as CaptainSkill));
+}
+
+/**
+ * How strong a carried-over skill is: 60% like a learned one; for a 航空 captain it also follows the inherent tier,
+ * so their air defence is exactly what 航空 gave before 0.0.29 (0.03 × level × tier).
+ */
+export function bonusScale(captain: ICaptain): number {
+  return LEARNED_SKILL_SCALE * (captain.skill === CaptainSkill.Aviation ? inherentTier(captain.level).mul : 1);
 }
 
 export const SKILL_LABEL: Record<CaptainSkill, string> = {
@@ -413,6 +444,7 @@ export const SKILL_LABEL: Record<CaptainSkill, string> = {
   [CaptainSkill.Torpedo]: '水雷',
   [CaptainSkill.Engineering]: '機関',
   [CaptainSkill.Aviation]: '航空',
+  [CaptainSkill.AntiAir]: '対空',
   [CaptainSkill.ASW]: '対潜',
   [CaptainSkill.Night]: '夜戦',
   [CaptainSkill.Recon]: '索敵',

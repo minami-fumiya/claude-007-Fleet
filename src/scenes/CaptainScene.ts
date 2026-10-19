@@ -237,7 +237,8 @@ export class CaptainScene extends Phaser.Scene {
       drawMeter(this.track(this.add.graphics()), ax + 44, ay + 6, half - 44 - 56, 6, abilities[a] / ABILITY_MAX, ABILITY_COLOR.color);
       this.track(this.add.text(ax + half, ay, `+${abilities[a].toFixed(1)}%`, textStyle(12, ABILITY_COLOR.css)).setOrigin(1, 0));
     });
-    y += 58;
+    // Two per row: five abilities since 対空 split from 航空 (#185).
+    y += Math.ceil(Object.values(CaptainAbility).length / 2) * 26 + 6;
 
     // Aptitude (#131)
     y = this.label(x, y, '搭乗適性 (S 120%・A 100%・B 80%・C 60%)');
@@ -292,9 +293,11 @@ export class CaptainScene extends Phaser.Scene {
   private buildBreakdown(c: ICaptain, learned: CaptainSkill[], x: number, y: number, w: number): number {
     const save = loadSave();
     const stats = save.nations[save.current]?.captainStats[c.id];
+    // 対空 carried over from the old 航空 (#185) counts like a learned skill.
+    const bonus = save.nations[save.current]?.captainBonus[c.id] ?? [];
     const ctx = { night: true };
-    const sources = captainSources(c, ctx, learned, stats);
-    const rows = modifierBreakdown(sources, captainModifiers(c, ctx, learned, stats));
+    const sources = captainSources(c, ctx, learned, stats, undefined, bonus);
+    const rows = modifierBreakdown(sources, captainModifiers(c, ctx, learned, stats, undefined, bonus));
     y = this.label(x, y, '現在の補正 (適性 A・夜戦時を含む)');
     if (rows.length === 0) {
       this.track(this.add.text(x, y, '—', textStyle(13, Css.muted)));

@@ -21,7 +21,7 @@ export const CAPTAIN_DROP_CHANCE = 0.05;
  */
 export const RECRUIT_ORDER: CaptainSkill[] = [
   CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Recon,
-  CaptainSkill.Engineering, CaptainSkill.Gunnery, CaptainSkill.Damecon, CaptainSkill.Aviation,
+  CaptainSkill.Engineering, CaptainSkill.AntiAir, CaptainSkill.Gunnery, CaptainSkill.Damecon, CaptainSkill.Aviation,
 ];
 
 /** The nation's captains, in the order they join. */

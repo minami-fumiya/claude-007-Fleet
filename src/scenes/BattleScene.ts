@@ -607,7 +607,8 @@ export class BattleScene extends Phaser.Scene {
       researchModifiers(TECH_TREE, progress.research),
       refitModifiers(REFIT_TABLE, shipData, stage),
       // The captain's own speciality, learned skills, abilities and earned traits (#45), by aptitude for the ship (#131).
-      captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass),
+      captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass,
+        captain ? progress.captainBonus[captain.id] ?? [] : []),
       formation,
     );
   }
@@ -1637,6 +1638,8 @@ export class BattleScene extends Phaser.Scene {
       ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
+      // Enemy planes shot down, by guns or fighters (#185).
+      ['planesDown', this.enemyAir.totalLost()],
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],

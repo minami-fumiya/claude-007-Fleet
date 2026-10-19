@@ -23,7 +23,9 @@ export type QuestEvent =
   // 0.0.27: captains joining from S ranks and promotions (#215)
   | 'captainJoin'
   // wins under each kind of event (#218)
-  | `event_${EventKind}`;
+  | `event_${EventKind}`
+  // 0.0.29: enemy planes shot down (#185)
+  | 'planesDown';
 
 export interface IQuest {
   id: string;
