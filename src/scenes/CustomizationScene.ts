@@ -282,9 +282,15 @@ export class CustomizationScene extends Phaser.Scene {
     return upgradeSlots(loadProgress().refits[this.ships[this.selected].id] ?? 0);
   }
 
+  /** A ship out on an unfinished sortie (#138) keeps its fit until it comes home. */
+  private away(shipId: string): boolean {
+    return (loadProgress().sortie?.shipIds ?? []).includes(shipId);
+  }
+
   private toggle(upgradeId: string): void {
     if (!this.unlocked.has(upgradeId)) return;
     const ship = this.ships[this.selected];
+    if (this.away(ship.id)) return;
     const progress = loadProgress();
     const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId, this.slots());
     saveProgress({ ...progress, upgrades: { ...progress.upgrades, [ship.id]: next } });
@@ -293,6 +299,7 @@ export class CustomizationScene extends Phaser.Scene {
 
   private remodel(): void {
     const ship = this.ships[this.selected];
+    if (this.away(ship.id)) return;
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
     const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
@@ -396,5 +403,9 @@ export class CustomizationScene extends Phaser.Scene {
     }
     // Unremodelled ships have no upgrade slots (#72): point at the remodel that opens them.
     this.slotText.setText(slots > 0 ? `装備 ${fitted.length} / ${slots}` : `装備枠なし — 改に改造すると ${upgradeSlots(1)} 枠`);
+    if (this.away(ship.id)) {
+      this.refitBtn.setLabel('出撃中 — 帰投後に改装できます').setEnabled(false);
+      this.slotText.setText('出撃中');
+    }
   }
 }

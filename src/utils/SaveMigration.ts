@@ -86,7 +86,7 @@ export const MIGRATIONS: MigrationStep[] = [
   // v9 → v10 (0.0.19): building takes time now (#143; nothing under construction yet) and repairs got slower, so
   // every nation gets two of each time-saving item. Areas get a best battle rank (#149): a perfect win counts as S.
   // Promotion missions (#142) start uncounted, so each nation keeps the rank it holds as its floor. The resource
-  // ledger (#137) starts empty.
+  // ledger (#137) starts empty, and no sortie is in progress (#138).
   (data) => mapNations(data, (nation, key) => {
     const campaign = (Array.isArray(nation.campaign) ? nation.campaign : []).filter((id): id is string => typeof id === 'string');
     const merit = typeof nation.merit === 'number' ? nation.merit : 0;
@@ -100,6 +100,7 @@ export const MIGRATIONS: MigrationStep[] = [
       rankStats: {},
       rankFloor: Math.max(floor, held),
       ledger: {},
+      sortie: null,
     };
   }),
 ];

@@ -110,6 +110,8 @@ export class ResultsScene extends Phaser.Scene {
 
     // Mid-sortie (#53): advance to the next node, or withdraw keeping what was won.
     const advance = data?.advance === true;
+    // A campaign battle that can't advance (the main fleet, a defeat, everyone 大破) ends the sortie (#138).
+    if (!advance && data?.returnScene === SceneKeys.CAMPAIGN) endSortie(this);
     const by1 = y + reportH + BUTTONS.y1;
     if (advance) {
       new UIButton(this, CANVAS_W / 2, by1, '進撃  ›', () => {

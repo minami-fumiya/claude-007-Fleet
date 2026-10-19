@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { recordLedger } from '@/systems/LedgerSystem';
+import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -94,6 +95,10 @@ export class CampaignMapScene extends Phaser.Scene {
 
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
+    // A sortie left unfinished (#138) opens on its area.
+    const pending = pendingSortie(this);
+    const pendingArea = pending ? DATA.areas.find((a) => a.id === pending.areaId) : undefined;
+    if (pendingArea && this.theaters.some((t) => t.id === pendingArea.theater)) this.theater = pendingArea.theater;
     const w = CANVAS_W - L.map.x * 2;
     const bw = (w - 8 * (this.theaters.length - 1)) / Math.max(1, this.theaters.length);
     this.tabs = this.theaters.map(
@@ -115,7 +120,8 @@ export class CampaignMapScene extends Phaser.Scene {
       this.tabs[i].setLabel(`${t.name}  ${pct}%`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
     const areas = areasOf(DATA, id);
-    this.selected = areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
+    const pending = pendingSortie(this);
+    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
     this.drawMap();
     this.drawDetail();
   }
@@ -241,8 +247,24 @@ export class CampaignMapScene extends Phaser.Scene {
     if (this.status || sweepNote) {
       add(this.add.text(x, y, this.status ? `${this.status}\n${sweepNote}` : sweepNote, textStyle(12, this.status ? Css.success : Css.muted, { ...wrap, lineSpacing: 2 })));
     }
-    const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
     const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
+    // A sortie left unfinished here (#138): continue it or withdraw.
+    const pending = pendingSortie(this);
+    if (pending && pending.areaId === a.id) {
+      const half = (d.w - 48 - 12) / 2;
+      const bh = IS_PORTRAIT ? 76 : 60;
+      add(this.add.text(x, by - bh / 2 - (IS_PORTRAIT ? 34 : 26), pending.advance ? `出撃中: 前の戦闘は終了。進撃すると ${pending.node} / ${pending.battles} 戦目` : `出撃中: ${pending.node} / ${pending.battles} 戦目の途中で中断 (戦い直し)`, textStyle(12, Css.cyan)));
+      add(new UIButton(this, d.x + 24 + half / 2, by, pending.advance ? '進撃して続ける  ›' : '続きから  ›', () => this.resume(), {
+        variant: 'gold', width: half, height: bh, fontSize: IS_PORTRAIT ? 18 : 17,
+      }));
+      add(new UIButton(this, d.x + d.w - 24 - half / 2, by, '撤退する', () => {
+        endSortie(this);
+        this.status = '撤退しました';
+        this.drawDetail();
+      }, { variant: 'secondary', width: half, height: bh, fontSize: 17 }));
+      return;
+    }
+    const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
     const btn = add(
       new UIButton(this, d.x + 24 + bw / 2, by, open ? '出撃準備  ›' : '前の海域を攻略してください', () => this.prepare(a), {
         variant: open ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open ? 20 : 14,
@@ -253,6 +275,16 @@ export class CampaignMapScene extends Phaser.Scene {
       add(new UIButton(this, d.x + d.w - 24 - bw / 2, by, '掃討', () => this.sweep(a), {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: 20,
       })).setEnabled(left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
+    }
+  }
+
+  /** Continues the saved sortie (#138). */
+  private resume(): void {
+    const init = resumeSortie(this);
+    if (init) this.scene.start(SceneKeys.BATTLE, init);
+    else {
+      endSortie(this);
+      this.drawDetail();
     }
   }
 

@@ -563,7 +563,10 @@ export class HomeScene extends Phaser.Scene {
           variant: 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 52 : 34, fontSize: 14,
         }),
       );
-      btn.setEnabled(dockFree && canAfford(progress.resources, cost));
+      // A ship out on an unfinished sortie (#138) can't be docked until it comes home.
+      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
+      if (away) btn.setLabel('出撃中');
+      btn.setEnabled(!away && dockFree && canAfford(progress.resources, cost));
       y += L.rowH;
     }
     if (damaged.length > maxRows) {

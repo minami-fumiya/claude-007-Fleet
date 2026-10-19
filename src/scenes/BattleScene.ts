@@ -82,7 +82,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
-import { takeSortieNotes } from '@/utils/SortieFlow';
+import { markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
 
 
 
@@ -1670,6 +1670,8 @@ export class BattleScene extends Phaser.Scene {
     ].filter((l) => l);
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
+    // The sortie's battle is settled (#138): reopening the game offers the advance, not this battle again.
+    if (area) progress = markSortieFought(progress);
     // Nations opened by this battle (#134) are announced with the recruits.
     const locksBefore = nationLocks(loadSave().nations);
     saveProgress(progress);

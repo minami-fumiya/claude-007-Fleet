@@ -12,6 +12,7 @@
 import { IDockJob, IItems, IResources } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
+import { ISortieState } from '@/types/Sortie';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
@@ -88,6 +89,8 @@ export interface INationProgress {
   rankStats: Partial<Record<RankStat, number>>;
   /** Resource income and spending by hour and category, last 24 hours (#137) */
   ledger: Ledger;
+  /** The campaign sortie in progress, if any (#138): it can be continued after closing the game */
+  sortie: ISortieState | null;
 }
 
 /** The whole save (v2 and later). */
@@ -126,7 +129,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {},
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null,
   };
 }
 
@@ -264,6 +267,20 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     areaRanks: parseAreaRanks(data.areaRanks),
     rankStats: numbers(data.rankStats),
     ledger: parseLedger(data.ledger),
+    sortie: parseSortie(data.sortie),
+  };
+}
+
+/** A stored sortie when it has the parts the flow needs; anything else counts as none. */
+function parseSortie(v: unknown): ISortieState | null {
+  if (!isObject(v) || typeof v.areaId !== 'string' || !Array.isArray(v.route) || !isNum(v.at) || !isNation(v.nation) || !isNation(v.enemyNation)) return null;
+  const shipIds = strings(v.shipIds);
+  if (shipIds.length === 0) return null;
+  const captainIds = (Array.isArray(v.captainIds) ? v.captainIds : []).map((c) => (typeof c === 'string' ? c : null));
+  const route = v.route.filter((n): n is ISortieState['route'][number] => isObject(n) && typeof n.kind === 'string');
+  return {
+    areaId: v.areaId, route, at: v.at, nation: v.nation, enemyNation: v.enemyNation, shipIds, captainIds,
+    formation: (Object.values(Formation) as string[]).includes(v.formation as string) ? (v.formation as Formation) : Formation.LineAhead, fought: v.fought === true,
   };
 }
 

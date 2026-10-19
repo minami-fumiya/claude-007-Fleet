@@ -69,6 +69,9 @@ export interface ISettlement {
 export function sortieBlockers(progress: IProgress, ships: IShipData[], now: number, opts: ISortieOptions = {}): string[] {
   const state = completeRepairs(progress, now);
   const reasons: string[] = [];
+  // Ships out on an unfinished campaign sortie (#138) stay with it until it is continued or withdrawn.
+  const away = progress.sortie?.shipIds ?? [];
+  for (const s of ships) if (away.includes(s.id)) reasons.push(`${s.name} は出撃中 (作戦地図で続けるか撤退)`);
   // Exercises use docked ships too: they fight at full HP and keep no damage.
   if (!opts.exercise) {
     for (const s of ships) {
