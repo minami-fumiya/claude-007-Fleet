@@ -38,6 +38,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { beginSortie, endSortie } from '@/utils/SortieFlow';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -1635,6 +1636,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     };
 
     emitTutorial('sortie', this.registry);
-    this.scene.start(SceneKeys.BATTLE, initData);
+    // A campaign area is fought node by node (#53); the first battle may be its escorts.
+    const sortie = area
+      ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList)
+      : null;
+    if (!area) endSortie(this);
+    this.scene.start(SceneKeys.BATTLE, sortie ?? initData);
   }
 }

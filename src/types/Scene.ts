@@ -19,6 +19,8 @@ export interface IBattleInitData {
   objective?: Objective;
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */
   captainIds?: (string | null)[];
+  /** Node of a multi-battle campaign sortie (#53): battle number, battles in all, and whether it is the boss */
+  sortie?: { node: number; battles: number; boss: boolean };
 }
 
 export interface ICaptainReport {
@@ -54,6 +56,12 @@ export interface IBattleResultData {
   recruits?: string;
   /** Scene the "back" button returns to (default: the home port) */
   returnScene?: string;
+  /** What the route held on the way to this battle (#53), e.g. "資源マス: 燃料 120 を回収" */
+  route?: string;
+  /** A won node before the boss (#53): the results offer 進撃 / 撤退 */
+  advance?: boolean;
+  /** Who drops out (大破) or what the route held, shown above 進撃 */
+  advanceNote?: string;
   /** Battle setup RETRY replays directly (scenarios); absent = back to the Fleet Builder */
   retry?: IBattleInitData;
 }

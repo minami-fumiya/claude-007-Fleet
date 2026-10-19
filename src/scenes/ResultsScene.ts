@@ -5,6 +5,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { IBattleResultData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, UIButton } from '@/ui/components/UIKit';
+import { advanceSortie, endSortie } from '@/utils/SortieFlow';
 
 // Portrait text is enlarged (see uiFontSize), so the card and its stat tiles grow with it.
 const CARD_W = IS_PORTRAIT ? 664 : 620;
@@ -41,7 +42,7 @@ export class ResultsScene extends Phaser.Scene {
     const reports = data?.captainReports ?? [];
     // The campaign line ("海域攻略: … 初回報酬 …") is split at its reward so neither half runs off the card (#69).
     const campaignLines = (data?.campaign ?? '').split(/\s{2,}(?=初回報酬)/);
-    const rewardLines = [...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? '', data?.recruits ?? ''].filter((l) => l);
+    const rewardLines = [data?.route ?? '', ...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? '', data?.recruits ?? '', data?.advanceNote ?? ''].filter((l) => l);
     // Long lines wrap inside the card; their measured heights size the report area.
     const rewardTexts = rewardLines.map((line) =>
       this.add.text(CANVAS_W / 2, 0, line, textStyle(14, Css.cyan, { fontStyle: 'bold', align: 'center', wordWrap: { width: CARD_W - 56, useAdvancedWrap: true } })).setOrigin(0.5, 0),
@@ -98,13 +99,27 @@ export class ResultsScene extends Phaser.Scene {
       if (t.width > colW - 8) t.setScale((colW - 8) / t.width);
     });
 
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, '再出撃', () => (data?.retry ? this.scene.start(SceneKeys.BATTLE, data.retry) : this.scene.start(SceneKeys.FLEET_BUILDER)), {
+    // Mid-sortie (#53): advance to the next node, or withdraw keeping what was won.
+    const advance = data?.advance === true;
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y1, advance ? '進撃  ›' : '再出撃', () => {
+      if (advance) {
+        const next = advanceSortie(this);
+        if (next) this.scene.start(SceneKeys.BATTLE, next.init);
+        else this.scene.start(SceneKeys.CAMPAIGN);
+        return;
+      }
+      if (data?.retry) this.scene.start(SceneKeys.BATTLE, data.retry);
+      else this.scene.start(SceneKeys.FLEET_BUILDER);
+    }, {
       variant: victory ? 'gold' : 'primary',
       width: CARD_W - 96,
       height: BUTTONS.h1,
       fontSize: 22,
     });
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => this.scene.start(data?.returnScene ?? SceneKeys.HOME), {
+    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, advance ? '撤退 (報酬はそのまま)' : BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => {
+      endSortie(this);
+      this.scene.start(data?.returnScene ?? SceneKeys.HOME);
+    }, {
       variant: 'secondary',
       width: CARD_W - 96,
       height: BUTTONS.h2,
