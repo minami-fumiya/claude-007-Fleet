@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
+import campaignTheaters from '@/data/campaign.json';
+
+const THEATER_NAME: Record<string, string> = Object.fromEntries(campaignTheaters.theaters.map((t) => [t.id, t.name]));
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -12,7 +15,7 @@ import { Nation } from '@/types/Nation';
 import { nextRegenMs, REGEN_CAP, REGEN_PER_TICK, regenFull } from '@/systems/ResourceSystem';
 import { clearCount, fleetSlots, missionCount, missionText, promotionText, RANK_MISSIONS, rankOf } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
-import { buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
+import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { addResources, canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IShipData } from '@/types/Ship';
@@ -22,7 +25,7 @@ import { ResourceBar } from '@/ui/components/ResourceBar';
 import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
-import { baseBonusLines, baseLockText, baseOfProgress, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
+import { baseBonusLines, baseLockText, baseOfProgress, currentBaseId, isAtCurrentBase, isBaseOpen, moveBase, nationBases, repairTimeMultiplier } from '@/systems/BaseSystem';
 import { addItems, claimableCount, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QuestKind, QUESTS, questProgress, refreshQuests, withQuestEvents } from '@/systems/QuestSystem';
 import { eventLabel, nextEvent } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
@@ -235,12 +238,14 @@ export class HomeScene extends Phaser.Scene {
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
     add(this.add.text(x + 28, y + 22, '軍港', eyebrowStyle(11)));
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 52 : 42), '拠点を移す', displayStyle(22)));
-    add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '軍港ごとに建造・研究・修理の得意分野があります。移動は無料で、昇進すると選べる軍港が増えます。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
+    add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '軍港ごとに出撃できる戦域と得意分野があります。艦とドックは軍港ごとで、他の軍港の艦は編成画面で燃料を払って呼び寄せます。移動は無料、昇進すると選べる軍港が増えます。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
     let ry = y + head;
     for (const b of bases) {
       const open = isBaseOpen(b, progress);
       const here = b.id === current?.id;
-      const detail = open ? baseBonusLines(b).join('・') : baseLockText(b);
+      // Where sorties from here can go (#145), then the bonuses.
+      const reach = (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・');
+      const detail = open ? [reach ? `出撃: ${reach}` : '', ...baseBonusLines(b)].filter((x) => x).join('  ·  ') : baseLockText(b);
       add(new UIButton(this, x + w / 2, ry + rowH / 2, b.name, () => this.moveBase(b.id), {
         variant: here ? 'gold' : open ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: IS_PORTRAIT ? 17 : 16,
         caption: here ? `在籍中 · ${detail}` : detail,
@@ -475,7 +480,10 @@ export class HomeScene extends Phaser.Scene {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
     this.dockMeters = [];
-    const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
+    const all = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
+    // The docks and damaged ships of the base the admiral is at (#145).
+    const here = currentBaseId(all);
+    const progress = baseDockView(all, here);
     this.bar.refresh(progress.resources);
     if (this.regenText) this.refreshRegen(Date.now());
 
@@ -544,9 +552,11 @@ export class HomeScene extends Phaser.Scene {
     y += IS_PORTRAIT ? 40 : 28;
 
     // Damaged ships waiting for a dock
-    const damaged = Object.keys(progress.damage)
+    const damagedAll = Object.keys(progress.damage)
       .map((id) => this.registryShips.byId(id))
-      .filter((s): s is IShipData => s !== undefined && !isDocked(progress, s.id));
+      .filter((s): s is IShipData => s !== undefined && !isDocked(all, s.id));
+    const damaged = damagedAll.filter((s) => isAtCurrentBase(all, s.id));
+    const elsewhere = damagedAll.length - damaged.length;
     add(this.add.text(d.x + pad, y, damaged.length > 0 ? '損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
     y += IS_PORTRAIT ? 36 : 26;
     const dockFree = progress.docks.length < docks;
@@ -569,15 +579,18 @@ export class HomeScene extends Phaser.Scene {
       btn.setEnabled(!away && dockFree && canAfford(progress.resources, cost));
       y += L.rowH;
     }
-    if (damaged.length > maxRows) {
-      add(this.add.text(d.x + pad, y, `他 ${damaged.length - maxRows} 隻`, textStyle(12, Css.dim)));
+    if (damaged.length > maxRows || elsewhere > 0) {
+      const more = [damaged.length > maxRows ? `他 ${damaged.length - maxRows} 隻` : '', elsewhere > 0 ? `他の軍港の損傷艦 ${elsewhere} 隻 (その軍港で入渠)` : ''].filter((t) => t);
+      add(this.add.text(d.x + pad, y, more.join('  ·  '), textStyle(12, Css.dim)));
     }
   }
 
   private buildDock(): void {
-    const built = buildDock(loadProgress());
+    const progress = loadProgress();
+    const here = currentBaseId(progress);
+    const built = buildDock(baseDockView(progress, here));
     if (!built) return;
-    saveProgress(built, 'dock');
+    saveProgress(mergeBaseDocks(progress, here, built), 'dock');
     this.refresh();
   }
 
@@ -586,9 +599,10 @@ export class HomeScene extends Phaser.Scene {
     const f = hpFraction(progress, ship.id);
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
-    const docked = paid ? startRepair(progress, ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass) : null;
+    const here = currentBaseId(progress);
+    const docked = paid ? startRepair(baseDockView(progress, here), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass) : null;
     if (!paid || !docked) return;
-    saveProgress(withQuestEvents({ ...progress, ...docked, resources: paid }, [['repair', 1]], Date.now()), 'repair');
+    saveProgress(withQuestEvents({ ...mergeBaseDocks(progress, here, { ...progress, ...docked }), resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();
   }
 

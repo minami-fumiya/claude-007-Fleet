@@ -13,6 +13,8 @@ export interface IDockJob {
   shipId: string;
   /** Epoch ms when the repair finishes */
   endsAt: number;
+  /** Base whose dock it is in (#145); the current base when absent */
+  base?: string;
 }
 
 /** Items that finish a repair or a build at once (#143). */

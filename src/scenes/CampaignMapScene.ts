@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { recordLedger } from '@/systems/LedgerSystem';
+import { baseOfProgress, baseReaches, basesFor } from '@/systems/BaseSystem';
 import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -115,9 +116,11 @@ export class CampaignMapScene extends Phaser.Scene {
   private selectTheater(id: string): void {
     this.theater = id;
     const cleared = loadProgress().campaign;
+    const base = baseOfProgress(loadProgress());
     this.theaters.forEach((t, i) => {
       const pct = Math.round(theaterProgress(DATA, t.id, cleared) * 100);
-      this.tabs[i].setLabel(`${t.name}  ${pct}%`).setVariant(t.id === id ? 'primary' : 'secondary');
+      // A theater out of the current base's reach (#145) is marked; its map can still be read.
+      this.tabs[i].setLabel(`${t.name}  ${pct}%${baseReaches(base, t.id) ? '' : '  (他港)'}`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
     const areas = areasOf(DATA, id);
     const pending = pendingSortie(this);
@@ -265,16 +268,20 @@ export class CampaignMapScene extends Phaser.Scene {
       return;
     }
     const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
+    // Sorties leave from a base that reaches the theater (#145).
+    const reach = baseReaches(baseOfProgress(progress), a.theater);
+    const from = basesFor(progress.nation, a.theater).map((b) => b.name).join('・');
+    const label = !open ? '前の海域を攻略してください' : reach ? '出撃準備  ›' : `${from}から出撃 (軍港を移す)`;
     const btn = add(
-      new UIButton(this, d.x + 24 + bw / 2, by, open ? '出撃準備  ›' : '前の海域を攻略してください', () => this.prepare(a), {
-        variant: open ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open ? 20 : 14,
+      new UIButton(this, d.x + 24 + bw / 2, by, label, () => this.prepare(a), {
+        variant: open && reach ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open && reach ? 20 : 14,
       }),
     );
-    btn.setEnabled(open);
+    btn.setEnabled(open && reach);
     if (sweepable) {
       add(new UIButton(this, d.x + d.w - 24 - bw / 2, by, '掃討', () => this.sweep(a), {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: 20,
-      })).setEnabled(left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
+      })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
     }
   }
 

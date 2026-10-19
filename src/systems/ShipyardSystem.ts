@@ -5,7 +5,7 @@ import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH } from './ResearchSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
-import { buildMultiplier, currentBase, scaleCost } from './BaseSystem';
+import { assignShips, buildMultiplier, currentBase, currentBaseId, scaleCost } from './BaseSystem';
 import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
 
@@ -112,7 +112,8 @@ export function isOwned(progress: Pick<IProgress, 'ships'>, roster: IShipData[],
 /** Adds a ship to the fleet (no duplicates). */
 export function grantShip(progress: IProgress, roster: IShipData[], id: string): IProgress {
   const owned = ownedIds(progress, roster);
-  return owned.includes(id) ? { ...progress, ships: owned } : { ...progress, ships: [...owned, id] };
+  // A new ship joins the base the admiral is at (#145).
+  return owned.includes(id) ? { ...progress, ships: owned } : assignShips({ ...progress, ships: [...owned, id] }, [id], currentBaseId(progress));
 }
 
 /**
@@ -143,7 +144,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
   if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
-  if ((progress.builds ?? []).length >= buildDockCount(progress)) return 'dock';
+  if (buildsHere(progress).length >= buildDockCount(progress)) return 'dock';
   return 'ready';
 }
 
@@ -197,12 +198,19 @@ export function buildDockCount(progress: Parameters<typeof rankOf>[0]): number {
   return BUILD_DOCK_RANKS.filter((r) => rank >= r).length;
 }
 
+/** Builds on the slips of the base the admiral is at (#145); each base has its own. */
+export function buildsHere(progress: IProgress): IProgress['builds'] {
+  const here = currentBaseId(progress);
+  return (progress.builds ?? []).filter((b) => (b.base ?? here) === here);
+}
+
 /** Pays for the ship and lays it down; it joins the fleet when `completeBuilds` finds it finished. */
 export function startBuild(progress: IProgress, roster: IShipData[], ship: IShipData, now: number, timeMul = 1): IProgress | null {
   if (!roster.some((s) => s.id === ship.id) || buildState(progress, roster, ship) !== 'ready') return null;
   const left = pay(progress.resources, buildCostAt(progress, ship));
   if (!left) return null;
-  return { ...progress, resources: left, builds: [...(progress.builds ?? []), { shipId: ship.id, endsAt: now + buildTimeMs(ship, timeMul) }] };
+  // Laid down at the current base (#145): it joins that base when finished.
+  return { ...progress, resources: left, builds: [...(progress.builds ?? []), { shipId: ship.id, endsAt: now + buildTimeMs(ship, timeMul), base: currentBaseId(progress) }] };
 }
 
 /** Adds every finished ship to the fleet; `done` lists them (empty when nothing finished). */
@@ -211,7 +219,10 @@ export function completeBuilds(progress: IProgress, roster: IShipData[], now: nu
   const done = builds.filter((b) => b.endsAt <= now).map((b) => b.shipId);
   if (done.length === 0) return { progress, done };
   let next: IProgress = { ...progress, builds: builds.filter((b) => b.endsAt > now) };
-  for (const id of done) next = grantShip(next, roster, id);
+  for (const b of builds.filter((x) => x.endsAt <= now)) {
+    next = grantShip(next, roster, b.shipId);
+    if (b.base) next = assignShips(next, [b.shipId], b.base);
+  }
   return { progress: next, done };
 }
 
