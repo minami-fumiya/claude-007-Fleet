@@ -5,6 +5,7 @@ import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH } from './ResearchSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
+import { buildMultiplier, currentBase, scaleCost } from './BaseSystem';
 import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
 
@@ -77,6 +78,11 @@ export function buildCost(ship: IShipData): IResources {
   return out;
 }
 
+/** Build cost at the admiral's current base (#88), which can make some classes cheaper. */
+export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campaign' | 'merit' | 'rankFloor'>, ship: IShipData): IResources {
+  return scaleCost(buildCost(ship), buildMultiplier(currentBase(progress.nation, progress), ship.shipClass));
+}
+
 /** The ship a new nation starts with: its first-listed historical destroyer (else its cheapest ship). */
 export function starterShip(roster: IShipData[]): IShipData | undefined {
   const historical = roster.filter((s) => !s.fictional);
@@ -135,7 +141,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
-  if (!canAfford(progress.resources, buildCost(ship))) return 'resources';
+  if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
   return 'ready';
 }
 
@@ -161,7 +167,7 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
 /** Pays for and adds the ship. Returns null when it can't be built now. */
 export function buildShip(progress: IProgress, roster: IShipData[], ship: IShipData): IProgress | null {
   if (!roster.some((s) => s.id === ship.id) || buildState(progress, roster, ship) !== 'ready') return null;
-  const left = pay(progress.resources, buildCost(ship));
+  const left = pay(progress.resources, buildCostAt(progress, ship));
   return left ? { ...grantShip(progress, roster, ship.id), resources: left } : null;
 }
 

@@ -8,6 +8,7 @@ import { loadProgress } from '@/utils/ProgressStore';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { IServiceRecord } from '@/types/Record';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -22,6 +23,8 @@ export class RecordScene extends Phaser.Scene {
   }
 
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     audio.music('menu');
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };

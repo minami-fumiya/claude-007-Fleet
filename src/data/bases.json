@@ -1,0 +1,326 @@
+{
+  "bases": [
+    {
+      "id": "ijn_home",
+      "nation": "IJN",
+      "name": "横須賀鎮守府",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "ijn_light",
+      "nation": "IJN",
+      "name": "舞鶴鎮守府",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "ijn_cruiser",
+      "nation": "IJN",
+      "name": "佐世保鎮守府",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "ijn_heavy",
+      "nation": "IJN",
+      "name": "呉鎮守府",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    },
+    {
+      "id": "usn_home",
+      "nation": "USN",
+      "name": "ノーフォーク海軍基地",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "usn_light",
+      "nation": "USN",
+      "name": "サンディエゴ海軍基地",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "usn_cruiser",
+      "nation": "USN",
+      "name": "真珠湾海軍基地",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "usn_heavy",
+      "nation": "USN",
+      "name": "ブルックリン海軍工廠",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    },
+    {
+      "id": "km_home",
+      "nation": "KM",
+      "name": "キール軍港",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "km_light",
+      "nation": "KM",
+      "name": "ロリアン潜水艦基地",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "km_cruiser",
+      "nation": "KM",
+      "name": "ハンブルク造船所",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "km_heavy",
+      "nation": "KM",
+      "name": "ヴィルヘルムスハーフェン軍港",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    },
+    {
+      "id": "rn_home",
+      "nation": "RN",
+      "name": "ポーツマス軍港",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "rn_light",
+      "nation": "RN",
+      "name": "デヴォンポート軍港",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "rn_cruiser",
+      "nation": "RN",
+      "name": "ロサイス軍港",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "rn_heavy",
+      "nation": "RN",
+      "name": "スカパ・フロー泊地",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    },
+    {
+      "id": "fr_home",
+      "nation": "FR",
+      "name": "トゥーロン軍港",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "fr_light",
+      "nation": "FR",
+      "name": "シェルブール軍港",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "fr_cruiser",
+      "nation": "FR",
+      "name": "ビゼルト軍港",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "fr_heavy",
+      "nation": "FR",
+      "name": "ブレスト軍港",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    },
+    {
+      "id": "su_home",
+      "nation": "SU",
+      "name": "クロンシュタット軍港",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "su_light",
+      "nation": "SU",
+      "name": "ウラジオストク軍港",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "su_cruiser",
+      "nation": "SU",
+      "name": "セヴァストポリ軍港",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "su_heavy",
+      "nation": "SU",
+      "name": "レニングラード造船所",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    },
+    {
+      "id": "rm_home",
+      "nation": "RM",
+      "name": "ラ・スペツィア軍港",
+      "unlockRank": 0,
+      "repairTime": 0.8
+    },
+    {
+      "id": "rm_light",
+      "nation": "RM",
+      "name": "ブリンディジ軍港",
+      "unlockRank": 2,
+      "build": {
+        "classes": [
+          "Destroyer",
+          "Submarine"
+        ],
+        "mul": 0.8
+      }
+    },
+    {
+      "id": "rm_cruiser",
+      "nation": "RM",
+      "name": "ナポリ軍港",
+      "unlockRank": 6,
+      "build": {
+        "classes": [
+          "Cruiser"
+        ],
+        "mul": 0.85
+      },
+      "research": 0.9
+    },
+    {
+      "id": "rm_heavy",
+      "nation": "RM",
+      "name": "ターラント軍港",
+      "unlockRank": 8,
+      "build": {
+        "classes": [
+          "Battleship",
+          "Carrier"
+        ],
+        "mul": 0.85
+      }
+    }
+  ]
+}

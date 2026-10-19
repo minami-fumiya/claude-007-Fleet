@@ -6,6 +6,7 @@ import { addBackup, backupLabel, ISaveBackup, MAX_BACKUPS, parseBackups, rawVers
 import { fleetSlots } from '@/systems/RankSystem';
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { Nation } from '@/types/Nation';
+import { EXISTING_PLAYER_HELP } from '@/utils/SaveMigration';
 
 /**
  * Save compatibility (CLAUDE.md "セーブデータを消さない"): every released version's save in tests/fixtures/saves
@@ -30,6 +31,8 @@ describe('every released save loads without losing progress', () => {
       expect(save.version).toBe(SAVE_VERSION);
       // v1 was one flat progress object (the IJN's); v2+ keeps one slot per nation.
       const before = (stored.nations ?? { IJN: stored }) as Record<string, Record<string, unknown>>;
+      // First-visit help (#61): a save from before it knows every screen; a newer one keeps its list.
+      expect(save.seenHelp).toEqual(expect.arrayContaining(Array.isArray(stored.seenHelp) ? (stored.seenHelp as string[]) : [...EXISTING_PLAYER_HELP]));
       for (const [nation, old] of Object.entries(before)) {
         const np = save.nations[nation as Nation];
         expect(np, nation).toBeDefined();
@@ -41,6 +44,7 @@ describe('every released save loads without losing progress', () => {
         const ownedBefore = Array.isArray(old.captains) ? (old.captains as string[]) : nationCaptains(nation).map((c) => c.id);
         expect(np!.captains).toEqual(expect.arrayContaining(ownedBefore));
         expect(np!.captainSkills).toEqual(expect.objectContaining((old.captainSkills as Record<string, string[]>) ?? {}));
+        if (typeof old.base === 'string') expect(np!.base, `${nation} base`).toBe(old.base);
         const res = old.resources as Record<string, number> | undefined;
         if (res) for (const k of ['fuel', 'ammo', 'steel', 'bauxite'] as const) expect(np!.resources[k], `${nation} ${k}`).toBeGreaterThanOrEqual(res[k] ?? 0);
         // Slots never shrink: saves from before merit ranks (v5) keep what the old six-rank table gave.

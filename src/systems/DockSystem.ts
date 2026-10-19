@@ -75,8 +75,9 @@ export function repairCost(maxHp: number, fraction: number): IResources {
   return resources({ fuel: Math.ceil(missing * 0.25), steel: Math.ceil(missing * 0.25) });
 }
 
-export function repairTimeMs(maxHp: number, fraction: number): number {
-  return missingHp(maxHp, fraction) * MS_PER_HP;
+/** `timeMul` is the current base's repair-time multiplier (#88). */
+export function repairTimeMs(maxHp: number, fraction: number, timeMul = 1): number {
+  return Math.round(missingHp(maxHp, fraction) * MS_PER_HP * timeMul);
 }
 
 /** Records a ship's state after a battle (1 = undamaged clears the entry). */
@@ -89,10 +90,10 @@ export function setDamage(state: IDockState, shipId: string, fraction: number): 
 }
 
 /** Puts a damaged ship into a free dock. Returns null if it can't (no dock free, not damaged, already in). */
-export function startRepair(state: IDockState, shipId: string, maxHp: number, now: number): IDockState | null {
+export function startRepair(state: IDockState, shipId: string, maxHp: number, now: number, timeMul = 1): IDockState | null {
   const f = hpFraction(state, shipId);
   if (f >= 1 || isDocked(state, shipId) || state.docks.length >= dockCount(state)) return null;
-  return { ...state, docks: [...state.docks, { shipId, endsAt: now + repairTimeMs(maxHp, f) }] };
+  return { ...state, docks: [...state.docks, { shipId, endsAt: now + repairTimeMs(maxHp, f, timeMul) }] };
 }
 
 /** Releases every ship whose repair has finished. */

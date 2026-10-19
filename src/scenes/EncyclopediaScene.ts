@@ -25,6 +25,7 @@ import { ScrollList } from '@/ui/components/ScrollList';
 import campaignData from '@/data/campaign.json';
 import aircraftData from '@/data/aircraft.json';
 import specialData from '@/data/special.json';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -94,7 +95,14 @@ export class EncyclopediaScene extends Phaser.Scene {
     super({ key: SceneKeys.ENCYCLOPEDIA });
   }
 
+  /** `tab` opens a tab directly (鎮守府 → 艦隊 → 艦長, #61). */
+  init(data?: { tab?: EncyclopediaTab }): void {
+    if (data?.tab && TABS.includes(data.tab)) this.tab = data.tab;
+  }
+
   create(): void {
+    // First-visit help (#61): drawn above the screen, so it can be made first.
+    showScreenHelp(this);
     audio.music('menu');
     this.dynamic = [];
     this.status = '';

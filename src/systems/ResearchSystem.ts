@@ -3,7 +3,7 @@ import { IShipData } from '@/types/Ship';
 import { IResources, ITechNode, TechBranch } from '@/types/Progression';
 import { ShipClass } from '@/types/ShipClass';
 import { combineModifiers } from './CustomizationSystem';
-import { canAfford, pay } from './ResourceSystem';
+import { canAfford, pay, scaleCost } from './ResourceSystem';
 import techTree from '@/data/tech-tree.json';
 
 /** The game's tech tree (src/data/tech-tree.json). */
@@ -73,14 +73,15 @@ export function prerequisitesMet(node: ITechNode, done: string[]): boolean {
   return node.requires.every((r) => done.includes(r));
 }
 
-export function canResearch(node: ITechNode, done: string[], have: IResources): boolean {
-  return !done.includes(node.id) && prerequisitesMet(node, done) && canAfford(have, node.cost);
+/** `costMul` is the current base's research multiplier (#88). */
+export function canResearch(node: ITechNode, done: string[], have: IResources, costMul = 1): boolean {
+  return !done.includes(node.id) && prerequisitesMet(node, done) && canAfford(have, scaleCost(node.cost, costMul));
 }
 
 /** Pays for and completes `node`. Returns null if it can't be researched now. */
-export function research(node: ITechNode, done: string[], have: IResources): { done: string[]; resources: IResources } | null {
-  if (!canResearch(node, done, have)) return null;
-  const left = pay(have, node.cost);
+export function research(node: ITechNode, done: string[], have: IResources, costMul = 1): { done: string[]; resources: IResources } | null {
+  if (!canResearch(node, done, have, costMul)) return null;
+  const left = pay(have, scaleCost(node.cost, costMul));
   return left ? { done: [...done, node.id], resources: left } : null;
 }
 
