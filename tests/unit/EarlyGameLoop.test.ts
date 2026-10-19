@@ -98,6 +98,7 @@ function clear(p: IProgress, a: ICampaignArea, roster: IShipData[]): IProgress {
   // BattleScene counts the win for the promotion missions (#142) before adding merit.
   next = addRankStats(next, { campaignWin: 1, sink: a.enemy.ships.length });
   next = addMerit(next, meritFor({ victory: true, campaign: true, firstClear: rec.firstClear, enemiesSunk: a.enemy.ships.length })).progress;
+  // An S-rank win also brings the area's reward-only ship, if it has one (#160).
   const ship = rewardShipFor(roster, ownedIds(next, roster), a.id);
   if (ship) next = grantShip(next, roster, ship.id);
   return next;
@@ -145,24 +146,22 @@ describe('a brand-new player can always progress', () => {
       const ex = settleBattle(p, { victory: true, enemiesSunk: 1, planesLost: 0, ships: [] }, { exercise: true });
       expect(ex.reward.fuel).toBeGreaterThan(0);
 
-      // 4) Clearing the first area: merit for 少尉, two slots, and a second ship.
+      // 4) Clearing the first area: merit for 少尉 and two slots. Opening areas grant no reward-only ship (#160).
       p = clear(p, first, roster);
       expect(rankOf(p).name).toBe('少尉');
       expect(fleetSlots(p)).toBe(2);
+      expect(ownedShips(p, roster)).toHaveLength(1);
+
+      // 5) The first-clear resources pay for a second destroyer (grade 0, no class research); every nation keeps one (#160).
+      const buildable = roster.find((s) => s.shipClass === ShipClass.Destroyer && !ownedIds(p, roster).includes(s.id) && !isRewardOnly(s));
+      expect(buildable).toBeDefined();
+      expect(canAfford(p.resources, buildCost(buildable!))).toBe(true);
+      p = buildShip(p, roster, buildable!)!;
       expect(ownedShips(p, roster)).toHaveLength(2);
       // The next area (two enemies) is affordable with two ships.
       const second = areasOf(data, home)[1];
       expect(second.enemy.ships).toHaveLength(2);
       expect(paySortie(p, ownedShips(p, roster), { area: second })).not.toBeNull();
-
-      // 5) The first-clear resources pay for a destroyer or submarine build too (grade 0, no class research).
-      // Every nation keeps a destroyer it can build (#160).
-      const buildable = roster.find((s) => s.shipClass === ShipClass.Destroyer && !ownedIds(p, roster).includes(s.id) && !isRewardOnly(s));
-      expect(buildable).toBeDefined();
-      if (buildable) {
-        expect(canAfford(p.resources, buildCost(buildable))).toBe(true);
-        expect(buildShip(p, roster, buildable)).not.toBeNull();
-      }
     });
   }
 });

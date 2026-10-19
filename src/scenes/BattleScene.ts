@@ -1616,15 +1616,17 @@ export class BattleScene extends Phaser.Scene {
       let newShip = '';
       if (rec.firstClear) {
         progress = { ...progress, resources: addResources(progress.resources, area.reward), ledger: recordLedger(progress.ledger, 'firstClear', area.reward, Date.now()) };
-        // First-clear ship (#18): the area's reward-only ship for this nation (#160).
-        const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-        const ship = rewardShipFor(roster, ownedIds(progress, roster), area.id);
-        if (ship) {
-          progress = grantShip(progress, roster, ship.id);
-          newShip = `  新しい艦: ${ship.name.replace(/\s*\(.*\)\s*$/, '')}`;
-        }
       }
-      result.campaign = `海域攻略: ${area.name}${rec.firstClear ? `  初回報酬 ${formatResources(area.reward)}${newShip}` : ''}`;
+      // The area's reward-only ship (#39 #160) joins on an S-rank win, the first clear or any later one.
+      const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+      const ship = rewardShipFor(roster, ownedIds(progress, roster), area.id);
+      if (ship && rank === 'S') {
+        progress = grantShip(progress, roster, ship.id);
+        newShip = `  新しい艦: ${ship.name.replace(/\s*\(.*\)\s*$/, '')}`;
+      } else if (ship) {
+        newShip = `  (S 評価で ${ship.name.replace(/\s*\(.*\)\s*$/, '')} が手に入ります)`;
+      }
+      result.campaign = `海域攻略: ${area.name}${rec.firstClear ? `  初回報酬 ${formatResources(area.reward)}` : ''}${newShip}`;
       result.returnScene = SceneKeys.CAMPAIGN;
     } else if (area) {
       result.campaign = `作戦失敗: ${area.name}`;

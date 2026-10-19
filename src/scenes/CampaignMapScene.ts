@@ -227,11 +227,11 @@ export class CampaignMapScene extends Phaser.Scene {
       .map((g) => `${g.kind}  ${g.names.join('・')}`)
       .join('\n');
     const map = DataLoader.getMap(this, a.map);
-    // First-clear ship for the nation being played (#18).
+    // The area's reward-only ship for the nation being played, until it is won with an S rank (#160).
     const progress = loadProgress();
     const roster = registry.byNation(progress.nation);
-    const rewardShip = isCleared(a, cleared) ? undefined : rewardShipFor(roster, ownedIds(progress, roster), a.id);
-    const reward = formatResources(a.reward) + (rewardShip ? `  +  ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
+    const rewardShip = rewardShipFor(roster, ownedIds(progress, roster), a.id);
+    const reward = formatResources(a.reward) + (rewardShip ? `  /  S 評価で ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
       // Portrait keeps to the kinds (the names ran the sweep line into the buttons).

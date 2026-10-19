@@ -128,13 +128,25 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(grantShip(built, IJN, 'etorofu').ships).toEqual(['fubuki', 'etorofu']);
   });
 
-  it('first-clear reward: the area\'s reward-only ship, once (#160)', () => {
-    const dd = rewardShipFor(IJN, ['fubuki'], 'p1')!;
-    expect(dd.shipClass).toBe(ShipClass.Destroyer);
-    expect(isRewardOnly(dd)).toBe(true);
-    expect(rewardShipFor(IJN, ['fubuki', dd.id], 'p1')).toBeUndefined();
-    // An area with no ship for the nation grants resources only.
+  it("first-clear reward: the area's reward-only ship, once; opening areas have none (#160)", () => {
+    const ship = rewardShipFor(IJN, ['fubuki'], 'p3')!;
+    expect(ship.shipClass).toBe(ShipClass.Submarine);
+    expect(isRewardOnly(ship)).toBe(true);
+    expect(rewardShipFor(IJN, ['fubuki', ship.id], 'p3')).toBeUndefined();
+    expect(rewardShipFor(IJN, ['fubuki'], 'p1')).toBeUndefined();
+    // An area of a theater the nation doesn't play grants nothing.
     expect(rewardShipFor(IJN, ['fubuki'], 'b1')).toBeUndefined();
+  });
+
+  it('at most half of each theater\'s areas have a reward-only ship, always including the last (#160)', () => {
+    for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
+      for (const t of campaignData.theaters) {
+        const areas = campaignData.areas.filter((a) => a.theater === t.id).map((a) => a.id);
+        const n = areas.filter((id) => byArea?.[id]).length;
+        expect(n, `${nation} ${t.id}`).toBeLessThanOrEqual(Math.floor(areas.length / 2));
+      }
+    }
+    expect(REWARD_SHIPS.IJN?.p6).toBe('nagato');
   });
 });
 
