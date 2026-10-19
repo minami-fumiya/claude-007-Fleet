@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { FIRST_VERSION, LATEST_VERSION, MigrationStep, MIGRATIONS, RawSave, runMigrations, versionOf } from '@/utils/SaveMigration';
 import { emptySave, parseSave, SAVE_VERSION, switchNation } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
@@ -139,5 +141,18 @@ describe('v4 → v5: merit ranks, docks to build, tutorial (#36 / #38 / #90)', (
   it('a brand-new save starts the tutorial with one dock and no merit', () => {
     const save = parseSave(null);
     expect(save.tutorial).toEqual({ step: 0, done: false });
+  });
+});
+
+describe('v11 → v12: hourly quests and lifetime totals (#158)', () => {
+  it('keeps quest progress and claims, and seeds the totals from what the save counted', () => {
+    const fixture = JSON.parse(readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.21.json'), 'utf8'));
+    const save = parseSave(JSON.stringify(fixture));
+    const q = save.nations[Nation.IJN]!.quests;
+    expect(q.progress).toEqual(expect.objectContaining(fixture.nations.IJN.quests.progress));
+    expect(q.claimed).toEqual(fixture.nations.IJN.quests.claimed);
+    expect(q.hour).toBe(0);
+    expect(q.totals.sink).toBe(fixture.nations.IJN.rankStats.sink);
+    expect(q.totals.build).toBe(1);
   });
 });

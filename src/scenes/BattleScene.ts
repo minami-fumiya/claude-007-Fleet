@@ -57,7 +57,8 @@ import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, levelUpNotes, MAX_LEVEL, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { ShipClass } from '@/types/ShipClass';
-import { IProgress, loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
+import { IProgress, loadProgress, loadSave, saveProgress, withProgress as withSaveProgress } from '@/utils/ProgressStore';
+import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
 import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown } from '@/systems/BattleRank';
@@ -68,8 +69,8 @@ import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/Resear
 import { addResources, formatResources } from '@/systems/ResourceSystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
-import { campaignSide, recordClear, theaterProgress } from '@/systems/CampaignSystem';
-import { awardMedals, newMedals, recordBattle } from '@/systems/RecordSystem';
+import { campaignSide, recordClear } from '@/systems/CampaignSystem';
+import { recordBattle } from '@/systems/RecordSystem';
 import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
 import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
@@ -79,7 +80,7 @@ import { IScenario, IScenarioSide } from '@/types/Scenario';
 import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
-import { withQuestEvents } from '@/systems/QuestSystem';
+import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
 import { markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
@@ -1445,6 +1446,7 @@ export class BattleScene extends Phaser.Scene {
     const captainXp = { ...progress.captainXp };
     const captainStats = { ...progress.captainStats };
     const reports: ICaptainReport[] = [];
+    let levels = 0;
     const night = this.conditions.time === TimeOfDay.Night;
     const subsSunk = this.enemies.filter((e) => !e.isAlive && e.stats.shipClass === ShipClass.Submarine).length;
     for (const [ship, captain] of this.captains) {
@@ -1452,6 +1454,7 @@ export class BattleScene extends Phaser.Scene {
       const gained = Math.round(battleXp({ victory, enemiesSunk, flagship: ship === this.flagship, survived: ship.isAlive }) * this.battleEvent.xpMul);
       const award = awardXp(captain, gained);
       captainXp[captain.id] = award.captain.xp;
+      levels += award.captain.level - captain.level;
       // What traits count (#45): the fleet's sinks, and coming home 大破.
       const heavySurvival = ship.isAlive && ship.stats.maxHp > 0 && ship.stats.currentHp / ship.stats.maxHp <= 0.25;
       const before = earnedTraits(captainStats[captain.id]).length;
@@ -1465,7 +1468,7 @@ export class BattleScene extends Phaser.Scene {
       });
     }
     // Historical scenarios are exhibitions: nothing carries over.
-    if (!this.scenario) saveProgress({ ...progress, captainXp, captainStats });
+    if (!this.scenario) saveProgress(withQuestEvents({ ...progress, captainXp, captainStats }, [['captainLevel', levels]], Date.now()));
     return reports;
   }
 
@@ -1598,8 +1601,17 @@ export class BattleScene extends Phaser.Scene {
     // 任務 (#52): the sortie, the win and what was sunk.
     const sunk = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy);
     const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
+    const night = this.conditions.time === TimeOfDay.Night;
+    const won = (b: boolean): number => (victory && b ? 1 : 0);
+    const theaterWin: Partial<Record<string, QuestEvent>> = { pacific: 'winPacific', atlantic: 'winAtlantic', mediterranean: 'winMediterranean', baltic: 'winBaltic' };
+    const theaterEvent = area ? theaterWin[area.theater] : undefined;
     progress = withQuestEvents(progress, [
-      ['sortie', 1], ['win', victory ? 1 : 0], ['nightWin', victory && this.conditions.time === TimeOfDay.Night ? 1 : 0], ['sink', sunk.length],
+      ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
+      // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
+      ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
+      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
+      ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
     ], Date.now());
     if (skirmish) {
@@ -1697,17 +1709,16 @@ export class BattleScene extends Phaser.Scene {
 
   /** Adds this battle to the service record and awards any medals it earned. */
   private updateRecord(progress: IProgress, victory: boolean, shipsLost: number, result: IBattleResultData): IProgress {
-    const campaign = campaignData as ICampaignData;
     let record = recordBattle(progress.record, {
       victory,
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       damageDealt: Object.values(this.damageLog.player).reduce((a, n) => a + n, 0),
       shipsLost,
     });
-    const medals = newMedals(record, {
-      clearedTheaters: campaign.theaters.filter((t) => theaterProgress(campaign, t.id, progress.campaign) >= 1).map((t) => t.id),
-    });
-    record = awardMedals(record, medals);
+    // Medals look at every nation's progress too (#92): the save as it will be written.
+    const awarded = awardEarnedMedals(withSaveProgress(loadSave(), { ...progress, record }));
+    const medals = awarded.medals;
+    record = awarded.save.record;
     if (medals.length > 0) result.medals = medals.map((m) => m.name);
     return { ...progress, record };
   }

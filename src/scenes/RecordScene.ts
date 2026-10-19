@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { MEDALS, totalSunk } from '@/systems/RecordSystem';
+import { MEDAL_CATEGORY_LABEL, MedalCategory, medalProgress, MEDALS, totalSunk } from '@/systems/RecordSystem';
+import { medalContext } from '@/utils/MedalContext';
 import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
-import { loadProgress } from '@/utils/ProgressStore';
+import { awardPendingMedals, loadProgress, loadSave } from '@/utils/ProgressStore';
 import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerTotals, SPENDING } from '@/systems/LedgerSystem';
 import { RESOURCE_KEYS, RESOURCE_LABEL, resources } from '@/systems/ResourceSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, addStatCard, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, addStatCard, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { IServiceRecord } from '@/types/Record';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
@@ -23,6 +24,9 @@ export class RecordScene extends Phaser.Scene {
   /** Right panel: the medal case or the resource ledger (#137) */
   private view: 'medals' | 'ledger' = 'medals';
   private layer: Phaser.GameObjects.GameObject[] = [];
+  /** Medal case category and page (#92) */
+  private medalCategory: MedalCategory = 'sink';
+  private medalPage = 0;
 
   constructor() {
     super({ key: SceneKeys.RECORD });
@@ -43,6 +47,7 @@ export class RecordScene extends Phaser.Scene {
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '戦績', displayStyle(24)).setOrigin(0.5);
 
+    awardPendingMedals();
     const record = loadProgress().record;
     this.buildStats(record);
     const p = L.medals;
@@ -162,31 +167,75 @@ export class RecordScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The medal case (#92): one category at a time, a page of cards each. Earned medals shine; the rest show what they
+   * need and how far along the admiral is.
+   */
   private buildMedals(earned: string[]): void {
     const p = L.medals;
-    this.track(this.add.text(p.x + 22, p.y + 18, `勲章  ·  ${earned.length} / ${MEDALS.length}`, eyebrowStyle(11)));
-    const gap = 10;
-    const cw = (p.w - 44 - gap * (L.medalCols - 1)) / L.medalCols;
-    const rows = Math.ceil(MEDALS.length / L.medalCols);
-    // Below the 勲章 / 資源の収支 tabs.
+    const record = loadProgress().record;
+    const ctx = medalContext(loadSave());
+    const rate = Math.round((earned.filter((id) => MEDALS.some((m) => m.id === id)).length / MEDALS.length) * 100);
+    this.track(this.add.text(p.x + 22, p.y + 18, `勲章  ·  ${earned.length} / ${MEDALS.length}  ·  達成率 ${rate}%`, eyebrowStyle(11)));
+    const cats = Object.keys(MEDAL_CATEGORY_LABEL) as MedalCategory[];
     const top = p.y + (IS_PORTRAIT ? 70 : 56);
-    const ch = Math.min(IS_PORTRAIT ? 96 : 120, (p.y + p.h - 16 - top - gap * (rows - 1)) / rows);
-    MEDALS.forEach((m, i) => {
+    const ctw = (p.w - 44 - 6 * (cats.length - 1)) / cats.length;
+    const cth = IS_PORTRAIT ? 44 : 30;
+    cats.forEach((c, i) => {
+      const n = MEDALS.filter((m) => m.category === c);
+      const got = n.filter((m) => earned.includes(m.id)).length;
+      this.track(new UIButton(this, p.x + 22 + i * (ctw + 6) + ctw / 2, top + cth / 2, IS_PORTRAIT ? MEDAL_CATEGORY_LABEL[c].slice(0, 2) : `${MEDAL_CATEGORY_LABEL[c]} ${got}/${n.length}`, () => {
+        this.medalCategory = c;
+        this.medalPage = 0;
+        this.showView('medals');
+      }, { variant: c === this.medalCategory ? 'primary' : 'secondary', width: ctw, height: cth, fontSize: IS_PORTRAIT ? 13 : 11 }));
+    });
+    const list = MEDALS.filter((m) => m.category === this.medalCategory);
+    const rowsPerPage = IS_PORTRAIT ? 6 : 5;
+    const perPage = rowsPerPage * L.medalCols;
+    const pages = Math.max(1, Math.ceil(list.length / perPage));
+    this.medalPage = Math.min(this.medalPage, pages - 1);
+    const gap = 10;
+    const gridTop = top + cth + 14;
+    const navH = IS_PORTRAIT ? 52 : 36;
+    const cw = (p.w - 44 - gap * (L.medalCols - 1)) / L.medalCols;
+    const ch = (p.y + p.h - 16 - navH - 10 - gridTop - gap * (rowsPerPage - 1)) / rowsPerPage;
+    list.slice(this.medalPage * perPage, (this.medalPage + 1) * perPage).forEach((m, i) => {
       const on = earned.includes(m.id);
       const x = p.x + 22 + (i % L.medalCols) * (cw + gap);
-      const y = top + Math.floor(i / L.medalCols) * (ch + gap);
+      const y = gridTop + Math.floor(i / L.medalCols) * (ch + gap);
       this.track(drawPanel(this.add.graphics(), x, y, cw, ch, {
         radius: 14, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.35, rimAlpha: on ? 0.8 : 0.12, glow: on ? 0.8 : 0,
       }));
       const g = this.track(this.add.graphics());
-      const cx = x + 30;
+      const cx = x + 28;
       const cy = y + ch / 2;
       g.fillStyle(on ? Colors.gold : 0xffffff, on ? 1 : 0.08);
-      g.fillCircle(cx, cy, 15);
+      g.fillCircle(cx, cy, 14);
       g.lineStyle(2, 0xffffff, on ? 0.7 : 0.15);
-      g.strokeCircle(cx, cy, 15);
-      this.track(this.add.text(x + 56, cy - 4, m.name, textStyle(15, on ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 1));
-      this.track(this.add.text(x + 56, cy + 2, m.description, textStyle(11, on ? Css.muted : Css.dim, { wordWrap: { width: cw - 66, useAdvancedWrap: true } })).setOrigin(0, 0));
+      g.strokeCircle(cx, cy, 14);
+      const tx = x + 52;
+      const tw = cw - 62;
+      this.track(this.add.text(tx, y + 8, m.name, textStyle(14, on ? Css.text : Css.muted, { fontStyle: 'bold' })));
+      this.track(this.add.text(tx, y + 30, m.description, textStyle(11, on ? Css.muted : Css.dim)));
+      if (!on) {
+        const [value, goal] = medalProgress(m.id, record, ctx);
+        drawMeter(this.track(this.add.graphics()), tx, y + ch - 14, tw - 70, 4, value / goal, Colors.cyan);
+        this.track(this.add.text(x + cw - 10, y + ch - 20, `${value.toLocaleString()} / ${goal.toLocaleString()}`, textStyle(10, Css.cyan)).setOrigin(1, 0));
+      }
     });
+    if (pages > 1) {
+      const ny = p.y + p.h - 16 - navH / 2;
+      const nw = IS_PORTRAIT ? 120 : 90;
+      this.track(new UIButton(this, p.x + p.w / 2 - nw - 50, ny, '‹ 前', () => {
+        this.medalPage = (this.medalPage + pages - 1) % pages;
+        this.showView('medals');
+      }, { variant: 'secondary', width: nw, height: navH, fontSize: 13 }));
+      this.track(this.add.text(p.x + p.w / 2, ny, `${this.medalPage + 1} / ${pages}`, textStyle(13, Css.muted)).setOrigin(0.5));
+      this.track(new UIButton(this, p.x + p.w / 2 + nw + 50, ny, '次 ›', () => {
+        this.medalPage = (this.medalPage + 1) % pages;
+        this.showView('medals');
+      }, { variant: 'secondary', width: nw, height: navH, fontSize: 13 }));
+    }
   }
 }

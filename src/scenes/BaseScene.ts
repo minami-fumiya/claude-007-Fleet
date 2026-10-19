@@ -13,6 +13,7 @@ import { clock } from '@/utils/TimeFormat';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import campaignData from '@/data/campaign.json';
 
@@ -202,7 +203,7 @@ export class BaseScene extends Phaser.Scene {
     const progress = loadProgress();
     const next = startFacility(progress, base.id, id, Date.now());
     if (!next) return;
-    saveProgress(next, 'facility');
+    saveProgress(withQuestEvents(next, [['facility', 1]], Date.now()), 'facility');
     this.status = '';
     this.refresh();
   }
