@@ -33,6 +33,8 @@ export interface ICaptainData {
   bio?: string;
   /** Overrides of the aptitude the speciality implies (#131) */
   aptitude?: Partial<Record<ShipClass, Aptitude>>;
+  /** How the abilities grow (#209): early bloomers peak sooner, late ones catch up by Lv100; steady when absent */
+  growth?: 'early' | 'late';
 }
 
 /** How well a captain commands a ship class (#131): S 120%, A 100%, B 80%, C 60% of their skills and abilities. */

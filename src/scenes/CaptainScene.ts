@@ -5,7 +5,7 @@ import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
-  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
+  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, GROWTH_LABEL, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
   LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, NO_STATS, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
@@ -227,7 +227,7 @@ export class CaptainScene extends Phaser.Scene {
     y += 6;
 
     // Abilities (#131)
-    y = this.label(x, y, `能力 (Lv${MAX_LEVEL} で最大 +${ABILITY_MAX}%)`);
+    y = this.label(x, y, `能力 (Lv${MAX_LEVEL} で最大 +${ABILITY_MAX}%・成長型 ${GROWTH_LABEL[c.growth ?? 'steady']})`);
     const abilities = captainAbilities(c);
     const half = (colW - 20) / 2;
     (Object.values(CaptainAbility) as CaptainAbility[]).forEach((a, i) => {

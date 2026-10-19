@@ -212,12 +212,16 @@ const GROWTH: Record<CaptainSkill, Record<CaptainAbility, number>> = {
   [CaptainSkill.Damecon]: { gunnery: 0.7, torpedo: 0.3, aviation: 0.3, antiAir: 0.4, handling: 0.7 },
 };
 
+/** Curve of each growth type (#209): all reach the same top at Lv100, early bloomers get there faster. */
+export const GROWTH_CURVE: Record<NonNullable<ICaptainData['growth']> | 'steady', number> = { early: 0.5, steady: 0.7, late: 1 };
+export const GROWTH_LABEL: Record<NonNullable<ICaptainData['growth']> | 'steady', string> = { early: '早熟', steady: '標準', late: '晩成' };
+
 /**
  * A captain's abilities in percent (one decimal). They grow from 0 at Lv1 to ABILITY_MAX × growth at Lv100, faster
  * early on so the first levels are felt.
  */
 export function captainAbilities(captain: ICaptainData & { level: number }): Record<CaptainAbility, number> {
-  const t = Math.pow(Math.max(0, Math.min(MAX_LEVEL, captain.level) - 1) / (MAX_LEVEL - 1), 0.7);
+  const t = Math.pow(Math.max(0, Math.min(MAX_LEVEL, captain.level) - 1) / (MAX_LEVEL - 1), GROWTH_CURVE[captain.growth ?? 'steady']);
   const growth = GROWTH[captain.skill];
   const out = {} as Record<CaptainAbility, number>;
   for (const a of Object.values(CaptainAbility)) out[a] = Math.round(ABILITY_MAX * growth[a] * t * 10) / 10;

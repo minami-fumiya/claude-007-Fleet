@@ -11,6 +11,8 @@ import { Nation } from '@/types/Nation';
 import { NO_MODIFIERS } from '@/types/Modifiers';
 import captains from '@/data/captains.json';
 
+const CLASS_LIST = [ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer, ShipClass.Carrier, ShipClass.Submarine];
+
 const data = (skill: CaptainSkill): ICaptainData => ({ id: 'c', name: 'c', nation: Nation.IJN, skill });
 
 describe('CaptainSystem levels', () => {
@@ -95,13 +97,31 @@ describe('captainModifiers', () => {
     for (const skill of Object.values(CaptainSkill)) expect(SKILL_LABEL[skill], skill).toMatch(/^.{2}$/);
   });
 
-  it('has eight captains per nation, one of each skill, with unique ids', () => {
+  it('has 30 captains per nation (#209), every speciality three times or more, unique ids and names', () => {
     const all = captains.captains as ICaptainData[];
     expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
+    expect(new Set(all.map((c) => c.name)).size).toBe(all.length);
     for (const nation of Object.values(Nation)) {
       const mine = all.filter((c) => c.nation === nation);
-      expect(mine.map((c) => c.skill).sort(), nation).toEqual(Object.values(CaptainSkill).sort());
+      expect(mine, nation).toHaveLength(30);
+      for (const skill of Object.values(CaptainSkill)) expect(mine.filter((c) => c.skill === skill).length, `${nation} ${skill}`).toBeGreaterThanOrEqual(3);
+      // The same speciality comes in different flavours: not every captain of it suits the same classes.
+      const flavours = new Set(mine.filter((c) => c.skill === CaptainSkill.Torpedo).map((c) => JSON.stringify(c.aptitude ?? {})));
+      expect(flavours.size, nation).toBeGreaterThanOrEqual(3);
+      for (const c of mine) {
+        expect(c.bio, c.id).toBeTruthy();
+        expect(CLASS_LIST.some((k) => aptitudeFor(c, k) === 'S'), c.id).toBe(true);
+      }
     }
+  });
+
+  it('growth types reach the same top at Lv100 but differ on the way (#209)', () => {
+    const base = { id: 'x', name: 'x', nation: Nation.IJN, skill: CaptainSkill.Gunnery } as ICaptainData;
+    const at = (growth: ICaptainData['growth'], level: number): number => captainAbilities({ ...base, growth, level }).gunnery;
+    expect(at('early', 100)).toBe(at(undefined, 100));
+    expect(at('late', 100)).toBe(at(undefined, 100));
+    expect(at('early', 30)).toBeGreaterThan(at(undefined, 30));
+    expect(at('late', 30)).toBeLessThan(at(undefined, 30));
   });
 });
 
