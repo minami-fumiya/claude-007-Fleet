@@ -108,9 +108,12 @@ export function areaMode(ships: IShipData[]): BattleMode {
   return BattleMode.Surface;
 }
 
-/** Share of a theater cleared, 0..1. */
+/** 訓練海域 pay this share of rewards, experience and merit (#202). */
+export const TRAINING_SCALE = 0.5;
+
+/** Share of a theater cleared, 0..1 (訓練海域 don't count, #202). */
 export function theaterProgress(data: ICampaignData, theater: string, cleared: string[]): number {
-  const areas = areasOf(data, theater);
+  const areas = areasOf(data, theater).filter((a) => !a.training);
   return areas.length === 0 ? 0 : areas.filter((a) => cleared.includes(a.id)).length / areas.length;
 }
 

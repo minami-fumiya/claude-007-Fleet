@@ -123,6 +123,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('pacific_war', '太平洋従軍章', 'campaign', [10, 50], (g) => `太平洋で ${g} 回勝利する`, (_r, c) => total(c, 'winPacific')),
   ...ladder('atlantic_war', '大西洋従軍章', 'campaign', [10, 50], (g) => `大西洋で ${g} 回勝利する`, (_r, c) => total(c, 'winAtlantic')),
   ...ladder('med_war', '地中海従軍章', 'campaign', [10, 50], (g) => `地中海で ${g} 回勝利する`, (_r, c) => total(c, 'winMediterranean')),
+  { id: 'blacksea', name: '黒海制覇章', description: '黒海戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('blacksea') ? 1 : 0), goal: 1 },
+  ...ladder('blacksea_war', '黒海従軍章', 'campaign', [10, 50], (g) => `黒海で ${g} 回勝利する`, (_r, c) => total(c, 'winBlackSea')),
+  ...ladder('training', '訓練章', 'campaign', [5, 30], (g) => `訓練海域で ${g} 回勝利する`, (_r, c) => total(c, 'trainingWin')),
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
   ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),

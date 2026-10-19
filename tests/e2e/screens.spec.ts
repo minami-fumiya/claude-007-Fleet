@@ -342,6 +342,29 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the strategic map shows the training areas and the Black Sea (#202)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 16, seenHelp: ['CampaignMapScene'] });
+    await open(page, 'CampaignMapScene');
+    expect(await overflowingTexts(page, 'CampaignMapScene'), `pacific (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CampaignMapScene'), `pacific overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('map-training.png') });
+    // A Soviet admiral: the Baltic and the Black Sea.
+    const su = { ...SAVE, version: 16, current: 'SU', seenHelp: ['CampaignMapScene'], nations: { SU: { ...SAVE.nations.IJN, ships: ['gnevny'], campaign: ['b1'] } } };
+    await page.evaluate((save) => localStorage.setItem('ww2fleet.progress.v2', JSON.stringify(save)), su);
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScenes(true).length);
+    await open(page, 'CampaignMapScene');
+    const tabs = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }>; selectTheater?(id: string): void };
+      return s.theaters.map((t) => t.id);
+    });
+    expect(tabs).toEqual(['baltic', 'blacksea']);
+    expect(await overflowingTexts(page, 'CampaignMapScene'), `SU (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('map-su.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('a sortie: pick ships, deploy, pause and resume the battle', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene');

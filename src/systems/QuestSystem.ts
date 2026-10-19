@@ -27,7 +27,9 @@ export type QuestEvent =
   // 0.0.29: enemy planes shot down (#185)
   | 'planesDown'
   // 0.0.30: remodels finished in a chosen direction (#86)
-  | 'refitBranch';
+  | 'refitBranch'
+  // the Black Sea theater and training areas (#202)
+  | 'winBlackSea' | 'trainingWin';
 
 export interface IQuest {
   id: string;

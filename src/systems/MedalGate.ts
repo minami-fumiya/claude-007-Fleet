@@ -85,6 +85,6 @@ export function unlocksOf(medalId: string): { research: string[]; other: string[
   if (medalId === 'builder') other.push('燃料タンク・弾薬庫 Lv4〜');
   if (medalId === 'shipwright') other.push('製鋼所 Lv4〜');
   if (medalId === 'veteran') other.push('工作部 Lv4〜');
-  if (['pacific', 'atlantic', 'mediterranean', 'baltic'].includes(medalId)) other.push('その戦域の軍港の固有施設 Lv3');
+  if (['pacific', 'atlantic', 'mediterranean', 'baltic', 'blacksea'].includes(medalId)) other.push('その戦域の軍港の固有施設 Lv3');
   return { research, other };
 }

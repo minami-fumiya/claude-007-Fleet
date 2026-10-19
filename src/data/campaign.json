@@ -3,7 +3,8 @@
     { "id": "pacific", "name": "太平洋", "en": "PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN"} },
     { "id": "atlantic", "name": "大西洋", "en": "ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM"} },
     { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN", "opponents": {"IJN": "RN", "RN": "RM", "RM": "RN", "FR": "RM", "KM": "RN"} },
-    { "id": "baltic", "name": "バルト海", "en": "BALTIC", "opponents": {"SU": "KM", "KM": "SU"} }
+    { "id": "baltic", "name": "バルト海", "en": "BALTIC", "opponents": {"SU": "KM", "KM": "SU"} },
+    { "id": "blacksea", "name": "黒海", "en": "BLACK SEA", "opponents": {"SU": "KM"}, "exam": false }
   ],
   "areas": [
     {
@@ -248,6 +249,100 @@
       "enemy": { "nation": "KM", "ships": ["tirpitz", "scharnhorst", "prinz_eugen", "admiral_hipper", "z1", "z23", "z20"] },
       "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }, "rewardShip": "Battleship"
+    },
+    {
+      "id": "bs1", "theater": "blacksea", "name": "黒海哨戒", "description": "沿岸を哨戒する敵駆逐艦を排除し、黒海の航路を開け。",
+      "x": 0.1, "y": 0.62, "requires": [],
+      "enemy": { "nation": "KM", "ships": ["z1"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 300, "ammo": 300, "steel": 300, "bauxite": 100 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "bs2", "theater": "blacksea", "name": "オデッサ補給線", "description": "Uボートと駆逐艦の襲撃から、オデッサへの輸送船団を守れ。",
+      "x": 0.27, "y": 0.4, "requires": ["bs1"],
+      "enemy": { "nation": "KM", "ships": ["u_boat_viic", "z1"] },
+      "objective": "Convoy", "map": "convoy-route", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 500, "ammo": 300, "steel": 400, "bauxite": 150 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "bs3", "theater": "blacksea", "name": "セヴァストポリ沖夜戦", "description": "夜のセヴァストポリ沖で、敵巡洋艦戦隊を迎え撃て。",
+      "x": 0.45, "y": 0.62, "requires": ["bs2"],
+      "enemy": { "nation": "KM", "ships": ["emden", "z1", "z23"] },
+      "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
+      "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
+    },
+    {
+      "id": "bs6", "theater": "blacksea", "name": "ケルチ海峡突破", "description": "敵の哨戒線を抜けて、旗艦をアゾフ海へ突破させよ。(夜戦の別ルート)",
+      "x": 0.48, "y": 0.86, "requires": ["bs2"],
+      "enemy": { "nation": "KM", "ships": ["z1", "z23", "u_boat_viic"] },
+      "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "アゾフ海" }, "timeLimitSec": 300 },
+      "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "bs4", "theater": "blacksea", "name": "ルーマニア沿岸砲撃", "description": "敵の沿岸砲台と港湾施設を艦砲射撃で破壊せよ。",
+      "x": 0.62, "y": 0.4, "requires": [], "requiresAny": ["bs3", "bs6"],
+      "enemy": { "nation": "KM", "ships": ["emden", "z1", "z23", "z20"] },
+      "objective": "Bombard", "map": "atoll", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 600, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
+    },
+    {
+      "id": "bs7", "theater": "blacksea", "name": "巡洋艦追撃", "description": "港を砲撃に来た軽巡洋艦を、逃げられる前に撃沈せよ。",
+      "x": 0.76, "y": 0.32, "requires": ["bs4"],
+      "enemy": { "nation": "KM", "ships": ["nurnberg", "emden", "z1", "z20"] },
+      "objective": "SinkTargets", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 250 }, "rewardShip": "Cruiser"
+    },
+    {
+      "id": "bs8", "theater": "blacksea", "name": "セヴァストポリ防衛", "description": "港へ迫る敵艦隊を、時間いっぱい食い止めよ。",
+      "x": 0.8, "y": 0.7, "requires": ["bs7"],
+      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "nurnberg", "z1", "z23"] },
+      "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "セヴァストポリ" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
+    },
+    {
+      "id": "bs5", "theater": "blacksea", "name": "黒海決戦", "description": "敵主力艦隊を捕捉し、黒海の制海権を握れ。",
+      "x": 0.92, "y": 0.58, "requires": ["bs8"],
+      "enemy": { "nation": "KM", "ships": ["deutschland", "admiral_hipper", "nurnberg", "z1", "z23", "z20", "u_boat_viic"] },
+      "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
+      "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }, "rewardShip": "Battleship"
+    },
+    {
+      "id": "p0", "theater": "pacific", "name": "太平洋訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
+      "x": 0.05, "y": 0.92, "requires": [], "training": true,
+      "enemy": { "nation": "USN", "ships": ["fletcher"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "a0", "theater": "atlantic", "name": "大西洋訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
+      "x": 0.05, "y": 0.92, "requires": [], "training": true,
+      "enemy": { "nation": "KM", "ships": ["z1"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "m0", "theater": "mediterranean", "name": "地中海訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
+      "x": 0.05, "y": 0.92, "requires": [], "training": true,
+      "enemy": { "nation": "RN", "ships": ["javelin"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "b0", "theater": "baltic", "name": "バルト海訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
+      "x": 0.05, "y": 0.92, "requires": [], "training": true,
+      "enemy": { "nation": "KM", "ships": ["z1"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+    },
+    {
+      "id": "bs0", "theater": "blacksea", "name": "黒海訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
+      "x": 0.05, "y": 0.92, "requires": [], "training": true,
+      "enemy": { "nation": "KM", "ships": ["z1"] },
+      "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
     }
   ]
 }
