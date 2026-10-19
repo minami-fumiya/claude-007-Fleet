@@ -14,6 +14,9 @@ export interface IObjectiveState {
   convoyTotal?: number;
   convoyEscaped?: number;
   convoyLost?: number;
+  /** Convoy HP left and in all (#186), for the objective line. */
+  convoyHp?: number;
+  convoyMaxHp?: number;
   /** Shore bombardment */
   landTargetsAlive?: number;
   /** Scenario objectives */
@@ -69,6 +72,13 @@ function clock(sec: number): string {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
+/** "  ·  船団 HP 72%" (#186): the convoy's HP left over all its ships, escaped ones included. */
+export function convoyHpText(s: IObjectiveState): string {
+  const max = s.convoyMaxHp ?? 0;
+  if (max <= 0) return '';
+  return `  ·  船団 HP ${Math.round((100 * Math.max(0, s.convoyHp ?? 0)) / max)}%`;
+}
+
 export function objectiveStatus(objective: Objective, s: IObjectiveState): string {
   const left = (s.timeLimitSec ?? 0) > 0 ? `  ·  残り ${clock((s.timeLimitSec ?? 0) - (s.elapsedSec ?? 0))}` : '';
   switch (objective) {
@@ -81,7 +91,7 @@ export function objectiveStatus(objective: Objective, s: IObjectiveState): strin
     case Objective.Delay:
       return `敵の突入を阻止せよ${left}`;
     case Objective.Convoy:
-      return `船団  脱出 ${s.convoyEscaped ?? 0} / 必要 ${CONVOY_NEEDED}  ·  喪失 ${s.convoyLost ?? 0}`;
+      return `船団  脱出 ${s.convoyEscaped ?? 0} / 必要 ${CONVOY_NEEDED}  ·  喪失 ${s.convoyLost ?? 0}${convoyHpText(s)}`;
     case Objective.Bombard:
       return `陸上目標  残り ${s.landTargetsAlive ?? 0}`;
     default:

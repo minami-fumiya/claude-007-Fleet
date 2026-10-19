@@ -37,6 +37,10 @@ describe('ObjectiveSystem', () => {
   it('describes progress for the HUD', () => {
     expect(objectiveStatus(Objective.Convoy, { ...base, convoyEscaped: 1, convoyLost: 1 })).toContain('脱出 1');
     expect(objectiveStatus(Objective.Bombard, { ...base, landTargetsAlive: 3 })).toContain('3');
+    // The convoy's HP over all its ships (#186)
+    expect(objectiveStatus(Objective.Convoy, { ...base, convoyHp: 360, convoyMaxHp: 500 })).toContain('船団 HP 72%');
+    expect(objectiveStatus(Objective.Convoy, { ...base, convoyHp: -20, convoyMaxHp: 500 })).toContain('船団 HP 0%');
+    expect(objectiveStatus(Objective.Convoy, base)).not.toContain('HP');
     expect(objectiveStatus(Objective.Annihilate, base)).toBe('');
   });
 });

@@ -342,7 +342,7 @@ export class BattleScene extends Phaser.Scene {
     this.explosion = new Explosion(this);
     this.splash = new WaterSplash(this);
     const torpedoMain = weaponKind(this.playerWeapon) === WeaponKind.Torpedo;
-    this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲');
+    this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲', this.convoy);
 
     this.fog = new FogOfWar(this, this.conditions.fogColor, this.conditions.fogAlpha);
     this.trails = new ShipTrails(this);
@@ -1422,6 +1422,8 @@ export class BattleScene extends Phaser.Scene {
       convoyTotal: this.convoy.length,
       convoyEscaped: this.convoyEscaped,
       convoyLost: this.convoy.filter((c) => c.stats.currentHp <= 0).length,
+      convoyHp: this.convoy.reduce((n, c) => n + Math.max(0, c.stats.currentHp), 0),
+      convoyMaxHp: this.convoy.reduce((n, c) => n + c.stats.maxHp, 0),
       landTargetsAlive: this.landTargets.filter((t) => t.isAlive).length,
       targetsAlive: this.scenarioTargets.filter((t) => t.isAlive).length,
       flagshipInZone: zone ? inZone(this.flagship.x, this.flagship.y, zone, WORLD.w, WORLD.h) : false,
