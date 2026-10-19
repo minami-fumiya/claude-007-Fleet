@@ -3,7 +3,9 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
-import { baseBonusLines, baseLockText, baseOfProgress, currentBaseId, IBase, isBaseOpen, moveBase, nationBases } from '@/systems/BaseSystem';
+import {
+  baseBonusLines, baseLockText, baseOfProgress, BaseState, baseState, baseWorkOf, currentBaseId, IBase, isBaseOpen, moveBase, nationBases, rushBaseWork, startBaseWork,
+} from '@/systems/BaseSystem';
 import {
   COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, facilityPreview, holdCap, regenRules, startFacility, UNIQUE_REGEN_CAP, uniqueStrength,
 } from '@/systems/FacilitySystem';
@@ -26,6 +28,9 @@ const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 140, w: CANVAS_W - 32 }, barCols: 2, list: { x: 16, y: 280, w: CANVAS_W - 32, h: 262 } as IRect, detail: { x: 16, y: 554, w: CANVAS_W - 32, h: CANVAS_H - 570 } as IRect, rowH: 110 }
   : { bar: { x: 24, y: 92, w: CANVAS_W - 48 }, barCols: 4, list: { x: 24, y: 176, w: 360, h: 528 } as IRect, detail: { x: 400, y: 176, w: 856, h: 528 } as IRect, rowH: 112 };
 
+/** List-row text of a base that is not open yet (#217); 'locked' shows the rank it waits for. */
+const BASE_STATE_TEXT: Partial<Record<BaseState, string>> = { ready: '着工できる', resources: '着工できる (資源不足)', busy: '着工待ち (他の工事中)' };
+
 /** The base's own facility, named after its bonus. */
 function uniqueName(base: IBase): string {
   if (base.repairTime) return '修理工廠';
@@ -44,6 +49,8 @@ export class BaseScene extends Phaser.Scene {
   private bar!: ResourceBar;
   private layer: Phaser.GameObjects.GameObject[] = [];
   private timer: { text: Phaser.GameObjects.Text; endsAt: number; label: string } | null = null;
+  /** The base under construction (#217), counting down on its list row */
+  private workTimer: { text: Phaser.GameObjects.Text; endsAt: number; name: string } | null = null;
   private status = '';
   /** Where the back button goes: the home port, or the strategic map that opened this screen (#220) */
   private returnTo: string = SceneKeys.HOME;
@@ -77,6 +84,15 @@ export class BaseScene extends Phaser.Scene {
   update(): void {
     const progress = loadProgress();
     this.bar.refresh(progress.resources, holdCap(progress.facilities));
+    if (this.workTimer) {
+      // A finished construction opens the base on load (#217).
+      if (!progress.baseWork) {
+        this.status = `${this.workTimer.name}が開港しました`;
+        this.refresh();
+        return;
+      }
+      this.workTimer.text.setText(`工事中 残り ${clock(this.workTimer.endsAt - Date.now())}`);
+    }
     if (!this.timer) return;
     const left = this.timer.endsAt - Date.now();
     // A finished job takes effect on load: redraw with the new level.
@@ -97,6 +113,7 @@ export class BaseScene extends Phaser.Scene {
     for (const o of this.layer) o.destroy();
     this.layer = [];
     this.timer = null;
+    this.workTimer = null;
     const progress = loadProgress();
     this.bar.refresh(progress.resources, holdCap(progress.facilities));
     this.buildList();
@@ -122,8 +139,14 @@ export class BaseScene extends Phaser.Scene {
         radius: 14, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.45, rimAlpha: on ? 0.85 : 0.15, glow: on ? 0.8 : 0,
       }));
       this.track(this.add.text(bx + 16, by + 12, b.name, textStyle(IS_PORTRAIT ? 16 : 15, open ? Css.text : Css.dim, { fontStyle: 'bold' })));
-      const sub = b.id === here ? '在籍中' : open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : baseLockText(b);
-      this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, b.id === here ? Css.gold : open ? Css.muted : Css.dim)).setOrigin(0, 1));
+      // A base past its rank is built before it opens (#217).
+      const state = baseState(b, progress);
+      const sub = b.id === here ? '在籍中' : open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockText(b);
+      const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, b.id === here ? Css.gold : open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
+      if (state === 'building' && progress.baseWork) {
+        this.workTimer = { text: subText, endsAt: progress.baseWork.endsAt, name: b.name };
+        subText.setText(`工事中 残り ${clock(progress.baseWork.endsAt - Date.now())}`);
+      }
       this.track(this.add.zone(bx, by, cw, rh).setOrigin(0, 0).setInteractive({ cursor: 'pointer' }).on('pointerup', () => {
         this.selectedId = b.id;
         this.status = '';
@@ -140,13 +163,26 @@ export class BaseScene extends Phaser.Scene {
     const here = currentBaseId(progress) === base.id;
     const open = isBaseOpen(base, progress);
     const facilities = progress.facilities;
-    this.track(this.add.text(x, d.y + 18, here ? '在籍中の軍港' : open ? '軍港' : '未解放', eyebrowStyle(11, here ? Css.gold : Css.cyan)));
+    const state = baseState(base, progress);
+    this.track(this.add.text(x, d.y + 18, here ? '在籍中の軍港' : open ? '軍港' : state === 'building' ? '工事中' : '未開港', eyebrowStyle(11, here ? Css.gold : Css.cyan)));
     const title = this.track(this.add.text(x, d.y + 38, base.name, displayStyle(22)));
-    const moveW = IS_PORTRAIT ? 200 : 180;
-    if (!here) {
-      this.track(new UIButton(this, d.x + d.w - 24 - moveW / 2, d.y + 44, open ? 'ここへ移る' : baseLockText(base), () => this.move(base), {
-        variant: open ? 'gold' : 'secondary', width: moveW, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
-      })).setEnabled(open);
+    if (!here && open) {
+      const moveW = IS_PORTRAIT ? 200 : 180;
+      this.track(new UIButton(this, d.x + d.w - 24 - moveW / 2, d.y + 44, 'ここへ移る', () => this.move(base), {
+        variant: 'gold', width: moveW, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
+      }));
+    } else if (!open) {
+      // Construction (#217): start it once the rank is reached, or finish it with a 高速建造材.
+      const work = baseWorkOf(base);
+      const items = progress.items.fastBuild;
+      const label = state === 'building' ? `高速建造材で完成 (所持 ${items})`
+        : state === 'ready' || state === 'resources' ? `着工 ${work.minutes}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(work.cost)}`
+          : state === 'busy' ? '他の軍港を工事中' : baseLockText(base);
+      const enabled = state === 'ready' || (state === 'building' && items > 0);
+      const workW = IS_PORTRAIT ? 300 : 340;
+      this.track(new UIButton(this, d.x + d.w - 24 - workW / 2, d.y + 44, label, () => (state === 'building' ? this.rushWork() : this.startWork(base)), {
+        variant: state === 'ready' ? 'gold' : 'secondary', width: workW, height: IS_PORTRAIT ? 60 : 40, fontSize: IS_PORTRAIT ? 12 : 12,
+      })).setEnabled(enabled);
     }
     let y = title.y + title.height + 10;
     // Where sorties go from here (#145) and the bonus its own facility gives (#146).
@@ -208,6 +244,25 @@ export class BaseScene extends Phaser.Scene {
     const hold = holdCap(facilities);
     this.track(this.add.text(x, d.y + d.h - 34, `保有上限 燃${hold.fuel} 弾${hold.ammo} 鋼${hold.steel} ボ${hold.bauxite}  (全軍港の施設で増える)`, textStyle(12, Css.muted)).setOrigin(0, 1));
     this.track(this.add.text(x, d.y + d.h - 16, `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}  ·  回復上限 燃${cap.fuel} 弾${cap.ammo} 鋼${cap.steel} ボ${cap.bauxite}`, textStyle(12, Css.muted)).setOrigin(0, 1));
+  }
+
+  private startWork(base: IBase): void {
+    const progress = loadProgress();
+    const next = startBaseWork(progress, base, Date.now());
+    if (!next) return;
+    saveProgress(next, 'facility');
+    this.status = `${base.name}の工事を始めました`;
+    this.refresh();
+  }
+
+  private rushWork(): void {
+    const progress = loadProgress();
+    const name = nationBases(progress.nation).find((b) => b.id === progress.baseWork?.base)?.name ?? '軍港';
+    const next = rushBaseWork(progress, Date.now());
+    if (!next) return;
+    saveProgress(next);
+    this.status = `${name}が開港しました`;
+    this.refresh();
   }
 
   private move(base: IBase): void {

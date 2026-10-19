@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { recordLedger } from '@/systems/LedgerSystem';
-import { baseOfProgress, baseReaches, basesFor } from '@/systems/BaseSystem';
+import { baseOfProgress, baseReaches, basesFor, baseState, nationBases } from '@/systems/BaseSystem';
 import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -100,6 +100,11 @@ export class CampaignMapScene extends Phaser.Scene {
     new UIButton(this, CANVAS_W - back.x, back.y, '軍港  ›', () => this.scene.start(SceneKeys.BASE, { returnTo: SceneKeys.CAMPAIGN }), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
+    // A base under construction, or one ready to be built (#217), is noted under the button.
+    const p = loadProgress();
+    const works = nationBases(p.nation).map((b) => baseState(b, p));
+    const workNote = works.includes('building') ? '工事中' : works.includes('ready') ? '着工できます' : '';
+    if (workNote) this.add.text(CANVAS_W - back.x, back.y + back.h / 2 + 4, workNote, textStyle(11, Css.cyan)).setOrigin(0.5, 0);
 
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;

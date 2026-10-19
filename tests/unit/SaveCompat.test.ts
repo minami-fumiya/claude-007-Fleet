@@ -8,6 +8,7 @@ import { nationCaptains } from '@/systems/CaptainRoster';
 import { validLearned, withProgress } from '@/systems/CaptainSystem';
 import { Nation } from '@/types/Nation';
 import { EXISTING_PLAYER_HELP } from '@/utils/SaveMigration';
+import { baseRankMet, currentBase, isBaseOpen, nationBases } from '@/systems/BaseSystem';
 
 /**
  * Save compatibility (CLAUDE.md "セーブデータを消さない"): every released version's save in tests/fixtures/saves
@@ -46,6 +47,11 @@ describe('every released save loads without losing progress', () => {
         expect(np!.captains).toEqual(expect.arrayContaining(ownedBefore));
         expect(np!.captainSkills).toEqual(expect.objectContaining((old.captainSkills as Record<string, string[]>) ?? {}));
         if (typeof old.base === 'string') expect(np!.base, `${nation} base`).toBe(old.base);
+        // Bases (#217): every base the rank had opened before 0.0.28 counts as built, the current one included.
+        if (rawVersion(raw) < 15) {
+          for (const b of nationBases(nation)) if (baseRankMet(b, { ...np!, nation })) expect(isBaseOpen(b, np!), `${nation} ${b.id}`).toBe(true);
+          if (typeof old.base === 'string' && old.base) expect(currentBase(nation, np!)?.id, `${nation} current base`).toBe(old.base);
+        }
         // Sweepable areas (#57) and quest progress / claimed rewards (#52) stay.
         expect(np!.perfect).toEqual(expect.arrayContaining((old.perfect as string[]) ?? []));
         const quests = old.quests as { progress?: Record<string, number>; claimed?: string[] } | undefined;

@@ -19,7 +19,8 @@ const byId = (id: string): IShipData => IJN.find((s) => s.id === id)!;
 /** A 大佐 IJN admiral at 呉 with two ships at 横須賀 and one at 呉. */
 const admiral = (patch: Partial<IProgress> = {}): IProgress => ({
   ...progressView(switchNation(emptySave(), Nation.IJN, 'fubuki', T0)),
-  merit: 900, rankStats: ALL_MISSIONS_DONE, base: 'ijn_heavy', resources: resources({ fuel: 5000, ammo: 5000, steel: 5000, bauxite: 5000 }),
+  // Every base built (#217), so the admiral can work from any of them.
+  merit: 900, rankStats: ALL_MISSIONS_DONE, base: 'ijn_heavy', basesOpen: nationBases(Nation.IJN).map((b) => b.id), resources: resources({ fuel: 5000, ammo: 5000, steel: 5000, bauxite: 5000 }),
   ships: ['fubuki', 'yukikaze', 'nagato'], shipBases: { fubuki: 'ijn_home', yukikaze: 'ijn_home', nagato: 'ijn_heavy' },
   ...patch,
 });
