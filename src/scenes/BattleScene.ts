@@ -1652,7 +1652,10 @@ export class BattleScene extends Phaser.Scene {
     const joined: string[] = [];
     const trained: string[] = [];
     for (let i = 0; i < recruits; i++) {
-      const r = recruitCaptain(progress.nation, progress.captains);
+      // Captains suited to the classes the nation owns come first (#159).
+      const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+      const classes = [...new Set(ownedIds(progress, roster).map((id) => roster.find((s) => s.id === id)?.shipClass).filter((c): c is ShipClass => c !== undefined))];
+      const r = recruitCaptain(progress.nation, progress.captains, classes);
       if (!r.joined) {
         // Everyone has joined (#131): the recruit trains one of them instead.
         const dup = duplicateCaptain(progress.nation, progress.captains);
