@@ -24,6 +24,7 @@ import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { placeLabels } from '@/utils/LabelLayout';
+import { dashes, rimSegment } from '@/utils/RouteLine';
 import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
@@ -161,9 +162,11 @@ export class CampaignMapScene extends Phaser.Scene {
       for (const r of prerequisitesOf(a)) {
         const from = areas.find((x) => x.id === r);
         if (!from) continue;
-        const p = this.nodePos(from);
-        g.lineStyle(3, isCleared(from, cleared) ? Colors.cyan : Colors.muted, isCleared(from, cleared) ? 0.7 : 0.25);
-        g.lineBetween(p.x, p.y, to.x, to.y);
+        // Dashed, rim to rim (#162): the line never runs through a node's number or rank.
+        const seg = rimSegment(this.nodePos(from), to, NODE_R, 5);
+        if (!seg) continue;
+        g.lineStyle(3, isCleared(from, cleared) ? Colors.cyan : Colors.muted, isCleared(from, cleared) ? 0.8 : 0.35);
+        for (const d of dashes(seg, 10, 7)) g.lineBetween(d.x1, d.y1, d.x2, d.y2);
       }
     }
     // Nodes

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.19.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.20.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -143,6 +143,8 @@ async function overlappingTexts(page: Page, key: string): Promise<string[]> {
 
 test.describe('screens', () => {
   test('every menu screen opens without errors or text off the canvas', async ({ page }, info) => {
+    // Fourteen screens, each checked for overflow and overlaps.
+    test.setTimeout(240_000);
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout);
     for (const key of SCREENS) {
@@ -155,6 +157,8 @@ test.describe('screens', () => {
   });
 
   test('a save full of ships, captains and cleared areas still fits every screen (#163)', async ({ page }, info) => {
+    // Fourteen screens, each checked for overflow and overlaps.
+    test.setTimeout(240_000);
     const layout = info.project.metadata.layout as string;
     const read = (f: string): { ships?: Array<{ id: string; fictional?: boolean }> } => JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', f), 'utf8'));
     const ships = read('ships/ijn.json').ships!.filter((s) => !s.fictional).map((s) => s.id);
