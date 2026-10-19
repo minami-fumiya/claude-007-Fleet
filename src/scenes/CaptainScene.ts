@@ -6,7 +6,7 @@ import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
   ABILITY_LABEL, ABILITY_MAX, aptitudeFor, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
-  LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, learnSlots, MAX_LEVEL, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
+  LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
 import { CAPTAIN_SOURCES, captainsLeft, DUPLICATE_CAPTAIN_XP, nationCaptains, nextCaptainText } from '@/systems/CaptainRoster';
@@ -20,6 +20,7 @@ import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '
 import { ScrollList } from '@/ui/components/ScrollList';
 import { ABILITY_COLOR, SKILL_COLOR, TRAIT_COLOR } from '@/ui/SkillColors';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { recordLedger } from '@/systems/LedgerSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
@@ -194,7 +195,7 @@ export class CaptainScene extends Phaser.Scene {
 
     // Learned skills, one button per slot (#130)
     const learned = this.learnedOf(c);
-    const open = learnSlots(c.level);
+    const open = openLearnSlots(c, learned);
     y = this.label(x, y, `習得スキル ${learned.length} / ${open} 枠`);
     y = this.buildSlots(c, learned, x, y, colW);
     const caption = this.track(this.add.text(x, y, `枠をタップしてスキルを選ぶ (空き枠は無料・付け替えは ${formatResources(RETRAIN_COST)})。\n効果は固有スキルの ${Math.round(LEARNED_SKILL_SCALE * 100)}%`, textStyle(11, Css.dim, { wordWrap: { width: colW, useAdvancedWrap: true } })));
@@ -246,7 +247,7 @@ export class CaptainScene extends Phaser.Scene {
     const gap = 6;
     const sw = (w - gap * (n - 1)) / n;
     const sh = IS_PORTRAIT ? 48 : 38;
-    const open = learnSlots(c.level);
+    const open = openLearnSlots(c, learned);
     for (let i = 0; i < n; i++) {
       const sx = x + i * (sw + gap);
       const skill = learned[i];
@@ -413,7 +414,7 @@ export class CaptainScene extends Phaser.Scene {
       resources = pay(resources, plan.cost)!;
     }
     const ledger = plan.cost ? recordLedger(np.ledger, 'captain', plan.cost, Date.now()) : np.ledger;
-    saveSave({ ...save, nations: { ...save.nations, [save.current]: { ...np, resources, ledger, captainSkills: { ...np.captainSkills, [c.id]: plan.learned } } } });
+    saveSave({ ...save, nations: { ...save.nations, [save.current]: withQuestEvents({ ...np, resources, ledger, captainSkills: { ...np.captainSkills, [c.id]: plan.learned } }, [['learnSkill', 1]], Date.now()) } });
     this.status = plan.replaces ? `「${SKILL_LABEL[plan.replaces]}」を外し「${SKILL_LABEL[skill]}」を習得しました` : `「${SKILL_LABEL[skill]}」を習得しました`;
     this.statusCss = Css.success;
     this.refresh();

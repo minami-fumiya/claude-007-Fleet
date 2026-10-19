@@ -1627,6 +1627,7 @@ export class BattleScene extends Phaser.Scene {
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
       ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
+      ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],

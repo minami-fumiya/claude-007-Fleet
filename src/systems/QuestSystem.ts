@@ -14,7 +14,9 @@ export type QuestEvent =
   | 'sortie' | 'win' | 'nightWin' | 'dayWin' | 'winS' | 'winA' | 'perfectWin' | 'campaignWin' | 'objectiveWin' | 'exerciseWin' | 'ddFlagWin'
   | 'winPacific' | 'winAtlantic' | 'winMediterranean' | 'winBaltic'
   | 'sink' | 'sinkDestroyer' | 'sinkCruiser' | 'sinkCarrier' | 'sinkSubmarine' | 'sinkBattleship'
-  | 'repair' | 'build' | 'research' | 'refit' | 'sweep' | 'facility' | 'captainLevel';
+  | 'repair' | 'build' | 'research' | 'refit' | 'sweep' | 'facility' | 'captainLevel'
+  // 0.0.25: convoy escorts won (#186), skills taught to captains (#187)
+  | 'convoyWin' | 'learnSkill';
 
 export interface IQuest {
   id: string;

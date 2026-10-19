@@ -107,8 +107,10 @@ export function skillModifiers(skill: CaptainSkill, level: number, ctx: ICaptain
 
 /** Learned skills work at this share of an inherent one, so a captain's own speciality stays special (#45). */
 export const LEARNED_SKILL_SCALE = 0.6;
-/** Levels at which a learn slot opens (#131: Lv30 and Lv60 add a fourth and fifth). */
-export const LEARN_SLOT_LEVELS = [3, 6, 9, 30, 60];
+/** Levels at which a learn slot opens (#187: rounder steps than #131's 3・6・9・30・60). */
+export const LEARN_SLOT_LEVELS = [5, 10, 20, 40, 70];
+/** The slot levels up to 0.0.24 (#131): skills learned under them stay (#187). */
+const LEGACY_LEARN_SLOT_LEVELS = [3, 6, 9, 30, 60];
 
 /** The inherent skill's own slot strengthens at Lv10 (II, ×1.5) and Lv50 (III, ×2) (#131). */
 export const INHERENT_TIERS: ReadonlyArray<{ level: number; mul: number; label: string }> = [
@@ -243,14 +245,23 @@ export function learnSlots(level: number): number {
   return LEARN_SLOT_LEVELS.filter((l) => level >= l).length;
 }
 
-/** Learned skills that still fit: known specialities, not the inherent one, no repeats, within the open slots. */
+/**
+ * Learned skills that still fit: known specialities, not the inherent one, no repeats, within the open slots. A
+ * skill learned before #187 moved the slots to later levels keeps its slot: up to the old count for the level.
+ */
 export function validLearned(captain: ICaptain, learned: readonly string[]): CaptainSkill[] {
   const known = new Set<string>(Object.values(CaptainSkill));
   const out: CaptainSkill[] = [];
   for (const s of learned) {
     if (known.has(s) && s !== captain.skill && !out.includes(s as CaptainSkill)) out.push(s as CaptainSkill);
   }
-  return out.slice(0, learnSlots(captain.level));
+  const legacy = LEGACY_LEARN_SLOT_LEVELS.filter((l) => captain.level >= l).length;
+  return out.slice(0, Math.max(learnSlots(captain.level), legacy));
+}
+
+/** Slots the captain can use (#187): those open at the level, and any kept from the old levels. */
+export function openLearnSlots(captain: ICaptain, learned: readonly string[]): number {
+  return Math.max(learnSlots(captain.level), validLearned(captain, learned).length);
 }
 
 /** Learns `skill` into the next free slot, or replaces `replace` (paid retraining). Null when not allowed. */
@@ -276,7 +287,7 @@ export interface ILearnPlan {
 
 export function learnPlan(captain: ICaptain, learned: readonly string[], slot: number, skill: CaptainSkill): ILearnPlan | null {
   const current = validLearned(captain, learned);
-  if (slot < 0 || slot >= learnSlots(captain.level)) return null;
+  if (slot < 0 || slot >= openLearnSlots(captain, current)) return null;
   const replaces = current[slot];
   if (replaces === skill) return null;
   const next = learnSkill(captain, current, skill, replaces);

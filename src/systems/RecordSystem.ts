@@ -99,6 +99,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('explorer', '攻略章', 'campaign', [5, 15, 30], (g) => `作戦の海域を ${g} か所攻略する`, (_r, c) => c.areasCleared ?? 0),
   ...ladder('flawless', '海域完勝章', 'campaign', [3, 10, 25], (g) => `${g} か所の海域で S 評価を取る`, (_r, c) => c.areasS ?? 0),
   ...ladder('operations', '作戦従事章', 'campaign', [20, 100, 400], (g) => `作戦の海域で ${g} 回勝利する`, (_r, c) => total(c, 'campaignWin')),
+  ...ladder('convoy', '船団護衛章', 'campaign', [3, 15, 50], (g) => `輸送船団の護衛で ${g} 回勝利する`, (_r, c) => total(c, 'convoyWin')),
   ...ladder('mission', '任務達成章', 'campaign', [10, 50], (g) => `目的がある海域で ${g} 回勝利する`, (_r, c) => total(c, 'objectiveWin')),
   ...ladder('pacific_war', '太平洋従軍章', 'campaign', [10, 50], (g) => `太平洋で ${g} 回勝利する`, (_r, c) => total(c, 'winPacific')),
   ...ladder('atlantic_war', '大西洋従軍章', 'campaign', [10, 50], (g) => `大西洋で ${g} 回勝利する`, (_r, c) => total(c, 'winAtlantic')),
@@ -109,6 +110,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('science', '技術章', 'growth', [5, 15, 30], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
   ...ladder('mentor', '名艦長章', 'growth', [10, 30, 60, 100], (g) => `艦長を Lv${g} に育てる`, (_r, c) => c.captainLevel ?? 0),
+  ...ladder('instructor', '教官章', 'growth', [1, 10, 30], (g) => `艦長にスキルを ${g} 回習得させる`, (_r, c) => total(c, 'learnSkill')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
   ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
   // 軍港・工廠
