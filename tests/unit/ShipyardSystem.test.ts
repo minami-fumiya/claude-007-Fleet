@@ -165,6 +165,17 @@ describe('reward-only ships (#39)', () => {
     }
   });
 
+  it('are never fleet carriers; every navy with carriers can build one; at most one light carrier as a reward (#204)', () => {
+    const fleetCarrier = (x: IShipData): boolean => x.shipClass === ShipClass.Carrier && x.subtype !== 'LightCarrier' && x.subtype !== 'EscortCarrier';
+    for (const nation of new Set(all.map((x) => x.nation))) {
+      const rewards = Object.values(REWARD_SHIPS[nation] ?? {}).map((id) => all.find((x) => x.id === id)!);
+      expect(rewards.filter(fleetCarrier).map((x) => x.id), nation).toEqual([]);
+      expect(rewards.filter((x) => x.shipClass === ShipClass.Carrier).length, nation).toBeLessThanOrEqual(1);
+      const carriers = all.filter((x) => x.nation === nation && x.shipClass === ShipClass.Carrier && !x.fictional);
+      if (carriers.length > 0) expect(carriers.some((x) => !isRewardOnly(x)), `${nation} can build a carrier`).toBe(true);
+    }
+  });
+
   it('cannot be built; the shipyard names the area instead', () => {
     const p = player({ resources: rich, research: ['build_cruiser', 'build_battleship'], rankFloor: 13 });
     expect(isRewardOnly(byId('nagato'))).toBe(true);

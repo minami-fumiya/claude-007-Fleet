@@ -41,6 +41,8 @@ export interface IMedalContext {
   captains?: number;
   /** Highest captain level */
   captainLevel?: number;
+  /** Most carriers one nation owns (#204) */
+  carriersOwned?: number;
   /** Most enemies one captain's own ship has sunk (#199) */
   captainSinks?: number;
   /** Sum of every facility level built (#146) */
@@ -108,6 +110,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('med_war', '地中海従軍章', 'campaign', [10, 50], (g) => `地中海で ${g} 回勝利する`, (_r, c) => total(c, 'winMediterranean')),
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
+  ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),
   ...ladder('fleet', '艦隊章', 'growth', [5, 15, 30], (g) => `艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.shipsOwned ?? 0),
   ...ladder('science', '技術章', 'growth', [5, 15, 30], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),

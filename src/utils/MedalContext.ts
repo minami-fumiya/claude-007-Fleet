@@ -1,4 +1,13 @@
 import campaignData from '@/data/campaign.json';
+import ijn from '@/data/ships/ijn.json';
+import usn from '@/data/ships/usn.json';
+import km from '@/data/ships/km.json';
+import rn from '@/data/ships/rn.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
+import rm from '@/data/ships/rm.json';
+import { IShipData } from '@/types/Ship';
+import { ShipClass } from '@/types/ShipClass';
 import { ICampaignData } from '@/types/Campaign';
 import { IMedal } from '@/types/Record';
 import { theaterProgress } from '@/systems/CampaignSystem';
@@ -8,6 +17,8 @@ import { awardMedals, IMedalContext, newMedals } from '@/systems/RecordSystem';
 import type { ISave } from './ProgressStore';
 
 const CAMPAIGN = campaignData as ICampaignData;
+/** Carrier ids of every navy, for the 機動部隊編成章 (#204) */
+const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships as IShipData[]).filter((s) => s.shipClass === ShipClass.Carrier).map((s) => s.id)));
 
 /**
  * What the medals (#92) look at beyond the record, over every nation the admiral has played: lifetime quest-event
@@ -18,7 +29,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -27,6 +38,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     ctx.areasCleared += np.campaign.length;
     ctx.areasS += Object.values(np.areaRanks ?? {}).filter((r) => r === 'S').length;
     ctx.shipsOwned = Math.max(ctx.shipsOwned, np.ships.length);
+    ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);
     for (const xp of Object.values(np.captainXp ?? {})) ctx.captainLevel = Math.max(ctx.captainLevel, levelForXp(xp));
