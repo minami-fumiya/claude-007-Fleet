@@ -9,7 +9,8 @@ import { Nation } from '@/types/Nation';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { areaMode } from '@/systems/CampaignSystem';
 import { hpFraction } from '@/systems/DockSystem';
-import { addResources, formatResources, pay } from '@/systems/ResourceSystem';
+import { formatResources, gainResources, lostNote, pay } from '@/systems/ResourceSystem';
+import { holdCap } from '@/systems/FacilitySystem';
 import { battleNodes, NODE_LABEL, nextBattleIndex, nodesBetween, shipsForNextNode, sortieRoute } from '@/systems/SortieMapSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
@@ -149,8 +150,9 @@ export function advanceSortie(scene: Phaser.Scene): { init: IBattleInitData; not
   for (const node of nodesBetween(s.route, s.at)) {
     const loot = node.loot ?? {};
     if (node.kind === 'resource') {
-      progress = { ...progress, resources: addResources(progress.resources, loot) };
-      notes.push(`${NODE_LABEL.resource}: ${formatResources(loot)} を回収`);
+      const g = gainResources(progress.resources, loot, holdCap(progress.facilities));
+      progress = { ...progress, resources: g.resources };
+      notes.push(`${NODE_LABEL.resource}: ${formatResources(loot)} を回収${lostNote(g.lost)}`);
     } else if (node.kind === 'whirlpool') {
       // A whirlpool takes what it can; it never blocks the advance.
       const left = pay(progress.resources, loot) ?? { ...progress.resources, fuel: 0 };

@@ -16,7 +16,7 @@ import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { captainsLeft } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
-import { canAfford, formatResources } from '@/systems/ResourceSystem';
+import { addResources, canAfford, formatResources, lostNote } from '@/systems/ResourceSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { ICampaignArea, ICampaignData, Objective, ITheater } from '@/types/Campaign';
@@ -328,8 +328,9 @@ export class CampaignMapScene extends Phaser.Scene {
     if (!r) return;
     // Ledger (#137): the sweep's reward in, its fuel and ammo out as a sortie.
     const now = Date.now();
-    saveProgress({ ...r.progress, ledger: recordLedger(recordLedger(r.progress.ledger, 'sweep', r.reward, now), 'sortie', r.cost, now) });
-    this.status = `掃討完了: ${formatResources(r.reward)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
+    const ledger = recordLedger(recordLedger(recordLedger(r.progress.ledger, 'sweep', addResources(r.reward, r.lost, -1), now), 'sortie', r.cost, now), 'overflow', r.lost, now);
+    saveProgress({ ...r.progress, ledger });
+    this.status = `掃討完了: ${formatResources(r.reward)}${lostNote(r.lost)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
     this.drawDetail();
   }
 

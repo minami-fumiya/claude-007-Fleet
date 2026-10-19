@@ -13,6 +13,8 @@ import { IMedal } from '@/types/Record';
 import { theaterProgress } from '@/systems/CampaignSystem';
 import { levelForXp } from '@/systems/CaptainSystem';
 import { rankOf } from '@/systems/RankSystem';
+import { holdCap } from '@/systems/FacilitySystem';
+import { atHoldCap } from '@/systems/ResourceSystem';
 import { awardMedals, IMedalContext, newMedals } from '@/systems/RecordSystem';
 import type { ISave } from './ProgressStore';
 
@@ -29,7 +31,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -42,6 +44,10 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     for (const j of np.facilityJobs ?? []) byBase[j.base] = (byBase[j.base] ?? 0) + 1;
     ctx.parallelFacilities = Math.max(ctx.parallelFacilities, ...Object.values(byBase), 0);
     for (const n of Object.values(np.baseDocks ?? {})) ctx.maxDocks = Math.max(ctx.maxDocks, n ?? 0);
+    // Holding cap (#221): the steel cap the mills reached, and whether every resource is full.
+    const cap = holdCap(np.facilities ?? {});
+    ctx.steelCap = Math.max(ctx.steelCap, cap.steel);
+    if (np.resources && atHoldCap(np.resources, cap)) ctx.fullStock = 1;
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);

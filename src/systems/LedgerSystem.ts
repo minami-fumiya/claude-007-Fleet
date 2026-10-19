@@ -9,11 +9,14 @@ import { RESOURCE_KEYS, resources } from './ResourceSystem';
 
 export type LedgerCategory =
   | 'regen' | 'battle' | 'firstClear' | 'quest' | 'sweep'
-  | 'sortie' | 'aircraft' | 'repair' | 'build' | 'research' | 'refit' | 'dock' | 'facility' | 'captain';
+  | 'sortie' | 'aircraft' | 'repair' | 'build' | 'research' | 'refit' | 'dock' | 'facility' | 'captain'
+  /** Income lost to the holding cap (#221): neither in nor out, shown on its own line */
+  | 'overflow';
 
 export const LEDGER_LABEL: Record<LedgerCategory, string> = {
   regen: '自然回復', battle: '戦闘', firstClear: '初回報酬', quest: '任務', sweep: '掃討',
   sortie: '出撃', aircraft: '艦載機補充', repair: '修理', build: '建造', research: '研究', refit: '改造', dock: 'ドック増設', facility: '軍港の施設', captain: '艦長',
+  overflow: '上限で受け取れず',
 };
 
 export const INCOME: LedgerCategory[] = ['regen', 'battle', 'firstClear', 'quest', 'sweep'];
@@ -79,7 +82,7 @@ export function ledgerText(ledger: Ledger, now: number): string {
     const r = totals[c];
     return r ? `${sign}${LEDGER_LABEL[c]}\t${RESOURCE_KEYS.map((k) => r[k]).join('\t')}` : null;
   };
-  return [`収支 (直近 ${LEDGER_HOURS} 時間)\t燃料\t弾薬\t鋼材\tボーキ`, ...INCOME.map((c) => line(c, '+')), ...SPENDING.map((c) => line(c, '-'))]
+  return [`収支 (直近 ${LEDGER_HOURS} 時間)\t燃料\t弾薬\t鋼材\tボーキ`, ...INCOME.map((c) => line(c, '+')), ...SPENDING.map((c) => line(c, '-')), line('overflow', '×')]
     .filter((l): l is string => l !== null)
     .join('\n');
 }

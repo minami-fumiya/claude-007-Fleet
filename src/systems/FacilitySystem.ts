@@ -1,5 +1,5 @@
 import { IResources } from '@/types/Progression';
-import { canAfford, pay, REGEN_CAP, REGEN_PER_TICK, RESOURCE_KEYS, resources } from './ResourceSystem';
+import { canAfford, HOLD_CAP_BASE, HOLD_CAP_PER_LEVEL, pay, REGEN_CAP, REGEN_PER_TICK, RESOURCE_KEYS, resources } from './ResourceSystem';
 import type { IBase } from './BaseSystem';
 import { facilityMedal } from './MedalGate';
 
@@ -20,10 +20,10 @@ export interface IFacility {
 }
 
 export const COMMON_FACILITIES: IFacility[] = [
-  { id: 'fuelTank', name: '燃料タンク', effect: '燃料の回復上限 +1,000', maxLevel: 5 },
-  { id: 'ammoDepot', name: '弾薬庫', effect: '弾薬の回復上限 +1,000', maxLevel: 5 },
-  { id: 'steelMill', name: '製鋼所', effect: '鋼材の回復 +1 / 分', maxLevel: 5 },
-  { id: 'airBase', name: '航空基地', effect: 'ボーキの回復 +1 / 分', maxLevel: 5 },
+  { id: 'fuelTank', name: '燃料タンク', effect: '燃料の回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
+  { id: 'ammoDepot', name: '弾薬庫', effect: '弾薬の回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
+  { id: 'steelMill', name: '製鋼所', effect: '鋼材の回復 +1 / 分・保有上限 +5,000', maxLevel: 5 },
+  { id: 'airBase', name: '航空基地', effect: 'ボーキの回復 +1 / 分・保有上限 +5,000', maxLevel: 5 },
   { id: 'workshop', name: '工作部', effect: 'この軍港の研究費・建造時間 −5%', maxLevel: 5 },
 ];
 
@@ -128,6 +128,16 @@ export function regenRules(facilities: Facilities): IRegenRules {
   perTick.steel += totalLevel(facilities, 'steelMill');
   perTick.bauxite += totalLevel(facilities, 'airBase');
   return { perTick, cap };
+}
+
+/** Which facility raises each resource's holding cap (#221). */
+export const HOLD_FACILITY: Record<keyof IResources, FacilityId> = { fuel: 'fuelTank', ammo: 'ammoDepot', steel: 'steelMill', bauxite: 'airBase' };
+
+/** Holding cap (#221): the base amount plus HOLD_CAP_PER_LEVEL per level of the resource's facility, every base counted. */
+export function holdCap(facilities: Facilities): IResources {
+  const cap = resources();
+  for (const k of RESOURCE_KEYS) cap[k] = HOLD_CAP_BASE[k] + HOLD_CAP_PER_LEVEL * totalLevel(facilities, HOLD_FACILITY[k]);
+  return cap;
 }
 
 /** "燃料タンク Lv2 (横須賀) +2,000" lines behind the regeneration figures. */

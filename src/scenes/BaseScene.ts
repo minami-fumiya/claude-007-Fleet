@@ -5,7 +5,7 @@ import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { baseBonusLines, baseLockText, baseOfProgress, currentBaseId, IBase, isBaseOpen, moveBase, nationBases } from '@/systems/BaseSystem';
 import {
-  COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, regenRules, startFacility, uniqueStrength,
+  COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, holdCap, regenRules, startFacility, uniqueStrength,
 } from '@/systems/FacilitySystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
@@ -76,7 +76,7 @@ export class BaseScene extends Phaser.Scene {
 
   update(): void {
     const progress = loadProgress();
-    this.bar.refresh(progress.resources);
+    this.bar.refresh(progress.resources, holdCap(progress.facilities));
     if (!this.timer) return;
     const left = this.timer.endsAt - Date.now();
     // A finished job takes effect on load: redraw with the new level.
@@ -98,7 +98,7 @@ export class BaseScene extends Phaser.Scene {
     this.layer = [];
     this.timer = null;
     const progress = loadProgress();
-    this.bar.refresh(progress.resources);
+    this.bar.refresh(progress.resources, holdCap(progress.facilities));
     this.buildList();
     const base = nationBases(progress.nation).find((b) => b.id === this.selectedId);
     if (base) this.buildDetail(base);
@@ -203,7 +203,10 @@ export class BaseScene extends Phaser.Scene {
     }
     // Regeneration with every base's facilities (#146).
     const { perTick: r, cap } = regenRules(facilities);
-    this.track(this.add.text(x, d.y + d.h - 16, `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}  ·  上限 燃${cap.fuel} 弾${cap.ammo} 鋼${cap.steel} ボ${cap.bauxite}`, textStyle(12, Css.muted)).setOrigin(0, 1));
+    // The holding cap (#221) above it: rewards stop there, the four resource facilities raise it.
+    const hold = holdCap(facilities);
+    this.track(this.add.text(x, d.y + d.h - 34, `保有上限 燃${hold.fuel} 弾${hold.ammo} 鋼${hold.steel} ボ${hold.bauxite}  (全軍港の施設で増える)`, textStyle(12, Css.muted)).setOrigin(0, 1));
+    this.track(this.add.text(x, d.y + d.h - 16, `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}  ·  回復上限 燃${cap.fuel} 弾${cap.ammo} 鋼${cap.steel} ボ${cap.bauxite}`, textStyle(12, Css.muted)).setOrigin(0, 1));
   }
 
   private move(base: IBase): void {
