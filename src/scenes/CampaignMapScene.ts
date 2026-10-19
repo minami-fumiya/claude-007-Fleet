@@ -13,6 +13,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventS
 import { activeEvent } from '@/utils/GameClock';
 import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
+import { nextCaptainText } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
@@ -232,6 +233,10 @@ export class CampaignMapScene extends Phaser.Scene {
     const roster = registry.byNation(progress.nation);
     const rewardShip = rewardShipFor(roster, ownedIds(progress, roster), a.id);
     const reward = formatResources(a.reward) + (rewardShip ? `  /  S 評価で ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
+    // The captain the first clear brings (#179), while the area is not cleared and someone is left to join.
+    const owned = ownedIds(progress, roster);
+    const classes = [...new Set(roster.filter((s) => owned.includes(s.id)).map((s) => s.shipClass))];
+    const captain = progress.campaign.includes(a.id) ? '' : nextCaptainText(progress.nation, progress.captains, classes);
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
       // Portrait keeps to the kinds (the names ran the sweep line into the buttons).
@@ -239,7 +244,7 @@ export class CampaignMapScene extends Phaser.Scene {
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
       ['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')],
-      ['初回報酬', reward],
+      ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       this.detailLayer.push(o);

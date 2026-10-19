@@ -1,7 +1,7 @@
 import captainData from '@/data/captains.json';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { ShipClass } from '@/types/ShipClass';
-import { aptitudeFor } from './CaptainSystem';
+import { aptitudeFor, SKILL_LABEL } from './CaptainSystem';
 
 /**
  * Which captains a nation has (#44, pure). A new nation starts with its first listed captain; more join on a
@@ -51,6 +51,24 @@ export function nextCaptain(nation: string, owned: readonly string[], shipClasse
 export function recruitCaptain(nation: string, owned: readonly string[], shipClasses?: readonly ShipClass[]): { owned: string[]; joined: ICaptainData | null } {
   const next = nextCaptain(nation, owned, shipClasses);
   return next ? { owned: [...owned, next.id], joined: next } : { owned: [...owned], joined: null };
+}
+
+/** How captains join (#179), in the words the screens use. */
+export const CAPTAIN_SOURCES: readonly string[] = [
+  '作戦の初回攻略で 1 名',
+  '昇進するたびに 1 名',
+  `戦闘に勝つと ${Math.round(CAPTAIN_DROP_CHANCE * 100)}% の確率で 1 名`,
+];
+
+/** "艦長 坂井 (雷撃)" (#179): who the next recruit would be, or '' when every captain has joined. */
+export function nextCaptainText(nation: string, owned: readonly string[], shipClasses?: readonly ShipClass[]): string {
+  const next = nextCaptain(nation, owned, shipClasses);
+  return next ? `艦長 ${next.name} (${SKILL_LABEL[next.skill]})` : '';
+}
+
+/** Captains of the nation not joined yet (#179). */
+export function captainsLeft(nation: string, owned: readonly string[]): number {
+  return nationCaptains(nation).filter((c) => !owned.includes(c.id)).length;
 }
 
 export function ownsCaptain(owned: readonly string[], id: string | null | undefined): boolean {

@@ -11,6 +11,7 @@ import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveP
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { nextRegenMs, regenFull } from '@/systems/ResourceSystem';
+import { captainsLeft } from '@/systems/CaptainRoster';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
@@ -372,7 +373,10 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       // Promotion missions (#142) first: done (✓) or how far along.
       const missions = (RANK_MISSIONS[r.index] ?? []).map((m) => (missionCount(progress, m.stat) >= m.goal || r.index <= current.index ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`));
-      const extra = [...missions, r.unlocks].filter((t) => t).join('  ·  ');
+      // Each promotion ahead brings a captain while any is left to join (#179).
+      const ahead = r.index - current.index;
+      const captain = ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
+      const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
         const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
         const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, extra, textStyle(11, missions.some((m) => m.startsWith('任務')) ? Css.cyan : css)));
