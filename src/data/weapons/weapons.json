@@ -701,6 +701,42 @@
       "range": 370,
       "reloadTime": 8000,
       "projectileSpeed": 255
+    },
+    {
+      "id": "14in_45",
+      "name": "14in/45 主砲",
+      "type": "ShellAP",
+      "firePower": 96,
+      "range": 560,
+      "reloadTime": 1450,
+      "projectileSpeed": 580
+    },
+    {
+      "id": "14in_50",
+      "name": "14in/50 主砲",
+      "type": "ShellAP",
+      "firePower": 98,
+      "range": 575,
+      "reloadTime": 1450,
+      "projectileSpeed": 600
+    },
+    {
+      "id": "16in_45_mk5",
+      "name": "16in/45 Mk.5 主砲",
+      "type": "ShellAP",
+      "firePower": 108,
+      "range": 590,
+      "reloadTime": 1600,
+      "projectileSpeed": 580
+    },
+    {
+      "id": "10cm_type98",
+      "name": "10cm 連装高角砲",
+      "type": "ShellHE",
+      "firePower": 30,
+      "range": 430,
+      "reloadTime": 500,
+      "projectileSpeed": 560
     }
   ]
 }

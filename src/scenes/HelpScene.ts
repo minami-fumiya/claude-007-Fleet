@@ -21,9 +21,12 @@ const CLASS_HELP: Record<ShipClass, string> = {
   [ShipClass.Battleship]: '耐久と装甲が最も高く、大口径砲で遠くから撃ち合う艦隊の主力。速力は遅め。',
   [ShipClass.Cruiser]: '砲と魚雷を併せ持つ万能艦。戦艦より速く、駆逐艦より打たれ強い。',
   [ShipClass.Destroyer]: '高速で魚雷が主兵装。多くの艦は爆雷で潜水艦を攻撃できる。打たれ弱い。',
-  [ShipClass.Carrier]: '艦載機 (戦闘機・艦爆・艦攻) で遠くの敵を攻撃する。砲戦は苦手で、機体は対空砲火で失われる。',
+  [ShipClass.Carrier]: '艦載機 (戦闘機・艦爆・艦攻) で遠くの敵を攻撃する。砲戦は苦手で、機体は対空砲火で失われる。航空研究は空母の建造研究の後に進められる。',
   [ShipClass.Submarine]: '潜航して魚雷で奇襲する。潜航中は砲弾が当たらず爆雷だけが有効。酸素が尽きると浮上する。',
 };
+
+/** Classes and their sister ships (#85). */
+const SISTER_HELP = '同じ級 (例: 金剛型) の艦は性能が同じで、艦名だけが違う。図鑑の各艦に同型艦の一覧がある。';
 
 const OBJECTIVE_HELP: Record<Objective, string> = {
   [Objective.Annihilate]: '敵の艦艇をすべて撃沈する。',
@@ -91,7 +94,7 @@ export class HelpScene extends Phaser.Scene {
       this.tab === 'controls'
         ? CONTROLS.map((c) => [c.label, c.text])
         : this.tab === 'classes'
-          ? CLASS_ORDER.map((c) => [CLASS_JA[c], CLASS_HELP[c]])
+          ? [...CLASS_ORDER.map((c): [string, string] => [CLASS_JA[c], CLASS_HELP[c]]), ['同型艦', SISTER_HELP]]
           : this.tab === 'formations'
             ? formationHelp()
             : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];

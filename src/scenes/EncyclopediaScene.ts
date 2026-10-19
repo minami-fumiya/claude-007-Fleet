@@ -6,6 +6,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import {
   CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
+  sisterNames,
 } from '@/systems/EncyclopediaSystem';
 import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
 import { SKILL_COLOR } from '@/ui/SkillColors';
@@ -370,6 +371,9 @@ export class EncyclopediaScene extends Phaser.Scene {
       lines.push(`艦載機  戦闘機 ${a.fighters} / 艦爆 ${a.diveBombers} / 艦攻 ${a.torpedoBombers}`);
     }
     y = this.section(y, '兵装', lines.join('\n') || '—');
+    // The class's other ships (#85): same performance, other names.
+    const sisters = sisterNames(DataLoader.getRegistry(this).byNation(ship.nation), ship);
+    if (sisters.length > 0) y = this.section(y, `同型艦 (${sisters.length + 1} 隻)`, sisters.join('・'), Css.muted);
     this.section(y, '解説', ship.description ?? '—', Css.muted);
   }
 
