@@ -5,6 +5,7 @@ import { listBackups, loadSave, parseSaveChecked, resetProgressCache, SAVE_VERSI
 import { addBackup, backupLabel, ISaveBackup, MAX_BACKUPS, parseBackups, rawVersion } from '@/utils/SaveBackup';
 import { fleetSlots } from '@/systems/RankSystem';
 import { nationCaptains } from '@/systems/CaptainRoster';
+import { validLearned, withProgress } from '@/systems/CaptainSystem';
 import { Nation } from '@/types/Nation';
 import { EXISTING_PLAYER_HELP } from '@/utils/SaveMigration';
 
@@ -96,5 +97,15 @@ describe('save backups', () => {
     expect(parseBackups(JSON.stringify(list))).toEqual(list);
     expect(parseBackups('nope')).toEqual([]);
     expect(backupLabel({ at: Date.UTC(2026, 0, 2), version: 4, reason: 'reset', raw: '' })).toContain('v4 · リセット前');
+  });
+});
+
+describe('captain skills learned before #187 moved the slot levels', () => {
+  it('a Lv4 captain keeps the skill learned in the old Lv3 slot', () => {
+    const { save } = parseSaveChecked(readFileSync(join(DIR, 'save-0.0.25.json'), 'utf8'));
+    const np = save.nations.IJN!;
+    const murase = withProgress(nationCaptains('IJN').find((c) => c.id === 'ijn_murase')!, np.captainXp.ijn_murase);
+    expect(murase.level).toBeLessThan(5);
+    expect(validLearned(murase, np.captainSkills.ijn_murase)).toEqual(['ASW']);
   });
 });

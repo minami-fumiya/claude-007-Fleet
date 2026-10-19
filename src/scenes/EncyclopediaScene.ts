@@ -87,14 +87,24 @@ export class EncyclopediaScene extends Phaser.Scene {
   private selectedId = '';
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private maxStat = { hp: 1, armor: 1, speed: 1 };
+  /** Where the back button goes (#178: the 改装 screen that opened this page), or the home port */
+  private back: { scene: string; data?: object } | null = null;
+  /** Entry to bring into view once the list is built */
+  private revealId = '';
 
   constructor() {
     super({ key: SceneKeys.ENCYCLOPEDIA });
   }
 
-  /** `tab` opens a tab directly (鎮守府 → 艦隊 → 艦長, #61). */
-  init(data?: { tab?: EncyclopediaTab }): void {
+  /** `tab` opens a tab directly (鎮守府 → 艦隊 → 艦長, #61); `id` an entry of the current nation (#178). */
+  init(data?: { tab?: EncyclopediaTab; id?: string; back?: { scene: string; data?: object } }): void {
     if (data?.tab && TABS.includes(data.tab)) this.tab = data.tab;
+    this.back = data?.back ?? null;
+    this.revealId = data?.id ?? '';
+    if (data?.id) {
+      this.selectedId = data.id;
+      this.shipClass = null;
+    }
   }
 
   create(): void {
@@ -112,7 +122,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     };
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
-    new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
+    new UIButton(this, back.x, back.y, this.back ? '‹  戻る' : '‹  鎮守府', () => (this.back ? this.scene.start(this.back.scene, this.back.data) : this.scene.start(SceneKeys.HOME)), {
       variant: 'secondary', width: back.w, height: back.h, fontSize: 15,
     });
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '図鑑', displayStyle(24)).setOrigin(0.5);
@@ -123,7 +133,13 @@ export class EncyclopediaScene extends Phaser.Scene {
     // The list scrolls (#20); its right edge leaves a gutter for the scrollbar.
     this.list = new ScrollList(this, { x: x + PAD, y: top, w: w - PAD * 2 + 4, h: y + h - PAD - COUNT_H - top });
     this.countText = this.add.text(x + w / 2, y + h - PAD - COUNT_H / 2 + 2, '', textStyle(12, Css.muted)).setOrigin(0.5);
+    this.list.setOffset(0);
     this.refresh();
+    if (this.revealId) {
+      const all = this.allEntries();
+      const i = (this.ownedOnly ? all.filter((e) => e.owned) : all).findIndex((e) => e.id === this.revealId);
+      if (i >= 0) this.list.reveal(Math.floor(i / L.cols) * (L.rowH + ROW_GAP), L.rowH);
+    }
   }
 
   private track<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -337,6 +353,14 @@ export class EncyclopediaScene extends Phaser.Scene {
       y += 26;
     }
     y += 8;
+    // 改装 › (#178): owned ships of the nation being played open on the refit screen.
+    if (owned && this.nation === loadSave().current) {
+      const bh = IS_PORTRAIT ? 48 : 36;
+      this.track(new UIButton(this, x + 110, y + bh / 2, '改装・改造  ›', () => this.scene.start(SceneKeys.CUSTOMIZATION, {
+        returnTo: SceneKeys.ENCYCLOPEDIA, scope: 'all', shipId: ship.id,
+      }), { variant: 'primary', width: 220, height: bh, fontSize: 14 }));
+      y += bh + 14;
+    }
     const lines = summarizeWeapons(ship.weapons).map(({ id, count }) => {
       const wd = DataLoader.getWeaponById(this, id);
       return `${wd?.name ?? id}${count > 1 ? ` ×${count}` : ''}`;

@@ -35,7 +35,7 @@ const AREA_NAMES: Record<string, string> = Object.fromEntries(campaignData.areas
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, tabsY: 300, tabH: 56, info: { x: 16, y: 340, w: CANVAS_W - 32, h: 64 } as IRect, top: 416, cols: 2, cardH: 140, gap: 12, left: 16 }
+  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, tabsY: 300, tabH: 56, info: { x: 16, y: 340, w: CANVAS_W - 32, h: 112 } as IRect, top: 464, cols: 2, cardH: 140, gap: 12, left: 16 }
   : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, tabsY: 178, tabH: 40, info: { x: 24, y: 206, w: CANVAS_W - 48, h: 46 } as IRect, top: 262, cols: 3, cardH: 100, gap: 10, left: 24 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 const ROWS = Math.max(1, Math.floor((CANVAS_H - 16 - L.top + L.gap) / (L.cardH + L.gap)));
@@ -146,7 +146,14 @@ export class ShipyardScene extends Phaser.Scene {
     const techId = techs.find((t) => t && !progress.research.includes(t)) ?? techs[techs.length - 1];
     const node = techId ? TREE.find((n) => n.id === techId) : undefined;
     const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで  ·  建造ドック ${buildsHere(progress).length} / ${buildDockCount(progress)}`;
-    add(this.add.text(info.x + 16, info.y + info.h / 2, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
+    // Portrait: the rank line on top and the research button below it; landscape: side by side (#182).
+    const bw = IS_PORTRAIT ? info.w - 32 : 440;
+    const lineY = IS_PORTRAIT ? info.y + 26 : info.y + info.h / 2;
+    const line = add(this.add.text(info.x + 16, lineY, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
+    const room = IS_PORTRAIT ? info.w - 32 : info.w - bw - 46;
+    if (line.width > room) line.setScale(room / line.width);
+    const buttonY = IS_PORTRAIT ? info.y + 76 : info.y + info.h / 2;
+    const buttonH = IS_PORTRAIT ? 52 : info.h - 12;
     if (node && !progress.research.includes(node.id)) {
       const costMul = researchMultiplier(baseOfProgress(progress));
       const ready = canResearch(node, progress.research, progress.resources, costMul, progress.record.medals);
@@ -156,12 +163,11 @@ export class ShipyardScene extends Phaser.Scene {
       const label = !pre ? `${node.name}: 前提 ${node.requires.map((r) => TECH_NAMES[r] ?? r).join('・')}`
         : medal ? `${node.name}: 要勲章「${medalName(medal)}」`
           : `${node.name}を研究  ${formatResources(scaleCost(node.cost, costMul))}`;
-      const bw = IS_PORTRAIT ? 400 : 440;
-      add(new UIButton(this, info.x + info.w - 10 - bw / 2, info.y + info.h / 2, label, () => this.research(node), {
-        variant: ready ? 'gold' : 'secondary', width: bw, height: info.h - 12, fontSize: 12,
+      add(new UIButton(this, info.x + info.w - 16 - bw / 2, buttonY, label, () => this.research(node), {
+        variant: ready ? 'gold' : 'secondary', width: bw, height: buttonH, fontSize: 12,
       })).setEnabled(ready);
     } else if (node) {
-      add(this.add.text(info.x + info.w - 16, info.y + info.h / 2, `${node.name} 研究済`, eyebrowStyle(10, Css.gold)).setOrigin(1, 0.5));
+      add(this.add.text(info.x + info.w - 16, buttonY, `${node.name} 研究済`, eyebrowStyle(10, Css.gold)).setOrigin(1, 0.5));
     }
 
     const ships = this.classShips();

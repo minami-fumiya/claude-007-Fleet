@@ -20,8 +20,8 @@ import { aptitudeFor, assignCaptains, captainFit, SKILL_LABEL, withProgress } fr
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
-import { formatResources, pay } from '@/systems/ResourceSystem';
-import { assignShips, currentBaseId, isAtCurrentBase, nationBases, relocationCost, shipBaseOf } from '@/systems/BaseSystem';
+import { formatResources } from '@/systems/ResourceSystem';
+import { currentBaseId, isAtCurrentBase, nationBases, recallShips, shipBaseOf } from '@/systems/BaseSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
@@ -40,7 +40,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
-import { beginSortie } from '@/utils/SortieFlow';
+import { beginSortie, sortieShipIds } from '@/utils/SortieFlow';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -547,23 +547,22 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.awayShips = all.filter((s) => !isAtCurrentBase(progress, s.id));
   }
 
-  /** "呉鎮守府 · 配置換え 燃料 40" for a ship at another base. */
+  /** "呉鎮守府 · 配置換え (無料)" for a ship at another base. */
   private awayTag(ship: IShipData): string {
     const progress = loadProgress();
     const base = nationBases(this.nation).find((b) => b.id === shipBaseOf(progress, ship.id));
-    return `${base?.name ?? '他の軍港'} · 配置換え 燃料 ${relocationCost(ship)}`;
+    return `${base?.name ?? '他の軍港'} · 配置換え (無料)`;
   }
 
-  /** Brings a ship over from another base for fuel (#145); false when the fuel is short. */
+  /** Brings a ship over from another base (#145), free since #191; false when it is busy there. */
   private relocate(ship: IShipData): boolean {
     const progress = loadProgress();
-    const fuel = relocationCost(ship);
-    const paid = pay(progress.resources, { fuel });
-    if (!paid) {
-      this.summaryText.setText(`⚠ 燃料が足りません (配置換え 燃料 ${fuel})`).setColor(Css.danger);
+    const r = recallShips(progress, [ship.id], currentBaseId(progress), sortieShipIds(progress));
+    if (r.moved.length === 0) {
+      this.summaryText.setText('⚠ 出撃中か入渠中のため呼び寄せられません').setColor(Css.danger);
       return false;
     }
-    saveProgress(assignShips({ ...progress, resources: paid }, [ship.id], currentBaseId(progress)), 'sortie');
+    saveProgress(r.progress);
     this.splitByBase();
     return true;
   }
@@ -1275,6 +1274,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
     const preset = progress.presets[index];
     if (!preset) return;
+    // The preset's ships at other bases come over with it, for free (#191).
+    const recalled = recallShips(progress, preset.slotIds.filter((id): id is string => !!id), currentBaseId(progress), sortieShipIds(progress));
+    if (recalled.moved.length > 0) {
+      saveProgress(recalled.progress);
+      this.splitByBase();
+    }
     const placed = applyPreset(preset, this.ships.map((s) => s.id), this.slotCount);
     const used = new Set<string>();
     this.slots = placed.slotIds.map((id) => {
@@ -1285,6 +1290,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.captainIds = placed.captainIds.map((id) => (id && progress.captains.includes(id) ? id : null));
     this.formation = usableFormation(preset.formation, this.rankIndex);
     this.refresh();
+    if (recalled.moved.length > 0 || recalled.held.length > 0) {
+      const held = recalled.held.length > 0 ? `  (出撃中・入渠中の ${recalled.held.length} 隻は残りました)` : '';
+      this.summaryText.setText(`編成の ${recalled.moved.length} 隻をこの軍港へ呼び寄せました${held}`).setColor(Css.success);
+    }
   }
 
   private buildFooter(): void {

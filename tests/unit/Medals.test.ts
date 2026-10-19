@@ -16,6 +16,14 @@ describe('medals (#92)', () => {
     }
   });
 
+  it('new features bring medals and none is ever removed (0.0.25: convoy escort, captain instruction)', () => {
+    // Raise this floor whenever medals are added; it never goes down.
+    expect(MEDALS.length).toBeGreaterThanOrEqual(124);
+    for (const id of ['convoy', 'convoy_2', 'convoy_3', 'instructor', 'instructor_2', 'instructor_3']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
+    const r = emptyRecord();
+    expect(newMedals(r, { clearedTheaters: [], totals: { convoyWin: 3, learnSkill: 1 } }).map((m) => m.id)).toEqual(expect.arrayContaining(['convoy', 'instructor']));
+  });
+
   it('ladders: each tier at its goal, with progress shown towards the next', () => {
     const r = { ...emptyRecord(), sunk: { [ShipClass.Battleship]: 30 } };
     const ids = newMedals(r, { clearedTheaters: [] }).map((m) => m.id);

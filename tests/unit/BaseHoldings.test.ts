@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assignShips, BASES, baseReaches, basesFor, currentBaseId, isAtCurrentBase, nationBases, relocationCost, shipBaseOf } from '@/systems/BaseSystem';
+import { assignShips, BASES, baseReaches, basesFor, currentBaseId, isAtCurrentBase, nationBases, recallShips, shipBaseOf } from '@/systems/BaseSystem';
 import { baseDockView, dockCount, mergeBaseDocks, startRepair, setDamage } from '@/systems/DockSystem';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { buildsHere, startBuild } from '@/systems/ShipyardSystem';
@@ -39,8 +39,16 @@ describe('ships, docks and builds by base (#145)', () => {
     expect(sortieBlockers(p, [byId('fubuki')], T0, { exercise: true })[0]).toContain('他の軍港に所属');
     const moved = assignShips(p, ['fubuki'], currentBaseId(p));
     expect(sortieBlockers(moved, [byId('fubuki')], T0, { exercise: true })).toEqual([]);
-    expect(relocationCost(byId('fubuki'))).toBe(20);
-    expect(relocationCost(byId('yamato'))).toBeGreaterThan(relocationCost(byId('fubuki')));
+  });
+
+  it('recalls ships for free, a whole preset at once, leaving those out on a sortie or in a dock (#191)', () => {
+    const p = admiral({ docks: [{ shipId: 'yukikaze', endsAt: T0 + 1000, base: 'ijn_home' }] });
+    const r = recallShips(p, ['fubuki', 'yukikaze', 'nagato', 'unknown'], currentBaseId(p), []);
+    expect(r.moved).toEqual(['fubuki']);
+    expect(r.held).toEqual(['yukikaze']);
+    expect(shipBaseOf(r.progress, 'fubuki')).toBe(currentBaseId(p));
+    expect(r.progress.resources).toEqual(p.resources);
+    expect(recallShips(p, ['fubuki'], currentBaseId(p), ['fubuki']).held).toEqual(['fubuki']);
   });
 
   it('each base has its own repair docks', () => {

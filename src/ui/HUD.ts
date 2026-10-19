@@ -88,6 +88,8 @@ export class HUD {
   private enemyLabels = new Map<BaseShip, Phaser.GameObjects.Text>();
   private escortBars = new Map<BaseShip, HealthBar>();
   private escortLabels = new Map<BaseShip, Phaser.GameObjects.Text>();
+  /** Convoy ships (#186) share the escort bars, drawn in gold so their HP reads apart from the warships'. */
+  private convoyShips = new Set<BaseShip>();
   private killText: Phaser.GameObjects.Text;
   private readonly totalEnemies: number;
 
@@ -106,6 +108,7 @@ export class HUD {
     escorts: BaseShip[] = [],
     /** Name of the weapon whose reload the strip shows */
     mainWeaponLabel = '主砲',
+    convoy: BaseShip[] = [],
   ) {
     this.totalEnemies = enemies.length;
 
@@ -160,7 +163,8 @@ export class HUD {
       );
     }
 
-    for (const escort of escorts) {
+    for (const ship of convoy) this.convoyShips.add(ship);
+    for (const escort of [...escorts, ...convoy]) {
       this.escortBars.set(escort, new HealthBar(scene, ESCORT_BAR_W, 6));
       this.escortLabels.set(
         escort,
@@ -213,7 +217,7 @@ export class HUD {
         syncLabel(label, ship);
         const bottom = ship.y + hullRadius(ship) + LABEL_GAP;
         label.setPosition(ship.x, bottom).setVisible(true);
-        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, Colors.cyan);
+        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, this.convoyShips.has(ship) ? Colors.gold : Colors.cyan);
       } else {
         bar.update(0, 1, -500, -500);
         label.setVisible(false);
