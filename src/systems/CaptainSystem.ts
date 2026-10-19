@@ -300,15 +300,17 @@ export function learnPlan(captain: ICaptain, learned: readonly string[], slot: n
 
 /** What a captain has done that traits count (per captain, in the save). */
 export interface ICaptainStats {
-  /** Enemies sunk by the captain's fleet in night battles */
+  /** Enemies the captain's own ship sank in night battles (the whole fleet's before #199) */
   nightSinks: number;
-  /** Enemy submarines sunk by the captain's fleet */
+  /** Enemy submarines the captain's own ship sank (the whole fleet's before #199) */
   subSinks: number;
+  /** Enemies the captain's own ship sank (#199) */
+  sinks: number;
   /** Battles the captain's ship came home from heavily damaged (25% HP or less) */
   heavySurvivals: number;
 }
 
-export const NO_STATS: ICaptainStats = { nightSinks: 0, subSinks: 0, heavySurvivals: 0 };
+export const NO_STATS: ICaptainStats = { nightSinks: 0, subSinks: 0, sinks: 0, heavySurvivals: 0 };
 
 export interface ITrait {
   id: string;
@@ -318,6 +320,8 @@ export interface ITrait {
   /** "夜戦の砲火力 +5%・夜間視界 +5%" */
   effect: string;
   earned: (s: ICaptainStats) => boolean;
+  /** How far along (#199): [count, goal] */
+  progress: (s: ICaptainStats) => [number, number];
   modifiers: (ctx: ICaptainContext) => Partial<IShipModifiers>;
 }
 
@@ -325,16 +329,19 @@ export const TRAITS: ITrait[] = [
   {
     id: 'night_ace', name: '夜戦巧者', condition: '夜戦で 3 隻撃沈', effect: '夜戦の砲火力 +5%・夜間の視界 +5%',
     earned: (s) => s.nightSinks >= 3,
+    progress: (s) => [s.nightSinks, 3],
     modifiers: (ctx) => (ctx.night ? { gunPowerMul: 1.05, nightVisionMul: 1.05 } : {}),
   },
   {
     id: 'unsinkable', name: '不沈艦長', condition: '大破から 3 回生還', effect: '耐久 +5%・装甲 +1',
     earned: (s) => s.heavySurvivals >= 3,
+    progress: (s) => [s.heavySurvivals, 3],
     modifiers: () => ({ hpMul: 1.05, armorAdd: 1 }),
   },
   {
     id: 'sub_killer', name: '潜水艦キラー', condition: '潜水艦を 5 隻撃沈', effect: '爆雷 +10%・ソナー +10%',
     earned: (s) => s.subSinks >= 5,
+    progress: (s) => [s.subSinks, 5],
     modifiers: () => ({ depthChargeMul: 1.1, sonarMul: 1.1 }),
   },
 ];
@@ -343,12 +350,13 @@ export function earnedTraits(stats: ICaptainStats | undefined): ITrait[] {
   return TRAITS.filter((t) => t.earned(stats ?? NO_STATS));
 }
 
-/** Adds one battle to a captain's stats. */
+/** Adds one battle to a captain's stats: `sunk` and `subsSunk` are what the captain's own ship sank (#199). */
 export function addBattleStats(stats: ICaptainStats | undefined, battle: { night: boolean; sunk: number; subsSunk: number; heavySurvival: boolean }): ICaptainStats {
   const s = stats ?? NO_STATS;
   return {
     nightSinks: s.nightSinks + (battle.night ? Math.max(0, battle.sunk) : 0),
     subSinks: s.subSinks + Math.max(0, battle.subsSunk),
+    sinks: (s.sinks ?? 0) + Math.max(0, battle.sunk),
     heavySurvivals: s.heavySurvivals + (battle.heavySurvival ? 1 : 0),
   };
 }

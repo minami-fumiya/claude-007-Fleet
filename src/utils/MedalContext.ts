@@ -18,7 +18,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -30,6 +30,7 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);
     for (const xp of Object.values(np.captainXp ?? {})) ctx.captainLevel = Math.max(ctx.captainLevel, levelForXp(xp));
+    for (const st of Object.values(np.captainStats ?? {})) ctx.captainSinks = Math.max(ctx.captainSinks, st?.sinks ?? 0);
     for (const levels of Object.values(np.facilities ?? {})) for (const lv of Object.values(levels ?? {})) ctx.facilityLevels += lv ?? 0;
     ctx.rankIndex = Math.max(ctx.rankIndex, rankOf({ ...np, nation }).index);
   }

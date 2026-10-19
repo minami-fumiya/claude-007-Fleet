@@ -388,6 +388,27 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a 艦長教本 goes to the captain the player picks, and traits show their progress (#199)', async ({ page }, info) => {
+    const save = { ...SAVE, version: 13, seenHelp: ['CaptainScene'], nations: { IJN: { ...SAVE.nations.IJN, captains: ['ijn_sakai', 'ijn_murase'], items: { fastRepair: 0, fastBuild: 0, captainBook: 1 } } } };
+    const errors = await boot(page, info.project.metadata.layout as string, save);
+    await open(page, 'CaptainScene');
+    await page.screenshot({ path: info.outputPath('captain-book.png') });
+    expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CaptainScene')).toEqual([]);
+    const r = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as {
+        selectedId: string; useBook(c: { id: string; name: string }): void; children: { list: Array<{ type: string; text?: string }> };
+      };
+      const xp = (): number => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.captainXp[s.selectedId] ?? 0;
+      const traits = s.children.list.some((o) => o.type === 'Text' && /夜戦で 3 隻撃沈 — \d+ \/ 3/.test(o.text ?? ''));
+      const before = xp();
+      s.useBook({ id: s.selectedId, name: '' });
+      return { gained: xp() - before, books: JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.items.captainBook, traits };
+    });
+    expect(r).toEqual({ gained: 300, books: 0, traits: true });
+    expect(errors).toEqual([]);
+  });
+
   test('編成 from the menu moves on to 作戦 or 演習 instead of a sortie (#109)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene', { organize: true });

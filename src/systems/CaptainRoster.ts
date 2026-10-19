@@ -1,6 +1,7 @@
 import captainData from '@/data/captains.json';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { ShipClass } from '@/types/ShipClass';
+import { IItems } from '@/types/Progression';
 import { aptitudeFor, SKILL_LABEL } from './CaptainSystem';
 
 /**
@@ -75,11 +76,18 @@ export function ownsCaptain(owned: readonly string[], id: string | null | undefi
   return !!id && owned.includes(id);
 }
 
-/** XP a captain gets when they would join again (#131): once a nation has every captain, a recruit trains one instead. */
+/**
+ * XP of a 艦長教本 (#131 #199): once a nation has every captain, a recruit becomes a book the player uses on a captain
+ * of their choice (it used to train a random captain, so unused ones levelled up).
+ */
 export const DUPLICATE_CAPTAIN_XP = 300;
 
-/** The owned captain a duplicate recruit trains (random). */
-export function duplicateCaptain(nation: string, owned: readonly string[], rng: () => number = Math.random): ICaptainData | undefined {
-  const mine = nationCaptains(nation).filter((c) => owned.includes(c.id));
-  return mine.length > 0 ? mine[Math.min(mine.length - 1, Math.floor(rng() * mine.length))] : undefined;
+/** Uses one 艦長教本 on `captainId`; null when there is none or the captain isn't owned. */
+export function useCaptainBook<T extends { items: IItems; captains: string[]; captainXp: Record<string, number> }>(progress: T, captainId: string): T | null {
+  if ((progress.items.captainBook ?? 0) <= 0 || !progress.captains.includes(captainId)) return null;
+  return {
+    ...progress,
+    items: { ...progress.items, captainBook: progress.items.captainBook - 1 },
+    captainXp: { ...progress.captainXp, [captainId]: (progress.captainXp[captainId] ?? 0) + DUPLICATE_CAPTAIN_XP },
+  };
 }

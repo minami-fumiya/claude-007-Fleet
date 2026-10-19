@@ -1,3 +1,4 @@
+import type { BaseShip } from '@/entities/ships/BaseShip';
 import Phaser from 'phaser';
 import { DEPTH_WATER_FX } from '@/config/GameConstants';
 import { IWeaponData } from '@/types/Weapon';
@@ -10,6 +11,8 @@ export const DEPTH_CHARGE_RADIUS = 110;
 /** A depth charge sinking where it was dropped; `update` reports when its fuse runs out. */
 export class DepthCharge extends Phaser.GameObjects.Image {
   weapon: IWeaponData | null = null;
+  /** The ship that dropped it (#199) */
+  source: BaseShip | null = null;
   private detonateAt = 0;
 
   constructor(scene: Phaser.Scene) {
@@ -18,8 +21,9 @@ export class DepthCharge extends Phaser.GameObjects.Image {
     this.setDepth(DEPTH_WATER_FX + 1).setActive(false).setVisible(false);
   }
 
-  drop(x: number, y: number, weapon: IWeaponData, now: number): void {
+  drop(x: number, y: number, weapon: IWeaponData, now: number, source: BaseShip | null = null): void {
     this.weapon = weapon;
+    this.source = source;
     this.detonateAt = now + DEPTH_CHARGE_FUSE_MS;
     this.setPosition(x, y).setAlpha(1).setScale(1).setActive(true).setVisible(true);
   }
