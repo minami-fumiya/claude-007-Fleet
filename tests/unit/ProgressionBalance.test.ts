@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { duelRatio, shipDps } from '@/systems/BalanceModel';
 import { applyToWeapons, combineModifiers } from '@/systems/CustomizationSystem';
 import { researchModifiers, TECH_TREE } from '@/systems/ResearchSystem';
-import { maxStage, REFIT_TABLE, refitModifiers, refitShipData, RefitTable } from '@/systems/RefitSystem';
+import { branchesFor, maxStage, REFIT_TABLE, refitModifiers, refitShipData, RefitTable } from '@/systems/RefitSystem';
 import { IShipModifiers } from '@/types/Modifiers';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
@@ -56,7 +56,8 @@ const CAPS: Array<{ key: keyof IShipModifiers; max?: number; min?: number }> = [
   { key: 'visionMul', max: 1.45 },
   { key: 'aaMul', max: 3.4 },
   { key: 'airPowerMul', max: 1.35 },
-  { key: 'planesAdd', max: 2 },
+  // 搭載機増加 (改三乙, #86) adds 2 on top of research's 1.
+  { key: 'planesAdd', max: 3 },
   { key: 'rearmMul', min: 0.7 },
   { key: 'sonarMul', max: 1.65 },
   { key: 'depthChargeMul', max: 1.65 },
@@ -75,6 +76,27 @@ describe('progression balance (research + remodel)', () => {
         }
         // Gun damage per second × hull: the combined surface-combat gain stays below 2.6×.
         expect((m.gunPowerMul / m.gunReloadMul) * m.hpMul, ship.id).toBeLessThan(2.6);
+      }
+    }
+  });
+
+  it('every branch of the last stage (#86) stays within the same caps, and none is strictly better than standard', () => {
+    for (const ship of ALL) {
+      const last = maxStage(REFIT_TABLE, ship);
+      for (const br of branchesFor(REFIT_TABLE, ship)) {
+        const m = combineModifiers(RESEARCH, refitModifiers(REFIT_TABLE, ship, last, br.id));
+        for (const c of CAPS) {
+          if (c.max !== undefined) expect(m[c.key], `${ship.id} ${br.id} ${c.key}`).toBeLessThanOrEqual(c.max);
+          if (c.min !== undefined) expect(m[c.key], `${ship.id} ${br.id} ${c.key}`).toBeGreaterThanOrEqual(c.min);
+        }
+        expect((m.gunPowerMul / m.gunReloadMul) * m.hpMul, `${ship.id} ${br.id}`).toBeLessThan(2.6);
+        // A direction trades: it never beats the standard stage in every stat at once.
+        const std = refitModifiers(REFIT_TABLE, ship, last);
+        const b = refitModifiers(REFIT_TABLE, ship, last, br.id);
+        const keys = Object.keys(b) as Array<keyof IShipModifiers>;
+        const lowerBetter = new Set<keyof IShipModifiers>(['gunReloadMul', 'rearmMul', 'nightAimMul']);
+        const worse = keys.some((k) => (lowerBetter.has(k) ? b[k] > std[k] : b[k] < std[k]));
+        expect(worse, `${ship.id} ${br.id} gives up something`).toBe(true);
       }
     }
   });

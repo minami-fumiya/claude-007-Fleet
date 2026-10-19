@@ -54,6 +54,8 @@ export interface INationProgress {
   upgrades: Record<string, string[]>;
   /** Ship id → refit stage (0 = original) */
   refits: Record<string, number>;
+  /** Ship id → the branch chosen for its last remodel stage (#86); none = the standard stage */
+  refitBranches: Record<string, string>;
   /** Ship id → crew proficiency 0..100 */
   proficiency: Record<string, number>;
   /** Captain id → total XP */
@@ -143,7 +145,7 @@ export interface IProgress extends INationProgress {
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, refits: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
+    upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null,
   };
@@ -275,6 +277,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     ships: [...new Set(strings(data.ships))],
     upgrades,
     refits: numbers(data.refits),
+    refitBranches: stringMap(data.refitBranches),
     proficiency: numbers(data.proficiency),
     captainXp: numbers(data.captainXp),
     campaign: strings(data.campaign),

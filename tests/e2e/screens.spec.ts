@@ -319,6 +319,29 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the last remodel stage takes a direction: 改三甲・乙・丙 (#86)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const save = {
+      ...SAVE, version: 16, seenHelp: ['CustomizationScene'],
+      nations: { IJN: { ...SAVE.nations.IJN, refits: { fubuki: 2 }, proficiency: { fubuki: 100 }, resources: { fuel: 9000, ammo: 9000, steel: 9000, bauxite: 4000 } } },
+    };
+    const errors = await boot(page, layout, save);
+    await open(page, 'CustomizationScene', { returnTo: 'HomeScene', scope: 'all', shipId: 'fubuki' });
+    type C = { openBranches(): void; chooseBranch(id: string): void };
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as C).openBranches());
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'CustomizationScene'), `branches (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('refit-branches.png') });
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CustomizationScene') as unknown as C).chooseBranch('asw'));
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { refits: Record<string, number>; refitBranches: Record<string, string> });
+    expect(stored.refits.fubuki).toBe(3);
+    expect(stored.refitBranches.fubuki).toBe('asw');
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'CustomizationScene'), `after (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('refit-branched.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('a sortie: pick ships, deploy, pause and resume the battle', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene');

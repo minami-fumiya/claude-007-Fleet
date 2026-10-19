@@ -605,7 +605,7 @@ export class BattleScene extends Phaser.Scene {
     return combineModifiers(
       upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
       researchModifiers(TECH_TREE, progress.research),
-      refitModifiers(REFIT_TABLE, shipData, stage),
+      refitModifiers(REFIT_TABLE, shipData, stage, progress.refitBranches[shipData.id]),
       // The captain's own speciality, learned skills, abilities and earned traits (#45), by aptitude for the ship (#131).
       captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass,
         captain ? progress.captainBonus[captain.id] ?? [] : []),
@@ -625,7 +625,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.scenario) return;
     const progress = loadProgress();
     ship.stats.proficiency = progress.proficiency[ship.dataId] ?? 0;
-    ship.stats.name = refitName(REFIT_TABLE, ship.stats.name, { id: ship.dataId, shipClass: ship.stats.shipClass }, progress.refits[ship.dataId] ?? 0);
+    ship.stats.name = refitName(REFIT_TABLE, ship.stats.name, { id: ship.dataId, shipClass: ship.stats.shipClass }, progress.refits[ship.dataId] ?? 0, progress.refitBranches[ship.dataId]);
     const f = startingHp(progress, ship.dataId, this.exercise);
     ship.stats.currentHp = Math.max(1, Math.round(ship.stats.maxHp * f));
   }

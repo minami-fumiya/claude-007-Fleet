@@ -25,7 +25,9 @@ export type QuestEvent =
   // wins under each kind of event (#218)
   | `event_${EventKind}`
   // 0.0.29: enemy planes shot down (#185)
-  | 'planesDown';
+  | 'planesDown'
+  // 0.0.30: remodels finished in a chosen direction (#86)
+  | 'refitBranch';
 
 export interface IQuest {
   id: string;

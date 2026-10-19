@@ -195,6 +195,9 @@ export const MIGRATIONS: MigrationStep[] = [
     for (const id of aviators) captainBonus[id] = [...new Set([...(Array.isArray(before[id]) ? before[id] as string[] : []), CaptainSkill.AntiAir])];
     return { ...nation, captainBonus };
   }),
+  // v16 → v17 (0.0.30, #86): the last remodel stage can take a branch (改三甲 / 乙 / 丙). Every ship already remodelled
+  // keeps the standard stage it had: an empty branch list.
+  (data) => mapNations(data, (nation) => ({ refitBranches: {}, ...nation })),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

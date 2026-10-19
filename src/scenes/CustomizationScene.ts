@@ -17,7 +17,7 @@ import { IWeaponData } from '@/types/Weapon';
 import { ITechNode } from '@/types/Progression';
 import { unlockedUpgrades } from '@/systems/ResearchSystem';
 import techTree from '@/data/tech-tree.json';
-import { canRefit, currentStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
+import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch } from '@/systems/RefitSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -228,7 +228,7 @@ export class CustomizationScene extends Phaser.Scene {
     shown.forEach(({ s, i }, row) => {
       const on = i === this.selected;
       const frame = drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.8 : 0.15 });
-      const label = shortName(refitName(this.refitTable, s.name, s, refits[s.id] ?? 0));
+      const label = shortName(refitName(this.refitTable, s.name, s, refits[s.id] ?? 0, loadProgress().refitBranches[s.id]));
       const name = this.add.text(16, rowH / 2, `${label}${this.fleetIds.includes(s.id) ? '  ⚑' : ''}`, textStyle(15, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
       const sub = this.add.text(rowW - 14, rowH / 2, kindLabel(s), eyebrowStyle(10, Css.dim)).setOrigin(1, 0.5);
       list.addItem(this.add.container(0, row * (rowH + 6), [frame, name, sub]), rowW, rowH, () => {
@@ -323,9 +323,81 @@ export class CustomizationScene extends Phaser.Scene {
     if (this.away(ship.id)) return;
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
+    // The last stage takes a direction (#86): reaching it, or changing it later, goes through the branch sheet.
+    if (branchesFor(this.refitTable, ship).length > 0 && stage >= maxStage(this.refitTable, ship) - 1) {
+      this.openBranches();
+      return;
+    }
     const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
     if (!r) return;
     saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage } }, [['refit', 1]], Date.now()), 'refit');
+    this.refresh();
+  }
+
+  /** The directions of the last stage (#86): 標準 and the class's branches, each with what it changes. */
+  openBranches(): void {
+    const ship = this.ships[this.selected];
+    const progress = loadProgress();
+    const stage = progress.refits[ship.id] ?? 0;
+    const last = maxStage(this.refitTable, ship);
+    const reached = stage >= last;
+    const current = progress.refitBranches[ship.id] ?? 'standard';
+    const standard = stagesFor(this.refitTable, ship)[last - 1];
+    const options = [
+      { id: 'standard', suffix: standard.suffix, label: '標準: 全体を少しずつ強化する', effects: standard.effects },
+      ...branchesFor(this.refitTable, ship),
+    ];
+    this.closeShipList();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      this.sheet.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.75).setOrigin(0, 0).setInteractive());
+    const rowH = IS_PORTRAIT ? 92 : 64;
+    const w = IS_PORTRAIT ? CANVAS_W - 48 : 760;
+    const h = 130 + options.length * (rowH + 8) + 60;
+    const r = { x: (CANVAS_W - w) / 2, y: Math.max(16, (CANVAS_H - h) / 2), w, h };
+    add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(r.x + 24, r.y + 20, `${shortName(ship.name)}  ·  ${standard.suffix}の方向`, eyebrowStyle(11, Css.cyan)));
+    const can = reached || canRefit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
+    add(this.add.text(r.x + 24, r.y + 42, reached ? `変更には ${formatResources(standard.cost)}` : `${formatResources(standard.cost)}  ·  熟練 ${progress.proficiency[ship.id] ?? 0} / ${standard.minProficiency}`, textStyle(13, can ? Css.muted : Css.danger)));
+    let y = r.y + 76;
+    for (const o of options) {
+      const on = reached && o.id === current;
+      add(drawPanel(this.add.graphics(), r.x + 20, y, r.w - 40, rowH, { radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.8 : 0.2 }));
+      add(this.add.text(r.x + 36, y + 10, `${o.suffix}  ${o.label}`, textStyle(IS_PORTRAIT ? 14 : 13, Css.text, { fontStyle: 'bold', wordWrap: { width: r.w - 220, useAdvancedWrap: true } })));
+      const fx = add(this.add.text(r.x + 36, y + rowH - 10, describeModifiers(o.effects).join('  '), textStyle(11, Css.cyan)).setOrigin(0, 1));
+      if (fx.width > r.w - 220) fx.setScale((r.w - 220) / fx.width);
+      add(new UIButton(this, r.x + r.w - 100, y + rowH / 2, on ? '選択中' : reached ? '変更' : '改造', () => this.chooseBranch(o.id), {
+        variant: on ? 'secondary' : 'primary', width: 140, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
+      })).setEnabled(!on && can);
+      y += rowH + 8;
+    }
+    add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), 'やめる', () => this.closeShipList(), {
+      variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15,
+    }));
+  }
+
+  /** Remodels to the last stage in direction `id`, or switches a finished ship to it for the stage's cost (#86). */
+  chooseBranch(id: string): void {
+    const ship = this.ships[this.selected];
+    if (this.away(ship.id)) return;
+    const progress = loadProgress();
+    const stage = progress.refits[ship.id] ?? 0;
+    const branches = { ...progress.refitBranches };
+    if (id === 'standard') delete branches[ship.id];
+    else branches[ship.id] = id;
+    if (stage >= maxStage(this.refitTable, ship)) {
+      const left = switchBranch(this.refitTable, ship, stage, progress.refitBranches[ship.id], id, progress.resources);
+      if (!left) return;
+      saveProgress({ ...progress, resources: left, refitBranches: branches }, 'refit');
+    } else {
+      const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
+      if (!r) return;
+      saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage }, refitBranches: branches }, [['refit', 1], ['refitBranch', 1]], Date.now()), 'refit');
+    }
+    this.closeShipList();
     this.refresh();
   }
 
@@ -376,7 +448,8 @@ export class CustomizationScene extends Phaser.Scene {
     };
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
-    const mods = combineModifiers(upgradeModifiers(fitted, this.catalog, slots), refitModifiers(this.refitTable, ship, stage));
+    const branch = progress.refitBranches[ship.id];
+    const mods = combineModifiers(upgradeModifiers(fitted, this.catalog, slots), refitModifiers(this.refitTable, ship, stage, branch));
     const after = applyToStats(base, mods);
     // Special refits may swap weapons (e.g. secondaries replaced by AA guns).
     const weaponsAfter = applyToWeapons(this.loadout(refitShipData(this.refitTable, ship, stage).weapons), mods);
@@ -408,14 +481,23 @@ export class CustomizationScene extends Phaser.Scene {
     if (removed.length > 0 || added.length > 0) extras.push(`兵装 ${removed.join('・') || '—'} → ${added.join('・') || '撤去'}`);
     this.extrasText.setText(extras.join('  '));
     this.statsText.forEach((t, i) => t.setText(lines[i] ?? '').setColor(lines[i]?.includes('→') ? Css.text : Css.muted));
-    this.shipName.setText(refitName(this.refitTable, ship.name, ship, stage));
-    const reached = currentStage(this.refitTable, ship, stage);
-    this.specialText.setText(reached?.special && reached.label ? `特別改装: ${reached.label}` : '');
+    this.shipName.setText(refitName(this.refitTable, ship.name, ship, stage, branch));
+    const reached = currentStage(this.refitTable, ship, stage, branch);
+    this.specialText.setText(reached?.special && reached.label ? `特別改装: ${reached.label}` : branch && reached?.label ? `改造の方向: ${reached.label}` : '');
     const next = nextStage(this.refitTable, ship, stage);
     const prof = progress.proficiency[ship.id] ?? 0;
-    if (!next) {
+    const branched = branchesFor(this.refitTable, ship).length > 0;
+    if (!next && branched) {
+      // Finished, but the direction of the last stage can still change (#86).
+      this.refitText.setText('改造完了 (最終段階)  ·  方向はいつでも変えられます (改造の資源が要ります)');
+      this.refitBtn.setLabel(`${reached?.suffix ?? ''} の方向を変更`).setEnabled(true);
+    } else if (!next) {
       this.refitText.setText('改造完了 (最終段階)');
       this.refitBtn.setLabel('改造完了').setEnabled(false);
+    } else if (branched && stage === maxStage(this.refitTable, ship) - 1) {
+      const slotsNext = upgradeSlots(stage + 1) > slots ? `  ·  装備枠 ${upgradeSlots(stage + 1)}` : '';
+      this.refitText.setText(`次: ${next.suffix} (方向を選ぶ: 標準・${branchesFor(this.refitTable, ship).map((b) => b.suffix).join('・')})  ·  熟練 ${prof} / ${next.minProficiency}${slotsNext}  ·  ${formatResources(next.cost)}`);
+      this.refitBtn.setLabel(`${next.suffix} の方向を選ぶ`).setEnabled(true);
     } else {
       const special = next.special && next.label ? `【特別改装】${next.label}\n` : '';
       const slotsNext = upgradeSlots(stage + 1) > slots ? `  ·  装備枠 ${upgradeSlots(stage + 1)}` : '';
