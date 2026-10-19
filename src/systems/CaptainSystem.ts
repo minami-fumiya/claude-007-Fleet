@@ -454,3 +454,29 @@ export const SKILL_LABEL: Record<CaptainSkill, string> = {
   [CaptainSkill.Recon]: '索敵',
   [CaptainSkill.Damecon]: '応急',
 };
+
+// ---------------------------------------------------------------------------
+// Finding a captain among 30 (#209)
+// ---------------------------------------------------------------------------
+
+/** 'all', a speciality, or `apt:<class>` for captains suited (S) to that ship class. */
+export type CaptainFilter = 'all' | CaptainSkill | `apt:${ShipClass}`;
+export type CaptainSort = 'join' | 'level' | 'skill';
+
+export const CAPTAIN_SORT_LABEL: Record<CaptainSort, string> = { join: '加入順', level: 'Lv 順', skill: '専門順' };
+export const CAPTAIN_SORTS: CaptainSort[] = ['join', 'level', 'skill'];
+
+/** The captains matching `filter`, in `sort` order ('join' keeps the given order). */
+export function findCaptains<T extends ICaptainData & { level: number }>(list: readonly T[], filter: CaptainFilter, sort: CaptainSort): T[] {
+  const matches = list.filter((c) => {
+    if (filter === 'all') return true;
+    if (filter.startsWith('apt:')) return aptitudeFor(c, filter.slice(4) as ShipClass) === 'S';
+    return c.skill === filter;
+  });
+  if (sort === 'level') return [...matches].sort((a, b) => b.level - a.level);
+  if (sort === 'skill') {
+    const order = Object.values(CaptainSkill);
+    return [...matches].sort((a, b) => order.indexOf(a.skill) - order.indexOf(b.skill) || b.level - a.level);
+  }
+  return matches;
+}

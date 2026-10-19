@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CAPTAINS, CAPTAIN_DROP_CHANCE, CAPTAIN_SOURCES, captainsLeft, nationCaptains, nextCaptain, OUTSIDER_EVERY, recruitCaptains } from '@/systems/CaptainRoster';
 import { QUESTS } from '@/systems/QuestSystem';
-import { aptitudeFor } from '@/systems/CaptainSystem';
+import { aptitudeFor, findCaptains } from '@/systems/CaptainSystem';
+import { CaptainSkill } from '@/types/Captain';
 import { ShipClass } from '@/types/ShipClass';
 
 describe('when captains join (#179 #215) and who comes (#210)', () => {
@@ -73,5 +74,23 @@ describe('recruits from quests and battles (#209)', () => {
     const withCaptain = QUESTS.filter((q) => (q.captains ?? 0) > 0);
     expect(withCaptain.length).toBeGreaterThanOrEqual(4);
     expect(withCaptain.every((q) => q.kind === 'weekly' || q.kind === 'once')).toBe(true);
+  });
+});
+
+describe('finding a captain among 30 (#209)', () => {
+  const list = nationCaptains('IJN').map((c, i) => ({ ...c, level: (i * 7) % 23 + 1 }));
+
+  it('filters by speciality or by S aptitude for a class, and sorts by level or speciality', () => {
+    expect(findCaptains(list, 'all', 'join')).toEqual(list);
+    const gun = findCaptains(list, CaptainSkill.Gunnery, 'join');
+    expect(gun.length).toBeGreaterThanOrEqual(3);
+    expect(gun.every((c) => c.skill === CaptainSkill.Gunnery)).toBe(true);
+    const ss = findCaptains(list, 'apt:Submarine', 'join');
+    expect(ss.length).toBeGreaterThan(0);
+    expect(ss.every((c) => aptitudeFor(c, ShipClass.Submarine) === 'S')).toBe(true);
+    const byLevel = findCaptains(list, 'all', 'level').map((c) => c.level);
+    expect(byLevel).toEqual([...byLevel].sort((a, b) => b - a));
+    const bySkill = findCaptains(list, 'all', 'skill').map((c) => c.skill);
+    expect(bySkill[0]).toBe(CaptainSkill.Gunnery);
   });
 });

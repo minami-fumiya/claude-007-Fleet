@@ -5,7 +5,7 @@ import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
-  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, GROWTH_LABEL, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
+  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, CAPTAIN_SORT_LABEL, CAPTAIN_SORTS, CaptainFilter, CaptainSort, findCaptains, GROWTH_LABEL, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
   LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, NO_STATS, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
@@ -15,6 +15,7 @@ import { loadProgress, loadSave, saveSave } from '@/utils/ProgressStore';
 import { DataLoader } from '@/utils/DataLoader';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { Aptitude, CaptainAbility, CaptainSkill, ICaptain } from '@/types/Captain';
+import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
@@ -30,9 +31,18 @@ const L = IS_PORTRAIT
   : { list: { x: 24, y: 96, w: 300, h: 604 } as IRect, detail: { x: 340, y: 96, w: 916, h: 604 } as IRect, rowH: 44, cols: 1 };
 
 const PAD = 14;
+/** Filter and sort buttons above the list (#209) */
+const TOOL_H = IS_PORTRAIT ? 44 : 36;
 const ROW_GAP = 6;
 const SHEET_DEPTH = 300;
 const APTITUDE_CSS: Record<Aptitude, string> = { S: Css.gold, A: Css.cyan, B: Css.muted, C: Css.dim };
+
+/** "全員" / "砲術" / "駆逐艦 S" for a list filter (#209). */
+function filterLabel(f: CaptainFilter): string {
+  if (f === 'all') return '全員';
+  if (f.startsWith('apt:')) return `${CLASS_JA[f.slice(4) as ShipClass]} S`;
+  return SKILL_LABEL[f as CaptainSkill];
+}
 
 /**
  * 艦長 (#130): the nation's captains and everything that grows them — level, the inherent skill and its tiers
@@ -46,6 +56,9 @@ export class CaptainScene extends Phaser.Scene {
   private sheet: Phaser.GameObjects.GameObject[] = [];
   private status = '';
   private statusCss: string = Css.success;
+  /** List filter and order (#209): 30 captains need finding */
+  private filter: CaptainFilter = 'all';
+  private sort: CaptainSort = 'join';
 
   constructor() {
     super({ key: SceneKeys.CAPTAIN });
@@ -69,7 +82,7 @@ export class CaptainScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '艦長', displayStyle(24)).setOrigin(0.5);
     addPanel(this, L.list.x, L.list.y, L.list.w, L.list.h, { radius: 24, fillAlpha: 0.5 });
     addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
-    this.list = new ScrollList(this, { x: L.list.x + PAD, y: L.list.y + PAD, w: L.list.w - PAD * 2 + 4, h: L.list.h - PAD * 2 });
+    this.list = new ScrollList(this, { x: L.list.x + PAD, y: L.list.y + PAD + TOOL_H + 8, w: L.list.w - PAD * 2 + 4, h: L.list.h - PAD * 2 - TOOL_H - 8 });
     this.refresh();
   }
 
@@ -94,15 +107,56 @@ export class CaptainScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
-    const captains = this.owned();
-    if (!captains.some((c) => c.id === this.selectedId)) this.selectedId = captains[0]?.id ?? '';
+    const owned = this.owned();
+    const captains = findCaptains(owned, this.filter, this.sort);
+    if (!owned.some((c) => c.id === this.selectedId)) this.selectedId = captains[0]?.id ?? owned[0]?.id ?? '';
+    this.buildTools(captains.length, owned.length);
     this.buildList(captains);
-    const c = captains.find((x) => x.id === this.selectedId);
+    const c = owned.find((x) => x.id === this.selectedId);
     if (c) this.buildDetail(c);
     else {
       const d = L.detail;
       this.track(this.add.text(d.x + d.w / 2, d.y + d.h / 2, '艦長がいません', textStyle(15, Css.dim)).setOrigin(0.5));
     }
+  }
+
+  /** 絞り込み (opens the choices) and 並び (cycles) above the list (#209). */
+  private buildTools(shown: number, total: number): void {
+    const x = L.list.x + PAD;
+    const w = L.list.w - PAD * 2;
+    const y = L.list.y + PAD + TOOL_H / 2;
+    const fw = w * 0.6 - 4;
+    const label = this.filter === 'all' ? `絞り込み: 全員 (${total})` : `${filterLabel(this.filter)} ${shown} / ${total}`;
+    this.track(new UIButton(this, x + fw / 2, y, label, () => this.openFilter(), {
+      variant: this.filter === 'all' ? 'secondary' : 'primary', width: fw, height: TOOL_H, fontSize: IS_PORTRAIT ? 13 : 12,
+    }));
+    const sw = w - fw - 8;
+    this.track(new UIButton(this, x + fw + 8 + sw / 2, y, `並び: ${CAPTAIN_SORT_LABEL[this.sort]}`, () => {
+      this.sort = CAPTAIN_SORTS[(CAPTAIN_SORTS.indexOf(this.sort) + 1) % CAPTAIN_SORTS.length];
+      this.refresh();
+    }, { variant: 'secondary', width: sw, height: TOOL_H, fontSize: IS_PORTRAIT ? 13 : 12 }));
+  }
+
+  /** The filter choices: everyone, a speciality, or the captains suited (S) to a ship class (#209). */
+  openFilter(): void {
+    const options: CaptainFilter[] = ['all', ...Object.values(CaptainSkill), ...CLASS_ORDER.map((k) => `apt:${k}` as CaptainFilter)];
+    const cols = IS_PORTRAIT ? 3 : 4;
+    const bh = IS_PORTRAIT ? 52 : 40;
+    const rows = Math.ceil(options.length / cols);
+    const r = this.openSheet(110 + rows * (bh + 8) + 70);
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 22, '艦長の絞り込み', eyebrowStyle(11, Css.cyan)));
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 44, '専門か、適性 S の艦種で選ぶ', displayStyle(20)));
+    const bw = (r.w - 52 - 8 * (cols - 1)) / cols;
+    options.forEach((f, i) => {
+      const bx = r.x + 26 + (i % cols) * (bw + 8) + bw / 2;
+      const by = r.y + 92 + Math.floor(i / cols) * (bh + 8) + bh / 2;
+      this.sheetAdd(new UIButton(this, bx, by, filterLabel(f), () => {
+        this.filter = f;
+        this.closeSheet();
+        this.refresh();
+      }, { variant: f === this.filter ? 'primary' : 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 12 }));
+    });
+    this.sheetAdd(new UIButton(this, r.x + r.w / 2, r.y + r.h - 40, 'やめる', () => this.closeSheet(), { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15 }));
   }
 
   private buildList(captains: ICaptain[]): void {
