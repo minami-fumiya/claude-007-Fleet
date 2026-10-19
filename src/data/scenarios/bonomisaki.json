@@ -1,0 +1,18 @@
+{
+  "id": "bonomisaki",
+  "name": "坊ノ岬沖海戦",
+  "date": "1945年4月",
+  "theater": "pacific",
+  "description": "沖縄へ海上特攻に向かった大和と第二水雷戦隊は、米機動部隊の艦載機数百機の波状攻撃を受けた。大和は坊ノ岬沖で沈んだ。(矢矧・冬月ほかは近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Overcast",
+  "time": "Day",
+  "forces": {
+    "A": {"nation": "IJN", "ships": ["yamato", "sendai", "yukikaze", "fubuki", "shimakaze", "etorofu"], "positions": [{"x": 0.22, "y": 0.24, "angle": 120}, {"x": 0.143, "y": 0.253, "angle": 120}, {"x": 0.193, "y": 0.167, "angle": 120}, {"x": 0.091, "y": 0.223, "angle": 120}, {"x": 0.141, "y": 0.137, "angle": 120}, {"x": 0.17, "y": 0.327, "angle": 120}]},
+    "B": {"nation": "USN", "ships": ["essex", "enterprise", "independence", "yorktown", "fletcher", "gearing"], "positions": [{"x": 0.75, "y": 0.75, "angle": 300}, {"x": 0.827, "y": 0.737, "angle": 300}, {"x": 0.777, "y": 0.823, "angle": 300}, {"x": 0.879, "y": 0.767, "angle": 300}, {"x": 0.829, "y": 0.853, "angle": 300}, {"x": 0.8, "y": 0.663, "angle": 300}]}
+  },
+  "sides": [
+    {"force": "A", "label": "大和で沖縄へ", "objective": "Breakthrough", "zone": {"x": 0.92, "y": 0.9, "r": 0.06, "label": "沖縄"}, "timeLimitSec": 300, "brief": "航空攻撃に耐え、旗艦を南東の沖縄へ突入させよ。"},
+    {"force": "B", "label": "米機動部隊で阻止", "objective": "PreventEscape", "targets": ["yamato"], "zone": {"x": 0.92, "y": 0.9, "r": 0.06, "label": "沖縄"}, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "大和が沖縄に達する前に撃沈せよ。"}
+  ]
+}

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.22.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.23.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -153,6 +153,40 @@ test.describe('screens', () => {
       expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
+    expect(errors).toEqual([]);
+  });
+
+  test('the scenario list pages through 13 battles and a 7-vs-7 one starts (#71)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: ['ScenarioScene'] });
+    await open(page, 'ScenarioScene');
+    const listed = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as {
+        scenarios: Array<{ id: string }>; selected: number; theater: string; page: number; drawList(): void; refresh(): void;
+      };
+      s.theater = 'pacific';
+      s.page = 1;
+      s.selected = s.scenarios.findIndex((x) => x.id === 'leyte-gulf');
+      s.drawList();
+      s.refresh();
+      return s.scenarios.length;
+    });
+    expect(listed).toBe(13);
+    expect(await overflowingTexts(page, 'ScenarioScene'), `scenarios (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'ScenarioScene'), `scenarios overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('scenarios.png') });
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as { scenarios: unknown[]; selected: number; start(sc: unknown): void };
+      s.start(s.scenarios[s.selected]);
+    });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    await page.waitForTimeout(2500);
+    const sizes = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { escorts: unknown[]; enemies: unknown[] };
+      return { mine: b.escorts.length + 1, enemy: b.enemies.length };
+    });
+    expect(sizes).toEqual({ mine: 7, enemy: 7 });
+    await page.screenshot({ path: info.outputPath('scenario-battle.png') });
     expect(errors).toEqual([]);
   });
 

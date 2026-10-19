@@ -2,16 +2,17 @@
   "id": "bismarck-chase",
   "name": "ビスマルク追撃戦",
   "date": "1941年5月",
+  "theater": "atlantic",
   "description": "通商破壊に出撃した戦艦ビスマルクはデンマーク海峡で巡洋戦艦フッドを撃沈したが、英本国艦隊の執拗な追撃を受け、雷撃で舵を損傷した末に撃沈された。本シナリオは嵐の大西洋での追撃を再現する。",
   "map": "open-sea",
   "weather": "Storm",
   "time": "Day",
   "forces": {
-    "A": { "nation": "KM", "ships": ["bismarck", "prinz_eugen"], "positions": [{ "x": 0.2, "y": 0.5, "angle": 90 }, { "x": 0.13, "y": 0.45, "angle": 90 }] },
-    "B": { "nation": "RN", "ships": ["king_george_v", "hood", "cossack"], "positions": [{ "x": 0.42, "y": 0.86, "angle": 30 }, { "x": 0.36, "y": 0.9, "angle": 30 }, { "x": 0.5, "y": 0.82, "angle": 30 }] }
+    "A": {"nation": "KM", "ships": ["bismarck", "prinz_eugen"], "positions": [{"x": 0.2, "y": 0.5, "angle": 90}, {"x": 0.13, "y": 0.45, "angle": 90}]},
+    "B": {"nation": "RN", "ships": ["king_george_v", "hood", "cossack", "rodney", "ark_royal", "dorsetshire"], "positions": [{"x": 0.42, "y": 0.86, "angle": 30}, {"x": 0.36, "y": 0.9, "angle": 30}, {"x": 0.5, "y": 0.82, "angle": 30}, {"x": 0.433, "y": 0.937, "angle": 30}, {"x": 0.317, "y": 0.939, "angle": 30}, {"x": 0.507, "y": 0.91, "angle": 30}]}
   },
   "sides": [
-    { "force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["bismarck"], "zone": { "x": 0.97, "y": 0.5, "r": 0.12, "label": "脱出海域" }, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "ビスマルクが東の脱出海域に達する前に撃沈せよ。" },
-    { "force": "A", "label": "ビスマルクで突破", "objective": "Breakthrough", "zone": { "x": 0.97, "y": 0.5, "r": 0.12, "label": "脱出海域" }, "timeLimitSec": 300, "brief": "英艦隊を振り切り、東の脱出海域へ逃れよ。" }
+    {"force": "B", "label": "英本国艦隊で追撃", "objective": "PreventEscape", "targets": ["bismarck"], "zone": {"x": 0.97, "y": 0.5, "r": 0.12, "label": "脱出海域"}, "timeLimitSec": 300, "enemyGoesForZone": true, "brief": "ビスマルクが東の脱出海域に達する前に撃沈せよ。"},
+    {"force": "A", "label": "ビスマルクで突破", "objective": "Breakthrough", "zone": {"x": 0.97, "y": 0.5, "r": 0.12, "label": "脱出海域"}, "timeLimitSec": 300, "brief": "英艦隊を振り切り、東の脱出海域へ逃れよ。"}
   ]
 }

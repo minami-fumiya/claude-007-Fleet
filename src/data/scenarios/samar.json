@@ -1,0 +1,18 @@
+{
+  "id": "samar",
+  "name": "サマール沖海戦",
+  "date": "1944年10月",
+  "theater": "pacific",
+  "description": "栗田艦隊の大和以下の戦艦部隊は、サマール島沖で米護衛空母群「タフィー3」と遭遇した。駆逐艦・護衛駆逐艦の決死の反撃と艦載機の攻撃で、栗田艦隊は追撃を打ち切った。(護衛空母群・榛名ほかは近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Overcast",
+  "time": "Day",
+  "forces": {
+    "A": {"nation": "IJN", "ships": ["yamato", "nagato", "kongo", "ise", "tone", "shimakaze"], "positions": [{"x": 0.5, "y": 0.24, "angle": 180}, {"x": 0.45, "y": 0.18, "angle": 180}, {"x": 0.55, "y": 0.18, "angle": 180}, {"x": 0.45, "y": 0.12, "angle": 180}, {"x": 0.55, "y": 0.12, "angle": 180}, {"x": 0.4, "y": 0.24, "angle": 180}]},
+    "B": {"nation": "USN", "ships": ["casablanca", "independence", "fletcher", "gearing", "buckley", "sumner"], "positions": [{"x": 0.5, "y": 0.72, "angle": 0}, {"x": 0.55, "y": 0.78, "angle": 0}, {"x": 0.45, "y": 0.78, "angle": 0}, {"x": 0.55, "y": 0.84, "angle": 0}, {"x": 0.45, "y": 0.84, "angle": 0}, {"x": 0.6, "y": 0.72, "angle": 0}]}
+  },
+  "sides": [
+    {"force": "A", "label": "栗田艦隊で追撃", "objective": "SinkTargets", "targets": ["casablanca", "independence"], "timeLimitSec": 360, "brief": "逃げる護衛空母 2 隻を撃沈せよ。"},
+    {"force": "B", "label": "タフィー3 で遅滞", "objective": "Delay", "targets": ["yamato"], "zone": {"x": 0.5, "y": 0.95, "r": 0.05, "label": "レイテ湾口"}, "timeLimitSec": 240, "enemyGoesForZone": true, "brief": "大和をレイテ湾口に近づけるな。時間を稼ぐか、撃沈せよ。"}
+  ]
+}
