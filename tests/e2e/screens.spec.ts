@@ -45,15 +45,17 @@ const SCREENS = [
   'CaptainScene', 'BaseScene',
 ];
 
-async function boot(page: Page, layout: string, save: object = SAVE): Promise<string[]> {
+/** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */
+async function boot(page: Page, layout: string, save: object = SAVE, lastSeen = '99.0.0'): Promise<string[]> {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`/?layout=${layout}`);
   await page.waitForFunction(() => (window as GameWindow).game !== undefined, null, { timeout: 60_000 });
-  await page.evaluate((s) => {
+  await page.evaluate(([s, seen]) => {
     const data = s as typeof SAVE;
     localStorage.setItem('ww2fleet.progress.v2', JSON.stringify({ ...data, nations: { IJN: { ...data.nations.IJN, regenAt: Date.now() } } }));
-  }, save);
+    localStorage.setItem('ww2fleet.settings.v1', JSON.stringify({ lastSeenVersion: seen }));
+  }, [save, lastSeen] as const);
   await page.reload();
   await page.waitForFunction(() => {
     const g = (window as unknown as { game?: Phaser.Game }).game;
@@ -406,6 +408,30 @@ test.describe('screens', () => {
       return { gained: xp() - before, books: JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.items.captainBook, traits };
     });
     expect(r).toEqual({ gained: 300, books: 0, traits: true });
+    expect(errors).toEqual([]);
+  });
+
+  test('a new version shows its 更新内容 on the title once (#205)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, SAVE, '0.0.20-alpha');
+    type M = { changesLayer: unknown[]; children: { list: Array<{ type: string; list?: Array<{ text?: string }>; emit(e: string): void }> } };
+    const shown = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M).changesLayer.length);
+    expect(shown).toBeGreaterThan(0);
+    await page.screenshot({ path: info.outputPath('changes.png') });
+    expect(await overflowingTexts(page, 'MainMenuScene')).toEqual([]);
+    // 閉じる marks the version seen; the next visit shows nothing.
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M;
+      const close = s.children.list.find((o) => o.type === 'Container' && (o.list ?? []).some((c) => c.text === '閉じる'))!;
+      close.emit('pointerdown');
+      close.emit('pointerup');
+    });
+    const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.settings.v1')!).lastSeenVersion as string);
+    expect(seen).toMatch(/^0\.0\.\d+-alpha/);
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScene('MainMenuScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene') as unknown as M).changesLayer.length)).toBe(0);
     expect(errors).toEqual([]);
   });
 

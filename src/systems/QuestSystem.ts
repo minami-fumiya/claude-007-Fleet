@@ -16,7 +16,9 @@ export type QuestEvent =
   | 'sink' | 'sinkDestroyer' | 'sinkCruiser' | 'sinkCarrier' | 'sinkSubmarine' | 'sinkBattleship'
   | 'repair' | 'build' | 'research' | 'refit' | 'sweep' | 'facility' | 'captainLevel'
   // 0.0.25: convoy escorts won (#186), skills taught to captains (#187)
-  | 'convoyWin' | 'learnSkill';
+  | 'convoyWin' | 'learnSkill'
+  // 0.0.26: new versions met on the title screen (#205)
+  | 'versionUpdate';
 
 export interface IQuest {
   id: string;
