@@ -142,7 +142,8 @@ export const APTITUDE_SCALE: Record<Aptitude, number> = { S: 1.2, A: 1, B: 0.8, 
 const SKILL_APTITUDE: Record<CaptainSkill, Record<ShipClass, Aptitude>> = {
   [CaptainSkill.Gunnery]: { Battleship: 'S', Cruiser: 'A', Destroyer: 'B', Carrier: 'C', Submarine: 'C' },
   [CaptainSkill.Torpedo]: { Battleship: 'C', Cruiser: 'A', Destroyer: 'S', Carrier: 'C', Submarine: 'A' },
-  [CaptainSkill.Engineering]: { Battleship: 'A', Cruiser: 'A', Destroyer: 'A', Carrier: 'B', Submarine: 'B' },
+  // Every speciality suits at least one class at S (#188): fast ships for the engine room.
+  [CaptainSkill.Engineering]: { Battleship: 'A', Cruiser: 'S', Destroyer: 'S', Carrier: 'B', Submarine: 'B' },
   [CaptainSkill.Aviation]: { Battleship: 'C', Cruiser: 'B', Destroyer: 'C', Carrier: 'S', Submarine: 'C' },
   [CaptainSkill.ASW]: { Battleship: 'C', Cruiser: 'B', Destroyer: 'S', Carrier: 'B', Submarine: 'A' },
   [CaptainSkill.Night]: { Battleship: 'B', Cruiser: 'A', Destroyer: 'S', Carrier: 'C', Submarine: 'B' },
