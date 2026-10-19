@@ -88,19 +88,19 @@ describe('ShipyardSystem (#18 / #29)', () => {
   it('build gates: owned, research, rank, resources', () => {
     const p = player({ resources: rich });
     expect(buildState(p, IJN, byId('fubuki'))).toBe('owned');
-    expect(buildState(p, IJN, byId('yukikaze'))).toBe('ready');
-    expect(buildState(p, IJN, byId('takao'))).toBe('research');
+    expect(buildState(p, IJN, byId('etorofu'))).toBe('ready');
+    expect(buildState(p, IJN, byId('atago'))).toBe('research');
     // Heavy cruisers need their own research on top of the light-cruiser one (#37).
-    expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('takao'))).toBe('research');
+    expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('atago'))).toBe('research');
     expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('sendai'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'] }, IJN, byId('takao'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], merit: 100 }, IJN, byId('takao'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 6 }, IJN, byId('ise'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 7 }, IJN, byId('ise'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'] }, IJN, byId('atago'))).toBe('rank');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], merit: 100 }, IJN, byId('atago'))).toBe('ready');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 6 }, IJN, byId('kongo'))).toBe('rank');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 7 }, IJN, byId('kongo'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 11 }, IJN, byId('a150'))).toBe('fictional');
-    expect(buildState({ ...p, resources: resources() }, IJN, byId('yukikaze'))).toBe('resources');
+    expect(buildState({ ...p, resources: resources() }, IJN, byId('etorofu'))).toBe('resources');
     expect(buildStateLabel('research', byId('sendai'), { build_cruiser: '軽巡洋艦建造' })).toBe('要研究: 軽巡洋艦建造');
-    expect(buildStateLabel('research', byId('takao'), { build_heavy_cruiser: '重巡洋艦建造' })).toBe('要研究: 重巡洋艦建造');
+    expect(buildStateLabel('research', byId('atago'), { build_heavy_cruiser: '重巡洋艦建造' })).toBe('要研究: 重巡洋艦建造');
     expect(buildStateLabel('rank', byId('nagato'))).toBe('要階級: 中佐');
     expect(buildStateLabel('rank', byId('a150'))).toBe('要階級: 中将');
   });
@@ -119,26 +119,34 @@ describe('ShipyardSystem (#18 / #29)', () => {
 
   it('building pays and adds the ship once', () => {
     const p = player({ resources: rich });
-    const built = buildShip(p, IJN, byId('yukikaze'))!;
-    expect(built.ships).toEqual(['fubuki', 'yukikaze']);
-    expect(built.resources.steel).toBe(rich.steel - buildCost(byId('yukikaze')).steel);
-    expect(buildShip(built, IJN, byId('yukikaze'))).toBeNull();
+    const built = buildShip(p, IJN, byId('etorofu'))!;
+    expect(built.ships).toEqual(['fubuki', 'etorofu']);
+    expect(built.resources.steel).toBe(rich.steel - buildCost(byId('etorofu')).steel);
+    expect(buildShip(built, IJN, byId('etorofu'))).toBeNull();
     // Another nation's ship can't be built here.
     expect(buildShip(p, IJN, (usn.ships as IShipData[])[0])).toBeNull();
-    expect(grantShip(built, IJN, 'yukikaze').ships).toEqual(['fubuki', 'yukikaze']);
+    expect(grantShip(built, IJN, 'etorofu').ships).toEqual(['fubuki', 'etorofu']);
   });
 
-  it('first-clear reward: the cheapest unowned ship of the class, else of any class', () => {
-    const owned = ['fubuki'];
-    const dd = rewardShipFor(ShipClass.Destroyer, IJN, owned)!;
-    expect(dd.shipClass).toBe(ShipClass.Destroyer);
-    expect(owned).not.toContain(dd.id);
-    const allDd = IJN.filter((s) => s.shipClass === ShipClass.Destroyer).map((s) => s.id);
-    expect(rewardShipFor(ShipClass.Destroyer, IJN, allDd)!.shipClass).not.toBe(ShipClass.Destroyer);
-    expect(rewardShipFor(undefined, IJN, owned)).toBeUndefined();
-    expect(rewardShipFor(ShipClass.Destroyer, IJN, IJN.map((s) => s.id))).toBeUndefined();
-    // Never a fictional design.
-    expect(rewardShipFor(ShipClass.Battleship, IJN, IJN.filter((s) => !s.fictional && s.id !== 'kongo').map((s) => s.id))?.id).toBe('kongo');
+  it("first-clear reward: the area's reward-only ship, once; opening areas have none (#160)", () => {
+    const ship = rewardShipFor(IJN, ['fubuki'], 'p3')!;
+    expect(ship.shipClass).toBe(ShipClass.Submarine);
+    expect(isRewardOnly(ship)).toBe(true);
+    expect(rewardShipFor(IJN, ['fubuki', ship.id], 'p3')).toBeUndefined();
+    expect(rewardShipFor(IJN, ['fubuki'], 'p1')).toBeUndefined();
+    // An area of a theater the nation doesn't play grants nothing.
+    expect(rewardShipFor(IJN, ['fubuki'], 'b1')).toBeUndefined();
+  });
+
+  it('at most half of each theater\'s areas have a reward-only ship, always including the last (#160)', () => {
+    for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
+      for (const t of campaignData.theaters) {
+        const areas = campaignData.areas.filter((a) => a.theater === t.id).map((a) => a.id);
+        const n = areas.filter((id) => byArea?.[id]).length;
+        expect(n, `${nation} ${t.id}`).toBeLessThanOrEqual(Math.floor(areas.length / 2));
+      }
+    }
+    expect(REWARD_SHIPS.IJN?.p6).toBe('nagato');
   });
 });
 
@@ -168,12 +176,35 @@ describe('reward-only ships (#39)', () => {
     expect(buildState({ ...p, ships: [...p.ships, 'nagato'] }, IJN, byId('nagato'))).toBe('owned');
   });
 
-  it("the area's first clear grants its reward ship; other areas never hand one out", () => {
-    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], 'p6')?.id).toBe('nagato');
-    expect(rewardShipFor(ShipClass.Battleship, IJN, ['fubuki', 'nagato'], 'p6')?.id).not.toBe('nagato');
-    for (const area of ['p1', 'p4', 'p5']) {
-      const ship = rewardShipFor(ShipClass.Battleship, IJN, ['fubuki'], area);
-      expect(ship && isRewardOnly(ship)).toBe(false);
+  it("the area's first clear grants its reward ship, and every first-clear ship is reward-only (#160)", () => {
+    expect(rewardShipFor(IJN, ['fubuki'], 'p6')?.id).toBe('nagato');
+    expect(rewardShipFor(IJN, ['fubuki', 'nagato'], 'p6')).toBeUndefined();
+    for (const a of campaignData.areas) {
+      const ship = rewardShipFor(IJN, ['fubuki'], a.id);
+      if (ship) expect(isRewardOnly(ship)).toBe(true);
+    }
+  });
+
+  it('each ship rewards one area, and the opening areas never give a bigger class than theirs', () => {
+    const order = [ShipClass.Destroyer, ShipClass.Submarine, ShipClass.Cruiser, ShipClass.Carrier, ShipClass.Battleship];
+    for (const byArea of Object.values(REWARD_SHIPS)) {
+      const ids = Object.values(byArea ?? {});
+      expect(new Set(ids).size).toBe(ids.length);
+      for (const [area, id] of Object.entries(byArea ?? {})) {
+        const cls = all.find((x) => x.id === id)!.shipClass;
+        const want = campaignData.areas.find((x) => x.id === area)!.rewardShip as ShipClass;
+        expect(order.indexOf(cls), `${area} ${id}`).toBeLessThanOrEqual(order.indexOf(want));
+      }
+    }
+  });
+
+  it('every nation keeps a destroyer and a submarine it can build', () => {
+    for (const d of [ijn, usn, km, rn, fr, su, rm]) {
+      const ships = d.ships as IShipData[];
+      const starter = starterShip(ships)!;
+      for (const cls of [ShipClass.Destroyer, ShipClass.Submarine]) {
+        expect(ships.some((x) => x.shipClass === cls && x.id !== starter.id && !x.fictional && !isRewardOnly(x)), `${starter.nation} ${cls}`).toBe(true);
+      }
     }
   });
 });
@@ -192,19 +223,19 @@ describe('construction time (#143)', () => {
 
   it('a build is laid down, paid at once, and joins the fleet when finished', () => {
     const roster = IJN;
-    const p = startBuild(ready(), roster, byId('yukikaze'), now)!;
-    expect(p.ships).not.toContain('yukikaze');
+    const p = startBuild(ready({ research: ['build_submarine'] }), roster, byId('etorofu'), now)!;
+    expect(p.ships).not.toContain('etorofu');
     expect(p.resources.steel).toBeLessThan(rich.steel);
-    expect(buildState(p, roster, byId('yukikaze'))).toBe('building');
-    expect(startBuild(p, roster, byId('yukikaze'), now)).toBeNull();
+    expect(buildState(p, roster, byId('etorofu'))).toBe('building');
+    expect(startBuild(p, roster, byId('etorofu'), now)).toBeNull();
     // One slip at the start: a second build waits.
-    expect(buildState(p, roster, byId('shimakaze'))).toBe('dock');
-    expect(buildStateLabel('dock', byId('shimakaze'))).toBe('建造ドック満杯');
-    const early = completeBuilds(p, roster, now + buildTimeMs(byId('yukikaze')) - 1);
+    expect(buildState(p, roster, byId('i19'))).toBe('dock');
+    expect(buildStateLabel('dock', byId('i19'))).toBe('建造ドック満杯');
+    const early = completeBuilds(p, roster, now + buildTimeMs(byId('etorofu')) - 1);
     expect(early.done).toEqual([]);
-    const done = completeBuilds(p, roster, now + buildTimeMs(byId('yukikaze')));
-    expect(done.done).toEqual(['yukikaze']);
-    expect(done.progress.ships).toContain('yukikaze');
+    const done = completeBuilds(p, roster, now + buildTimeMs(byId('etorofu')));
+    expect(done.done).toEqual(['etorofu']);
+    expect(done.progress.ships).toContain('etorofu');
     expect(done.progress.builds).toEqual([]);
   });
 
@@ -212,12 +243,12 @@ describe('construction time (#143)', () => {
     expect(buildDockCount(player())).toBe(1);
     expect(buildDockCount(player({ rankFloor: 6 }))).toBe(2);
     expect(buildDockCount(player({ rankFloor: 8 }))).toBe(3);
-    const p = startBuild(ready({ items: { fastRepair: 0, fastBuild: 1 } }), IJN, byId('yukikaze'), now)!;
-    const fast = fastBuild(p, IJN, 'yukikaze', now)!;
-    expect(fast.ships).toContain('yukikaze');
+    const p = startBuild(ready({ items: { fastRepair: 0, fastBuild: 1 } }), IJN, byId('etorofu'), now)!;
+    const fast = fastBuild(p, IJN, 'etorofu', now)!;
+    expect(fast.ships).toContain('etorofu');
     expect(fast.items.fastBuild).toBe(0);
-    expect(fastBuild(fast, IJN, 'yukikaze', now)).toBeNull();
-    expect(fastBuild({ ...p, items: { fastRepair: 0, fastBuild: 0 } }, IJN, 'yukikaze', now)).toBeNull();
+    expect(fastBuild(fast, IJN, 'etorofu', now)).toBeNull();
+    expect(fastBuild({ ...p, items: { fastRepair: 0, fastBuild: 0 } }, IJN, 'etorofu', now)).toBeNull();
   });
 
   it('finished builds join the fleet on load, even after the game was closed', () => {

@@ -27,6 +27,8 @@ export class SettingsScene extends Phaser.Scene {
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private resetArmed = false;
   private backupsOpen = false;
+  /** Backup row tapped once (#157); -1 = none */
+  private restoreArmed = -1;
   /** Nation reset (#129): the list is open, and which nation was tapped once */
   private nationResetOpen = false;
   private nationResetArmed: Nation | null = null;
@@ -145,18 +147,14 @@ export class SettingsScene extends Phaser.Scene {
     if (this.nationResetOpen) this.drawNationReset();
     // Backups taken before updates, imports and resets: tap one to restore it (#114).
     const backups = listBackups();
-    this.track(new UIButton(this, x + w / 2, y + BTN_H / 2, this.backupsOpen ? 'バックアップを閉じる' : `バックアップから復元 (${backups.length})`, () => {
-      this.backupsOpen = !this.backupsOpen;
+    // Opens a sheet over the page (#157): the list no longer runs off the bottom.
+    this.track(new UIButton(this, x + w / 2, y + BTN_H / 2, `バックアップから復元 (${backups.length})`, () => {
+      this.backupsOpen = true;
+      this.restoreArmed = -1;
       this.refresh();
     }, { variant: 'secondary', width: w, height: BTN_H, fontSize: 14 })).setEnabled(backups.length > 0);
     y += BTN_H + gap;
-    if (this.backupsOpen) {
-      for (const b of backups) {
-        this.track(new UIButton(this, x + w / 2, y + BTN_H / 2, backupLabel(b), () => this.restore(b), { variant: 'primary', width: w, height: BTN_H - 8, fontSize: 13 }));
-        y += BTN_H - 8 + 6;
-      }
-      y += 4;
-    }
+    if (this.backupsOpen) this.drawBackups(backups);
     if (this.status) this.track(this.add.text(x, y, this.status, textStyle(14, this.statusCss, { wordWrap: { width: w, useAdvancedWrap: true } })));
   }
 
@@ -235,9 +233,48 @@ export class SettingsScene extends Phaser.Scene {
     this.say('セーブコードを読み込みました (前のデータはバックアップに残っています)');
   }
 
+  /** Sheet of the backups (#157): the first tap arms a row, the second restores it. */
+  private drawBackups(backups: ISaveBackup[]): void {
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      return this.track(o);
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const bh = BTN_H - 4;
+    const gap = 10;
+    const w = IS_PORTRAIT ? CANVAS_W - 64 : 640;
+    const h = (IS_PORTRAIT ? 190 : 150) + backups.length * (bh + gap) + bh + 40;
+    const x = (CANVAS_W - w) / 2;
+    const y = Math.max(16, (CANVAS_H - h) / 2);
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 28, y + 22, 'バックアップから復元', eyebrowStyle(11)));
+    const note = this.restoreArmed >= 0
+      ? 'もう一度押すと、今の進行をこのバックアップで置き換えます (今の進行もバックアップに残ります)。'
+      : '更新・読み込み・リセットの前に自動で残したセーブです (最新 5 件)。選ぶと確認のあと復元します。';
+    add(this.add.text(x + 28, y + 52, note, textStyle(13, this.restoreArmed >= 0 ? Css.danger : Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
+    const top = y + (IS_PORTRAIT ? 140 : 108);
+    backups.forEach((b, i) => {
+      const armed = this.restoreArmed === i;
+      add(new UIButton(this, x + w / 2, top + i * (bh + gap) + bh / 2, armed ? `もう一度で復元: ${backupLabel(b)}` : backupLabel(b), () => {
+        if (this.restoreArmed !== i) {
+          this.restoreArmed = i;
+          this.refresh();
+          return;
+        }
+        this.restore(b);
+      }, { variant: armed ? 'danger' : 'primary', width: w - 56, height: bh, fontSize: 13 }));
+    });
+    add(new UIButton(this, x + w / 2, y + h - 20 - bh / 2, '閉じる', () => {
+      this.backupsOpen = false;
+      this.restoreArmed = -1;
+      this.refresh();
+    }, { variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: bh, fontSize: 15 }));
+  }
+
   private restore(b: ISaveBackup): void {
     this.resetArmed = false;
     this.backupsOpen = false;
+    this.restoreArmed = -1;
     if (!restoreBackup(b)) return this.say('このバックアップは読み込めませんでした。', Css.danger);
     this.say(`バックアップ (${backupLabel(b)}) を復元しました`);
   }

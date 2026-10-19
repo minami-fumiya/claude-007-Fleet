@@ -4,9 +4,10 @@ import {
 } from '@/systems/CaptainSystem';
 import { combineModifiers } from '@/systems/CustomizationSystem';
 import { modifierBreakdown } from '@/systems/EncyclopediaSystem';
-import { ALL_CAPTAINS, DUPLICATE_CAPTAIN_XP, duplicateCaptain, nationCaptains, nextCaptain, recruitCaptain, starterCaptain } from '@/systems/CaptainRoster';
+import { ALL_CAPTAINS, DUPLICATE_CAPTAIN_XP, duplicateCaptain, RECRUIT_ORDER, nationCaptains, nextCaptain, recruitCaptain, starterCaptain } from '@/systems/CaptainRoster';
 import { CaptainSkill, ICaptainData } from '@/types/Captain';
 import { Nation } from '@/types/Nation';
+import { ShipClass } from '@/types/ShipClass';
 import { emptySave, parseSave, switchNation } from '@/utils/ProgressStore';
 
 const data: ICaptainData = { id: 'c', name: '試験', nation: Nation.IJN, skill: CaptainSkill.Gunnery };
@@ -54,12 +55,19 @@ describe('traits (#45)', () => {
 });
 
 describe('captain roster (#44)', () => {
-  it('a new nation starts with its first captain; recruits come in data order', () => {
+  it('a new nation starts with a destroyer captain; recruits suit the classes the nation owns (#159)', () => {
     const save = switchNation(emptySave(), Nation.USN, 'fletcher', 0);
     const first = starterCaptain('USN')!;
+    expect(first.skill).toBe(CaptainSkill.Torpedo);
     expect(save.nations.USN!.captains).toEqual([first.id]);
     const r = recruitCaptain('USN', [first.id]);
     expect(r.joined?.id).toBe(nationCaptains('USN')[1].id);
+    // Destroyers only: the next destroyer specialists; a carrier brings the aviator forward.
+    const dd = nationCaptains('USN').filter((c) => [CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night].includes(c.skill)).map((c) => c.id);
+    expect(nextCaptain('USN', [first.id], [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.ASW);
+    expect(nextCaptain('USN', dd, [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.Recon);
+    expect(nextCaptain('USN', [first.id], [ShipClass.Carrier])?.skill).toBe(CaptainSkill.Aviation);
+    expect(nationCaptains('USN').map((c) => c.skill)).toEqual(RECRUIT_ORDER);
     const all = nationCaptains('USN').map((c) => c.id);
     expect(nextCaptain('USN', all)).toBeUndefined();
     expect(recruitCaptain('USN', all).joined).toBeNull();

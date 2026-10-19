@@ -5,9 +5,9 @@ import {
 } from '@/systems/ResourceSystem';
 import { paySortie, settleBattle, sortieBlockers } from '@/systems/ProgressionSystem';
 import { repairCost, startRepair, completeRepairs, SUNK_HP_FRACTION } from '@/systems/DockSystem';
-import { buildCost, buildShip, grantShip, ownedIds, ownedShips, rewardShipFor, starterShip } from '@/systems/ShipyardSystem';
+import { buildCost, buildShip, grantShip, isRewardOnly, ownedIds, ownedShips, rewardShipFor, starterShip } from '@/systems/ShipyardSystem';
 import { addMerit, addRankStats, fleetSlots, meritFor, rankOf } from '@/systems/RankSystem';
-import { areasOf, enemyShips, isFreeArea, recordClear } from '@/systems/CampaignSystem';
+import { areasOf, enemyShips, isFreeArea, recordClear, theatersFor } from '@/systems/CampaignSystem';
 import { addResources, battleReward, resources, sortieCost } from '@/systems/ResourceSystem';
 import { IResources } from '@/types/Progression';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -98,7 +98,8 @@ function clear(p: IProgress, a: ICampaignArea, roster: IShipData[]): IProgress {
   // BattleScene counts the win for the promotion missions (#142) before adding merit.
   next = addRankStats(next, { campaignWin: 1, sink: a.enemy.ships.length });
   next = addMerit(next, meritFor({ victory: true, campaign: true, firstClear: rec.firstClear, enemiesSunk: a.enemy.ships.length })).progress;
-  const ship = rewardShipFor(a.rewardShip, roster, ownedIds(next, roster), a.id);
+  // An S-rank win also brings the area's reward-only ship, if it has one (#160).
+  const ship = rewardShipFor(roster, ownedIds(next, roster), a.id);
   if (ship) next = grantShip(next, roster, ship.id);
   return next;
 }
@@ -122,7 +123,9 @@ describe('a brand-new player can always progress', () => {
       }
 
       // 2) Worst case: the starter is sunk in the first area and comes home 大破 with no resources.
-      const first = areasOf(data, data.theaters[0].id)[0];
+      // The nation's own first theater: its first area grants a reward-only destroyer (#160).
+      const home = theatersFor(data, nation)[0].id;
+      const first = areasOf(data, home)[0];
       p = settleBattle(paySortie(p, fleet, { area: first })!, { victory: false, enemiesSunk: 0, planesLost: 0, ships: [{ shipId: fleet[0].id, hpFraction: 0, sunk: true }] }).progress;
       expect(p.damage[fleet[0].id]).toBe(SUNK_HP_FRACTION);
       // An exercise still works (full HP, free, docked or not).
@@ -143,22 +146,22 @@ describe('a brand-new player can always progress', () => {
       const ex = settleBattle(p, { victory: true, enemiesSunk: 1, planesLost: 0, ships: [] }, { exercise: true });
       expect(ex.reward.fuel).toBeGreaterThan(0);
 
-      // 4) Clearing the first area: merit for 少尉, two slots, and a second ship.
+      // 4) Clearing the first area: merit for 少尉 and two slots. Opening areas grant no reward-only ship (#160).
       p = clear(p, first, roster);
       expect(rankOf(p).name).toBe('少尉');
       expect(fleetSlots(p)).toBe(2);
+      expect(ownedShips(p, roster)).toHaveLength(1);
+
+      // 5) The first-clear resources pay for a second destroyer (grade 0, no class research); every nation keeps one (#160).
+      const buildable = roster.find((s) => s.shipClass === ShipClass.Destroyer && !ownedIds(p, roster).includes(s.id) && !isRewardOnly(s));
+      expect(buildable).toBeDefined();
+      expect(canAfford(p.resources, buildCost(buildable!))).toBe(true);
+      p = buildShip(p, roster, buildable!)!;
       expect(ownedShips(p, roster)).toHaveLength(2);
       // The next area (two enemies) is affordable with two ships.
-      const second = areasOf(data, data.theaters[0].id)[1];
+      const second = areasOf(data, home)[1];
       expect(second.enemy.ships).toHaveLength(2);
       expect(paySortie(p, ownedShips(p, roster), { area: second })).not.toBeNull();
-
-      // 5) The first-clear resources pay for a destroyer or submarine build too (grade 0, no class research).
-      const buildable = roster.find((s) => s.shipClass === ShipClass.Destroyer && !ownedIds(p, roster).includes(s.id));
-      if (buildable) {
-        expect(canAfford(p.resources, buildCost(buildable))).toBe(true);
-        expect(buildShip(p, roster, buildable)).not.toBeNull();
-      }
     });
   }
 });

@@ -117,8 +117,8 @@ export function grantShip(progress: IProgress, roster: IShipData[], id: string):
 }
 
 /**
- * Reward-only ships (報酬限定艦, #39): nation → campaign area → ship. These can't be built; the area's first clear
- * grants them (each nation's famous ships, from its theaters' last areas).
+ * Reward-only ships (報酬限定艦, #39 #160): nation → campaign area → ship. These can't be built; the area's first clear
+ * grants them. Each nation keeps its destroyers and submarines (and, with many of a class, one of it) buildable.
  */
 export const REWARD_SHIPS = rewardShipData as Partial<Record<string, Record<string, string>>>;
 
@@ -242,17 +242,10 @@ export function buildShip(progress: IProgress, roster: IShipData[], ship: IShipD
 }
 
 /**
- * The ship a campaign area's first clear grants this nation: its reward-only ship for that area (#39) when it does
- * not own it yet, else the cheapest buildable historical ship of the area's `rewardShip` class it does not own,
- * else its cheapest unowned buildable historical ship of any class.
+ * The ship a campaign area's first clear grants this nation: its reward-only ship for that area when it does not own
+ * it yet. Every first-clear ship is reward-only (#160); an area without one for the nation grants resources only.
  */
-export function rewardShipFor(rewardClass: ShipClass | undefined, roster: IShipData[], owned: string[], areaId?: string): IShipData | undefined {
-  const special = areaId && roster[0] ? REWARD_SHIPS[roster[0].nation]?.[areaId] : undefined;
-  const reward = special ? roster.find((s) => s.id === special && !owned.includes(s.id)) : undefined;
-  if (reward) return reward;
-  if (!rewardClass) return undefined;
-  const candidates = roster.filter((s) => !s.fictional && !owned.includes(s.id) && !isRewardOnly(s));
-  const total = (s: IShipData): number => RESOURCE_KEYS.reduce((sum, key) => sum + buildCost(s)[key], 0);
-  const cheapest = (list: IShipData[]): IShipData | undefined => [...list].sort((a, b) => total(a) - total(b))[0];
-  return cheapest(candidates.filter((s) => s.shipClass === rewardClass)) ?? cheapest(candidates);
+export function rewardShipFor(roster: IShipData[], owned: string[], areaId: string): IShipData | undefined {
+  const id = roster[0] ? REWARD_SHIPS[roster[0].nation]?.[areaId] : undefined;
+  return id ? roster.find((s) => s.id === id && !owned.includes(s.id)) : undefined;
 }

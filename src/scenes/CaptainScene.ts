@@ -5,13 +5,15 @@ import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
-  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
+  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
   LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, learnSlots, MAX_LEVEL, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { canAfford, formatResources, pay } from '@/systems/ResourceSystem';
-import { loadSave, saveSave } from '@/utils/ProgressStore';
+import { loadProgress, loadSave, saveSave } from '@/utils/ProgressStore';
+import { DataLoader } from '@/utils/DataLoader';
+import { ownedShips } from '@/systems/ShipyardSystem';
 import { Aptitude, CaptainAbility, CaptainSkill, ICaptain } from '@/types/Captain';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
@@ -196,7 +198,12 @@ export class CaptainScene extends Phaser.Scene {
       const name = this.track(this.add.text(x + i * aw, y, CLASS_JA[cls].slice(0, 2), textStyle(13, Css.muted)));
       this.track(this.add.text(name.x + name.width + 6, y - 2, apt, textStyle(16, APTITUDE_CSS[apt], { fontStyle: 'bold' })));
     });
-    y += 34;
+    y += 30;
+    // Recommended ships (#164): the owned ships this captain suits best.
+    const roster = DataLoader.getRegistry(this).byNation(c.nation);
+    const rec = recommendedShips(c, ownedShips(loadProgress(), roster)).map((s) => s.name.replace(/\s*\(.*\)\s*$/, ''));
+    this.track(this.add.text(x, y, `推奨の艦: ${rec.length > 0 ? rec.join('・') : '適性 S の艦をまだ持っていません'}`, textStyle(12, rec.length > 0 ? Css.text : Css.dim, { wordWrap: { width: colW, useAdvancedWrap: true } })));
+    y += 30;
 
     // Second column (landscape) or further down (portrait): the bonus breakdown and traits.
     const bx = IS_PORTRAIT ? x : d.x + 480;

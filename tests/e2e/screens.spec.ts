@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.19.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.20.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -105,14 +105,77 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
   }, key);
 }
 
+/**
+ * Visible texts that overlap another visible text (#163): "a × b" for each pair crossing by more than a few pixels both
+ * ways. Only texts at the same depth count: a sheet over the screen, or content scrolling under a fixed bar, is meant
+ * to cover what lies beneath. Masked (scroll list) texts are left out like in overflowingTexts.
+ */
+async function overlappingTexts(page: Page, key: string): Promise<string[]> {
+  return page.evaluate((k) => {
+    const g = (window as unknown as { game: Phaser.Game }).game;
+    const scene = g.scene.getScene(k);
+    const boxes: Array<{ text: string; b: Phaser.Geom.Rectangle; depth: number }> = [];
+    const visit = (o: Phaser.GameObjects.GameObject, visible: boolean, depth: number): void => {
+      const v = visible && (o as unknown as { visible?: boolean }).visible !== false && ((o as unknown as { alpha?: number }).alpha ?? 1) > 0.05;
+      if ((o as unknown as { mask?: unknown }).mask) return;
+      if (o.type === 'Container') {
+        (o as Phaser.GameObjects.Container).list.forEach((c) => visit(c, v, depth));
+        return;
+      }
+      const t = o as Phaser.GameObjects.Text;
+      if (!v || o.type !== 'Text' || t.text.trim() === '') return;
+      boxes.push({ text: t.text.replace(/\n/g, ' ').slice(0, 24), b: t.getBounds(), depth });
+    };
+    scene.children.list.forEach((o) => visit(o, true, (o as unknown as { depth: number }).depth));
+    const out: string[] = [];
+    const SLACK = 3;
+    boxes.forEach((a, i) => {
+      for (const c of boxes.slice(i + 1)) {
+        if (c.depth !== a.depth) continue;
+        const w = Math.min(a.b.right, c.b.right) - Math.max(a.b.left, c.b.left);
+        const h = Math.min(a.b.bottom, c.b.bottom) - Math.max(a.b.top, c.b.top);
+        if (w > SLACK && h > SLACK) out.push(`${a.text} × ${c.text}`);
+      }
+    });
+    return out;
+  }, key);
+}
+
 test.describe('screens', () => {
   test('every menu screen opens without errors or text off the canvas', async ({ page }, info) => {
+    // Fourteen screens, each checked for overflow and overlaps.
+    test.setTimeout(240_000);
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout);
     for (const key of SCREENS) {
       await open(page, key);
       expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
+      expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('a save full of ships, captains and cleared areas still fits every screen (#163)', async ({ page }, info) => {
+    // Fourteen screens, each checked for overflow and overlaps.
+    test.setTimeout(240_000);
+    const layout = info.project.metadata.layout as string;
+    const read = (f: string): { ships?: Array<{ id: string; fictional?: boolean }> } => JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', f), 'utf8'));
+    const ships = read('ships/ijn.json').ships!.filter((s) => !s.fictional).map((s) => s.id);
+    const captains = (JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', 'captains.json'), 'utf8')) as { captains?: Array<{ id: string; nation: string }> } | Array<{ id: string; nation: string }>);
+    const ijnCaptains = (Array.isArray(captains) ? captains : captains.captains ?? []).filter((c) => c.nation === 'IJN').map((c) => c.id);
+    const campaign = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'm1', 'm2', 'm3', 'm4'];
+    const heavy = {
+      ...SAVE,
+      version: 7,
+      seenHelp: SCREENS,
+      nations: { IJN: { ...SAVE.nations.IJN, ships, captains: ijnCaptains, captainXp: Object.fromEntries(ijnCaptains.map((id, i) => [id, i * 40_000])), campaign, merit: 20_000, proficiency: Object.fromEntries(ships.map((id) => [id, 80])) } },
+    };
+    const errors = await boot(page, layout, heavy);
+    for (const key of SCREENS) {
+      await open(page, key);
+      expect.soft(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
+      expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
     }
     expect(errors).toEqual([]);
   });
@@ -284,6 +347,7 @@ test.describe('screens', () => {
     await open(page, 'CaptainScene', { id: 'ijn_sakai' });
     await page.screenshot({ path: info.outputPath('captain.png') });
     expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CaptainScene'), 'overlaps').toEqual([]);
     type Scene = { openPicker(c: unknown, slot: number): void; confirmLearn(c: unknown, slot: number, s: string): void; applyLearn(c: unknown, slot: number, s: string): void; owned(): Array<{ id: string }> };
     const call = (fn: string, slot: number, skill?: string) => page.evaluate(([f, i, k]) => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as Scene & Record<string, (...a: unknown[]) => void>;
@@ -316,6 +380,7 @@ test.describe('screens', () => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: info.outputPath('customize-list.png') });
     expect(await overflowingTexts(page, 'CustomizationScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CustomizationScene'), 'overlaps').toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -325,21 +390,21 @@ test.describe('screens', () => {
     const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { builds: Array<{ shipId: string }>; ships: string[]; items: { fastBuild: number } });
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
-      const target = s.classShips().find((x) => x.id === 'shimakaze');
+      const target = s.classShips().find((x) => x.id === 'etorofu');
       s.build(target);
     });
     let np = await read();
-    expect(np.builds.map((b) => b.shipId)).toEqual(['shimakaze']);
-    expect(np.ships).not.toContain('shimakaze');
+    expect(np.builds.map((b) => b.shipId)).toEqual(['etorofu']);
+    expect(np.ships).not.toContain('etorofu');
     await page.waitForTimeout(300);
     await page.screenshot({ path: info.outputPath('shipyard-building.png') });
     // Tapping it again spends a 高速建造材 (migrated saves get two).
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
-      s.build(s.classShips().find((x) => x.id === 'shimakaze'));
+      s.build(s.classShips().find((x) => x.id === 'etorofu'));
     });
     np = await read();
-    expect(np.ships).toContain('shimakaze');
+    expect(np.ships).toContain('etorofu');
     expect(np.items.fastBuild).toBe(1);
     await open(page, 'HomeScene');
     await page.screenshot({ path: info.outputPath('home-docks.png') });
@@ -347,6 +412,7 @@ test.describe('screens', () => {
     await open(page, 'RecordScene', { view: 'ledger' });
     await page.screenshot({ path: info.outputPath('ledger.png') });
     expect(await overflowingTexts(page, 'RecordScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'RecordScene'), 'overlaps').toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -363,6 +429,26 @@ test.describe('screens', () => {
     await page.screenshot({ path: info.outputPath('nations-locked.png') });
     const current = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).current);
     expect(current).toBe('IJN');
+    expect(errors).toEqual([]);
+  });
+
+  test('the backup list opens as a sheet that fits the screen (#157)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: [] });
+    await page.evaluate(() => {
+      const raw = localStorage.getItem('ww2fleet.progress.v2')!;
+      const list = Array.from({ length: 5 }, (_, i) => ({ at: Date.now() - i * 3_600_000, version: 9, reason: i % 2 ? 'migration' : 'reset', raw }));
+      localStorage.setItem('ww2fleet.progress.backups', JSON.stringify(list));
+    });
+    await open(page, 'SettingsScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('SettingsScene') as unknown as { backupsOpen: boolean; refresh(): void };
+      s.backupsOpen = true;
+      s.refresh();
+    });
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'SettingsScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'SettingsScene')).toEqual([]);
+    await page.screenshot({ path: info.outputPath('backups.png') });
     expect(errors).toEqual([]);
   });
 
@@ -428,6 +514,7 @@ test.describe('screens', () => {
     await open(page, 'CampaignMapScene');
     await page.screenshot({ path: info.outputPath('sortie-resume.png') });
     expect(await overflowingTexts(page, 'CampaignMapScene')).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'CampaignMapScene'), 'overlaps').toEqual([]);
     await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { resume(): void }).resume());
     await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
     const node = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown } }).battleData.sortie);
