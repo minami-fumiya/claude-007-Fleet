@@ -283,6 +283,22 @@ test.describe('screens', () => {
       return after - before;
     });
     expect(paused).toBe(0);
+    // The pause sheet shows the objective and progress (#189), inside the sheet and above its buttons.
+    const sheet = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as {
+        setPaused(p: boolean): void; pauseLayer: Phaser.GameObjects.GameObject[];
+      };
+      b.setPaused(true);
+      const info = b.pauseLayer.find((o) => o.type === 'Text' && (o as Phaser.GameObjects.Text).text.startsWith('作戦目標')) as Phaser.GameObjects.Text;
+      const buttons = b.pauseLayer.filter((o) => o.type === 'Container') as Phaser.GameObjects.Container[];
+      const r = info.getBounds();
+      return { text: info.text, bottom: r.bottom, firstButtonTop: Math.min(...buttons.map((c) => c.y - c.height / 2)) };
+    });
+    await page.screenshot({ path: info.outputPath('battle-paused.png') });
+    expect(sheet.text).toContain('経過');
+    expect(sheet.text).toContain('敵艦  撃沈');
+    expect(sheet.bottom).toBeLessThan(sheet.firstButtonTop);
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { setPaused(p: boolean): void }).setPaused(false));
     await page.waitForTimeout(1500);
     await page.screenshot({ path: info.outputPath('battle.png') });
     expect(errors).toEqual([]);

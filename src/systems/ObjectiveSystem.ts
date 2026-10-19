@@ -100,6 +100,25 @@ export function objectiveStatus(objective: Objective, s: IObjectiveState): strin
 }
 
 /**
+ * What the pause sheet shows (#189): the objective, the battle clock (with its limit), both fleets' state and the
+ * objective's own progress. `goal` is the objective as the map words it ("敵旗艦の撃沈 — 突入地点 (6:00 以内)").
+ */
+export function pauseLines(objective: Objective, goal: string, s: IObjectiveState, fleet: { alive: number; total: number }): string[] {
+  const limit = s.timeLimitSec ?? 0;
+  const elapsed = s.elapsedSec ?? 0;
+  const lines = [
+    `作戦目標  ${goal}`,
+    `経過  ${clock(elapsed)}${limit > 0 ? `  /  制限 ${clock(limit)}  (残り ${clock(limit - elapsed)})` : ''}`,
+    `敵艦  撃沈 ${s.enemiesTotal - s.enemiesAlive} / ${s.enemiesTotal}`,
+    `味方  健在 ${fleet.alive} / ${fleet.total}${s.flagshipAlive ? '' : '  (旗艦喪失)'}`,
+  ];
+  // The time limit is already on the clock line.
+  const status = objectiveStatus(objective, { ...s, timeLimitSec: 0 }).trim();
+  if (status) lines.push(`進捗  ${status}`);
+  return lines;
+}
+
+/**
  * Throttle that brings a ship `distance` px away to its goal in `arrivalSec` (velocity = speed × throttle px/s).
  * A Delay's target (#40) used to run in at full speed and reach the zone within seconds.
  */

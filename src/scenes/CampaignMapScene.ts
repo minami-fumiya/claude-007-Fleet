@@ -43,7 +43,7 @@ export const OBJECTIVE_LABEL: Record<Objective, string> = {
 };
 
 /** "敵旗艦の撃沈 (6:00 以内)" — the objective with its target, zone and time limit (#40). */
-function objectiveText(a: ICampaignArea): string {
+export function objectiveText(a: ICampaignArea): string {
   const side = a.side;
   if (!side) return OBJECTIVE_LABEL[a.objective];
   const label = side.targetLead && a.objective === Objective.SinkTargets ? '敵旗艦の撃沈' : OBJECTIVE_LABEL[a.objective];

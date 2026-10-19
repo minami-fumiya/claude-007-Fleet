@@ -71,7 +71,8 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
 import { campaignSide, recordClear } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
-import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus } from '@/systems/ObjectiveSystem';
+import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
+import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
@@ -1515,18 +1516,32 @@ export class BattleScene extends Phaser.Scene {
     };
     // Swallows taps so the sea and HUD underneath don't react.
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.6).setOrigin(0, 0).setInteractive());
-    const w = IS_PORTRAIT ? CANVAS_W - 96 : 420;
-    const h = IS_PORTRAIT ? 380 : 300;
+    const w = IS_PORTRAIT ? CANVAS_W - 64 : 520;
+    const h = IS_PORTRAIT ? 520 : 440;
     const x = (CANVAS_W - w) / 2;
     const y = (CANVAS_H - h) / 2;
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
-    add(this.add.text(CANVAS_W / 2, y + 48, '一時停止中', displayStyle(IS_PORTRAIT ? 30 : 26)).setOrigin(0.5));
+    add(this.add.text(CANVAS_W / 2, y + 44, '一時停止中', displayStyle(IS_PORTRAIT ? 30 : 26)).setOrigin(0.5));
+    // The objective and how the battle stands (#189).
+    const fleet = this.friendlies();
+    const lines = pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length });
+    add(this.add.text(x + 32, y + 84, lines.join('\n'), textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { lineSpacing: 8, wordWrap: { width: w - 64, useAdvancedWrap: true } })));
     const bh = IS_PORTRAIT ? 72 : 56;
-    add(new UIButton(this, CANVAS_W / 2, y + h / 2 + 8, '再開  ▶', () => this.setPaused(false), { variant: 'gold', width: w - 64, height: bh, fontSize: 20 }));
-    add(new UIButton(this, CANVAS_W / 2, y + h - bh / 2 - 28, '撤退する', () => {
+    const retreatH = bh - 8;
+    const retreatY = y + h - retreatH / 2 - 28;
+    add(new UIButton(this, CANVAS_W / 2, retreatY - retreatH / 2 - 16 - bh / 2, '再開  ▶', () => this.setPaused(false), { variant: 'gold', width: w - 64, height: bh, fontSize: 20 }));
+    add(new UIButton(this, CANVAS_W / 2, retreatY, '撤退する', () => {
       this.setPaused(false);
       this.scene.start(SceneKeys.FLEET_BUILDER);
-    }, { variant: 'secondary', width: w - 64, height: bh - 8, fontSize: 16 }));
+    }, { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
+  }
+
+  /** The objective in the map's words (#189): the area's, a scenario side's with its brief, or a plain fight's. */
+  private goalText(): string {
+    if (this.scenarioSetup) return `${OBJECTIVE_LABEL[this.objective]} — ${this.scenarioSetup.side.brief}`;
+    const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
+    if (area && this.side && (this.battleData?.sortie?.boss ?? true)) return objectiveText(area);
+    return OBJECTIVE_LABEL[this.objective];
   }
 
   private triggerGameOver(victory: boolean): void {
