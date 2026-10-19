@@ -1,3 +1,4 @@
+import { researchMedal } from './MedalGate';
 import { IShipModifiers, IUpgradeData } from '@/types/Modifiers';
 import { IShipData } from '@/types/Ship';
 import { IResources, ITechNode, TechBranch } from '@/types/Progression';
@@ -73,14 +74,20 @@ export function prerequisitesMet(node: ITechNode, done: string[]): boolean {
   return node.requires.every((r) => done.includes(r));
 }
 
-/** `costMul` is the current base's research multiplier (#88). */
-export function canResearch(node: ITechNode, done: string[], have: IResources, costMul = 1): boolean {
-  return !done.includes(node.id) && prerequisitesMet(node, done) && canAfford(have, scaleCost(node.cost, costMul));
+/** Whether the medal the project needs (#169) is held; `medals` undefined skips the check (tests of costs alone). */
+export function medalMet(node: Pick<ITechNode, 'id'>, medals?: readonly string[]): boolean {
+  const need = researchMedal(node.id);
+  return !need || !medals || medals.includes(need);
+}
+
+/** `costMul` is the current base's research multiplier (#88); `medals` the admiral's (#169). */
+export function canResearch(node: ITechNode, done: string[], have: IResources, costMul = 1, medals?: readonly string[]): boolean {
+  return !done.includes(node.id) && prerequisitesMet(node, done) && medalMet(node, medals) && canAfford(have, scaleCost(node.cost, costMul));
 }
 
 /** Pays for and completes `node`. Returns null if it can't be researched now. */
-export function research(node: ITechNode, done: string[], have: IResources, costMul = 1): { done: string[]; resources: IResources } | null {
-  if (!canResearch(node, done, have, costMul)) return null;
+export function research(node: ITechNode, done: string[], have: IResources, costMul = 1, medals?: readonly string[]): { done: string[]; resources: IResources } | null {
+  if (!canResearch(node, done, have, costMul, medals)) return null;
   const left = pay(have, scaleCost(node.cost, costMul));
   return left ? { done: [...done, node.id], resources: left } : null;
 }

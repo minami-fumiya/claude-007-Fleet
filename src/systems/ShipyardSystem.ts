@@ -8,6 +8,7 @@ import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
 import { assignShips, buildMultiplier, currentBase, currentBaseId, scaleCost } from './BaseSystem';
 import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
+import { hasMedal, medalName, shipMedal } from './MedalGate';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -132,7 +133,7 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
-export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'resources' | 'dock' | 'ready';
+export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'medal' | 'resources' | 'dock' | 'ready';
 
 /** Why a ship can or can't be built right now; `techNames` maps research ids to their display names. */
 export function buildState(progress: IProgress, roster: IShipData[], ship: IShipData): BuildState {
@@ -143,6 +144,8 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
+  // The biggest battleships and carriers, and the fictional designs, need a medal too (#169).
+  if (!hasMedal(progress.record ?? { medals: [] }, shipMedal(ship, shipGrade(ship)))) return 'medal';
   if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
   if (buildsHere(progress).length >= buildDockCount(progress)) return 'dock';
   return 'ready';
@@ -164,6 +167,7 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
     }
     case 'fictional': return `要研究: ${techNames[FICTIONAL_TECH] ?? FICTIONAL_TECH}`;
     case 'rank': return `要階級: ${gradeRankName(shipGrade(ship))}`;
+    case 'medal': return `要勲章: ${medalName(shipMedal(ship, shipGrade(ship)) ?? '')}`;
     case 'resources': return '資源不足';
     case 'ready': return '建造可 ›';
   }

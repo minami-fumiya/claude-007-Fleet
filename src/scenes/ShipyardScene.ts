@@ -4,12 +4,13 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
-import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
 import { buildTimeMul } from '@/systems/FacilitySystem';
 import { currentBaseId } from '@/systems/BaseSystem';
-import { availableShips, canResearch, prerequisitesMet, research } from '@/systems/ResearchSystem';
+import { availableShips, canResearch, medalMet, prerequisitesMet, research } from '@/systems/ResearchSystem';
+import { medalName, researchMedal } from '@/systems/MedalGate';
 import { formatResources } from '@/systems/ResourceSystem';
 import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
 import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
@@ -63,6 +64,7 @@ export class ShipyardScene extends Phaser.Scene {
   create(): void {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
+    awardPendingMedals();
     this.guide = new TutorialGuide(this);
     this.tabs = [];
     this.layer = [];
@@ -147,9 +149,13 @@ export class ShipyardScene extends Phaser.Scene {
     add(this.add.text(info.x + 16, info.y + info.h / 2, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     if (node && !progress.research.includes(node.id)) {
       const costMul = researchMultiplier(baseOfProgress(progress));
-      const ready = canResearch(node, progress.research, progress.resources, costMul);
+      const ready = canResearch(node, progress.research, progress.resources, costMul, progress.record.medals);
       const pre = prerequisitesMet(node, progress.research);
-      const label = pre ? `${node.name}を研究  ${formatResources(scaleCost(node.cost, costMul))}` : `${node.name}: 前提 ${node.requires.map((r) => TECH_NAMES[r] ?? r).join('・')}`;
+      // A medal the build research needs (#169) shows instead of the cost until it is earned.
+      const medal = medalMet(node, progress.record.medals) ? undefined : researchMedal(node.id);
+      const label = !pre ? `${node.name}: 前提 ${node.requires.map((r) => TECH_NAMES[r] ?? r).join('・')}`
+        : medal ? `${node.name}: 要勲章「${medalName(medal)}」`
+          : `${node.name}を研究  ${formatResources(scaleCost(node.cost, costMul))}`;
       const bw = IS_PORTRAIT ? 400 : 440;
       add(new UIButton(this, info.x + info.w - 10 - bw / 2, info.y + info.h / 2, label, () => this.research(node), {
         variant: ready ? 'gold' : 'secondary', width: bw, height: info.h - 12, fontSize: 12,
@@ -268,7 +274,7 @@ export class ShipyardScene extends Phaser.Scene {
 
   private research(node: ITechNode): void {
     const progress = loadProgress();
-    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)));
+    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)), progress.record.medals);
     if (!result) return;
     saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();

@@ -5,6 +5,7 @@ import {
   branchNodes,
   branchProgress,
   canResearch,
+  medalMet,
   prerequisitesMet,
   regenMultiplier,
   researchModifiers,
@@ -12,6 +13,7 @@ import {
   TECH_BRANCHES,
 } from '@/systems/ResearchSystem';
 import { describeModifiers } from '@/systems/CustomizationSystem';
+import { medalName, researchMedal } from '@/systems/MedalGate';
 import { canAfford, formatResources, scaleCost } from '@/systems/ResourceSystem';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
@@ -60,7 +62,7 @@ export class ResearchView {
     private readonly scene: Phaser.Scene,
     private readonly area: IResearchViewArea,
     private readonly tree: ITechNode[],
-    private readonly state: () => { done: string[]; resources: IResources; costMul?: number },
+    private readonly state: () => { done: string[]; resources: IResources; costMul?: number; medals?: string[] },
     private readonly onResearch: (node: ITechNode) => void,
   ) {
     const rows = Math.ceil(TECH_BRANCHES.length / TAB_COLS);
@@ -137,7 +139,7 @@ export class ResearchView {
   }
 
   refresh(): void {
-    const { done, resources, costMul = 1 } = this.state();
+    const { done, resources, costMul = 1, medals } = this.state();
     TECH_BRANCHES.forEach((b, i) => {
       const p = branchProgress(this.tree, b.id, done);
       const tab = this.tabs[i];
@@ -147,10 +149,14 @@ export class ResearchView {
     this.summary.setText(this.summaryText(done));
     for (const c of this.cards) {
       const finished = done.includes(c.node.id);
-      const ready = canResearch(c.node, done, resources, costMul);
-      const met = prerequisitesMet(c.node, done);
-      const label = finished ? '研究済' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
+      const ready = canResearch(c.node, done, resources, costMul, medals);
+      // A medal the project needs (#169) counts as a prerequisite and is named with them.
+      const medal = researchMedal(c.node.id);
+      const medalOk = medalMet(c.node, medals);
+      const met = prerequisitesMet(c.node, done) && medalOk;
+      const label = finished ? '研究済' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
       c.state.setText(label).setColor(finished ? Css.gold : ready ? Css.cyan : met ? Css.muted : Css.danger);
+      c.requires.setText(medal && !finished ? `${this.requiresText(c.node)}・勲章「${medalName(medal)}」` : this.requiresText(c.node));
       c.requires.setColor(finished || met ? Css.dim : Css.danger);
       c.frame.clear();
       drawPanel(c.frame, 0, 0, c.w, c.h, {
