@@ -1775,7 +1775,8 @@ export class BattleScene extends Phaser.Scene {
     const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
     const night = this.conditions.time === TimeOfDay.Night;
     const won = (b: boolean): number => (victory && b ? 1 : 0);
-    const theaterWin: Partial<Record<string, QuestEvent>> = { pacific: 'winPacific', atlantic: 'winAtlantic', mediterranean: 'winMediterranean', baltic: 'winBaltic', blacksea: 'winBlackSea' };
+    const theaterWin: Partial<Record<string, QuestEvent>> = { pacific: 'winPacific', atlantic: 'winAtlantic', mediterranean: 'winMediterranean', baltic: 'winBaltic', blacksea: 'winBlackSea',
+      north_pacific: 'winNorthPacific', south_atlantic: 'winSouthAtlantic', indian: 'winIndian', arctic: 'winArctic' };
     const theaterEvent = area ? theaterWin[area.theater] : undefined;
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],

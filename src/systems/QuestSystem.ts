@@ -31,6 +31,8 @@ export type QuestEvent =
   | 'refitBranch'
   // the Black Sea theater and training areas (#202)
   | 'winBlackSea' | 'trainingWin'
+  // The seas added in 0.0.35 (#250)
+  | 'winNorthPacific' | 'winSouthAtlantic' | 'winIndian' | 'winArctic'
   // 0.0.31: quests claimed (#180)
   | 'questClaim'
   // 0.0.32: shop purchases (#183)

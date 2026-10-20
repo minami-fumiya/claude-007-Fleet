@@ -15,6 +15,9 @@ import { CHANGELOG, IChangelogEntry, unseenEntries } from '@/systems/Changelog';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
+import { sevenSeasWon } from '@/systems/CampaignSystem';
+import { ICampaignData } from '@/types/Campaign';
+import campaignData from '@/data/campaign.json';
 
 const CARD = IS_PORTRAIT
   ? { x: 32, y: 48, w: CANVAS_W - 64, h: CANVAS_H - 96 }
@@ -29,7 +32,6 @@ const TAGLINE = '艦隊を編成し、七つの海の制海権を握れ。';
 /** English line over the title (#198) */
 const EN_TITLE = 'SEVEN  SEAS  FLEET';
 
-const INFO_TILES = titleTiles(IS_PORTRAIT);
 
 /** "v0.0.17-alpha", plus "preview" on a Vercel PR preview (its own saves). */
 export function versionLabel(host: string): string {
@@ -232,8 +234,9 @@ export class MainMenuScene extends Phaser.Scene {
   /** The three info tiles as one strip (#198): the title and the sea come first. */
   private buildInfoStrip(x: number, y: number, w: number, h: number): void {
     addPanel(this, x, y, w, h, { radius: 14, fillAlpha: 0.5 });
-    const cw = w / INFO_TILES.length;
-    INFO_TILES.forEach((tile, i) => {
+    const tiles = titleTiles(IS_PORTRAIT, sevenSeasWon(campaignData as unknown as ICampaignData, loadSave().nations));
+    const cw = w / tiles.length;
+    tiles.forEach((tile, i) => {
       const tx = x + i * cw + cw / 2;
       this.add.text(tx, y + h / 2 - (IS_PORTRAIT ? 14 : 10), tile.title, textStyle(IS_PORTRAIT ? 14 : 13, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5);
       const body = this.add.text(tx, y + h / 2 + (IS_PORTRAIT ? 14 : 12), tile.body, textStyle(11, Css.muted)).setOrigin(0.5);
