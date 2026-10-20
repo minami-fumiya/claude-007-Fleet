@@ -209,6 +209,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
   ...ladder('history_battles', '史実従軍章', 'special', [10, 50], (g) => `史実のシナリオで ${g} 回勝利する`, (r) => r.byMode?.scenario?.victories ?? 0),
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
+  ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them
   ...([
     ['q_win200', '不敗の勲章', '任務「不敗の艦隊」を達成する'], ['q_sink500', '五百隻撃沈記念章', '任務「五百隻撃沈」を達成する'],

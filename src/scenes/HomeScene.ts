@@ -5,6 +5,7 @@ import { holdCap, regenRules } from '@/systems/FacilitySystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
+import { pendingSummary } from '@/systems/PendingSummary';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation } from '@/utils/ProgressStore';
@@ -28,7 +29,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseOfProgress, currentBaseId, isAtCurrentBase, repairTimeMultiplier } from '@/systems/BaseSystem';
 import {
-  activeQuests, addItems, claimableCount, QUESTS, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
+  activeQuests, addItems, claimableCount, recordQuestEvent, QUESTS, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
   gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
 import { MEDALS } from '@/systems/RecordSystem';
@@ -513,7 +514,7 @@ export class HomeScene extends Phaser.Scene {
     if (!r) return null;
     // A ladder quest's medal (#158) goes into the shared record with the reward.
     const record = r.medal && !progress.record.medals.includes(r.medal) ? { ...progress.record, medals: [...progress.record.medals, r.medal] } : progress.record;
-    let next: IProgress = { ...progress, record, quests: r.state, resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
+    let next: IProgress = { ...progress, record, quests: recordQuestEvent(r.state, 'questClaim', Date.now()), resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
     let note = '';
     // Some quests bring a captain (#209), chosen like any recruit: for the classes the fleet is short of.
     if (r.captains > 0) {
@@ -594,13 +595,40 @@ export class HomeScene extends Phaser.Scene {
     const ch = IS_PORTRAIT ? m.y + m.h - top : (m.y + m.h - top - gap * (slots - 1)) / slots;
     // 任務 (#52): rewards waiting show on the button.
     const claimable = claimableCount(loadProgress().quests, Date.now());
+    // お知らせ (#192): the screens with something waiting say so in their caption, like 任務 does.
+    const pending = pendingSummary(loadProgress(), Date.now(), 0).filter((p) => p.id !== 'quests' && p.id !== 'docks');
     items.forEach((item, i) => {
       const x = m.x + (i % cols) * (cw + gap);
       const y = top + Math.floor(i / cols) * (ch + gap);
       const ready = item.action === 'quests' && claimable > 0;
+      const waiting = item.action ? undefined : pending.find((p) => p.scene === item.scene);
       add(new UIButton(this, x + cw / 2, y + ch / 2, item.label, () => this.openMenuItem(item), {
-        variant: ready ? 'gold' : item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26, caption: ready ? `達成 ${claimable}` : item.caption,
+        variant: ready ? 'gold' : item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26,
+        caption: ready ? `達成 ${claimable}` : waiting ? `${waiting.label} ${waiting.count}` : item.caption,
       }));
+    });
+  }
+
+  /**
+   * お知らせ (#192): a chip for each thing waiting on the admiral, at the top of the dock panel; a tap goes there.
+   * Portrait: a row under the panel title; landscape: right of it.
+   */
+  private drawPending(progress: IProgress, freeDocks: number, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
+    const items = pendingSummary(progress, Date.now(), freeDocks);
+    if (items.length === 0) return;
+    const d = L.dock;
+    const h = IS_PORTRAIT ? 30 : 26;
+    const gap = 6;
+    const y = d.y + (IS_PORTRAIT ? 64 : 22);
+    const right = d.x + d.w - 22;
+    const left = IS_PORTRAIT ? d.x + 22 : d.x + 260;
+    const w = Math.min(IS_PORTRAIT ? 150 : 120, (right - left - gap * (items.length - 1)) / items.length);
+    items.forEach((it, i) => {
+      const x = (IS_PORTRAIT ? left : right - items.length * (w + gap) + gap) + i * (w + gap) + w / 2;
+      add(new UIButton(this, x, y, `${it.label} ${it.count}`, () => {
+        if (it.id === 'quests') this.openQuests();
+        else this.scene.start(it.scene, { returnTo: SceneKeys.HOME });
+      }, { variant: it.id === 'quests' ? 'gold' : 'primary', width: w, height: h, fontSize: 12 }));
     });
   }
 
@@ -644,6 +672,7 @@ export class HomeScene extends Phaser.Scene {
     const docks = dockCount(progress);
     const building = buildsHere(all).length;
     const used = progress.docks.length + building;
+    this.drawPending(all, Math.max(0, docks - used), add);
     add(this.add.text(d.x + pad, y, 'ドック', eyebrowStyle(10, Css.gold)));
     add(this.add.text(d.x + pad + 110, y - 2, `使用中 ${used} / ${docks}  ·  入渠 ${progress.docks.length}・建造 ${building}  ·  空き ${Math.max(0, docks - used)}`, textStyle(13, used >= docks ? Css.gold : Css.muted)));
     y += IS_PORTRAIT ? 48 : 36;

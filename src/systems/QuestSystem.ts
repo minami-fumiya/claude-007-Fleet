@@ -29,7 +29,9 @@ export type QuestEvent =
   // 0.0.30: remodels finished in a chosen direction (#86)
   | 'refitBranch'
   // the Black Sea theater and training areas (#202)
-  | 'winBlackSea' | 'trainingWin';
+  | 'winBlackSea' | 'trainingWin'
+  // 0.0.31: quests claimed (#180)
+  | 'questClaim';
 
 export interface IQuest {
   id: string;
