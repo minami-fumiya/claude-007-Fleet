@@ -634,7 +634,8 @@ export class HomeScene extends Phaser.Scene {
    * the dock panel's own summary line.
    */
   private drawPending(progress: IProgress, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
-    const items = pendingSummary(progress, Date.now(), 0).filter((p) => p.id !== 'docks');
+    // Sweeps show on the 作戦 button (掃討 3), so the strip leaves them out (2026-10-20).
+    const items = pendingSummary(progress, Date.now(), 0).filter((p) => p.id !== 'docks' && p.id !== 'sweeps');
     const n = L.notice;
     add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
     if (items.length === 0) {

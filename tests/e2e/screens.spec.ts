@@ -789,7 +789,8 @@ test.describe('screens', () => {
       (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene').children.list.forEach(visit);
       return out;
     });
-    // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full), the captain book.
+    // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full; shown on the 作戦
+    // button, no longer in the strip), the captain book.
     const labels = await texts();
     expect(labels.some((t) => /^任務 \d+$/.test(t)), `quest notice (${layout})`).toBe(true);
     expect(labels.some((t) => t === '掃討 3'), `sweep notice (${layout})`).toBe(true);
@@ -798,7 +799,7 @@ test.describe('screens', () => {
     const placed = await page.evaluate(() => {
       const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
       const textOf = (o: Phaser.GameObjects.GameObject): string | undefined => (o.type === 'Text' ? (o as Phaser.GameObjects.Text).text : undefined);
-      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => textOf(x) === '掃討 3')) as Phaser.GameObjects.Container | undefined;
+      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => textOf(x) === '艦長教本 1')) as Phaser.GameObjects.Container | undefined;
       const title = scene.children.list.find((o) => textOf(o) === '入渠 — 損傷艦の修理') as Phaser.GameObjects.Text | undefined;
       return { chipBottom: chip ? chip.y + chip.height / 2 : NaN, titleTop: title ? title.y : NaN };
     });
