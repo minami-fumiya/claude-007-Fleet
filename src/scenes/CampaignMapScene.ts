@@ -114,7 +114,8 @@ export class CampaignMapScene extends Phaser.Scene {
     if (workNote) this.add.text(CANVAS_W - back.x, back.y + back.h / 2 + 4, workNote, textStyle(11, Css.cyan)).setOrigin(0.5, 0);
 
     // 七つの海 (#250): how many of the seven this admiral has taken, any navy's conquests counted.
-    this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 132 : 86, sevenSeasText(DATA, loadSave().nations), textStyle(12, Css.gold)).setOrigin(0.5);
+    // Portrait: in the row of the back button, where the title leaves room; landscape: under the title.
+    this.add.text(CANVAS_W / 2, IS_PORTRAIT ? back.y : 86, sevenSeasText(DATA, loadSave().nations), textStyle(12, Css.gold)).setOrigin(0.5);
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
     // A sortie left unfinished (#138) opens on its area.
@@ -270,9 +271,11 @@ export class CampaignMapScene extends Phaser.Scene {
       ...(giantHere ? [['超兵器', `${giantHere.name} が主力艦隊に加わる (撃沈でゴールド +${SUPERWEAPON_GOLD})`] as [string, string]] : []),
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
-      ['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')],
       // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.
-      ['敵の戦力', curveText(fleetPower(enemy), areaDepth(DATA, a))],
+      // Portrait shares the route's row, so the briefing stays clear of the buttons.
+      ...(IS_PORTRAIT
+        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(fleetPower(enemy), areaDepth(DATA, a))}`] as [string, string]]
+        : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(fleetPower(enemy), areaDepth(DATA, a))]] as Array<[string, string]>),
       ...(open ? [] : [['解放の条件', lockText(DATA, a, cleared)] as [string, string]]),
       ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];

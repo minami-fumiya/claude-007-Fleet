@@ -386,7 +386,8 @@ test.describe('screens', () => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }>; selectTheater?(id: string): void };
       return s.theaters.map((t) => t.id);
     });
-    expect(tabs).toEqual(['baltic', 'blacksea']);
+    // The Baltic and the Black Sea, then the seas of 0.0.35 the Soviet navy fights in (#250).
+    expect(tabs).toEqual(['baltic', 'blacksea', 'north_pacific', 'arctic']);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `SU (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('map-su.png') });
     expect(errors).toEqual([]);
