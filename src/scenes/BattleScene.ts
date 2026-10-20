@@ -19,7 +19,7 @@ import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
-import { applyCritical, CRITICAL_LABEL, LAND_CRITICAL_LABEL, rollCriticalHit } from '@/systems/DamageSystem';
+import { applyCritical, applyStatus, CRITICAL_LABEL, effectiveShell, LAND_CRITICAL_LABEL, nextShellMode, rollCriticalHit, rollStatus, SHELL_LABEL, statusDamage, STATUS_LABEL } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
@@ -187,6 +187,8 @@ export class BattleScene extends Phaser.Scene {
   private scenario: IScenario | null = null;
   /** Free battle (演習, #15): starts at full HP and keeps no damage */
   private exercise = false;
+  /** Fires and floods the player's side started on enemy ships (#48) */
+  private firesSet = 0;
   /** The enemy fleet's formation (#82) */
   private enemyFormation: Formation = Formation.LineAhead;
   /** 難易度 (#100) of this battle: scenarios always 普通 */
@@ -268,6 +270,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemies = [];
     this.aiSystems = [];
     this.escortAISystems = [];
+    this.firesSet = 0;
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
     this.convoy = [];
@@ -404,6 +407,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const dtSec = delta / 1000;
+    this.burnAndFlood(delta);
     this.updateSubmarines(dtSec);
     this.playerRecon.update(time, delta, aaGuns(this.enemies), this.enemies);
     this.enemyRecon.update(time, delta, aaGuns(this.playerSide()), this.playerSide());
@@ -1174,10 +1178,14 @@ export class BattleScene extends Phaser.Scene {
       projectile.missed.add(target);
       return;
     }
-    const weapon = projectile.weapon ?? FALLBACK_WEAPON;
+    const fired = projectile.weapon ?? FALLBACK_WEAPON;
+    // 弾種 (#48): a gun's shell is AP or HE by the firing ship's choice (AUTO picks by the target).
+    const shell = effectiveShell(fired.type, projectile.source?.shellMode ?? 'auto', target.stats.shipClass);
+    const weapon = shell === fired.type ? fired : { ...fired, type: shell };
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
     CombatSystem.applyDamage(target, dmg, projectile.source);
     this.rollCritical(target, weapon, dmg);
+    this.rollFireOrFlood(target, weapon);
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
     this.sound3d('explosion', projectile.x, projectile.y);
@@ -1195,6 +1203,40 @@ export class BattleScene extends Phaser.Scene {
   private logDamage(target: BaseShip, weapon: IWeaponData, dmg: number): void {
     const side = this.enemies.includes(target) ? 'player' : 'enemy';
     this.damageLog[side][weapon.id] = (this.damageLog[side][weapon.id] ?? 0) + Math.round(dmg);
+  }
+
+  /** 火災・浸水 (#48): a hit may start a fire (HE, bombs) or flooding (torpedoes); damage control shortens them. */
+  private rollFireOrFlood(target: BaseShip, weapon: IWeaponData): void {
+    if (!target.isAlive || target.isLand) return;
+    const kind = rollStatus(weapon.type, Math.random, target.mods.fireFloodMul);
+    if (!kind) return;
+    target.status = applyStatus(target.status, kind, this.battleNow(), target.mods.fireFloodMul);
+    const friendly = this.playerSide().includes(target);
+    if (!friendly) this.firesSet++;
+    if (!target.visible) return;
+    const t = this.add
+      .text(target.x, target.y - 46, STATUS_LABEL[kind], textStyle(13, friendly ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+      .setOrigin(0.5)
+      .setDepth(DEPTH_HUD - 2);
+    this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+  }
+
+  /** Fires and flooding burn every ship each frame (#48), credited to whoever caused them. */
+  private burnAndFlood(delta: number): void {
+    const now = this.battleNow();
+    for (const s of [...this.playerSide(), ...this.enemies]) {
+      if (!s.isAlive || s.isLand) continue;
+      const dmg = statusDamage(s.status, now, delta, s.stats.maxHp);
+      if (dmg > 0) s.takeDamage(dmg);
+    }
+  }
+
+  /** 弾種 (#48): AUTO → 徹甲弾 → 榴弾; the guns reload when the shells change. */
+  cycleShells(): void {
+    if (!this.flagship?.isAlive) return;
+    this.flagship.shellMode = nextShellMode(this.flagship.shellMode);
+    this.playerWeapons.restartReload(this.flagship, this.flagship.loadout, this.battleNow());
+    for (const e of this.escorts) e.shellMode = this.flagship.shellMode;
   }
 
   /** A hit may knock out a component; show it over the ship. */
@@ -1353,6 +1395,15 @@ export class BattleScene extends Phaser.Scene {
         .setOrigin(1, 1)
         .setDepth(DEPTH_HUD + 2)
         .setScrollFactor(0);
+      y -= a.h + a.gap;
+    }
+    // 弾種 (#48): ships with guns can force AP or HE (AUTO picks by the target).
+    if (!this.flagship.sub && this.flagship.loadout.some((w) => weaponKind(w) === WeaponKind.Gun)) {
+      const shellBtn = new UIButton(this, x, y, SHELL_LABEL[this.flagship.shellMode], () => {
+        this.cycleShells();
+        shellBtn.setLabel(SHELL_LABEL[this.flagship.shellMode]);
+      }, opts);
+      shellBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
       y -= a.h + a.gap;
     }
     if (this.flagship.sub) {
@@ -1674,7 +1725,7 @@ export class BattleScene extends Phaser.Scene {
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).

@@ -4,7 +4,7 @@ import { HealthBar } from './components/HealthBar';
 import { CANVAS_W, DEPTH_HUD, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawMeter, drawPanel } from '@/ui/components/UIKit';
-import { activeCriticals, CRITICAL_BADGE } from '@/systems/DamageSystem';
+import { activeCriticals, activeStatus, CRITICAL_BADGE } from '@/systems/DamageSystem';
 
 // Friendly ships carry their name + HP just below the hull, enemies just above it, so the
 // labels never cover the sprite. Gaps are measured from the hull's outer radius.
@@ -71,8 +71,11 @@ export interface IHudStatus {
 /** Name plus badges for component damage, e.g. "大和 (Yamato) [機舵]". */
 function labelFor(ship: BaseShip): string {
   const crits = activeCriticals(ship.criticals, ship.clock());
+  // 火災・浸水 (#48) join the component damage badges.
+  const status = activeStatus(ship.status, ship.clock()).map((k) => (k === 'fire' ? '火' : '水'));
   const name = ship.aiNote ? `${ship.stats.name} 〈${ship.aiNote}〉` : ship.stats.name;
-  return crits.length > 0 ? `${name} [${crits.map((c) => CRITICAL_BADGE[c]).join('')}]` : name;
+  const badges = [...crits.map((c) => CRITICAL_BADGE[c]), ...status];
+  return badges.length > 0 ? `${name} [${badges.join('')}]` : name;
 }
 
 /** Updates a label's text only when it changed (setText re-renders the texture). */

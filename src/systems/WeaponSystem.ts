@@ -49,6 +49,11 @@ export class WeaponSystem {
     return weaponKind(weapon) === WeaponKind.Gun ? weapon.reloadTime * ship.critEffects().gunReloadMul : weapon.reloadTime;
   }
 
+  /** Restarts the reload of `ship`'s guns (switching shells, #48). */
+  restartReload(ship: BaseShip, weapons: IWeaponData[], now: number): void {
+    for (const w of weapons) if (weaponKind(w) === WeaponKind.Gun) this.reload.markFired(ship, now, w.id);
+  }
+
   /** When `ship` last fired anything (for muzzle flashes at night). */
   lastFiredAt(ship: BaseShip): number | undefined {
     return this.lastFired.get(ship);

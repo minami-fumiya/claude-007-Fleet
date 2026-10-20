@@ -1,5 +1,6 @@
-import { CriticalState, CriticalType, ICriticalEffects } from '@/types/ShipDamage';
+import { CriticalState, CriticalType, ICriticalEffects, IStatusState, ShellMode, StatusKind } from '@/types/ShipDamage';
 import { WeaponType } from '@/types/Weapon';
+import { ShipClass } from '@/types/ShipClass';
 
 /** Component damage (pure): rolling criticals on hits and what an active critical does to a ship. */
 
@@ -85,4 +86,62 @@ export function criticalEffects(state: CriticalState, now: number): ICriticalEff
     out.gunReloadMul *= e.gunReloadMul ?? 1;
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// 弾種と火災・浸水 (#48)
+// ---------------------------------------------------------------------------
+
+/** Chance a hit sets the ship on fire (HE and bombs above all) or floods it (torpedoes). */
+const FIRE_CHANCE: Partial<Record<WeaponType, number>> = { [WeaponType.ShellHE]: 0.12, [WeaponType.Bomb]: 0.2, [WeaponType.ShellAP]: 0.02 };
+const FLOOD_CHANCE: Partial<Record<WeaponType, number>> = { [WeaponType.Torpedo]: 0.35, [WeaponType.DepthCharge]: 0.1 };
+export const STATUS_DURATION_MS: Record<StatusKind, number> = { fire: 12_000, flood: 15_000 };
+/** Share of the ship's full HP lost each second */
+export const STATUS_DPS: Record<StatusKind, number> = { fire: 0.005, flood: 0.0035 };
+/** A flooding ship is slower */
+export const FLOOD_SPEED_MUL = 0.85;
+/** Switching the main guns' shells costs this long (the guns reload) */
+export const SHELL_SWITCH_MS = 2500;
+
+export const STATUS_LABEL: Record<StatusKind, string> = { fire: '火災', flood: '浸水' };
+export const SHELL_LABEL: Record<ShellMode, string> = { auto: '弾種 自動', AP: '徹甲弾', HE: '榴弾' };
+
+/**
+ * Rolls for a fire or flooding on a hit; `chanceMul` is the ship's damage control (lower is better). A ship on fire
+ * doesn't catch fire again, but the fire burns on.
+ */
+export function rollStatus(type: WeaponType, rng: () => number = Math.random, chanceMul = 1): StatusKind | null {
+  if (rng() < (FIRE_CHANCE[type] ?? 0) * chanceMul) return 'fire';
+  if (rng() < (FLOOD_CHANCE[type] ?? 0) * chanceMul) return 'flood';
+  return null;
+}
+
+/** Starts (or restarts) a fire / flooding; `durationMul` shortens it for good damage control. */
+export function applyStatus(state: IStatusState, kind: StatusKind, now: number, durationMul = 1): IStatusState {
+  return { ...state, [kind]: now + STATUS_DURATION_MS[kind] * durationMul };
+}
+
+export function activeStatus(state: IStatusState, now: number): StatusKind[] {
+  return (Object.keys(state) as StatusKind[]).filter((k) => (state[k] ?? 0) > now);
+}
+
+/** HP lost to fire and flooding over `dtMs`. */
+export function statusDamage(state: IStatusState, now: number, dtMs: number, maxHp: number): number {
+  return activeStatus(state, now).reduce((sum, k) => sum + STATUS_DPS[k] * maxHp * (dtMs / 1000), 0);
+}
+
+export function statusSpeedMul(state: IStatusState, now: number): number {
+  return (state.flood ?? 0) > now ? FLOOD_SPEED_MUL : 1;
+}
+
+/** The shell a main-gun hit counts as: AUTO uses AP on battleships and cruisers, HE on the rest. */
+export function effectiveShell(type: WeaponType, mode: ShellMode, target: ShipClass): WeaponType {
+  if (type !== WeaponType.ShellAP && type !== WeaponType.ShellHE) return type;
+  if (mode === 'AP') return WeaponType.ShellAP;
+  if (mode === 'HE') return WeaponType.ShellHE;
+  return target === ShipClass.Battleship || target === ShipClass.Cruiser ? WeaponType.ShellAP : WeaponType.ShellHE;
+}
+
+export function nextShellMode(m: ShellMode): ShellMode {
+  return m === 'auto' ? 'AP' : m === 'AP' ? 'HE' : 'auto';
 }

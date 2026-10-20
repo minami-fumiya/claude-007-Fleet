@@ -16,3 +16,14 @@ export interface ICriticalEffects {
   turnMul: number;
   gunReloadMul: number;
 }
+
+/** 火災・浸水 (#48): burning or flooding until these times (scene ms). */
+export interface IStatusState {
+  fire?: number;
+  flood?: number;
+}
+
+export type StatusKind = keyof IStatusState;
+
+/** 弾種 (#48): the main guns' shells. AUTO picks per target (AP for heavy ships, HE for the rest). */
+export type ShellMode = 'auto' | 'AP' | 'HE';

@@ -35,8 +35,8 @@ export type QuestEvent =
   | 'questClaim'
   // 0.0.32: shop purchases (#183)
   | 'shopBuy'
-  // 0.0.33: wins on 難しい (#100)
-  | 'hardWin';
+  // 0.0.33: wins on 難しい (#100), fires and floods started on enemy ships (#48)
+  | 'hardWin' | 'fireSet';
 
 export interface IQuest {
   id: string;
