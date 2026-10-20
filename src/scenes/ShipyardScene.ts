@@ -145,7 +145,8 @@ export class ShipyardScene extends Phaser.Scene {
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
     return filterShips(this.classRoster(), this.filterBar.filter, {
       owned: ownedIds(progress, roster), roster,
-      buildable: (s) => buildState(progress, roster, s) === 'ready',
+      // A ship on the slip stays listed: tapping it again finishes it with a 高速建造材.
+      buildable: (s) => ['ready', 'building'].includes(buildState(progress, roster, s)),
       nameKnown: (s) => buildNameShown(buildState(progress, roster, s)),
     });
   }
