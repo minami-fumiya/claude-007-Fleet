@@ -18,6 +18,8 @@ import { openBaseCount } from '@/systems/BaseSystem';
 import { atHoldCap } from '@/systems/ResourceSystem';
 import { awardMedals, IMedalContext, newMedals } from '@/systems/RecordSystem';
 import type { ISave } from './ProgressStore';
+import { IWallet } from '@/types/Progression';
+import { addGold, GOLD_PER_MEDAL } from '@/systems/GoldSystem';
 
 const CAMPAIGN = campaignData as ICampaignData;
 /** Carrier ids of every navy, for the 機動部隊編成章 (#204) */
@@ -35,11 +37,11 @@ const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships 
  * What the medals (#92) look at beyond the record, over every nation the admiral has played: lifetime quest-event
  * totals are summed, collections (ships, research, captains) count the best nation.
  */
-export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
+export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }): IMedalContext {
   const nations = Object.entries(save.nations).filter(([, np]) => np !== undefined);
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
-  const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters'>> = {
+  const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
     areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, classesComplete: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
@@ -70,11 +72,14 @@ export function medalContext(save: Pick<ISave, 'nations'>): IMedalContext {
     for (const levels of Object.values(np.facilities ?? {})) for (const lv of Object.values(levels ?? {})) ctx.facilityLevels += lv ?? 0;
     ctx.rankIndex = Math.max(ctx.rankIndex, rankOf({ ...np, nation }).index);
   }
-  return { ...ctx, totals, clearedTheaters: [...theaters] };
+  return { ...ctx, totals, clearedTheaters: [...theaters], goldEarned: save.wallet?.earned ?? 0 };
 }
 
 /** The save with every medal it has now earned (#92), and those new ones. */
-export function awardEarnedMedals<T extends Pick<ISave, 'nations' | 'record'>>(save: T): { save: T; medals: IMedal[] } {
+export function awardEarnedMedals<T extends Pick<ISave, 'nations' | 'record'> & { wallet?: IWallet }>(save: T): { save: T; medals: IMedal[] } {
   const medals = newMedals(save.record, medalContext(save));
-  return medals.length === 0 ? { save, medals } : { save: { ...save, record: awardMedals(save.record, medals) }, medals };
+  if (medals.length === 0) return { save, medals };
+  // Every medal comes with gold (#183).
+  const wallet = save.wallet ? { wallet: addGold(save.wallet, GOLD_PER_MEDAL * medals.length) } : {};
+  return { save: { ...save, record: awardMedals(save.record, medals), ...wallet }, medals };
 }

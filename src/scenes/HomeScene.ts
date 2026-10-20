@@ -6,9 +6,10 @@ import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { pendingSummary } from '@/systems/PendingSummary';
+import { addGold } from '@/systems/GoldSystem';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
-import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation } from '@/utils/ProgressStore';
+import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveProgress, saveSave, switchNation, walletOf } from '@/utils/ProgressStore';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources } from '@/systems/ResourceSystem';
@@ -182,6 +183,15 @@ export class HomeScene extends Phaser.Scene {
       this.add.text(x, a.y + 2, `${rankLine}  ·  ${promotionText(progress)}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
     }
     this.regenText = this.add.text(x, a.y + a.h - 2, '', textStyle(11, Css.muted)).setOrigin(0, 1);
+    // ゴールド (#183) beside the resources; a tap opens the items (#184). Portrait: the admiral row's top right;
+    // landscape: right of the event line, above the resources.
+    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook;
+    const gw = IS_PORTRAIT ? 190 : 220;
+    const gx = IS_PORTRAIT ? a.x + a.w - gw / 2 : L.resources.x + L.resources.w - gw / 2;
+    const gy = IS_PORTRAIT ? a.y + 14 : 80;
+    new UIButton(this, gx, gy, `${walletOf(progress).gold.toLocaleString('en-US')} G  ·  アイテム ${items} ›`, () => this.scene.start(SceneKeys.ITEMS), {
+      variant: 'secondary', width: gw, height: IS_PORTRAIT ? 30 : 26, fontSize: 12,
+    });
   }
 
   private refreshRegen(now: number): void {
@@ -312,7 +322,7 @@ export class HomeScene extends Phaser.Scene {
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
       // A reward that would overflow the holding cap (#221) waits unclaimed until there is room, or is taken anyway.
       const lost = status === 'claimable' ? gainResources(progress.resources, q.reward, cap).lost : resources();
-      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), q.captains ? `艦長 +${q.captains}` : '', medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・') + lostNote(lost);
+      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), q.gold ? `ゴールド ${q.gold}` : '', q.captains ? `艦長 +${q.captains}` : '', medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・') + lostNote(lost);
       return { id: q.id, name: q.name, text: q.text, value: questProgress(state, q), goal: q.goal, reward, status, overflow: lostNote(lost) !== '' };
     });
     const cols = IS_PORTRAIT ? 1 : 2;
@@ -514,7 +524,7 @@ export class HomeScene extends Phaser.Scene {
     if (!r) return null;
     // A ladder quest's medal (#158) goes into the shared record with the reward.
     const record = r.medal && !progress.record.medals.includes(r.medal) ? { ...progress.record, medals: [...progress.record.medals, r.medal] } : progress.record;
-    let next: IProgress = { ...progress, record, quests: recordQuestEvent(r.state, 'questClaim', Date.now()), resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
+    let next: IProgress = { ...progress, record, wallet: addGold(walletOf(progress), r.gold), quests: recordQuestEvent(r.state, 'questClaim', Date.now()), resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
     let note = '';
     // Some quests bring a captain (#209), chosen like any recruit: for the classes the fleet is short of.
     if (r.captains > 0) {

@@ -42,11 +42,20 @@ export interface IScenarioSide {
 /** Sea area a scenario is filed under in the list (#71). */
 export type ScenarioTheater = 'pacific' | 'atlantic' | 'mediterranean' | 'arctic';
 
+/** What happened in the real battle (#200): who won, how many ships each force lost, in a line. */
+export interface IScenarioHistory {
+  winner: 'A' | 'B' | 'draw';
+  /** Ships each force lost (within the scenario's forces) */
+  lost: { A: number; B: number };
+  text: string;
+}
+
 export interface IScenario {
   id: string;
   name: string;
   /** "1942年6月" */
   date: string;
+  history?: IScenarioHistory;
   theater?: ScenarioTheater;
   description: string;
   map: string;

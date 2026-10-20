@@ -5,8 +5,12 @@ import { CONTROLS } from '@/config/Controls';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
-import { addHeroShip } from '@/ui/components/HeroShip';
-import { titleTiles } from '@/systems/TitleCopy';
+import { continueLabel, titleTiles } from '@/systems/TitleCopy';
+import { prefersReducedMotion, TitleSea } from '@/ui/components/TitleSea';
+import { drawFlag } from '@/ui/components/NavalFlags';
+import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
+import { rankOf } from '@/systems/RankSystem';
+import { isStarted } from '@/utils/ProgressStore';
 import { CHANGELOG, IChangelogEntry, unseenEntries } from '@/systems/Changelog';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
@@ -22,7 +26,8 @@ const FLEET_GLOW = { offsetX: 0, offsetY: 0, color: 'rgba(255,201,74,0.55)', blu
 const TITLE = '七海艦隊';
 const SUBTITLE = '第二次世界大戦  ×  艦隊戦術';
 const TAGLINE = '艦隊を編成し、七つの海の制海権を握れ。';
-const NATIONS = '日本 · 米国 · ドイツ · 英国 · フランス · イタリア · ソ連';
+/** English line over the title (#198) */
+const EN_TITLE = 'SEVEN  SEAS  FLEET';
 
 const INFO_TILES = titleTiles(IS_PORTRAIT);
 
@@ -37,6 +42,8 @@ export class MainMenuScene extends Phaser.Scene {
   /** The 更新内容 sheet (#205) */
   private changesLayer: Phaser.GameObjects.GameObject[] = [];
   private changesList?: ScrollList;
+  /** The moving sea behind everything (#198) */
+  private sea?: TitleSea;
 
   constructor() {
     super({ key: SceneKeys.MAIN_MENU });
@@ -45,8 +52,10 @@ export class MainMenuScene extends Phaser.Scene {
   create(): void {
     audio.music('menu');
     this.howToLayer = null;
-    addBackdrop(this, 'menu');
-    addPanel(this, CARD.x, CARD.y, CARD.w, CARD.h, { radius: 32, fillAlpha: 0.45, glow: 1 });
+    addBackdrop(this, 'menu').setDepth(-40);
+    // The sea, the searchlights and a fleet crossing (#198); still when the OS asks for less motion.
+    this.sea = new TitleSea(this, IS_PORTRAIT ? 330 : 250, prefersReducedMotion());
+    addPanel(this, CARD.x, CARD.y, CARD.w, CARD.h, { radius: 32, fillAlpha: 0.18, glow: 0.6 });
     const corner = IS_PORTRAIT ? { w: 112, h: 56 } : { w: 112, h: 40 };
     new UIButton(this, CARD.x + CARD.w - 20 - corner.w / 2, CARD.y + 20 + corner.h / 2, '設定', () => this.scene.start(SceneKeys.SETTINGS, { returnTo: SceneKeys.MAIN_MENU }), {
       variant: 'secondary', width: corner.w, height: corner.h, fontSize: 14,
@@ -117,76 +126,118 @@ export class MainMenuScene extends Phaser.Scene {
     this.changesList = undefined;
   }
 
-  /** Two columns: copy and buttons on the left, the hero ship on the right. */
-  private buildLandscape(): void {
-    addHeroShip(this, CARD.x + CARD.w - 330, CARD.y + 330, 0.95);
-
-    this.add.text(LEFT_X, CARD.y + 70, SUBTITLE, eyebrowStyle(13));
-    this.add.text(LEFT_X - 6, CARD.y + 110, TITLE, displayStyle(120, Css.gold, { letterSpacing: 12, shadow: FLEET_GLOW }));
-    this.add.text(LEFT_X, CARD.y + 300, TAGLINE, textStyle(20, '#c9d6ee', { fontStyle: 'bold' }));
-
-    new UIButton(this, LEFT_X + 140, CARD.y + 386, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
-      variant: 'primary',
-      width: 280,
-      height: 64,
-      fontSize: 22,
-    });
-    new UIButton(this, LEFT_X + 400, CARD.y + 386, '操作方法', () => this.toggleHowTo(true), {
-      variant: 'secondary',
-      width: 200,
-      height: 64,
-      fontSize: 20,
-    });
-
-    this.buildInfoTiles(LEFT_X, CARD.y + 462, 196, 76);
-
-    this.add
-      .text(CARD.x + CARD.w - 40, CARD.y + CARD.h - 28, NATIONS, eyebrowStyle(10, Css.dim))
-      .setOrigin(1, 0.5);
+  update(_time: number, delta: number): void {
+    this.sea?.update(delta, this.game.loop.actualFps);
   }
 
-  /** One centred column for phones: hero ship, title, full-width buttons, tiles. */
+  /** The main button's label (#198): the nation and rank to go back to, for a save in progress. */
+  private continueText(): string {
+    const save = loadSave();
+    if (!isStarted(save, save.current)) return continueLabel(null, null);
+    return continueLabel(NATION_INFO[save.current].jaShort, rankOf(loadProgress()).name);
+  }
+
+  /**
+   * The title (#198): gold with a darker lower half and a thin dark edge; a light runs across it once when the
+   * screen opens (not with less motion).
+   */
+  private addTitle(x: number, y: number, size: number, originX: number): Phaser.GameObjects.Text {
+    const t = this.add.text(x, y, TITLE, displayStyle(size, Css.gold, { letterSpacing: 12, shadow: FLEET_GLOW })).setOrigin(originX, 0.5);
+    t.setStroke('#4a3208', 3);
+    t.setTint(0xfff4cc, 0xfff4cc, 0xd99a2b, 0xb8801e);
+    if (this.sea?.moving) {
+      const b = t.getBounds();
+      const shine = this.add.rectangle(b.x - 80, b.centerY, 60, b.height * 1.4, 0xffffff, 0.45).setAngle(18).setBlendMode(Phaser.BlendModes.ADD);
+      const shape = this.make.graphics({}, false).fillRect(b.x, b.y, b.width, b.height);
+      shine.setMask(shape.createGeometryMask());
+      this.tweens.add({ targets: shine, x: b.right + 80, duration: 1400, delay: 300, ease: 'Sine.easeInOut', onComplete: () => shine.destroy() });
+    }
+    return t;
+  }
+
+  /** The seven ensigns (#198), the nation being played in front with its name under it. */
+  private addFlags(cx: number, y: number, fw: number, fh: number, gap: number): void {
+    const save = loadSave();
+    const current = isStarted(save, save.current) ? save.current : null;
+    const total = PLAYABLE_NATIONS.length * fw + (PLAYABLE_NATIONS.length - 1) * gap;
+    const g = this.add.graphics();
+    PLAYABLE_NATIONS.forEach((n, i) => {
+      const x = cx - total / 2 + i * (fw + gap);
+      const on = n === current;
+      g.setAlpha(1);
+      drawFlag(g, n, x, y, fw, fh);
+      if (!on && current) {
+        g.fillStyle(Colors.bgDeep, 0.45);
+        g.fillRect(x, y, fw, fh);
+      }
+      if (on) {
+        g.lineStyle(2, Colors.gold, 1);
+        g.strokeRect(x - 3, y - 3, fw + 6, fh + 6);
+      }
+      this.add.text(x + fw / 2, y + fh + 6, NATION_INFO[n].jaShort, textStyle(11, on ? Css.gold : Css.muted, on ? { fontStyle: 'bold' } : {})).setOrigin(0.5, 0);
+    });
+  }
+
+  /** Two columns: copy, flags and buttons on the left; the fleet crosses the sea behind. */
+  private buildLandscape(): void {
+    this.add.text(LEFT_X, CARD.y + 66, EN_TITLE, eyebrowStyle(14, Css.cyan));
+    this.addTitle(LEFT_X - 6, CARD.y + 168, 116, 0);
+    this.add.text(LEFT_X, CARD.y + 250, SUBTITLE, eyebrowStyle(13));
+    this.add.text(LEFT_X, CARD.y + 282, TAGLINE, textStyle(20, '#c9d6ee', { fontStyle: 'bold' }));
+    this.addFlags(LEFT_X + 260, CARD.y + 334, 52, 34, 22);
+
+    new UIButton(this, LEFT_X + 180, CARD.y + 446, this.continueText(), () => this.scene.start(SceneKeys.HOME), {
+      variant: 'gold',
+      width: 360,
+      height: 72,
+      fontSize: 22,
+    });
+    new UIButton(this, LEFT_X + 470, CARD.y + 446, '操作方法', () => this.toggleHowTo(true), {
+      variant: 'secondary',
+      width: 180,
+      height: 60,
+      fontSize: 18,
+    });
+
+    this.buildInfoStrip(LEFT_X, CARD.y + 520, 660, 56);
+  }
+
+  /** One centred column for phones: the sea and fleet on top, then the title, flags, the main button and a strip. */
   private buildPortrait(): void {
     const cx = CANVAS_W / 2;
     const btnW = CARD.w - 96;
 
-    addHeroShip(this, cx, CARD.y + 270, 0.62);
+    this.add.text(cx, CARD.y + 420, EN_TITLE, eyebrowStyle(15, Css.cyan)).setOrigin(0.5);
+    this.addTitle(cx + 6, CARD.y + 520, 128, 0.5);
+    this.add.text(cx, CARD.y + 622, SUBTITLE, eyebrowStyle(14)).setOrigin(0.5);
+    this.add.text(cx, CARD.y + 666, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
+    this.addFlags(cx, CARD.y + 724, 60, 40, 14);
 
-    this.add.text(cx, CARD.y + 410, SUBTITLE, eyebrowStyle(14)).setOrigin(0.5);
-    this.add.text(cx + 6, CARD.y + 530, TITLE, displayStyle(132, Css.gold, { letterSpacing: 12, shadow: FLEET_GLOW })).setOrigin(0.5);
-    this.add.text(cx, CARD.y + 682, TAGLINE, textStyle(22, '#c9d6ee', { fontStyle: 'bold' })).setOrigin(0.5);
-
-    new UIButton(this, cx, CARD.y + 780, '鎮守府へ  →', () => this.scene.start(SceneKeys.HOME), {
-      variant: 'primary',
+    new UIButton(this, cx, CARD.y + 866, this.continueText(), () => this.scene.start(SceneKeys.HOME), {
+      variant: 'gold',
       width: btnW,
-      height: 80,
+      height: 92,
       fontSize: 26,
     });
-    new UIButton(this, cx, CARD.y + 876, '操作方法', () => this.toggleHowTo(true), {
+    new UIButton(this, cx, CARD.y + 968, '操作方法', () => this.toggleHowTo(true), {
       variant: 'secondary',
       width: btnW,
-      height: 68,
-      fontSize: 22,
+      height: 64,
+      fontSize: 20,
     });
 
-    // Tiles stack as full-width rows so the enlarged phone text fits on one line.
-    INFO_TILES.forEach((tile, i) => {
-      const x = cx - btnW / 2;
-      const y = CARD.y + 940 + i * 70;
-      addPanel(this, x, y, btnW, 60, { radius: 14, fillAlpha: 0.55 });
-      this.add.text(x + 20, y + 30, tile.title, textStyle(15, Css.gold, { fontStyle: 'bold' })).setOrigin(0, 0.5);
-      this.add.text(x + btnW - 20, y + 30, tile.body, textStyle(12, Css.muted)).setOrigin(1, 0.5);
-    });
-
-    this.add.text(cx, CARD.y + CARD.h - 26, NATIONS, eyebrowStyle(10, Css.dim)).setOrigin(0.5);
+    this.buildInfoStrip(cx - btnW / 2, CARD.y + 1036, btnW, 84);
   }
 
-  private buildInfoTiles(left: number, y: number, w: number, h: number): void {
+  /** The three info tiles as one strip (#198): the title and the sea come first. */
+  private buildInfoStrip(x: number, y: number, w: number, h: number): void {
+    addPanel(this, x, y, w, h, { radius: 14, fillAlpha: 0.5 });
+    const cw = w / INFO_TILES.length;
     INFO_TILES.forEach((tile, i) => {
-      const x = left + i * (w + 14);
-      addPanel(this, x, y, w, h, { radius: 14, fillAlpha: 0.55 });
-      this.add.text(x + 16, y + 14, tile.title, textStyle(15, Css.gold, { fontStyle: 'bold' }));
-      this.add.text(x + 16, y + 44, tile.body, textStyle(12, Css.muted));
+      const tx = x + i * cw + cw / 2;
+      this.add.text(tx, y + h / 2 - (IS_PORTRAIT ? 14 : 10), tile.title, textStyle(IS_PORTRAIT ? 14 : 13, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5);
+      const body = this.add.text(tx, y + h / 2 + (IS_PORTRAIT ? 14 : 12), tile.body, textStyle(11, Css.muted)).setOrigin(0.5);
+      if (body.width > cw - 12) body.setScale((cw - 12) / body.width);
     });
   }
 

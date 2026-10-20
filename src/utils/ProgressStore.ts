@@ -9,7 +9,7 @@
  * are step-by-step migrations in SaveMigration (#60).
  */
 
-import { IDockJob, IItems, IResources } from '@/types/Progression';
+import { IDockJob, IItems, IResources, IWallet } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
 import { awardEarnedMedals } from './MedalContext';
@@ -30,6 +30,7 @@ import { ICaptainStats } from '@/systems/CaptainSystem';
 import { nationCaptains, starterCaptain } from '@/systems/CaptainRoster';
 import { addBackup, BACKUP_KEY, BackupReason, ISaveBackup, parseBackups, rawVersion } from './SaveBackup';
 import { ISweepCharge, SWEEP_MAX } from '@/systems/SweepSystem';
+import { emptyWallet, parseWallet } from '@/systems/GoldSystem';
 import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
@@ -126,6 +127,8 @@ export interface ISave {
   seenHelp: string[];
   /** Newest clock time the game has seen (#89): a clock set back gets no event */
   lastSeenAt: number;
+  /** ゴールドとショップ (#183), shared by every nation */
+  wallet: IWallet;
 }
 
 export interface ITutorialState {
@@ -141,6 +144,13 @@ export interface ITutorialState {
 export interface IProgress extends INationProgress {
   nation: Nation;
   record: IServiceRecord;
+  /** The shared purse (#183); a view built without one (tests) has none, read it through walletOf */
+  wallet?: IWallet;
+}
+
+/** The purse of a view (#183), empty when it has none. */
+export function walletOf(p: Pick<IProgress, 'wallet'>): IWallet {
+  return p.wallet ?? emptyWallet();
 }
 
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
@@ -153,7 +163,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
 }
 
 export function emptySave(): ISave {
-  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [], lastSeenAt: 0 };
+  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [], lastSeenAt: 0, wallet: emptyWallet() };
 }
 
 // ---------------------------------------------------------------------------
@@ -178,7 +188,7 @@ export function currentNation(save: ISave): INationProgress {
 /** The scene-facing view of `save`; with `now`, natural regeneration up to that time is applied. */
 export function progressView(save: ISave, now?: number): IProgress {
   const np = currentNation(save);
-  const view: IProgress = { ...np, nation: save.current, record: save.record };
+  const view: IProgress = { ...np, nation: save.current, record: save.record, wallet: save.wallet };
   if (now === undefined) return view;
   // Facilities finished meanwhile count from now on; they set the regeneration rates and caps (#146).
   // So does a base whose construction ended (#217).
@@ -203,8 +213,8 @@ export function finishBuilds<T extends Pick<INationProgress, 'builds' | 'ships'>
 
 /** Writes a view back into its nation's slot (and the shared record). */
 export function withProgress(save: ISave, progress: IProgress): ISave {
-  const { nation, record, ...np } = progress;
-  return { ...save, nations: { ...save.nations, [nation]: np }, record };
+  const { nation, record, wallet, ...np } = progress;
+  return { ...save, nations: { ...save.nations, [nation]: np }, record, wallet: wallet ?? save.wallet };
 }
 
 /**
@@ -439,6 +449,7 @@ export function migrateV1(data: Record<string, unknown>): ISave {
     tutorial: { step: 0, done: true },
     seenHelp: [...EXISTING_PLAYER_HELP],
     lastSeenAt: 0,
+    wallet: emptyWallet(),
   };
 }
 
@@ -461,6 +472,7 @@ function parseLatest(data: Record<string, unknown>): ISave {
     // A save without the list is an existing player's: the screens they know are not explained again.
     seenHelp: Array.isArray(data.seenHelp) ? [...new Set(strings(data.seenHelp))] : [...EXISTING_PLAYER_HELP],
     lastSeenAt: isNum(data.lastSeenAt) ? data.lastSeenAt : 0,
+    wallet: parseWallet(data.wallet),
   };
 }
 

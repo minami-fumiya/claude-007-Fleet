@@ -1,5 +1,6 @@
 import { EVENT_KINDS } from './EventKinds';
-import { IBattleRecordInput, IMedal, IModeRecord, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
+import { IBattleRecordInput, IMedal, IModeRecord, IScenarioBest, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
+import { ALL_SCENARIOS } from '@/data/scenarios';
 import { ShipClass } from '@/types/ShipClass';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
@@ -46,7 +47,10 @@ export function recordBattle(r: IServiceRecord, b: IBattleRecordInput, mode: Rec
   if (mode !== 'scenario' || !scenario) return out;
   const was: IScenarioRecord = r.scenarios?.[scenario.id] ?? { wins: {}, losses: {} };
   const key = b.victory ? 'wins' : 'losses';
-  const now: IScenarioRecord = { ...was, [key]: { ...was[key], [scenario.force]: (was[key][scenario.force] ?? 0) + 1 } };
+  const battle: IScenarioBest = { victory: b.victory, sunk: b.sunkClasses.length, lost: Math.max(0, b.shipsLost) };
+  const prev = was.best?.[scenario.force];
+  const best = prev && !betterBest(battle, prev) ? prev : battle;
+  const now: IScenarioRecord = { ...was, [key]: { ...was[key], [scenario.force]: (was[key][scenario.force] ?? 0) + 1 }, best: { ...(was.best ?? {}), [scenario.force]: best } };
   return { ...out, scenarios: { ...(r.scenarios ?? {}), [scenario.id]: now } };
 }
 
@@ -64,6 +68,38 @@ export function unsortedRecord(r: IServiceRecord): IModeRecord {
   }
   const best = Math.max(0, ...parts.map((p) => p.bestDamage));
   return { sorties: less('sorties'), victories: less('victories'), perfectVictories: less('perfectVictories'), sunk, damageDealt: less('damageDealt'), bestDamage: r.bestDamage > best ? r.bestDamage : 0, shipsLost: less('shipsLost') };
+}
+
+/** True when `a` beats `b` (#200): a win first, then more sunk, then fewer lost. */
+export function betterBest(a: IScenarioBest, b: IScenarioBest): boolean {
+  if (a.victory !== b.victory) return a.victory;
+  if (a.sunk !== b.sunk) return a.sunk > b.sunk;
+  return a.lost < b.lost;
+}
+
+/** Scenarios won from the side that lost the real battle (#200 史実を覆す). */
+export function overturnedCount(r: Pick<IServiceRecord, 'scenarios'>): number {
+  return ALL_SCENARIOS.filter((sc) => {
+    const w = sc.history?.winner;
+    const loser = w === 'A' ? 'B' : w === 'B' ? 'A' : null;
+    return loser !== null && (r.scenarios?.[sc.id]?.wins[loser] ?? 0) > 0;
+  }).length;
+}
+
+/** Scenarios played from both sides (#200 歴史家). */
+export function bothSidesPlayed(r: Pick<IServiceRecord, 'scenarios'>): number {
+  const played = (s: IScenarioRecord, f: 'A' | 'B'): boolean => (s.wins[f] ?? 0) + (s.losses[f] ?? 0) > 0;
+  return ALL_SCENARIOS.filter((sc) => {
+    const s = r.scenarios?.[sc.id];
+    return s !== undefined && played(s, 'A') && played(s, 'B');
+  }).length;
+}
+
+/** Scenarios of a sea area won from either side, against how many it has (#200). */
+function theaterWins(r: Pick<IServiceRecord, 'scenarios'>, theater: string): number {
+  const list = ALL_SCENARIOS.filter((sc) => sc.theater === theater);
+  const won = list.filter((sc) => ((r.scenarios?.[sc.id]?.wins.A ?? 0) + (r.scenarios?.[sc.id]?.wins.B ?? 0)) > 0).length;
+  return won >= list.length ? 1 : 0;
 }
 
 /** Scenarios won at least once from either side, and from both sides (#177). */
@@ -113,6 +149,8 @@ export interface IMedalContext {
   nationsPlayed?: number;
   /** Highest rank index reached (0 = 准尉) */
   rankIndex?: number;
+  /** Lifetime gold earned (#183) */
+  goldEarned?: number;
 }
 
 export type MedalCategory = 'sink' | 'battle' | 'campaign' | 'growth' | 'base' | 'special' | 'quest';
@@ -208,7 +246,14 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('historian', '戦史章', 'special', [3, 6, 10], (g) => `史実のシナリオを ${g} 種類勝利する`, (r) => scenarioWins(r).won),
   ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
   ...ladder('history_battles', '史実従軍章', 'special', [10, 50], (g) => `史実のシナリオで ${g} 回勝利する`, (r) => r.byMode?.scenario?.victories ?? 0),
+  ...ladder('overturn', '史実を覆す章', 'special', [3, ALL_SCENARIOS.filter((sc) => sc.history && sc.history.winner !== 'draw').length], (g) => `史実で負けた側で、史実のシナリオ ${g} 種類に勝利する`, (r) => overturnedCount(r)),
+  { id: 'chronicler', name: '歴史家章', description: `史実のシナリオ ${ALL_SCENARIOS.length} 種類すべてを両方の陣営で遊ぶ`, category: 'special', value: (r) => bothSidesPlayed(r), goal: ALL_SCENARIOS.length },
+  ...([['pacific', '太平洋'], ['atlantic', '大西洋'], ['mediterranean', '地中海'], ['arctic', '北極海']] as const).map(([t, name]): IMedalRule => ({
+    id: `history_${t}`, name: `${name}戦史章`, description: `${name}の史実のシナリオすべてに勝利する`, category: 'special', value: (r) => theaterWins(r, t), goal: 1,
+  })),
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
+  ...ladder('shopper', '御用達章', 'base', [5, 30, 100], (g) => `ショップで ${g} 回買い物をする`, (_r, c) => total(c, 'shopBuy')),
+  ...ladder('treasury', '蓄財章', 'special', [5000, 50000, 200000], (g) => `ゴールドを累計 ${g.toLocaleString()} 手に入れる`, (_r, c) => c.goldEarned ?? 0),
   ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them
   ...([
@@ -250,7 +295,16 @@ export function parseRecord(raw: unknown): IServiceRecord {
     return out;
   };
   if (r.scenarios && typeof r.scenarios === 'object') {
-    for (const [id, v] of Object.entries(r.scenarios)) if (v && typeof v === 'object') scenarios[id] = { wins: side(v.wins), losses: side(v.losses) };
+    for (const [id, v] of Object.entries(r.scenarios)) {
+      if (!v || typeof v !== 'object') continue;
+      const best: Partial<Record<'A' | 'B', IScenarioBest>> = {};
+      const b = (v.best ?? {}) as Record<string, unknown>;
+      for (const f of ['A', 'B'] as const) {
+        const x = b[f] as Partial<IScenarioBest> | undefined;
+        if (x && typeof x === 'object') best[f] = { victory: x.victory === true, sunk: num(x.sunk), lost: num(x.lost) };
+      }
+      scenarios[id] = { wins: side(v.wins), losses: side(v.losses), ...(Object.keys(best).length > 0 ? { best } : {}) };
+    }
   }
   return {
     ...parseModeRecord(r),
