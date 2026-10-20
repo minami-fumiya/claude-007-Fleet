@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.29.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.30.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -723,6 +723,63 @@ test.describe('screens', () => {
     expect(swept.sweeps).toBe(1);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `sweep (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('sweep.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('notices on the home screen, ten quests a tab with claim-all, and the record by kind of battle (#192 #180 #177)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    // Every hourly quest of this hour finished (the board shows ten of the pool, #180).
+    const now = Date.now();
+    const day = Math.floor((now - 15 * 3_600_000) / 86_400_000);
+    const hourly = (JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', 'quests.json'), 'utf8')) as { quests: Array<{ id: string; kind: string; goal: number }> }).quests.filter((q) => q.kind === 'hourly');
+    const quests = { hour: Math.floor(now / 3_600_000), day, week: Math.floor((day + 4) / 7), progress: Object.fromEntries(hourly.map((q) => [q.id, q.goal])), claimed: [], totals: {} };
+    const save = { ...SAVE, version: 8, nations: { IJN: { ...SAVE.nations.IJN, perfect: ['p2'], quests, items: { fastRepair: 0, fastBuild: 0, captainBook: 1 } } } };
+    const errors = await boot(page, layout, save);
+    await open(page, 'HomeScene');
+    const texts = (): Promise<string[]> => page.evaluate(() => {
+      const out: string[] = [];
+      const visit = (o: Phaser.GameObjects.GameObject): void => {
+        if (o.type === 'Text') out.push((o as Phaser.GameObjects.Text).text);
+        if (o.type === 'Container') (o as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene').children.list.forEach(visit);
+      return out;
+    });
+    // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full), the captain book.
+    const labels = await texts();
+    expect(labels.some((t) => /^任務 \d+$/.test(t)), `quest notice (${layout})`).toBe(true);
+    expect(labels.some((t) => t === '掃討 3'), `sweep notice (${layout})`).toBe(true);
+    expect(labels.some((t) => t === '艦長教本 1'), `book notice (${layout})`).toBe(true);
+    expect(await overflowingTexts(page, 'HomeScene'), `home (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'HomeScene'), `home overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('home-notices.png') });
+    // まとめて受け取る (#180): the ten on the hourly tab in one press.
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openQuests(k: string): void }).openQuests('hourly'));
+    expect(await overflowingTexts(page, 'HomeScene'), `quests (${layout})`).toEqual([]);
+    expect.soft(await overlappingTexts(page, 'HomeScene'), `quests overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('quests-claim-all.png') });
+    const claimed = await page.evaluate(() => {
+      const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
+      const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => x.type === 'Text' && (x as Phaser.GameObjects.Text).text.startsWith('まとめて受け取る')));
+      btn?.emit('pointerup');
+      const stored = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { quests: { claimed: string[]; totals: Record<string, number> } } } };
+      return { found: btn !== undefined, claimed: stored.nations.IJN.quests.claimed.length, total: stored.nations.IJN.quests.totals.questClaim ?? 0 };
+    });
+    expect(claimed.found).toBe(true);
+    expect(claimed.claimed).toBe(10);
+    expect(claimed.total).toBe(10);
+    // The record: each tab fits.
+    await open(page, 'RecordScene');
+    for (const mode of ['all', 'campaign', 'exercise', 'scenario']) {
+      await page.evaluate((m) => {
+        const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('RecordScene') as unknown as { mode: string; buildStats(r: unknown): void };
+        s.mode = m;
+        s.buildStats(JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}').record);
+      }, mode);
+      expect(await overflowingTexts(page, 'RecordScene'), `record ${mode} (${layout})`).toEqual([]);
+      expect.soft(await overlappingTexts(page, 'RecordScene'), `record ${mode} overlaps (${layout})`).toEqual([]);
+      await page.screenshot({ path: info.outputPath(`record-${mode}.png`) });
+    }
     expect(errors).toEqual([]);
   });
 
