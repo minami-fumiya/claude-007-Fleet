@@ -10,6 +10,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { selectionFor } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { askShipName } from '@/ui/components/FilterBar';
 import { applyToStats, applyToWeapons, combineModifiers, customizeShips, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { IShipData, IShipStats } from '@/types/Ship';
@@ -18,11 +19,11 @@ import { IWeaponData } from '@/types/Weapon';
 import { ITechNode } from '@/types/Progression';
 import { unlockedUpgrades } from '@/systems/ResearchSystem';
 import techTree from '@/data/tech-tree.json';
-import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch } from '@/systems/RefitSystem';
-import { formatResources } from '@/systems/ResourceSystem';
+import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch, switchCost } from '@/systems/RefitSystem';
+import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { actionVariant, addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { withQuestEvents } from '@/systems/QuestSystem';
 
@@ -248,9 +249,9 @@ export class CustomizationScene extends Phaser.Scene {
     add(this.add.text(r.x + 24, bottom + 8, '⚑ = 艦隊の艦', textStyle(11, Css.dim)));
     const sw = IS_PORTRAIT ? 240 : 200;
     add(new UIButton(this, r.x + r.w - 24 - sw / 2, bottom + (IS_PORTRAIT ? 20 : 16), this.query ? `検索: ${this.query}` : '名前で検索', () => {
-      const answer = window.prompt('艦名・級の名前で検索 (空欄で解除)', this.query);
-      if (answer === null) return;
-      this.query = answer.trim();
+      const query = askShipName(this.query);
+      if (query === null) return;
+      this.query = query;
       this.openShipList(filter);
     }, { variant: this.query ? 'primary' : 'secondary', width: sw, height: IS_PORTRAIT ? 40 : 30, fontSize: 13 }));
     add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeShipList(), {
@@ -373,8 +374,8 @@ export class CustomizationScene extends Phaser.Scene {
     const r = { x: (CANVAS_W - w) / 2, y: Math.max(16, (CANVAS_H - h) / 2), w, h };
     add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
     add(this.add.text(r.x + 24, r.y + 20, `${shortName(ship.name)}  ·  ${standard.suffix}の方向`, eyebrowStyle(11, Css.cyan)));
-    const can = reached || canRefit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
-    add(this.add.text(r.x + 24, r.y + 42, reached ? `変更には ${formatResources(standard.cost)}` : `${formatResources(standard.cost)}  ·  熟練 ${progress.proficiency[ship.id] ?? 0} / ${standard.minProficiency}`, textStyle(13, can ? Css.muted : Css.danger)));
+    const can = reached ? canAfford(progress.resources, switchCost(this.refitTable, ship)) : canRefit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
+    add(this.add.text(r.x + 24, r.y + 42, reached ? `変更には ${formatResources(switchCost(this.refitTable, ship))} (改造の半分)` : `${formatResources(standard.cost)}  ·  熟練 ${progress.proficiency[ship.id] ?? 0} / ${standard.minProficiency}`, textStyle(13, can ? Css.muted : Css.danger)));
     let y = r.y + 76;
     for (const o of options) {
       const on = reached && o.id === current;
@@ -383,7 +384,7 @@ export class CustomizationScene extends Phaser.Scene {
       const fx = add(this.add.text(r.x + 36, y + rowH - 10, describeModifiers(o.effects).join('  '), textStyle(11, Css.cyan)).setOrigin(0, 1));
       if (fx.width > r.w - 220) fx.setScale((r.w - 220) / fx.width);
       add(new UIButton(this, r.x + r.w - 100, y + rowH / 2, on ? '選択中' : reached ? '変更' : '改造', () => this.chooseBranch(o.id), {
-        variant: on ? 'secondary' : 'primary', width: 140, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
+        variant: on ? 'secondary' : actionVariant(can), width: 140, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
       })).setEnabled(!on && can);
       y += rowH + 8;
     }
@@ -404,7 +405,7 @@ export class CustomizationScene extends Phaser.Scene {
     if (stage >= maxStage(this.refitTable, ship)) {
       const left = switchBranch(this.refitTable, ship, stage, progress.refitBranches[ship.id], id, progress.resources);
       if (!left) return;
-      saveProgress({ ...progress, resources: left, refitBranches: branches }, 'refit');
+      saveProgress(withQuestEvents({ ...progress, resources: left, refitBranches: branches }, [['refitRebranch', 1]], Date.now()), 'refit');
     } else {
       const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
       if (!r) return;
@@ -502,25 +503,27 @@ export class CustomizationScene extends Phaser.Scene {
     const branched = branchesFor(this.refitTable, ship).length > 0;
     if (!next && branched) {
       // Finished, but the direction of the last stage can still change (#86).
-      this.refitText.setText('改造完了 (最終段階)  ·  方向はいつでも変えられます (改造の資源が要ります)');
-      this.refitBtn.setLabel(`${reached?.suffix ?? ''} の方向を変更`).setEnabled(true);
+      const cost = switchCost(this.refitTable, ship);
+      this.refitText.setText(`改造完了 (最終段階)  ·  方向はいつでも変えられます (${formatResources(cost)})`);
+      this.refitBtn.setLabel(`${reached?.suffix ?? ''} の方向を変更`).setEnabled(true).setVariant(actionVariant(canAfford(progress.resources, cost)));
     } else if (!next) {
       this.refitText.setText('改造完了 (最終段階)');
-      this.refitBtn.setLabel('改造完了').setEnabled(false);
+      this.refitBtn.setLabel('改造完了').setEnabled(false).setVariant('secondary');
     } else if (branched && stage === maxStage(this.refitTable, ship) - 1) {
       const slotsNext = upgradeSlots(stage + 1) > slots ? `  ·  装備枠 ${upgradeSlots(stage + 1)}` : '';
       this.refitText.setText(`次: ${next.suffix} (方向を選ぶ: 標準・${branchesFor(this.refitTable, ship).map((b) => b.suffix).join('・')})  ·  熟練 ${prof} / ${next.minProficiency}${slotsNext}  ·  ${formatResources(next.cost)}`);
-      this.refitBtn.setLabel(`${next.suffix} の方向を選ぶ`).setEnabled(true);
+      this.refitBtn.setLabel(`${next.suffix} の方向を選ぶ`).setEnabled(true).setVariant(actionVariant(canRefit(this.refitTable, ship, stage, prof, progress.resources)));
     } else {
       const special = next.special && next.label ? `【特別改装】${next.label}\n` : '';
       const slotsNext = upgradeSlots(stage + 1) > slots ? `  ·  装備枠 ${upgradeSlots(stage + 1)}` : '';
       this.refitText.setText(`${special}次: ${next.suffix}  ·  熟練 ${prof} / ${next.minProficiency}${slotsNext}  ·  ${formatResources(next.cost)}`);
-      this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(canRefit(this.refitTable, ship, stage, prof, progress.resources));
+      const ready = canRefit(this.refitTable, ship, stage, prof, progress.resources);
+      this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(ready).setVariant(actionVariant(ready));
     }
     // Unremodelled ships have no upgrade slots (#72): point at the remodel that opens them.
     this.slotText.setText(slots > 0 ? `装備 ${fitted.length} / ${slots}` : `装備枠なし — 改に改造すると ${upgradeSlots(1)} 枠`);
     if (this.away(ship.id)) {
-      this.refitBtn.setLabel('出撃中 — 帰投後に改装できます').setEnabled(false);
+      this.refitBtn.setLabel('出撃中 — 帰投後に改装できます').setEnabled(false).setVariant('secondary');
       this.slotText.setText('出撃中');
     }
   }

@@ -18,6 +18,7 @@ import { IShipData } from '@/types/Ship';
 import { shipOrder, hullNumber } from '@/systems/ShipOrder';
 import { filterShips, kindsOf } from '@/systems/ListFilter';
 import { FilterBar } from '@/ui/components/FilterBar';
+import { BUILT_KEY } from './HomeScene';
 import { formatNo } from '@/systems/Numbering';
 import { buildLook, buildNameShown, hiddenShipName } from '@/systems/RevealSystem';
 import { ShipClass } from '@/types/ShipClass';
@@ -71,6 +72,8 @@ export class ShipyardScene extends Phaser.Scene {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
     awardPendingMedals();
+    // The home screen's 建造完了 notice (#264) is read once the shipyard is open.
+    this.registry.remove(BUILT_KEY);
     this.guide = new TutorialGuide(this);
     this.tabs = [];
     this.layer = [];

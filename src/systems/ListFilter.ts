@@ -27,7 +27,7 @@ export const LIST_STATE_LABEL: Record<ListState, string> = {
   unowned: '未保有',
 };
 
-/** Folds width, case and katakana into one form, so ｶﾞﾝﾄ, ガント and がんと match alike. */
+/** Folds width, case and katakana into one form, so half-width kana, ガント and がんと match alike. */
 export function normalizeQuery(text: string): string {
   return text
     .normalize('NFKC')

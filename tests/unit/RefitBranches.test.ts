@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { branchesFor, maxStage, REFIT_TABLE, refitModifiers, refitName, switchBranch } from '@/systems/RefitSystem';
+import { branchesFor, maxStage, REFIT_TABLE, refitModifiers, refitName, stagesFor, switchBranch, switchCost } from '@/systems/RefitSystem';
 import { parseSave } from '@/utils/ProgressStore';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -28,10 +28,12 @@ describe('refit branches (#86)', () => {
     expect(refitModifiers(REFIT_TABLE, dd, last, 'nope')).toEqual(refitModifiers(REFIT_TABLE, dd, last));
   });
 
-  it('switching direction later costs the stage again; not before the last stage or to the same one', () => {
+  it('switching direction later costs half the stage (#265); not before the last stage or to the same one', () => {
     const last = maxStage(REFIT_TABLE, dd);
     const left = switchBranch(REFIT_TABLE, dd, last, 'asw', 'fast', rich)!;
-    expect(left.steel).toBeLessThan(rich.steel);
+    const full = stagesFor(REFIT_TABLE, dd)[last - 1].cost;
+    expect(switchCost(REFIT_TABLE, dd).steel).toBe(Math.ceil((full.steel ?? 0) / 2));
+    expect(rich.steel - left.steel).toBe(switchCost(REFIT_TABLE, dd).steel);
     expect(switchBranch(REFIT_TABLE, dd, last, 'asw', 'asw', rich)).toBeNull();
     expect(switchBranch(REFIT_TABLE, dd, last - 1, undefined, 'asw', rich)).toBeNull();
     expect(switchBranch(REFIT_TABLE, dd, last, undefined, 'nope', rich)).toBeNull();

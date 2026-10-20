@@ -277,6 +277,14 @@ export function addPanel(
 
 export type ButtonVariant = 'primary' | 'gold' | 'secondary' | 'danger';
 
+/**
+ * Gold only when actionable (#269): a call to action is gold only when pressing it would do the thing now (resources,
+ * proficiency and slots allow it); otherwise it stays a plain button, still pressable where it opens an explanation.
+ */
+export function actionVariant(ready: boolean): ButtonVariant {
+  return ready ? 'gold' : 'secondary';
+}
+
 const BTN_PAD = 24;
 
 const BUTTON_GRADIENTS: Record<ButtonVariant, [string, string] | null> = {

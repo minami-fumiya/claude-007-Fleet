@@ -10,6 +10,7 @@ import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
 import { dockCount } from './DockSystem';
+import { withQuestEvents } from './QuestSystem';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -234,7 +235,8 @@ export function completeBuilds(progress: IProgress, roster: IShipData[], now: nu
     next = grantShip(next, roster, b.shipId);
     if (b.base) next = assignShips(next, [b.shipId], b.base);
   }
-  return { progress: next, done };
+  // 竣工章 (#264) counts the ships that come out of the yard.
+  return { progress: withQuestEvents(next, [['buildDone', done.length]], now), done };
 }
 
 /** Finishes a build at once with a 高速建造材; null when there is none or the ship isn't being built. */

@@ -29,6 +29,8 @@ export type QuestEvent =
   | 'planesDown'
   // 0.0.30: remodels finished in a chosen direction (#86)
   | 'refitBranch'
+  // 0.0.36: finished ships moved to another direction (#265), builds finished, list searches (#263)
+  | 'refitRebranch' | 'buildDone' | 'listSearch'
   // the Black Sea theater and training areas (#202)
   | 'winBlackSea' | 'trainingWin'
   // The seas added in 0.0.35 (#250)

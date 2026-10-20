@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
-import { holdCap, regenRules } from '@/systems/FacilitySystem';
+import { buildTimeMul, holdCap, regenRules } from '@/systems/FacilitySystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -17,7 +17,7 @@ import { captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
-import { buildsHere, ownedIds, starterShip } from '@/systems/ShipyardSystem';
+import { buildsHere, buildTimeMs, completeBuilds, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
 import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -66,6 +66,8 @@ const L = IS_PORTRAIT
 
 /** Registry key: the menu tab last opened (#61), kept while the game runs. */
 const HOME_TAB_KEY = 'home.tab';
+/** Registry key: builds finished since the shipyard was opened (#264), for the notice strip */
+export const BUILT_KEY = 'home.built';
 const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 5 : 4;
 /** Progress bar offset below a dock row's ship name; portrait text is taller, so the bar sits lower. */
 const DOCK_METER_Y = IS_PORTRAIT ? 36 : 18;
@@ -577,6 +579,14 @@ export class HomeScene extends Phaser.Scene {
       this.refresh();
       return;
     }
+    // A build finished while the admiral watches (#264): it joins the fleet, and the notice strip says so.
+    const built = completeBuilds(progress, this.registryShips.byNation(progress.nation), now);
+    if (built.done.length > 0) {
+      saveProgress(built.progress);
+      this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + built.done.length);
+      this.refresh();
+      return;
+    }
     for (const m of this.dockMeters) {
       const left = m.endsAt - now;
       m.g.clear();
@@ -635,7 +645,10 @@ export class HomeScene extends Phaser.Scene {
    */
   private drawPending(progress: IProgress, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
     // Sweeps show on the 作戦 button (掃討 3), so the strip leaves them out (2026-10-20).
-    const items = pendingSummary(progress, Date.now(), 0).filter((p) => p.id !== 'docks' && p.id !== 'sweeps');
+    const items: Array<{ id: string; label: string; count: number; scene: string }> = pendingSummary(progress, Date.now(), 0).filter((p) => p.id !== 'docks' && p.id !== 'sweeps');
+    // Builds finished since the shipyard was last opened (#264).
+    const built = (this.registry.get(BUILT_KEY) as number | undefined) ?? 0;
+    if (built > 0) items.unshift({ id: 'built', label: '建造完了', count: built, scene: SceneKeys.SHIPYARD });
     const n = L.notice;
     add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
     if (items.length === 0) {
@@ -649,9 +662,25 @@ export class HomeScene extends Phaser.Scene {
     items.forEach((it, i) => {
       add(new UIButton(this, left + i * (w + gap) + w / 2, n.y + n.h / 2, `${it.label} ${it.count}`, () => {
         if (it.id === 'quests') this.openQuests();
-        else this.scene.start(it.scene, { returnTo: SceneKeys.HOME });
+        else {
+          if (it.id === 'built') this.registry.remove(BUILT_KEY);
+          this.scene.start(it.scene, { returnTo: SceneKeys.HOME });
+        }
       }, { variant: it.id === 'quests' ? 'gold' : 'primary', width: w, height: n.h - 6, fontSize: IS_PORTRAIT ? 14 : 12 }));
     });
+  }
+
+  /** A build row's button (#264): a 高速建造材 finishes the build here, without one the shipyard opens. */
+  private finishBuild(shipId: string): void {
+    const progress = loadProgress();
+    const done = progress.items.fastBuild > 0 ? fastBuild(progress, this.registryShips.byNation(progress.nation), shipId, Date.now()) : null;
+    if (!done) {
+      this.scene.start(SceneKeys.SHIPYARD, { returnTo: SceneKeys.HOME });
+      return;
+    }
+    saveProgress(done);
+    this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + 1);
+    this.refresh();
   }
 
   private openMenuItem(item: IHomeMenuItem): void {
@@ -732,6 +761,35 @@ export class HomeScene extends Phaser.Scene {
     }
     if (progress.docks.length > repairRows) {
       add(this.add.text(d.x + pad + 110, y, `ほか ${progress.docks.length - repairRows} 隻入渠中`, textStyle(12, Css.muted)));
+      y += IS_PORTRAIT ? 36 : 26;
+    }
+    // Builds in this base's docks (#264): the ship, a bar and the time left; a 高速建造材 finishes one at once.
+    const builds = buildsHere(all);
+    const buildRows = Math.min(builds.length, 2);
+    for (let i = 0; i < buildRows; i++) {
+      const job = builds[i];
+      const ship = this.registryShips.byId(job.shipId);
+      if (!ship) continue;
+      add(this.add.text(d.x + pad, y, `建造 ${i + 1}`, eyebrowStyle(10, Css.cyan)));
+      add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
+      const meterX = d.x + pad + 110;
+      const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
+      const g = add(this.add.graphics());
+      const t = add(
+        IS_PORTRAIT
+          ? this.add.text(meterX, y + DOCK_METER_Y + 14, '', textStyle(12, Css.muted))
+          : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
+      );
+      const total = buildTimeMs(ship, buildTimeMul(all.facilities, here));
+      this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
+      const items = all.items.fastBuild;
+      add(new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速建造材 (${items})` : '工廠へ', () => this.finishBuild(ship.id), {
+        variant: items > 0 ? 'primary' : 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
+      }));
+      y += IS_PORTRAIT ? 100 : 52;
+    }
+    if (builds.length > buildRows) {
+      add(this.add.text(d.x + pad + 110, y, `ほか ${builds.length - buildRows} 隻建造中`, textStyle(12, Css.muted)));
       y += IS_PORTRAIT ? 36 : 26;
     }
     const next = nextDock(progress);
