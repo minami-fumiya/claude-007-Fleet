@@ -155,4 +155,11 @@ describe('v11 → v12: hourly quests and lifetime totals (#158)', () => {
     expect(q.totals.sink).toBe(fixture.nations.IJN.rankStats.sink);
     expect(q.totals.build).toBe(1);
   });
+
+  it('v17 → v18 (#181): every area open for sweeping starts with three sweeps banked', () => {
+    const fixture = JSON.parse(readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.30.json'), 'utf8'));
+    fixture.nations.IJN.perfect = ['p1', 'p2'];
+    const n = parseSave(JSON.stringify(fixture)).nations[Nation.IJN]!;
+    expect(n.sweepCharges).toEqual({ p1: { charges: 3, at: 0 }, p2: { charges: 3, at: 0 } });
+  });
 });

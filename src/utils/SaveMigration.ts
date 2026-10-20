@@ -198,6 +198,13 @@ export const MIGRATIONS: MigrationStep[] = [
   // v16 → v17 (0.0.30, #86): the last remodel stage can take a branch (改三甲 / 乙 / 丙). Every ship already remodelled
   // keeps the standard stage it had: an empty branch list.
   (data) => mapNations(data, (nation) => ({ refitBranches: {}, ...nation })),
+  // v17 → v18 (0.0.31, #181): sweeps bank up to three, one more an hour, instead of three a game day. Every area
+  // already open for sweeping starts full, so no sweep usable before the update is lost.
+  (data) => mapNations(data, (nation) => {
+    const open = Array.isArray(nation.perfect) ? nation.perfect.filter((id): id is string => typeof id === 'string') : [];
+    const sweepCharges = Object.fromEntries(open.map((id) => [id, { charges: 3, at: 0 }]));
+    return { ...nation, sweepCharges: { ...sweepCharges, ...(typeof nation.sweepCharges === 'object' && nation.sweepCharges !== null ? nation.sweepCharges as RawSave : {}) } };
+  }),
 ];
 
 /** Applies `fn` to every nation slot of a raw v2+ save, leaving anything malformed alone. */

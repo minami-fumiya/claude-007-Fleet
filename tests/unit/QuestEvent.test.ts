@@ -4,7 +4,7 @@ import {
   activeQuests, claimQuest, emptyQuestState, gameDay, gameWeek, isClaimable, nextReset, parseQuestState, QUEST_KINDS, questBoard, questProgress, QUESTS, QUESTS_SHOWN,
   questStatus, recordQuestEvent, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
-import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost, SWEEPS_PER_DAY, sweepsLeft } from '@/systems/ProgressionSystem';
+import { canSweep, openSweeps, SWEEP_MAX, SWEEP_RECHARGE_MS, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { battleReward, resources } from '@/systems/ResourceSystem';
 import { emptyNationProgress, IProgress } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
@@ -190,17 +190,33 @@ describe('sweep (#57)', () => {
     expect(withQuestEvents(p, [], MONDAY_5AM)).toBe(p);
   });
 
-  it('three sweeps per area per game day (#57: unlimited sweeps made battles pointless)', () => {
-    let p: IProgress = { ...base(), perfect: [area.id] };
-    for (let i = 0; i < SWEEPS_PER_DAY; i++) {
-      expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(SWEEPS_PER_DAY - i);
+  it('banks up to three sweeps, one more an hour; the first S opens it at 0 (#181)', () => {
+    let p: IProgress = openSweeps({ ...base(), perfect: [area.id] }, area.id, MONDAY_5AM);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(0);
+    expect(sweepArea(p, area, enemy, MONDAY_5AM)).toBeNull();
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR - 1)).toBe(0);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR)).toBe(1);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 10 * HOUR)).toBe(SWEEP_MAX);
+    // Opening again (another S) keeps the charges.
+    expect(openSweeps(p, area.id, MONDAY_5AM + HOUR)).toBe(p);
+    // Using one at 2.5 h keeps the running hour: the next comes at 3 h.
+    p = sweepArea(p, area, enemy, MONDAY_5AM + 2.5 * HOUR)!.progress;
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 2.5 * HOUR)).toBe(1);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 3 * HOUR)).toBe(2);
+    expect(SWEEP_RECHARGE_MS).toBe(HOUR);
+  });
+
+  it('a full bank starts its hour on use, stops at the cap and ignores a clock set back (#181)', () => {
+    let p: IProgress = { ...base(), perfect: [area.id], sweepCharges: { [area.id]: { charges: SWEEP_MAX, at: 0 } } };
+    for (let i = 0; i < SWEEP_MAX; i++) {
+      expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(SWEEP_MAX - i);
       p = sweepArea(p, area, enemy, MONDAY_5AM)!.progress;
     }
     expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(0);
-    expect(sweepArea(p, area, enemy, MONDAY_5AM + HOUR)).toBeNull();
-    // Other areas have their own count; the next game day starts over.
-    expect(sweepsLeft(p, 'other', MONDAY_5AM)).toBe(SWEEPS_PER_DAY);
-    expect(sweepsLeft(p, area.id, MONDAY_5AM + 24 * HOUR)).toBe(SWEEPS_PER_DAY);
-    expect(sweepArea(p, area, enemy, MONDAY_5AM + 24 * HOUR)).not.toBeNull();
+    expect(sweepArea(p, area, enemy, MONDAY_5AM + HOUR / 2)).toBeNull();
+    expect(sweepsLeft(p, area.id, MONDAY_5AM - 24 * HOUR)).toBe(0);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR)).toBe(1);
+    // Areas keep their own charges; an area open from before the charges counts as full.
+    expect(sweepsLeft(p, 'other', MONDAY_5AM)).toBe(SWEEP_MAX);
   });
 });

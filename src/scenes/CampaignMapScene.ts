@@ -8,7 +8,8 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost, SWEEPS_PER_DAY, sweepsLeft } from '@/systems/ProgressionSystem';
+import { clock } from '@/utils/TimeFormat';
+import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
@@ -273,8 +274,9 @@ export class CampaignMapScene extends Phaser.Scene {
     // 掃討 (#57): an area won without losses can be swept, skipping the battle.
     const sweepable = canSweep(progress, a);
     const left = sweepsLeft(progress, a.id, Date.now());
+    const wait = nextSweepMs(progress.sweepCharges[a.id], Date.now());
     const sweepNote = sweepable
-      ? `掃討 (今日あと ${left} / ${SWEEPS_PER_DAY} 回・毎日 0 時に回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復まで ${clock(wait)}` : '満タン'}・1 時間に 1 回回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
     if (this.status || sweepNote) {

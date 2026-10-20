@@ -9,7 +9,10 @@ import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
 import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
 import { isAtCurrentBase } from './BaseSystem';
-import { gameDay, withQuestEvents } from './QuestSystem';
+import { withQuestEvents } from './QuestSystem';
+import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
+
+export { nextSweepMs, SWEEP_MAX, SWEEP_RECHARGE_MS, sweepCharges } from './SweepSystem';
 import { ShipClass } from '@/types/ShipClass';
 
 /**
@@ -125,14 +128,15 @@ export function startingHp(progress: IProgress, shipId: string, exercise = false
 /** A sweep pays this share of a won battle's resource reward (#57). */
 export const SWEEP_REWARD_SCALE = 0.8;
 
-/** Sweeps per area per game day (#57): unlimited instant rewards made battles pointless. Resets at 00:00 JST (#219). */
-export const SWEEPS_PER_DAY = 3;
+/** Sweeps of `area` left now (#181). */
+export function sweepsLeft(progress: Pick<IProgress, 'sweepCharges'>, areaId: string, now: number): number {
+  return sweepCharges(progress.sweepCharges[areaId], now);
+}
 
-/** Sweeps of `area` left today. */
-export function sweepsLeft(progress: Pick<IProgress, 'sweeps'>, areaId: string, now: number): number {
-  const s = progress.sweeps;
-  const used = s.day === gameDay(now) ? s.counts[areaId] ?? 0 : 0;
-  return Math.max(0, SWEEPS_PER_DAY - used);
+/** Opens `areaId` for sweeping on its first S (#181): starts at 0. An area already open keeps its charges. */
+export function openSweeps(progress: IProgress, areaId: string, now: number): IProgress {
+  if (progress.sweepCharges[areaId]) return progress;
+  return { ...progress, sweepCharges: { ...progress.sweepCharges, [areaId]: newSweepCharge(now) } };
 }
 
 /** True when `area` may be swept: cleared, and once won with an S rank (#57 / #149; perfect wins from before count). */
@@ -174,9 +178,7 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const after = rankOf(merited);
   const promoted = { progress: merited, promotedTo: after.index > before.index ? after : null };
   const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
-  const day = gameDay(now);
-  const counts = progress.sweeps.day === day ? progress.sweeps.counts : {};
-  const counted = { ...promoted.progress, sweeps: { day, counts: { ...counts, [area.id]: (counts[area.id] ?? 0) + 1 } } };
+  const counted = { ...promoted.progress, sweepCharges: { ...progress.sweepCharges, [area.id]: useSweepCharge(progress.sweepCharges[area.id], now) } };
   const next = withQuestEvents(counted, [
     ['sortie', 1], ['win', 1], ['sink', enemy.length], ['sweep', 1],
     ['sinkDestroyer', of(ShipClass.Destroyer)], ['sinkCruiser', of(ShipClass.Cruiser)],

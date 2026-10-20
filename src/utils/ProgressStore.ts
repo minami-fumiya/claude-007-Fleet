@@ -29,6 +29,7 @@ import { Formation } from '@/types/Formation';
 import { ICaptainStats } from '@/systems/CaptainSystem';
 import { nationCaptains, starterCaptain } from '@/systems/CaptainRoster';
 import { addBackup, BACKUP_KEY, BackupReason, ISaveBackup, parseBackups, rawVersion } from './SaveBackup';
+import { ISweepCharge, SWEEP_MAX } from '@/systems/SweepSystem';
 import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
@@ -82,8 +83,8 @@ export interface INationProgress {
   quests: IQuestState;
   /** Campaign areas won without losing a ship: they can be swept (#57) */
   perfect: string[];
-  /** Sweeps used today by area (#57): limited to SWEEPS_PER_DAY a game day */
-  sweeps: { day: number; counts: Record<string, number> };
+  /** Banked sweeps by area (#181): up to SWEEP_MAX, one more an hour; an area opens at 0 on its first S */
+  sweepCharges: Record<string, ISweepCharge>;
   /** Saved fleet setups (#33); null = unused */
   presets: (IFleetPreset | null)[];
   /** Ships under construction (#143): they join `ships` when finished */
@@ -146,7 +147,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
-    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweeps: { day: 0, counts: {} },
+    merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null,
   };
 }
@@ -293,7 +294,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     base: typeof data.base === 'string' ? data.base : '',
     quests: parseQuestState(data.quests),
     perfect: [...new Set(strings(data.perfect))],
-    sweeps: parseSweeps(data.sweeps),
+    sweepCharges: parseSweepCharges(data.sweepCharges),
     builds: parseJobs(data.builds),
     items: parseItems(data.items),
     areaRanks: parseAreaRanks(data.areaRanks),
@@ -377,9 +378,14 @@ function parseItems(v: unknown): IItems {
   return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild), captainBook: n(o.captainBook) };
 }
 
-function parseSweeps(v: unknown): { day: number; counts: Record<string, number> } {
-  if (!isObject(v)) return { day: 0, counts: {} };
-  return { day: isNum(v.day) ? v.day : 0, counts: numbers(v.counts) };
+function parseSweepCharges(src: unknown): Record<string, ISweepCharge> {
+  const out: Record<string, ISweepCharge> = {};
+  if (!isObject(src)) return out;
+  for (const [id, v] of Object.entries(src)) {
+    if (!isObject(v)) continue;
+    out[id] = { charges: isNum(v.charges) ? Math.max(0, Math.min(SWEEP_MAX, Math.floor(v.charges))) : SWEEP_MAX, at: isNum(v.at) ? v.at : 0 };
+  }
+  return out;
 }
 
 function stringLists(src: unknown): Record<string, string[]> {

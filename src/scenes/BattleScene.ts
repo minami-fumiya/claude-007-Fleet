@@ -63,7 +63,7 @@ import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
 import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown } from '@/systems/BattleRank';
 import { NATION_INFO } from '@/config/NationInfo';
-import { isExercise, settleBattle, startingHp } from '@/systems/ProgressionSystem';
+import { isExercise, openSweeps, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/ResearchSystem';
 import { addResources, formatResources, gainResources, lostNote } from '@/systems/ResourceSystem';
@@ -1622,7 +1622,8 @@ export class BattleScene extends Phaser.Scene {
     if (area && !skirmish) {
       // A training area's S rank brings no captain (#202).
       if (rank === 'S' && victory && !progress.perfect.includes(area.id) && !area.training) firstS = true;
-      if (rank === 'S' && !progress.perfect.includes(area.id)) progress = { ...progress, perfect: [...progress.perfect, area.id] };
+      // The first S opens sweeping at 0, one more each hour (#181).
+      if (rank === 'S' && !progress.perfect.includes(area.id)) progress = openSweeps({ ...progress, perfect: [...progress.perfect, area.id] }, area.id, Date.now());
       const best = betterRank(progress.areaRanks[area.id], rank);
       if (best && best !== progress.areaRanks[area.id]) progress = { ...progress, areaRanks: { ...progress.areaRanks, [area.id]: best } };
     }
