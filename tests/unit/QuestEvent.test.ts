@@ -4,7 +4,7 @@ import {
   activeQuests, claimQuest, emptyQuestState, gameDay, gameWeek, isClaimable, nextReset, parseQuestState, QUEST_KINDS, questBoard, questProgress, QUESTS, QUESTS_SHOWN,
   questStatus, recordQuestEvent, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
-import { canSweep, SWEEP_REWARD_SCALE, sweepArea, sweepCost, SWEEPS_PER_DAY, sweepsLeft } from '@/systems/ProgressionSystem';
+import { canSweep, openSweeps, SWEEP_MAX, SWEEP_RECHARGE_MS, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { battleReward, resources } from '@/systems/ResourceSystem';
 import { emptyNationProgress, IProgress } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
@@ -122,9 +122,15 @@ describe('quests: the board (#158)', () => {
     for (const k of QUEST_KINDS) expect(QUESTS.filter((q) => q.kind === k).length).toBeGreaterThanOrEqual(QUESTS_SHOWN[k]);
   });
 
-  it('three hourly quests turn over every hour; dailies and weeklies are picked per period, at most 10 on a tab', () => {
+  it('ten of each turn over every hour, day and week (#180), picked per period from a larger pool', () => {
     const now = MONDAY_5AM + 30 * 60_000;
-    expect(activeQuests('hourly', now)).toHaveLength(3);
+    for (const k of ['hourly', 'daily', 'weekly'] as const) {
+      expect(activeQuests(k, now), k).toHaveLength(10);
+      expect(questBoard(emptyQuestState(), k, now), k).toHaveLength(10);
+    }
+    expect(QUESTS.filter((q) => q.kind === 'hourly').length).toBeGreaterThanOrEqual(30);
+    expect(QUESTS.filter((q) => q.kind === 'daily').length).toBeGreaterThanOrEqual(30);
+    expect(QUESTS.filter((q) => q.kind === 'weekly').length).toBeGreaterThanOrEqual(25);
     expect(activeQuests('hourly', now + 10 * 60_000)).toEqual(activeQuests('hourly', now));
     const hours = new Set(Array.from({ length: 12 }, (_, i) => activeQuests('hourly', now + i * HOUR).map((q) => q.id).join()));
     expect(hours.size).toBeGreaterThan(6);
@@ -133,6 +139,21 @@ describe('quests: the board (#158)', () => {
     expect(activeQuests('daily', now + 24 * HOUR)).not.toEqual(activeQuests('daily', now));
     for (const k of QUEST_KINDS) expect(questBoard(emptyQuestState(), k, now).length).toBeLessThanOrEqual(10);
     expect(nextReset('hourly', now)).toBe(MONDAY_5AM + HOUR);
+  });
+
+  it('a full hourly board pays about 600 fuel and ammo; dailies bring 3〜4 time-saving items a day (#180)', () => {
+    const hourly = QUESTS.filter((q) => q.kind === 'hourly');
+    for (const k of ['fuel', 'ammo'] as const) {
+      const perHour = (hourly.reduce((s, q) => s + (q.reward[k] ?? 0), 0) / hourly.length) * QUESTS_SHOWN.hourly;
+      expect(perHour, k).toBeGreaterThanOrEqual(500);
+      expect(perHour, k).toBeLessThanOrEqual(700);
+    }
+    // Expected items over many days: the four core dailies always, the rest drawn.
+    const days = Array.from({ length: 60 }, (_, i) => activeQuests('daily', MONDAY_5AM + i * 24 * HOUR));
+    const items = days.map((d) => d.reduce((s, q) => s + (q.items?.fastRepair ?? 0) + (q.items?.fastBuild ?? 0), 0));
+    const mean = items.reduce((a, b) => a + b, 0) / items.length;
+    expect(mean).toBeGreaterThanOrEqual(3);
+    expect(mean).toBeLessThanOrEqual(4);
   });
 
   it('hourly progress resets on the hour; an off-board quest gains nothing', () => {
@@ -190,17 +211,33 @@ describe('sweep (#57)', () => {
     expect(withQuestEvents(p, [], MONDAY_5AM)).toBe(p);
   });
 
-  it('three sweeps per area per game day (#57: unlimited sweeps made battles pointless)', () => {
-    let p: IProgress = { ...base(), perfect: [area.id] };
-    for (let i = 0; i < SWEEPS_PER_DAY; i++) {
-      expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(SWEEPS_PER_DAY - i);
+  it('banks up to three sweeps, one more an hour; the first S opens it at 0 (#181)', () => {
+    let p: IProgress = openSweeps({ ...base(), perfect: [area.id] }, area.id, MONDAY_5AM);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(0);
+    expect(sweepArea(p, area, enemy, MONDAY_5AM)).toBeNull();
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR - 1)).toBe(0);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR)).toBe(1);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 10 * HOUR)).toBe(SWEEP_MAX);
+    // Opening again (another S) keeps the charges.
+    expect(openSweeps(p, area.id, MONDAY_5AM + HOUR)).toBe(p);
+    // Using one at 2.5 h keeps the running hour: the next comes at 3 h.
+    p = sweepArea(p, area, enemy, MONDAY_5AM + 2.5 * HOUR)!.progress;
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 2.5 * HOUR)).toBe(1);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + 3 * HOUR)).toBe(2);
+    expect(SWEEP_RECHARGE_MS).toBe(HOUR);
+  });
+
+  it('a full bank starts its hour on use, stops at the cap and ignores a clock set back (#181)', () => {
+    let p: IProgress = { ...base(), perfect: [area.id], sweepCharges: { [area.id]: { charges: SWEEP_MAX, at: 0 } } };
+    for (let i = 0; i < SWEEP_MAX; i++) {
+      expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(SWEEP_MAX - i);
       p = sweepArea(p, area, enemy, MONDAY_5AM)!.progress;
     }
     expect(sweepsLeft(p, area.id, MONDAY_5AM)).toBe(0);
-    expect(sweepArea(p, area, enemy, MONDAY_5AM + HOUR)).toBeNull();
-    // Other areas have their own count; the next game day starts over.
-    expect(sweepsLeft(p, 'other', MONDAY_5AM)).toBe(SWEEPS_PER_DAY);
-    expect(sweepsLeft(p, area.id, MONDAY_5AM + 24 * HOUR)).toBe(SWEEPS_PER_DAY);
-    expect(sweepArea(p, area, enemy, MONDAY_5AM + 24 * HOUR)).not.toBeNull();
+    expect(sweepArea(p, area, enemy, MONDAY_5AM + HOUR / 2)).toBeNull();
+    expect(sweepsLeft(p, area.id, MONDAY_5AM - 24 * HOUR)).toBe(0);
+    expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR)).toBe(1);
+    // Areas keep their own charges; an area open from before the charges counts as full.
+    expect(sweepsLeft(p, 'other', MONDAY_5AM)).toBe(SWEEP_MAX);
   });
 });

@@ -3,6 +3,8 @@
   "playHoursPerDay": 2,
   "playHoursPerWeek": 10,
   "rankRewardMul": 1.1,
+  "_questCompletion": "Share of the board's quests a player finishes (#180): some need a theater, a convoy or a kind of event they don't have.",
+  "questCompletion": { "hourly": 0.6, "daily": 0.7, "weekly": 0.6 },
   "phases": [
     {
       "id": "early",

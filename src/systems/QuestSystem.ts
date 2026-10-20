@@ -29,7 +29,9 @@ export type QuestEvent =
   // 0.0.30: remodels finished in a chosen direction (#86)
   | 'refitBranch'
   // the Black Sea theater and training areas (#202)
-  | 'winBlackSea' | 'trainingWin';
+  | 'winBlackSea' | 'trainingWin'
+  // 0.0.31: quests claimed (#180)
+  | 'questClaim';
 
 export interface IQuest {
   id: string;
@@ -65,8 +67,8 @@ export interface IQuestState {
 export const QUESTS = (questData as { quests: IQuest[] }).quests;
 export const QUEST_KINDS: QuestKind[] = ['hourly', 'daily', 'weekly', 'once'];
 export const QUEST_KIND_LABEL: Record<QuestKind, string> = { hourly: '毎時', daily: 'デイリー', weekly: 'ウィークリー', once: '戦果' };
-/** How many of each kind are on the board at a time (#158); one-time ones show the first 10 by state. */
-export const QUESTS_SHOWN: Record<QuestKind, number> = { hourly: 3, daily: 8, weekly: 6, once: 10 };
+/** How many of each kind are on the board at a time (#158; ten of each since #180); one-time ones show the first 10 by state. */
+export const QUESTS_SHOWN: Record<QuestKind, number> = { hourly: 10, daily: 10, weekly: 10, once: 10 };
 /** Dailies always on the board: the four from 0.0.15, so their progress carries over. */
 const CORE_DAILIES = ['d_sortie', 'd_win', 'd_sink', 'd_repair'];
 

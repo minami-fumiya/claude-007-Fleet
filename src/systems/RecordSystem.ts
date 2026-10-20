@@ -1,18 +1,26 @@
 import { EVENT_KINDS } from './EventKinds';
-import { IBattleRecordInput, IMedal, IServiceRecord } from '@/types/Record';
+import { IBattleRecordInput, IMedal, IModeRecord, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
 import { ShipClass } from '@/types/ShipClass';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
 
 export function emptyRecord(): IServiceRecord {
-  return { sorties: 0, victories: 0, perfectVictories: 0, sunk: {}, damageDealt: 0, bestDamage: 0, shipsLost: 0, medals: [] };
+  return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {} };
 }
 
-export function totalSunk(r: IServiceRecord): number {
+export function emptyModeRecord(): IModeRecord {
+  return { sorties: 0, victories: 0, perfectVictories: 0, sunk: {}, damageDealt: 0, bestDamage: 0, shipsLost: 0 };
+}
+
+export function totalSunk(r: Pick<IModeRecord, 'sunk'>): number {
   return Object.values(r.sunk).reduce((a, n) => a + (n ?? 0), 0);
 }
 
-export function recordBattle(r: IServiceRecord, b: IBattleRecordInput): IServiceRecord {
+export const RECORD_MODES: RecordMode[] = ['campaign', 'exercise', 'scenario'];
+export const RECORD_MODE_LABEL: Record<RecordMode, string> = { campaign: '作戦', exercise: '演習', scenario: '史実' };
+
+/** One battle added to a set of figures. */
+function addBattle<T extends IModeRecord>(r: T, b: IBattleRecordInput): T {
   const sunk = { ...r.sunk };
   for (const c of b.sunkClasses) sunk[c] = (sunk[c] ?? 0) + 1;
   const damage = Math.max(0, Math.round(b.damageDealt));
@@ -25,6 +33,45 @@ export function recordBattle(r: IServiceRecord, b: IBattleRecordInput): IService
     damageDealt: r.damageDealt + damage,
     bestDamage: Math.max(r.bestDamage, damage),
     shipsLost: r.shipsLost + Math.max(0, b.shipsLost),
+  };
+}
+
+/**
+ * Adds a battle to the record (#177): to its kind's figures always, to the career totals unless it is a historical
+ * scenario, and a scenario's win or loss to that scenario's side.
+ */
+export function recordBattle(r: IServiceRecord, b: IBattleRecordInput, mode: RecordMode = 'campaign', scenario?: { id: string; force: 'A' | 'B' }): IServiceRecord {
+  const byMode = { ...(r.byMode ?? {}), [mode]: addBattle(r.byMode?.[mode] ?? emptyModeRecord(), b) };
+  const out: IServiceRecord = { ...(mode === 'scenario' ? r : addBattle(r, b)), byMode };
+  if (mode !== 'scenario' || !scenario) return out;
+  const was: IScenarioRecord = r.scenarios?.[scenario.id] ?? { wins: {}, losses: {} };
+  const key = b.victory ? 'wins' : 'losses';
+  const now: IScenarioRecord = { ...was, [key]: { ...was[key], [scenario.force]: (was[key][scenario.force] ?? 0) + 1 } };
+  return { ...out, scenarios: { ...(r.scenarios ?? {}), [scenario.id]: now } };
+}
+
+/**
+ * Battles fought before the record was split (#177): the career totals less what the campaign and the exercises
+ * have counted since. Shown as 区分なし (0.0.30 以前); never negative.
+ */
+export function unsortedRecord(r: IServiceRecord): IModeRecord {
+  const parts = (['campaign', 'exercise'] as const).map((m) => r.byMode?.[m] ?? emptyModeRecord());
+  const less = (k: 'sorties' | 'victories' | 'perfectVictories' | 'damageDealt' | 'shipsLost'): number => Math.max(0, r[k] - parts.reduce((s, p) => s + p[k], 0));
+  const sunk: IModeRecord['sunk'] = {};
+  for (const c of Object.values(ShipClass)) {
+    const n = (r.sunk[c] ?? 0) - parts.reduce((s, p) => s + (p.sunk[c] ?? 0), 0);
+    if (n > 0) sunk[c] = n;
+  }
+  const best = Math.max(0, ...parts.map((p) => p.bestDamage));
+  return { sorties: less('sorties'), victories: less('victories'), perfectVictories: less('perfectVictories'), sunk, damageDealt: less('damageDealt'), bestDamage: r.bestDamage > best ? r.bestDamage : 0, shipsLost: less('shipsLost') };
+}
+
+/** Scenarios won at least once from either side, and from both sides (#177). */
+export function scenarioWins(r: Pick<IServiceRecord, 'scenarios'>): { won: number; bothSides: number } {
+  const all = Object.values(r.scenarios ?? {});
+  return {
+    won: all.filter((s) => (s.wins.A ?? 0) + (s.wins.B ?? 0) > 0).length,
+    bothSides: all.filter((s) => (s.wins.A ?? 0) > 0 && (s.wins.B ?? 0) > 0).length,
   };
 }
 
@@ -151,14 +198,18 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('supply_depot', '補給基地章', 'base', [3, 5], (g) => `燃料タンク・弾薬庫・製鋼所・航空基地をすべて Lv${g} 以上にする`, (_r, c) => c.supplyLevel ?? 0),
   ...ladder('dockyard', '船渠章', 'base', [10, 100, 300], (g) => `損傷艦を ${g} 隻入渠させる`, (_r, c) => total(c, 'repair')),
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),
-  ...ladder('patrol', '哨戒章', 'base', [10, 100], (g) => `攻略済みの海域を ${g} 回掃討する`, (_r, c) => total(c, 'sweep')),
+  ...ladder('patrol', '哨戒章', 'base', [10, 100, 300, 1000], (g) => `攻略済みの海域を ${g} 回掃討する`, (_r, c) => total(c, 'sweep')),
   // 特殊
   ...ladder('event_tour', 'イベント巡り章', 'special', [3, 7], (g) => `${g} 種類のイベントの開催中に勝利する`, (_r, c) => EVENT_KINDS.filter((k) => total(c, `event_${k}`) > 0).length),
   ...ladder('veteran_player', '古参章', 'special', [1, 3, 10], (g) => `新しい版を ${g} 回迎える (タイトルの更新内容)`, (_r, c) => total(c, 'versionUpdate')),
   ...ladder('nations', '連合章', 'special', [2, 4, 7], (g) => `${g} か国で艦隊を率いる`, (_r, c) => c.nationsPlayed ?? 0),
   ...ladder('torpedo_squadron', '水雷戦隊章', 'special', [10, 50], (g) => `駆逐艦が旗艦の艦隊で ${g} 回勝利する`, (_r, c) => total(c, 'ddFlagWin')),
   ...ladder('drill', '演習章', 'special', [20, 100], (g) => `演習で ${g} 回勝利する`, (_r, c) => total(c, 'exerciseWin')),
+  ...ladder('historian', '戦史章', 'special', [3, 6, 10], (g) => `史実のシナリオを ${g} 種類勝利する`, (r) => scenarioWins(r).won),
+  ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
+  ...ladder('history_battles', '史実従軍章', 'special', [10, 50], (g) => `史実のシナリオで ${g} 回勝利する`, (r) => r.byMode?.scenario?.victories ?? 0),
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
+  ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them
   ...([
     ['q_win200', '不敗の勲章', '任務「不敗の艦隊」を達成する'], ['q_sink500', '五百隻撃沈記念章', '任務「五百隻撃沈」を達成する'],
@@ -188,21 +239,43 @@ export function awardMedals(r: IServiceRecord, medals: IMedal[]): IServiceRecord
 
 /** Tolerant parse of a stored record (older saves have none). */
 export function parseRecord(raw: unknown): IServiceRecord {
-  const r = (raw ?? {}) as Partial<IServiceRecord>;
-  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
+  const r = (raw !== null && typeof raw === 'object' ? raw : {}) as Partial<IServiceRecord>;
+  const byMode: Partial<Record<RecordMode, IModeRecord>> = {};
+  for (const m of RECORD_MODES) if (r.byMode?.[m]) byMode[m] = parseModeRecord(r.byMode[m]);
+  const scenarios: Record<string, IScenarioRecord> = {};
+  const side = (v: unknown): Partial<Record<'A' | 'B', number>> => {
+    const o = (v !== null && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+    const out: Partial<Record<'A' | 'B', number>> = {};
+    for (const k of ['A', 'B'] as const) if (num(o[k]) > 0) out[k] = num(o[k]);
+    return out;
+  };
+  if (r.scenarios && typeof r.scenarios === 'object') {
+    for (const [id, v] of Object.entries(r.scenarios)) if (v && typeof v === 'object') scenarios[id] = { wins: side(v.wins), losses: side(v.losses) };
+  }
+  return {
+    ...parseModeRecord(r),
+    medals: Array.isArray(r.medals) ? r.medals.filter((m): m is string => typeof m === 'string') : [],
+    byMode,
+    scenarios,
+  };
+}
+
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
+
+function parseModeRecord(raw: unknown): IModeRecord {
+  const r = (raw !== null && typeof raw === 'object' ? raw : {}) as Partial<IModeRecord>;
   const sunk: Partial<Record<ShipClass, number>> = {};
   for (const c of Object.values(ShipClass)) {
-    const v = n((r.sunk as Record<string, unknown> | undefined)?.[c]);
+    const v = num((r.sunk as Record<string, unknown> | undefined)?.[c]);
     if (v > 0) sunk[c] = v;
   }
   return {
-    sorties: n(r.sorties),
-    victories: n(r.victories),
-    perfectVictories: n(r.perfectVictories),
+    sorties: num(r.sorties),
+    victories: num(r.victories),
+    perfectVictories: num(r.perfectVictories),
     sunk,
-    damageDealt: n(r.damageDealt),
-    bestDamage: n(r.bestDamage),
-    shipsLost: n(r.shipsLost),
-    medals: Array.isArray(r.medals) ? r.medals.filter((m): m is string => typeof m === 'string') : [],
+    damageDealt: num(r.damageDealt),
+    bestDamage: num(r.bestDamage),
+    shipsLost: num(r.shipsLost),
   };
 }
