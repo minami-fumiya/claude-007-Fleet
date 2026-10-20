@@ -16,7 +16,7 @@ import { IResources } from '@/types/Progression';
 
 const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, info: 290, top: 350, cols: 3, cardH: 128, gap: 12, left: 16, sellY: 1000 }
-  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, info: 166, top: 206, cols: 4, cardH: 104, gap: 10, left: 24, sellY: 640 };
+  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, info: 166, top: 206, cols: 4, cardH: 118, gap: 10, left: 24, sellY: 640 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 
 const REFUSAL: Record<Exclude<ShopRefusal, null>, string> = { gold: 'ゴールド不足', limit: '本日分は終了', cap: '保有上限' };
@@ -74,8 +74,8 @@ export class ShopScene extends Phaser.Scene {
       const price = priceOf(e, now);
       this.track(this.add.text(x + 14, y + 54, `${price} G${isDeal ? ` (通常 ${e.price})` : ''}`, textStyle(13, isDeal ? Css.gold : Css.cyan, { fontStyle: 'bold' })));
       const refusal = canBuy(w, e, p.resources, cap, now);
-      this.track(new UIButton(this, x + CARD_W / 2, y + L.cardH - 24, refusal ? REFUSAL[refusal] : '買う', () => this.buy(e.id), {
-        variant: refusal ? 'secondary' : 'gold', width: CARD_W - 28, height: IS_PORTRAIT ? 36 : 30, fontSize: 13,
+      this.track(new UIButton(this, x + CARD_W / 2, y + L.cardH - (IS_PORTRAIT ? 24 : 20), refusal ? REFUSAL[refusal] : '買う', () => this.buy(e.id), {
+        variant: refusal ? 'secondary' : 'gold', width: CARD_W - 28, height: IS_PORTRAIT ? 36 : 28, fontSize: 13,
       })).setEnabled(refusal === null);
     });
     // 売る: spare resources back to gold, a day's limit in all.
