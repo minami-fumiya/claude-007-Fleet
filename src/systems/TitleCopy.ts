@@ -17,3 +17,8 @@ export function titleTiles(portrait: boolean): ITitleTile[] {
     { title: '★ 作戦目的', body: `殲滅・護衛・突入など ${Object.values(Objective).length} 種` },
   ];
 }
+
+/** The title's main button (#198): "日本 · 少佐 で続ける" for a save in progress, "鎮守府へ" for a new one. */
+export function continueLabel(nation: string | null, rankName: string | null): string {
+  return nation && rankName ? `${nation} · ${rankName} で続ける` : '鎮守府へ  →';
+}

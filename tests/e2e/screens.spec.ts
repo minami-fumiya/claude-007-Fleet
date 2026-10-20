@@ -42,7 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
-  'CaptainScene', 'BaseScene',
+  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene',
 ];
 
 /** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */
@@ -469,6 +469,22 @@ test.describe('screens', () => {
   test('help lists every formation, and the title copy fits (#197)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HelpScene'] });
     expect(await overflowingTexts(page, 'MainMenuScene')).toEqual([]);
+    // The title (#198): the sea moves, the main button names the nation and rank to go back to, nothing overlaps.
+    expect.soft(await overlappingTexts(page, 'MainMenuScene'), 'title overlaps').toEqual([]);
+    const title = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene');
+      const texts: string[] = [];
+      const visit = (o: Phaser.GameObjects.GameObject): void => {
+        if (o.type === 'Text') texts.push((o as Phaser.GameObjects.Text).text);
+        if (o.type === 'Container') (o as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      s.children.list.forEach(visit);
+      return texts;
+    });
+    expect(title.some((t) => /^日本 · .+ で続ける$/.test(t))).toBe(true);
+    expect(title).toContain('SEVEN  SEAS  FLEET');
+    await page.waitForTimeout(1800);
+    await page.screenshot({ path: info.outputPath('title.png') });
     await open(page, 'HelpScene');
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HelpScene') as unknown as { tab: string; refresh(): void };
