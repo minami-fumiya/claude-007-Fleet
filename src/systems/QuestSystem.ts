@@ -37,8 +37,8 @@ export type QuestEvent =
   | 'shopBuy'
   // 0.0.33: wins on 難しい (#100), fires and floods started on enemy ships (#48)
   | 'hardWin' | 'fireSet'
-  // airfields destroyed (#83)
-  | 'airfieldDown';
+  // airfields destroyed (#83), superweapons sunk (#148)
+  | 'airfieldDown' | 'superweaponSunk';
 
 export interface IQuest {
   id: string;

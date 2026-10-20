@@ -34,6 +34,7 @@ import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
+import { BRIDGE_AIM_MUL, newlyBroken, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -188,6 +189,9 @@ export class BattleScene extends Phaser.Scene {
   private scenario: IScenario | null = null;
   /** Free battle (演習, #15): starts at full HP and keeps no damage */
   private exercise = false;
+  /** 超兵器 (#148): whether the enemy brings one, and the one on the sea */
+  private bringsSuperweapon = false;
+  private superweapon: BaseShip | null = null;
   /** Fires and floods the player's side started on enemy ships (#48) */
   private firesSet = 0;
   /** The enemy fleet's formation (#82) */
@@ -272,6 +276,7 @@ export class BattleScene extends Phaser.Scene {
     this.aiSystems = [];
     this.escortAISystems = [];
     this.firesSet = 0;
+    this.superweapon = null;
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
     this.convoy = [];
@@ -339,6 +344,9 @@ export class BattleScene extends Phaser.Scene {
     this.side = this.scenarioSetup?.side ?? (bossNode ? campaignSide(battleArea) : null);
     this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
     this.difficulty = battleDifficulty(audio.settings.difficulty, this.scenario !== null);
+    // 超兵器出現 (#148 #89): a main fleet in the event's theater brings its superweapon (not training areas).
+    const event = eventEffects(activeEvent());
+    this.bringsSuperweapon = this.battleData?.superweapon === true || (bossNode && battleArea !== undefined && !battleArea.training && event.superweaponTheater === battleArea.theater);
     this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);
@@ -690,7 +698,9 @@ export class BattleScene extends Phaser.Scene {
 
   private spawnEnemyFleet(fleet: IFleet): void {
     const profile = TACTICS[fleet.nation];
-    const ships = FleetSystem.getShips(fleet);
+    // The superweapon (#148) sails at the head of the fleet.
+    const giant = this.bringsSuperweapon ? superweaponOf(fleet.nation) : undefined;
+    const ships = giant ? [giant, ...FleetSystem.getShips(fleet)] : FleetSystem.getShips(fleet);
     // 敵の陣形 (#82): chosen by the situation unless the area or scenario names one; its effects apply as for the
     // player, the first ship leads and the others keep their slots until they have a target (散開).
     const named = this.scenarioSetup?.enemy.formation ?? (this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId)?.enemy.formation : undefined);
@@ -713,6 +723,10 @@ export class BattleScene extends Phaser.Scene {
       enemy.stats.maxHp = Math.round(enemy.stats.maxHp * this.difficulty.hpMul);
       enemy.stats.currentHp = enemy.stats.maxHp;
       enemy.setTint(0xdd4444);
+      if (giant && i === 0) {
+        enemy.setScale(giant.scale);
+        this.superweapon = enemy;
+      }
       enemy.setAngle(placed ? placed.angle : 180);
       this.enemies.push(enemy);
       this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
@@ -1193,7 +1207,9 @@ export class BattleScene extends Phaser.Scene {
     const shell = effectiveShell(fired.type, projectile.source?.shellMode ?? 'auto', target.stats.shipClass);
     const weapon = shell === fired.type ? fired : { ...fired, type: shell };
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
+    const hpBefore = target.stats.currentHp / Math.max(1, target.stats.maxHp);
     CombatSystem.applyDamage(target, dmg, projectile.source);
+    if (target === this.superweapon) this.breakParts(target, hpBefore);
     this.rollCritical(target, weapon, dmg);
     this.rollFireOrFlood(target, weapon);
     projectile.deactivate();
@@ -1213,6 +1229,21 @@ export class BattleScene extends Phaser.Scene {
   private logDamage(target: BaseShip, weapon: IWeaponData, dmg: number): void {
     const side = this.enemies.includes(target) ? 'player' : 'enemy';
     this.damageLog[side][weapon.id] = (this.damageLog[side][weapon.id] ?? 0) + Math.round(dmg);
+  }
+
+  /** 超兵器 (#148): parts give way as it is worn down, each for the rest of the battle. */
+  private breakParts(ship: BaseShip, hpBefore: number): void {
+    if (!ship.isAlive) return;
+    for (const part of newlyBroken(hpBefore, ship.stats.currentHp / Math.max(1, ship.stats.maxHp))) {
+      const crit = PART_CRITICAL[part];
+      if (crit) ship.criticals = { ...ship.criticals, [crit]: Number.POSITIVE_INFINITY };
+      else ship.aimErrorMul *= BRIDGE_AIM_MUL;
+      const t = this.add
+        .text(ship.x, ship.y - 70, PART_LABEL[part], textStyle(16, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
+        .setOrigin(0.5)
+        .setDepth(DEPTH_HUD - 2);
+      this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 1800, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+    }
   }
 
   /** 火災・浸水 (#48): a hit may start a fire (HE, bombs) or flooding (torpedoes); damage control shortens them. */
@@ -1748,7 +1779,7 @@ export class BattleScene extends Phaser.Scene {
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
@@ -1807,7 +1838,9 @@ export class BattleScene extends Phaser.Scene {
     const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
     progress = addMerit(progress, merit).progress;
     // ゴールド (#183): campaign wins by rank, more on a first clear.
-    const gold = Math.round(battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training }) * this.difficulty.rewardMul);
+    // Sinking a superweapon (#148) pays extra gold.
+    const giantSunk = this.superweapon !== null && !this.superweapon.isAlive;
+    const gold = Math.round(battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training }) * this.difficulty.rewardMul) + (giantSunk ? SUPERWEAPON_GOLD : 0);
     if (gold > 0) progress = { ...progress, wallet: addGold(walletOf(progress), gold) };
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };
@@ -1846,6 +1879,7 @@ export class BattleScene extends Phaser.Scene {
     result.reward = `${formatResources(settlement.reward)}${gold > 0 ? `・ゴールド ${gold}` : ''}${lostNote(lost)}`;
     // On its own line under the reward (it ran into the reward and wrapped mid-word).
     if (eventAppliesToBattle(event, area?.theater)) result.event = `イベント: ${eventLabel(event)}`;
+    if (giantSunk) result.event = [result.event ?? '', `超兵器撃沈: ${this.superweapon?.stats.name ?? ''}`].filter((l) => l).join('  ·  ');
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }

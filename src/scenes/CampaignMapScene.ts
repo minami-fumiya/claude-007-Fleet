@@ -10,6 +10,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { enemyFormation } from '@/systems/EnemyFormation';
+import { SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { TimeOfDay } from '@/types/Weather';
 import { FORMATION_RULES } from '@/systems/FormationRules';
 import { GOLD_SWEEP } from '@/systems/GoldSystem';
@@ -250,11 +251,15 @@ export class CampaignMapScene extends Phaser.Scene {
     const reward = formatResources(a.reward) + (rewardShip ? `  /  S 評価で ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
     // The area's first S brings a captain (#179 #215), while someone is left to join; who it is stays a surprise.
     const captain = progress.perfect.includes(a.id) || captainsLeft(progress.nation, progress.captains) === 0 ? '' : 'S 評価で艦長 +1';
+    const giantEvent = activeEvent();
+    const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
       // Portrait keeps to the kinds (the names ran the sweep line into the buttons).
       // The formation the enemy is expected to take (#82), before the player's fleet is known.
       ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}  ·  ${FORMATION_RULES[enemyFormation({ nation: enemyNation, enemy: enemy.map((e) => e.shipClass), player: [], night: a.time === TimeOfDay.Night, named: a.enemy.formation })].ja}${IS_PORTRAIT ? '' : `\n${lineup}`}`],
+      // 超兵器出現 (#148 #89): the main fleet here brings its giant while the event runs.
+      ...(giantHere ? [['超兵器', `${giantHere.name} が主力艦隊に加わる (撃沈でゴールド +${SUPERWEAPON_GOLD})`] as [string, string]] : []),
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
       ['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')],

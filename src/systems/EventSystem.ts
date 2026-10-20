@@ -9,11 +9,11 @@ import { DAY_START_UTC } from './QuestSystem';
  * the same time, offline too. Since #218 every window has an event, and 報酬 2 倍 comes at most twice a day.
  */
 
-export type EventKind = 'double' | 'steel' | 'training' | 'repair' | 'fuel' | 'ammo' | 'bauxite';
+export type EventKind = 'double' | 'steel' | 'training' | 'repair' | 'fuel' | 'ammo' | 'bauxite' | 'superweapon';
 
 export interface IGameEvent {
   kind: EventKind;
-  /** Theater id for 'double' */
+  /** Theater id for 'double' and 'superweapon' */
   theater?: string;
   startsAt: number;
   endsAt: number;
@@ -33,6 +33,8 @@ export interface IEventEffects {
   xpMul: number;
   /** Repair cost and time multiplier (入渠半額) */
   repairMul: number;
+  /** 超兵器出現 (#148): the theater whose main fleets bring their superweapon */
+  superweaponTheater?: string;
 }
 
 export const NO_EVENT: IEventEffects = { theaterRewardMul: 1, steelMul: 1, fuelMul: 1, ammoMul: 1, bauxiteMul: 1, xpMul: 1, repairMul: 1 };
@@ -41,9 +43,11 @@ const HOUR = 3_600_000;
 export const EVENT_WINDOW_MS = 3 * HOUR;
 export const WINDOWS_PER_DAY = 8;
 /** What a window can hold (#218: never nothing); 報酬 2 倍 is weighted but capped at MAX_DOUBLE a day. */
-const KINDS: EventKind[] = ['double', 'double', 'steel', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite'];
-const OTHER_KINDS: EventKind[] = KINDS.filter((k) => k !== 'double');
+const KINDS: EventKind[] = ['double', 'double', 'steel', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite', 'superweapon'];
+const OTHER_KINDS: EventKind[] = KINDS.filter((k) => k !== 'double' && k !== 'superweapon');
 export const MAX_DOUBLE = 2;
+/** 超兵器出現 (#148) at most once a day */
+export const MAX_SUPERWEAPON = 1;
 export const THEATERS = (campaignData as { theaters: Array<{ id: string; name: string }> }).theaters;
 
 export const EVENT_NAME: Record<EventKind, string> = {
@@ -54,6 +58,7 @@ export const EVENT_NAME: Record<EventKind, string> = {
   fuel: '燃料祭り',
   ammo: '弾薬祭り',
   bauxite: 'ボーキ祭り',
+  superweapon: '超兵器出現',
 };
 
 /** Small integer hash (mulberry-style), the same on every device. */
@@ -72,16 +77,18 @@ export function windowIndex(now: number): number {
 /** A game day's eight events, 00:00〜24:00 JST (#218): one per window, 報酬 2 倍 at most MAX_DOUBLE times. */
 export function daySchedule(day: number): IGameEvent[] {
   let doubles = 0;
+  let giants = 0;
   const out: IGameEvent[] = [];
   for (let i = 0; i < WINDOWS_PER_DAY; i++) {
     const w = day * WINDOWS_PER_DAY + i;
     const h = hash(w);
     let kind = KINDS[h % KINDS.length];
-    if (kind === 'double' && doubles >= MAX_DOUBLE) kind = OTHER_KINDS[(h >>> 4) % OTHER_KINDS.length];
+    if ((kind === 'double' && doubles >= MAX_DOUBLE) || (kind === 'superweapon' && giants >= MAX_SUPERWEAPON)) kind = OTHER_KINDS[(h >>> 4) % OTHER_KINDS.length];
     if (kind === 'double') doubles++;
+    if (kind === 'superweapon') giants++;
     const startsAt = DAY_START_UTC + w * EVENT_WINDOW_MS;
     const event: IGameEvent = { kind, startsAt, endsAt: startsAt + EVENT_WINDOW_MS };
-    if (kind === 'double') event.theater = THEATERS[(h >>> 8) % THEATERS.length]?.id;
+    if (kind === 'double' || kind === 'superweapon') event.theater = THEATERS[(h >>> 8) % THEATERS.length]?.id;
     out.push(event);
   }
   return out;
@@ -109,6 +116,7 @@ export function eventEffects(event: IGameEvent | null): IEventEffects {
     case 'fuel': return { ...NO_EVENT, fuelMul: 1.5 };
     case 'ammo': return { ...NO_EVENT, ammoMul: 1.5 };
     case 'bauxite': return { ...NO_EVENT, bauxiteMul: 1.5 };
+    case 'superweapon': return { ...NO_EVENT, superweaponTheater: event.theater };
   }
 }
 
@@ -125,7 +133,7 @@ export function applyEventReward(reward: IResources, effects: IEventEffects, the
 /** Whether `event` changes a battle fought in `theater` (none for exercises): what the results should mention. */
 export function eventAppliesToBattle(event: IGameEvent | null, theater?: string): event is IGameEvent {
   if (!event) return false;
-  if (event.kind === 'double') return theater !== undefined && theater === event.theater;
+  if (event.kind === 'double' || event.kind === 'superweapon') return theater !== undefined && theater === event.theater;
   return event.kind !== 'repair';
 }
 

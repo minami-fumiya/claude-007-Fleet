@@ -37,7 +37,7 @@ describe('events (#89)', () => {
       expect(e).not.toBeNull();
       kinds.add(e!.kind);
     }
-    expect(kinds).toEqual(new Set(['double', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite']));
+    expect(kinds).toEqual(new Set(['double', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite', 'superweapon']));
     const today = gameDay(MONDAY_5AM);
     for (let d = today; d < today + 60; d++) {
       const day = daySchedule(d);

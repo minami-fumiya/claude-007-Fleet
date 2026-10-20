@@ -17,6 +17,8 @@ export interface IBattleInitData {
   /** Campaign area this battle is for (absent for free battles) */
   areaId?: string;
   objective?: Objective;
+  /** The enemy brings its superweapon (#148), whatever the event */
+  superweapon?: boolean;
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */
   captainIds?: (string | null)[];
   /** Node of a multi-battle campaign sortie (#53): battle number, battles in all, and whether it is the boss */
