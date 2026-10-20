@@ -39,7 +39,7 @@ import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { actionVariant, addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie, sortieShipIds } from '@/utils/SortieFlow';
@@ -1620,7 +1620,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
     // In organize mode the buttons only move on, so they stay enabled.
-    if (!this.organizeOnly) this.startBtn.setEnabled(this.canStart());
+    if (!this.organizeOnly) this.startBtn.setEnabled(this.canStart()).setVariant(actionVariant(this.canStart()));
   }
 
   /**

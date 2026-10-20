@@ -631,8 +631,9 @@ export class HomeScene extends Phaser.Scene {
       const y = top + Math.floor(i / cols) * (ch + gap);
       const ready = item.action === 'quests' && claimable > 0;
       const waiting = item.action ? undefined : pending.find((p) => p.scene === item.scene);
+      // Gold marks a screen with something to do now (#269): rewards to claim, a sweep, a book, finished work.
       add(new UIButton(this, x + cw / 2, y + ch / 2, item.label, () => this.openMenuItem(item), {
-        variant: ready ? 'gold' : item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26,
+        variant: ready || waiting ? 'gold' : item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26,
         caption: ready ? `達成 ${claimable}` : waiting ? `${waiting.label} ${waiting.count}` : item.caption,
       }));
     });

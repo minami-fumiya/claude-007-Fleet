@@ -27,7 +27,7 @@ export interface IHomeMenuTab {
 export const HOME_MENU: IHomeMenuTab[] = [
   {
     id: 'sortie', label: '出撃', items: [
-      { label: '作戦', caption: '海域を攻略', scene: SceneKeys.CAMPAIGN, variant: 'gold' },
+      { label: '作戦', caption: '海域を攻略', scene: SceneKeys.CAMPAIGN, variant: 'primary' },
       { label: '演習', caption: '無傷で練習', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
       { label: '史実', caption: '史実の海戦', scene: SceneKeys.SCENARIO, variant: 'primary' },
       { label: '任務', caption: '日替わりの目標', scene: SceneKeys.HOME, variant: 'secondary', action: 'quests' },
@@ -36,7 +36,7 @@ export const HOME_MENU: IHomeMenuTab[] = [
   {
     id: 'fleet', label: '艦隊', items: [
       // Fleet only, then on to 作戦 or 演習 (#109). The fleet is kept between visits.
-      { label: '編成', caption: '艦と艦長', scene: SceneKeys.FLEET_BUILDER, variant: 'gold', data: { organize: true } },
+      { label: '編成', caption: '艦と艦長', scene: SceneKeys.FLEET_BUILDER, variant: 'primary', data: { organize: true } },
       { label: '改装', caption: '改造と部品', scene: SceneKeys.CUSTOMIZATION, variant: 'primary' },
       { label: '艦長', caption: 'スキルと成長', scene: SceneKeys.CAPTAIN, variant: 'primary' },
       { label: '軍港', caption: '移動と施設', scene: SceneKeys.BASE, variant: 'secondary' },
@@ -44,7 +44,7 @@ export const HOME_MENU: IHomeMenuTab[] = [
   },
   {
     id: 'arsenal', label: '工廠', items: [
-      { label: '研究', caption: '艦種と部品', scene: SceneKeys.ARSENAL, variant: 'gold' },
+      { label: '研究', caption: '艦種と部品', scene: SceneKeys.ARSENAL, variant: 'primary' },
       { label: '建造', caption: '新しい艦', scene: SceneKeys.SHIPYARD, variant: 'primary' },
       // ゴールドとショップ (#183)
       { label: 'ショップ', caption: 'ゴールドで交換', scene: SceneKeys.SHOP, variant: 'primary' },
