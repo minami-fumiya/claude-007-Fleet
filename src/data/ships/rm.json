@@ -199,6 +199,77 @@
       "year": 1935
     },
     {
+      "id": "andrea_doria",
+      "no": 1501006,
+      "name": "アンドレア・ドーリア (Andrea Doria)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 640,
+      "armor": 49,
+      "speed": 135,
+      "weapons": [
+        "320mm_m1936",
+        "120mm_m1926"
+      ],
+      "spriteKey": "andrea_doria",
+      "description": "アンドレア・ドーリア級戦艦の 1 番艦。大改装で速力と砲力を上げ、地中海の船団護衛に出た。",
+      "year": 1916
+    },
+    {
+      "id": "alberto_di_giussano",
+      "no": 1505005,
+      "name": "アルベルト・ディ・ジュッサーノ (Alberto di Giussano)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "alberto_di_giussano",
+      "description": "コンドッティエーリ級 (ジュッサーノ級) 軽巡洋艦の 1 番艦。非常に速いが装甲は薄い。ボン岬沖海戦で沈んだ。",
+      "year": 1931
+    },
+    {
+      "id": "antonio_da_noli",
+      "no": 1507014,
+      "name": "アントニオ・ダ・ノーリ (Antonio da Noli)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 13,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "antonio_da_noli",
+      "description": "ナヴィガトーリ級駆逐艦。大航海時代の航海者の名を持つ大型駆逐艦で、北アフリカへの船団を守った。",
+      "year": 1929
+    },
+    {
+      "id": "alfredo_oriani",
+      "no": 1507019,
+      "name": "アルフレード・オリアーニ (Alfredo Oriani)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "alfredo_oriani",
+      "description": "オリアーニ級駆逐艦の 1 番艦。マエストラーレ級を改良した型で、マタパン岬沖海戦を生き延びた。",
+      "year": 1937
+    },
+    {
       "id": "littorio",
       "no": 1501004,
       "name": "リットリオ (Littorio)",
@@ -556,6 +627,214 @@
       "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
+    },
+    {
+      "id": "caio_duilio",
+      "no": 1501007,
+      "name": "カイオ・ドゥイリオ (Caio Duilio)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "hp": 640,
+      "armor": 49,
+      "speed": 135,
+      "weapons": [
+        "320mm_m1936",
+        "120mm_m1926"
+      ],
+      "spriteKey": "andrea_doria",
+      "year": 1916,
+      "description": "アンドレア・ドーリア級戦艦の同型艦。性能はアンドレア・ドーリアと同じ。",
+      "sisterOf": "andrea_doria"
+    },
+    {
+      "id": "alberico_da_barbiano",
+      "no": 1505006,
+      "name": "アルベリコ・ダ・バルビアーノ (Alberico da Barbiano)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "alberto_di_giussano",
+      "year": 1931,
+      "description": "ジュッサーノ級軽巡洋艦の同型艦。性能はアルベルト・ディ・ジュッサーノと同じ。",
+      "sisterOf": "alberto_di_giussano"
+    },
+    {
+      "id": "bartolomeo_colleoni",
+      "no": 1505007,
+      "name": "バルトロメオ・コレオーニ (Bartolomeo Colleoni)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "alberto_di_giussano",
+      "year": 1931,
+      "description": "ジュッサーノ級軽巡洋艦の同型艦。性能はアルベルト・ディ・ジュッサーノと同じ。",
+      "sisterOf": "alberto_di_giussano"
+    },
+    {
+      "id": "giovanni_delle_bande_nere",
+      "no": 1505008,
+      "name": "ジョヴァンニ・デッレ・バンデ・ネーレ (Giovanni delle Bande Nere)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 20,
+      "speed": 190,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "alberto_di_giussano",
+      "year": 1931,
+      "description": "ジュッサーノ級軽巡洋艦の同型艦。性能はアルベルト・ディ・ジュッサーノと同じ。",
+      "sisterOf": "alberto_di_giussano"
+    },
+    {
+      "id": "ugolino_vivaldi",
+      "no": 1507015,
+      "name": "ウゴリーノ・ヴィヴァルディ (Ugolino Vivaldi)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 13,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "antonio_da_noli",
+      "year": 1929,
+      "description": "ナヴィガトーリ級駆逐艦の同型艦。性能はアントニオ・ダ・ノーリと同じ。",
+      "sisterOf": "antonio_da_noli"
+    },
+    {
+      "id": "nicoloso_da_recco",
+      "no": 1507016,
+      "name": "ニコローゾ・ダ・レッコ (Nicoloso da Recco)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 13,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "antonio_da_noli",
+      "year": 1929,
+      "description": "ナヴィガトーリ級駆逐艦の同型艦。性能はアントニオ・ダ・ノーリと同じ。",
+      "sisterOf": "antonio_da_noli"
+    },
+    {
+      "id": "lanzerotto_malocello",
+      "no": 1507017,
+      "name": "ランツェロット・マロチェッロ (Lanzerotto Malocello)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 13,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "antonio_da_noli",
+      "year": 1929,
+      "description": "ナヴィガトーリ級駆逐艦の同型艦。性能はアントニオ・ダ・ノーリと同じ。",
+      "sisterOf": "antonio_da_noli"
+    },
+    {
+      "id": "leone_pancaldo",
+      "no": 1507018,
+      "name": "レオーネ・パンカルド (Leone Pancaldo)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 13,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "antonio_da_noli",
+      "year": 1929,
+      "description": "ナヴィガトーリ級駆逐艦の同型艦。性能はアントニオ・ダ・ノーリと同じ。",
+      "sisterOf": "antonio_da_noli"
+    },
+    {
+      "id": "vittorio_alfieri",
+      "no": 1507020,
+      "name": "ヴィットリオ・アルフィエーリ (Vittorio Alfieri)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "alfredo_oriani",
+      "year": 1937,
+      "description": "オリアーニ級駆逐艦の同型艦。性能はアルフレード・オリアーニと同じ。",
+      "sisterOf": "alfredo_oriani"
+    },
+    {
+      "id": "giosue_carducci",
+      "no": 1507021,
+      "name": "ジョズエ・カルドゥッチ (Giosuè Carducci)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "alfredo_oriani",
+      "year": 1937,
+      "description": "オリアーニ級駆逐艦の同型艦。性能はアルフレード・オリアーニと同じ。",
+      "sisterOf": "alfredo_oriani"
+    },
+    {
+      "id": "vincenzo_gioberti",
+      "no": 1507022,
+      "name": "ヴィンチェンツォ・ジョベルティ (Vincenzo Gioberti)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 210,
+      "armor": 14,
+      "speed": 245,
+      "weapons": [
+        "120mm_m1926",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "alfredo_oriani",
+      "year": 1937,
+      "description": "オリアーニ級駆逐艦の同型艦。性能はアルフレード・オリアーニと同じ。",
+      "sisterOf": "alfredo_oriani"
     }
   ]
 }

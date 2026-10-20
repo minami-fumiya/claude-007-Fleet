@@ -182,6 +182,59 @@
       "year": 1934
     },
     {
+      "id": "bretagne",
+      "no": 1701003,
+      "name": "ブルターニュ (Bretagne)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "hp": 620,
+      "armor": 48,
+      "speed": 120,
+      "weapons": [
+        "330mm_m1931",
+        "138mm_m1929"
+      ],
+      "spriteKey": "bretagne",
+      "description": "ブルターニュ級戦艦の 1 番艦。第一次大戦期の旧式戦艦で、メルセルケビールで英艦隊の砲撃を受けて沈んだ。",
+      "year": 1916
+    },
+    {
+      "id": "duguay_trouin",
+      "no": 1705007,
+      "name": "デュゲ・トルーアン (Duguay-Trouin)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 22,
+      "speed": 182,
+      "weapons": [
+        "155mm_m1920",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "duguay_trouin",
+      "description": "デュゲ・トルーアン級軽巡洋艦の 1 番艦。高速の偵察巡洋艦で、インドシナや地中海で働いた。",
+      "year": 1926
+    },
+    {
+      "id": "le_hardi",
+      "no": 1707009,
+      "name": "ル・アルディ (Le Hardi)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 255,
+      "weapons": [
+        "130mm_m1932",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_hardi",
+      "description": "ル・アルディ級駆逐艦の 1 番艦。フランス最後の新型駆逐艦で、ダカールで戦った。",
+      "year": 1940
+    },
+    {
       "id": "jean_bart",
       "no": 1701002,
       "name": "ジャン・バール (Jean Bart)",
@@ -464,6 +517,137 @@
       "year": 1938,
       "description": "モガドール級駆逐艦の同型艦。性能はモガドールと同じ。",
       "sisterOf": "mogador"
+    },
+    {
+      "id": "provence",
+      "no": 1701004,
+      "name": "プロヴァンス (Provence)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "hp": 620,
+      "armor": 48,
+      "speed": 120,
+      "weapons": [
+        "330mm_m1931",
+        "138mm_m1929"
+      ],
+      "spriteKey": "bretagne",
+      "year": 1916,
+      "description": "ブルターニュ級戦艦の同型艦。性能はブルターニュと同じ。",
+      "sisterOf": "bretagne"
+    },
+    {
+      "id": "lorraine",
+      "no": 1701005,
+      "name": "ロレーヌ (Lorraine)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "hp": 620,
+      "armor": 48,
+      "speed": 120,
+      "weapons": [
+        "330mm_m1931",
+        "138mm_m1929"
+      ],
+      "spriteKey": "bretagne",
+      "year": 1916,
+      "description": "ブルターニュ級戦艦の同型艦。性能はブルターニュと同じ。",
+      "sisterOf": "bretagne"
+    },
+    {
+      "id": "lamotte_picquet",
+      "no": 1705008,
+      "name": "ラモット・ピケ (Lamotte-Picquet)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 22,
+      "speed": 182,
+      "weapons": [
+        "155mm_m1920",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "duguay_trouin",
+      "year": 1926,
+      "description": "デュゲ・トルーアン級軽巡洋艦の同型艦。性能はデュゲ・トルーアンと同じ。",
+      "sisterOf": "duguay_trouin"
+    },
+    {
+      "id": "primauguet",
+      "no": 1705009,
+      "name": "プリモゲ (Primauguet)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 320,
+      "armor": 22,
+      "speed": 182,
+      "weapons": [
+        "155mm_m1920",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "duguay_trouin",
+      "year": 1926,
+      "description": "デュゲ・トルーアン級軽巡洋艦の同型艦。性能はデュゲ・トルーアンと同じ。",
+      "sisterOf": "duguay_trouin"
+    },
+    {
+      "id": "fleuret",
+      "no": 1707010,
+      "name": "フルーレ (Fleuret)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 255,
+      "weapons": [
+        "130mm_m1932",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_hardi",
+      "year": 1940,
+      "description": "ル・アルディ級駆逐艦の同型艦。性能はル・アルディと同じ。",
+      "sisterOf": "le_hardi"
+    },
+    {
+      "id": "epee",
+      "no": 1707011,
+      "name": "エペ (Épée)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 255,
+      "weapons": [
+        "130mm_m1932",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_hardi",
+      "year": 1940,
+      "description": "ル・アルディ級駆逐艦の同型艦。性能はル・アルディと同じ。",
+      "sisterOf": "le_hardi"
+    },
+    {
+      "id": "lansquenet",
+      "no": 1707012,
+      "name": "ランスクネ (Lansquenet)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 255,
+      "weapons": [
+        "130mm_m1932",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "le_hardi",
+      "year": 1940,
+      "description": "ル・アルディ級駆逐艦の同型艦。性能はル・アルディと同じ。",
+      "sisterOf": "le_hardi"
     }
   ]
 }

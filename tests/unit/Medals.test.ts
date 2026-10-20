@@ -18,7 +18,7 @@ describe('medals (#92)', () => {
 
   it('new features bring medals and none is ever removed (0.0.25: convoy escort, captain instruction; 0.0.26: captain sinks)', () => {
     // Raise this floor whenever medals are added; it never goes down.
-    expect(MEDALS.length).toBeGreaterThanOrEqual(208);
+    expect(MEDALS.length).toBeGreaterThanOrEqual(223);
     for (const id of ['convoy', 'convoy_2', 'convoy_3', 'instructor', 'instructor_2', 'instructor_3', 'captain_ace', 'captain_ace_2', 'captain_ace_3', 'task_force', 'task_force_2', 'task_force_3', 'veteran_player', 'veteran_player_2', 'veteran_player_3', 'dock_expansion', 'dock_expansion_2', 'dock_expansion_3', 'rush_work', 'rush_work_2', 's_recruiter', 's_recruiter_2', 'event_tour', 'event_tour_2']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
     const r = emptyRecord();
     expect(newMedals(r, { clearedTheaters: [], totals: { convoyWin: 3, learnSkill: 1 } }).map((m) => m.id)).toEqual(expect.arrayContaining(['convoy', 'instructor']));
@@ -87,5 +87,15 @@ describe('medals of 0.0.29 (#85 #185 #209, 築港章 #217)', () => {
 describe('ladder names', () => {
   it('every rung of every ladder has a rank name', () => {
     expect(MEDALS.filter((m) => m.name.includes('undefined')).map((m) => m.id)).toEqual([]);
+  });
+
+  it('0.0.35: the seven seas (#250): a medal for each new sea, its battles, and the seas together', () => {
+    for (const id of ['north_pacific', 'south_atlantic', 'indian', 'arctic', 'north_pacific_war', 'arctic_war_2', 'seas', 'seas_2', 'seas_3']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
+    const r = emptyRecord();
+    const ids = newMedals(r, { clearedTheaters: ['pacific', 'baltic', 'blacksea', 'arctic'], totals: { winIndian: 10 } }).map((m) => m.id);
+    expect(ids).toEqual(expect.arrayContaining(['arctic', 'seas', 'indian_war']));
+    // The inland seas don't count among the seven.
+    expect(ids).not.toContain('seas_2');
+    expect(newMedals(r, { clearedTheaters: ['pacific', 'atlantic', 'mediterranean', 'north_pacific', 'south_atlantic', 'indian', 'arctic'] }).map((m) => m.id)).toContain('seas_3');
   });
 });
