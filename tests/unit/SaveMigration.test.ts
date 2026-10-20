@@ -170,4 +170,16 @@ describe('v11 → v12: hourly quests and lifetime totals (#158)', () => {
     expect(save.wallet.earned).toBe(save.wallet.gold);
     expect(save.wallet.shop).toEqual({ day: 0, bought: {} });
   });
+
+  it('v19 → v20 (#244): every base already open keeps its two docks (or more); a new base starts with one', () => {
+    const fixture = JSON.parse(readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.33.json'), 'utf8'));
+    const nations = fixture.nations as Record<string, { baseDocks?: Record<string, number>; basesOpen?: string[] }>;
+    const key = Object.keys(nations)[0];
+    nations[key].baseDocks = { only_entry: 5 };
+    nations[key].basesOpen = ['opened_without_entry'];
+    const n = parseSave(JSON.stringify(fixture)).nations[key as Nation]!;
+    expect(n.baseDocks.only_entry).toBe(5);
+    expect(n.baseDocks.opened_without_entry).toBe(2);
+    expect(Object.values(n.baseDocks).every((d) => d >= 2)).toBe(true);
+  });
 });

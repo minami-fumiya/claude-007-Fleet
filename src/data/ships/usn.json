@@ -2,6 +2,7 @@
   "ships": [
     {
       "id": "iowa",
+      "no": 1201021,
       "name": "アイオワ (Iowa)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -18,6 +19,7 @@
     },
     {
       "id": "north_carolina",
+      "no": 1201015,
       "name": "ノースカロライナ (North Carolina)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -34,6 +36,7 @@
     },
     {
       "id": "missouri",
+      "no": 1201024,
       "name": "ミズーリ (Missouri)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -46,10 +49,12 @@
       ],
       "spriteKey": "missouri",
       "description": "アイオワ級戦艦3番艦。1945年9月2日、東京湾に停泊した本艦の艦上で日本の降伏文書調印式が行われた。",
-      "year": 1944
+      "year": 1944,
+      "classOf": "iowa"
     },
     {
       "id": "new_jersey",
+      "no": 1201022,
       "name": "ニュージャージー (New Jersey)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -62,10 +67,12 @@
       ],
       "spriteKey": "new_jersey",
       "description": "アイオワ級戦艦2番艦。第二次大戦後も朝鮮戦争、ベトナム戦争、レバノン沖に投入された。",
-      "year": 1943
+      "year": 1943,
+      "classOf": "iowa"
     },
     {
       "id": "south_dakota",
+      "no": 1201017,
       "name": "サウスダコタ (South Dakota)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -82,6 +89,7 @@
     },
     {
       "id": "montana",
+      "no": 1201025,
       "name": "モンタナ (Montana)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -94,10 +102,12 @@
       ],
       "spriteKey": "montana",
       "fictional": true,
-      "description": "アイオワ級に続く戦艦として5隻が計画された。16インチ砲12門を備える予定だったが、1943年に建造が中止された (架空艦)。"
+      "description": "アイオワ級に続く戦艦として5隻が計画された。16インチ砲12門を備える予定だったが、1943年に建造が中止された (架空艦)。",
+      "year": 1946
     },
     {
       "id": "baltimore",
+      "no": 1204019,
       "name": "ボルチモア (Baltimore)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -115,6 +125,7 @@
     },
     {
       "id": "des_moines",
+      "no": 1204027,
       "name": "デ・モイン (Des Moines)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -132,6 +143,7 @@
     },
     {
       "id": "cleveland",
+      "no": 1205025,
       "name": "クリーブランド (Cleveland)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -149,6 +161,7 @@
     },
     {
       "id": "atlanta",
+      "no": 1205020,
       "name": "アトランタ (Atlanta)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -166,6 +179,7 @@
     },
     {
       "id": "fletcher",
+      "no": 1207052,
       "name": "フレッチャー (Fletcher)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -183,6 +197,7 @@
     },
     {
       "id": "gearing",
+      "no": 1207068,
       "name": "ギアリング (Gearing)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -200,6 +215,7 @@
     },
     {
       "id": "sumner",
+      "no": 1207063,
       "name": "アレン・M・サムナー (Allen M. Sumner)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -217,6 +233,7 @@
     },
     {
       "id": "buckley",
+      "no": 1208001,
       "name": "バックレイ (Buckley)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -235,6 +252,7 @@
     },
     {
       "id": "essex",
+      "no": 1209008,
       "name": "エセックス (Essex)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -255,6 +273,7 @@
     },
     {
       "id": "enterprise",
+      "no": 1209006,
       "name": "エンタープライズ (Enterprise)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -275,6 +294,7 @@
     },
     {
       "id": "midway",
+      "no": 1209019,
       "name": "ミッドウェイ (Midway)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -295,6 +315,7 @@
     },
     {
       "id": "yorktown",
+      "no": 1209004,
       "name": "ヨークタウン (Yorktown)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -315,6 +336,7 @@
     },
     {
       "id": "independence",
+      "no": 1210001,
       "name": "インディペンデンス (Independence)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -336,6 +358,7 @@
     },
     {
       "id": "casablanca",
+      "no": 1211005,
       "name": "カサブランカ (Casablanca)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -357,6 +380,7 @@
     },
     {
       "id": "gato",
+      "no": 1212001,
       "name": "ガトー (Gato)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -372,6 +396,7 @@
     },
     {
       "id": "balao",
+      "no": 1212010,
       "name": "バラオ (Balao)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -387,6 +412,7 @@
     },
     {
       "id": "new_york",
+      "no": 1201001,
       "name": "ニューヨーク (New York)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -403,6 +429,7 @@
     },
     {
       "id": "nevada",
+      "no": 1201003,
       "name": "ネヴァダ (Nevada)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -419,6 +446,7 @@
     },
     {
       "id": "pennsylvania",
+      "no": 1201005,
       "name": "ペンシルヴェニア (Pennsylvania)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -435,6 +463,7 @@
     },
     {
       "id": "new_mexico",
+      "no": 1201007,
       "name": "ニューメキシコ (New Mexico)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -451,6 +480,7 @@
     },
     {
       "id": "tennessee",
+      "no": 1201010,
       "name": "テネシー (Tennessee)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -467,6 +497,7 @@
     },
     {
       "id": "colorado",
+      "no": 1201012,
       "name": "コロラド (Colorado)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -483,6 +514,7 @@
     },
     {
       "id": "lexington",
+      "no": 1209001,
       "name": "レキシントン (Lexington)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -503,6 +535,7 @@
     },
     {
       "id": "ranger",
+      "no": 1209003,
       "name": "レンジャー (Ranger)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -523,6 +556,7 @@
     },
     {
       "id": "wasp",
+      "no": 1209007,
       "name": "ワスプ (Wasp)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -543,6 +577,7 @@
     },
     {
       "id": "bogue",
+      "no": 1211001,
       "name": "ボーグ (Bogue)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -564,6 +599,7 @@
     },
     {
       "id": "pensacola",
+      "no": 1204001,
       "name": "ペンサコーラ (Pensacola)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -581,6 +617,7 @@
     },
     {
       "id": "northampton",
+      "no": 1204003,
       "name": "ノーザンプトン (Northampton)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -598,6 +635,7 @@
     },
     {
       "id": "portland",
+      "no": 1204009,
       "name": "ポートランド (Portland)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -615,6 +653,7 @@
     },
     {
       "id": "new_orleans",
+      "no": 1204011,
       "name": "ニューオーリンズ (New Orleans)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -632,6 +671,7 @@
     },
     {
       "id": "wichita",
+      "no": 1204018,
       "name": "ウィチタ (Wichita)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -649,6 +689,7 @@
     },
     {
       "id": "omaha",
+      "no": 1205001,
       "name": "オマハ (Omaha)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -666,6 +707,7 @@
     },
     {
       "id": "brooklyn",
+      "no": 1205011,
       "name": "ブルックリン (Brooklyn)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -683,6 +725,7 @@
     },
     {
       "id": "farragut",
+      "no": 1207001,
       "name": "ファラガット (Farragut)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -700,6 +743,7 @@
     },
     {
       "id": "porter",
+      "no": 1207009,
       "name": "ポーター (Porter)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -717,6 +761,7 @@
     },
     {
       "id": "mahan",
+      "no": 1207017,
       "name": "マハン (Mahan)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -734,6 +779,7 @@
     },
     {
       "id": "sims",
+      "no": 1207032,
       "name": "シムス (Sims)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -751,6 +797,7 @@
     },
     {
       "id": "benson",
+      "no": 1207044,
       "name": "ベンソン (Benson)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -768,6 +815,7 @@
     },
     {
       "id": "tench",
+      "no": 1212015,
       "name": "テンチ (Tench)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -783,6 +831,7 @@
     },
     {
       "id": "texas",
+      "no": 1201002,
       "name": "テキサス (Texas)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -800,6 +849,7 @@
     },
     {
       "id": "oklahoma",
+      "no": 1201004,
       "name": "オクラホマ (Oklahoma)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -817,6 +867,7 @@
     },
     {
       "id": "arizona",
+      "no": 1201006,
       "name": "アリゾナ (Arizona)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -834,6 +885,7 @@
     },
     {
       "id": "mississippi",
+      "no": 1201008,
       "name": "ミシシッピ (Mississippi)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -851,6 +903,7 @@
     },
     {
       "id": "idaho",
+      "no": 1201009,
       "name": "アイダホ (Idaho)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -868,6 +921,7 @@
     },
     {
       "id": "california",
+      "no": 1201011,
       "name": "カリフォルニア (California)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -885,6 +939,7 @@
     },
     {
       "id": "maryland",
+      "no": 1201013,
       "name": "メリーランド (Maryland)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -902,6 +957,7 @@
     },
     {
       "id": "west_virginia",
+      "no": 1201014,
       "name": "ウェストヴァージニア (West Virginia)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -919,6 +975,7 @@
     },
     {
       "id": "washington",
+      "no": 1201016,
       "name": "ワシントン (Washington)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -936,6 +993,7 @@
     },
     {
       "id": "indiana",
+      "no": 1201018,
       "name": "インディアナ (Indiana)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -953,6 +1011,7 @@
     },
     {
       "id": "massachusetts",
+      "no": 1201019,
       "name": "マサチューセッツ (Massachusetts)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -970,6 +1029,7 @@
     },
     {
       "id": "alabama",
+      "no": 1201020,
       "name": "アラバマ (Alabama)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -987,6 +1047,7 @@
     },
     {
       "id": "wisconsin",
+      "no": 1201023,
       "name": "ウィスコンシン (Wisconsin)",
       "nation": "USN",
       "shipClass": "Battleship",
@@ -1004,6 +1065,7 @@
     },
     {
       "id": "saratoga",
+      "no": 1209002,
       "name": "サラトガ (Saratoga)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1025,6 +1087,7 @@
     },
     {
       "id": "hornet",
+      "no": 1209005,
       "name": "ホーネット (Hornet)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1046,6 +1109,7 @@
     },
     {
       "id": "intrepid",
+      "no": 1209009,
       "name": "イントレピッド (Intrepid)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1067,6 +1131,7 @@
     },
     {
       "id": "franklin",
+      "no": 1209010,
       "name": "フランクリン (Franklin)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1088,6 +1153,7 @@
     },
     {
       "id": "bunker_hill",
+      "no": 1209011,
       "name": "バンカー・ヒル (Bunker Hill)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1109,6 +1175,7 @@
     },
     {
       "id": "hancock",
+      "no": 1209012,
       "name": "ハンコック (Hancock)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1130,6 +1197,7 @@
     },
     {
       "id": "ticonderoga",
+      "no": 1209013,
       "name": "タイコンデロガ (Ticonderoga)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1151,6 +1219,7 @@
     },
     {
       "id": "bennington",
+      "no": 1209014,
       "name": "ベニントン (Bennington)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1172,6 +1241,7 @@
     },
     {
       "id": "randolph",
+      "no": 1209015,
       "name": "ランドルフ (Randolph)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1193,6 +1263,7 @@
     },
     {
       "id": "shangri_la",
+      "no": 1209016,
       "name": "シャングリラ (Shangri-La)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1214,6 +1285,7 @@
     },
     {
       "id": "bon_homme_richard",
+      "no": 1209017,
       "name": "ボノム・リシャール (Bon Homme Richard)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1235,6 +1307,7 @@
     },
     {
       "id": "antietam",
+      "no": 1209018,
       "name": "アンティータム (Antietam)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1256,6 +1329,7 @@
     },
     {
       "id": "franklin_d_roosevelt",
+      "no": 1209020,
       "name": "フランクリン・D・ルーズベルト (Franklin D. Roosevelt)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1277,6 +1351,7 @@
     },
     {
       "id": "princeton",
+      "no": 1210002,
       "name": "プリンストン (Princeton)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1299,6 +1374,7 @@
     },
     {
       "id": "belleau_wood",
+      "no": 1210003,
       "name": "ベロー・ウッド (Belleau Wood)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1321,6 +1397,7 @@
     },
     {
       "id": "cowpens",
+      "no": 1210004,
       "name": "カウペンス (Cowpens)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1343,6 +1420,7 @@
     },
     {
       "id": "monterey",
+      "no": 1210005,
       "name": "モントレー (Monterey)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1365,6 +1443,7 @@
     },
     {
       "id": "cabot",
+      "no": 1210006,
       "name": "カボット (Cabot)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1387,6 +1466,7 @@
     },
     {
       "id": "bataan",
+      "no": 1210007,
       "name": "バターン (Bataan)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1409,6 +1489,7 @@
     },
     {
       "id": "san_jacinto",
+      "no": 1210008,
       "name": "サン・ジャシント (San Jacinto)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1431,6 +1512,7 @@
     },
     {
       "id": "liscome_bay",
+      "no": 1211006,
       "name": "リスカム・ベイ (Liscome Bay)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1453,6 +1535,7 @@
     },
     {
       "id": "gambier_bay",
+      "no": 1211007,
       "name": "ガンビア・ベイ (Gambier Bay)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1475,6 +1558,7 @@
     },
     {
       "id": "st_lo",
+      "no": 1211008,
       "name": "セント・ロー (St. Lo)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1497,6 +1581,7 @@
     },
     {
       "id": "kalinin_bay",
+      "no": 1211009,
       "name": "カリニン・ベイ (Kalinin Bay)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1519,6 +1604,7 @@
     },
     {
       "id": "card",
+      "no": 1211002,
       "name": "カード (Card)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1541,6 +1627,7 @@
     },
     {
       "id": "core",
+      "no": 1211003,
       "name": "コア (Core)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1563,6 +1650,7 @@
     },
     {
       "id": "block_island",
+      "no": 1211004,
       "name": "ブロック・アイランド (Block Island)",
       "nation": "USN",
       "shipClass": "Carrier",
@@ -1585,6 +1673,7 @@
     },
     {
       "id": "salt_lake_city",
+      "no": 1204002,
       "name": "ソルトレイクシティ (Salt Lake City)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1603,6 +1692,7 @@
     },
     {
       "id": "chester",
+      "no": 1204004,
       "name": "チェスター (Chester)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1621,6 +1711,7 @@
     },
     {
       "id": "louisville",
+      "no": 1204005,
       "name": "ルイビル (Louisville)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1639,6 +1730,7 @@
     },
     {
       "id": "chicago",
+      "no": 1204006,
       "name": "シカゴ (Chicago)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1657,6 +1749,7 @@
     },
     {
       "id": "houston",
+      "no": 1204007,
       "name": "ヒューストン (Houston)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1675,6 +1768,7 @@
     },
     {
       "id": "augusta",
+      "no": 1204008,
       "name": "オーガスタ (Augusta)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1693,6 +1787,7 @@
     },
     {
       "id": "indianapolis",
+      "no": 1204010,
       "name": "インディアナポリス (Indianapolis)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1711,6 +1806,7 @@
     },
     {
       "id": "astoria",
+      "no": 1204012,
       "name": "アストリア (Astoria)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1729,6 +1825,7 @@
     },
     {
       "id": "minneapolis",
+      "no": 1204013,
       "name": "ミネアポリス (Minneapolis)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1747,6 +1844,7 @@
     },
     {
       "id": "tuscaloosa",
+      "no": 1204014,
       "name": "タスカルーサ (Tuscaloosa)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1765,6 +1863,7 @@
     },
     {
       "id": "san_francisco",
+      "no": 1204015,
       "name": "サンフランシスコ (San Francisco)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1783,6 +1882,7 @@
     },
     {
       "id": "quincy",
+      "no": 1204016,
       "name": "クインシー (Quincy)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1801,6 +1901,7 @@
     },
     {
       "id": "vincennes",
+      "no": 1204017,
       "name": "ヴィンセンス (Vincennes)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1819,6 +1920,7 @@
     },
     {
       "id": "boston",
+      "no": 1204020,
       "name": "ボストン (Boston)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1837,6 +1939,7 @@
     },
     {
       "id": "canberra",
+      "no": 1204021,
       "name": "キャンベラ (Canberra)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1855,6 +1958,7 @@
     },
     {
       "id": "pittsburgh",
+      "no": 1204022,
       "name": "ピッツバーグ (Pittsburgh)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1873,6 +1977,7 @@
     },
     {
       "id": "saint_paul",
+      "no": 1204023,
       "name": "セントポール (Saint Paul)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1891,6 +1996,7 @@
     },
     {
       "id": "bremerton",
+      "no": 1204024,
       "name": "ブレマートン (Bremerton)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1909,6 +2015,7 @@
     },
     {
       "id": "fall_river",
+      "no": 1204025,
       "name": "フォールリバー (Fall River)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1927,6 +2034,7 @@
     },
     {
       "id": "macon",
+      "no": 1204026,
       "name": "メイコン (Macon)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1945,6 +2053,7 @@
     },
     {
       "id": "salem",
+      "no": 1204028,
       "name": "セーラム (Salem)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1963,6 +2072,7 @@
     },
     {
       "id": "milwaukee",
+      "no": 1205002,
       "name": "ミルウォーキー (Milwaukee)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1981,6 +2091,7 @@
     },
     {
       "id": "cincinnati",
+      "no": 1205003,
       "name": "シンシナティ (Cincinnati)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -1999,6 +2110,7 @@
     },
     {
       "id": "raleigh",
+      "no": 1205004,
       "name": "ローリー (Raleigh)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2017,6 +2129,7 @@
     },
     {
       "id": "detroit",
+      "no": 1205005,
       "name": "デトロイト (Detroit)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2035,6 +2148,7 @@
     },
     {
       "id": "richmond",
+      "no": 1205006,
       "name": "リッチモンド (Richmond)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2053,6 +2167,7 @@
     },
     {
       "id": "concord",
+      "no": 1205007,
       "name": "コンコード (Concord)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2071,6 +2186,7 @@
     },
     {
       "id": "trenton",
+      "no": 1205008,
       "name": "トレントン (Trenton)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2089,6 +2205,7 @@
     },
     {
       "id": "marblehead",
+      "no": 1205009,
       "name": "マーブルヘッド (Marblehead)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2107,6 +2224,7 @@
     },
     {
       "id": "memphis",
+      "no": 1205010,
       "name": "メンフィス (Memphis)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2125,6 +2243,7 @@
     },
     {
       "id": "philadelphia",
+      "no": 1205012,
       "name": "フィラデルフィア (Philadelphia)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2143,6 +2262,7 @@
     },
     {
       "id": "savannah",
+      "no": 1205013,
       "name": "サバンナ (Savannah)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2161,6 +2281,7 @@
     },
     {
       "id": "nashville",
+      "no": 1205014,
       "name": "ナッシュビル (Nashville)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2179,6 +2300,7 @@
     },
     {
       "id": "phoenix",
+      "no": 1205015,
       "name": "フェニックス (Phoenix)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2197,6 +2319,7 @@
     },
     {
       "id": "boise",
+      "no": 1205016,
       "name": "ボイシ (Boise)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2215,6 +2338,7 @@
     },
     {
       "id": "honolulu",
+      "no": 1205017,
       "name": "ホノルル (Honolulu)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2233,6 +2357,7 @@
     },
     {
       "id": "helena",
+      "no": 1205018,
       "name": "ヘレナ (Helena)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2251,6 +2376,7 @@
     },
     {
       "id": "st_louis",
+      "no": 1205019,
       "name": "セントルイス (St. Louis)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2269,6 +2395,7 @@
     },
     {
       "id": "columbia",
+      "no": 1205026,
       "name": "コロンビア (Columbia)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2287,6 +2414,7 @@
     },
     {
       "id": "montpelier",
+      "no": 1205027,
       "name": "モントピリア (Montpelier)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2305,6 +2433,7 @@
     },
     {
       "id": "denver",
+      "no": 1205028,
       "name": "デンバー (Denver)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2323,6 +2452,7 @@
     },
     {
       "id": "santa_fe",
+      "no": 1205029,
       "name": "サンタフェ (Santa Fe)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2341,6 +2471,7 @@
     },
     {
       "id": "birmingham",
+      "no": 1205030,
       "name": "バーミングハム (Birmingham)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2359,6 +2490,7 @@
     },
     {
       "id": "mobile",
+      "no": 1205031,
       "name": "モービル (Mobile)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2377,6 +2509,7 @@
     },
     {
       "id": "biloxi",
+      "no": 1205032,
       "name": "ビロクシ (Biloxi)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2395,6 +2528,7 @@
     },
     {
       "id": "miami",
+      "no": 1205033,
       "name": "マイアミ (Miami)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2413,6 +2547,7 @@
     },
     {
       "id": "juneau",
+      "no": 1205021,
       "name": "ジュノー (Juneau)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2431,6 +2566,7 @@
     },
     {
       "id": "san_diego",
+      "no": 1205022,
       "name": "サンディエゴ (San Diego)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2449,6 +2585,7 @@
     },
     {
       "id": "san_juan",
+      "no": 1205023,
       "name": "サンファン (San Juan)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2467,6 +2604,7 @@
     },
     {
       "id": "oakland",
+      "no": 1205024,
       "name": "オークランド (Oakland)",
       "nation": "USN",
       "shipClass": "Cruiser",
@@ -2485,6 +2623,7 @@
     },
     {
       "id": "dewey",
+      "no": 1207002,
       "name": "デューイ (Dewey)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2503,6 +2642,7 @@
     },
     {
       "id": "hull",
+      "no": 1207003,
       "name": "ハル (Hull)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2521,6 +2661,7 @@
     },
     {
       "id": "macdonough",
+      "no": 1207004,
       "name": "マクドノー (Macdonough)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2539,6 +2680,7 @@
     },
     {
       "id": "worden",
+      "no": 1207005,
       "name": "ウォーデン (Worden)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2557,6 +2699,7 @@
     },
     {
       "id": "dale",
+      "no": 1207006,
       "name": "デイル (Dale)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2575,6 +2718,7 @@
     },
     {
       "id": "monaghan",
+      "no": 1207007,
       "name": "モナハン (Monaghan)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2593,6 +2737,7 @@
     },
     {
       "id": "aylwin",
+      "no": 1207008,
       "name": "エイルウィン (Aylwin)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2611,6 +2756,7 @@
     },
     {
       "id": "selfridge",
+      "no": 1207010,
       "name": "セルフリッジ (Selfridge)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2629,6 +2775,7 @@
     },
     {
       "id": "mcdougal",
+      "no": 1207011,
       "name": "マクドゥガル (McDougal)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2647,6 +2794,7 @@
     },
     {
       "id": "winslow",
+      "no": 1207012,
       "name": "ウィンスロー (Winslow)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2665,6 +2813,7 @@
     },
     {
       "id": "phelps",
+      "no": 1207013,
       "name": "フェルプス (Phelps)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2683,6 +2832,7 @@
     },
     {
       "id": "clark",
+      "no": 1207014,
       "name": "クラーク (Clark)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2701,6 +2851,7 @@
     },
     {
       "id": "moffett",
+      "no": 1207015,
       "name": "モフェット (Moffett)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2719,6 +2870,7 @@
     },
     {
       "id": "balch",
+      "no": 1207016,
       "name": "バルチ (Balch)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2737,6 +2889,7 @@
     },
     {
       "id": "cummings",
+      "no": 1207018,
       "name": "カミングス (Cummings)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2755,6 +2908,7 @@
     },
     {
       "id": "drayton",
+      "no": 1207019,
       "name": "ドレイトン (Drayton)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2773,6 +2927,7 @@
     },
     {
       "id": "lamson",
+      "no": 1207020,
       "name": "ラムソン (Lamson)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2791,6 +2946,7 @@
     },
     {
       "id": "flusser",
+      "no": 1207021,
       "name": "フラッサー (Flusser)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2809,6 +2965,7 @@
     },
     {
       "id": "reid",
+      "no": 1207022,
       "name": "リード (Reid)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2827,6 +2984,7 @@
     },
     {
       "id": "case",
+      "no": 1207023,
       "name": "ケース (Case)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2845,6 +3003,7 @@
     },
     {
       "id": "cassin",
+      "no": 1207024,
       "name": "カッシン (Cassin)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2863,6 +3022,7 @@
     },
     {
       "id": "shaw",
+      "no": 1207025,
       "name": "ショー (Shaw)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2881,6 +3041,7 @@
     },
     {
       "id": "tucker",
+      "no": 1207026,
       "name": "タッカー (Tucker)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2899,6 +3060,7 @@
     },
     {
       "id": "downes",
+      "no": 1207027,
       "name": "ダウンズ (Downes)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2917,6 +3079,7 @@
     },
     {
       "id": "cushing",
+      "no": 1207028,
       "name": "カッシング (Cushing)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2935,6 +3098,7 @@
     },
     {
       "id": "perkins",
+      "no": 1207029,
       "name": "パーキンス (Perkins)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2953,6 +3117,7 @@
     },
     {
       "id": "smith",
+      "no": 1207030,
       "name": "スミス (Smith)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2971,6 +3136,7 @@
     },
     {
       "id": "preston",
+      "no": 1207031,
       "name": "プレストン (Preston)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -2989,6 +3155,7 @@
     },
     {
       "id": "hughes",
+      "no": 1207033,
       "name": "ヒューズ (Hughes)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3007,6 +3174,7 @@
     },
     {
       "id": "anderson",
+      "no": 1207034,
       "name": "アンダーソン (Anderson)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3025,6 +3193,7 @@
     },
     {
       "id": "hammann",
+      "no": 1207035,
       "name": "ハムマン (Hammann)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3043,6 +3212,7 @@
     },
     {
       "id": "mustin",
+      "no": 1207036,
       "name": "マスティン (Mustin)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3061,6 +3231,7 @@
     },
     {
       "id": "russell",
+      "no": 1207037,
       "name": "ラッセル (Russell)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3079,6 +3250,7 @@
     },
     {
       "id": "obrien",
+      "no": 1207038,
       "name": "オブライエン (O'Brien)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3097,6 +3269,7 @@
     },
     {
       "id": "walke",
+      "no": 1207039,
       "name": "ウォーク (Walke)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3115,6 +3288,7 @@
     },
     {
       "id": "morris",
+      "no": 1207040,
       "name": "モリス (Morris)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3133,6 +3307,7 @@
     },
     {
       "id": "roe",
+      "no": 1207041,
       "name": "ロー (Roe)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3151,6 +3326,7 @@
     },
     {
       "id": "wainwright",
+      "no": 1207042,
       "name": "ウェインライト (Wainwright)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3169,6 +3345,7 @@
     },
     {
       "id": "buck",
+      "no": 1207043,
       "name": "バック (Buck)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3187,6 +3364,7 @@
     },
     {
       "id": "mayo",
+      "no": 1207045,
       "name": "メイヨー (Mayo)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3205,6 +3383,7 @@
     },
     {
       "id": "gleaves",
+      "no": 1207046,
       "name": "グリーブス (Gleaves)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3223,6 +3402,7 @@
     },
     {
       "id": "niblack",
+      "no": 1207047,
       "name": "ニブラック (Niblack)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3241,6 +3421,7 @@
     },
     {
       "id": "laffey",
+      "no": 1207048,
       "name": "ラフィー (Laffey)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3259,6 +3440,7 @@
     },
     {
       "id": "woodworth",
+      "no": 1207049,
       "name": "ウッドワース (Woodworth)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3277,6 +3459,7 @@
     },
     {
       "id": "livermore",
+      "no": 1207050,
       "name": "リバモア (Livermore)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3295,6 +3478,7 @@
     },
     {
       "id": "eberle",
+      "no": 1207051,
       "name": "エバール (Eberle)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3313,6 +3497,7 @@
     },
     {
       "id": "obannon",
+      "no": 1207053,
       "name": "オバノン (O'Bannon)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3331,6 +3516,7 @@
     },
     {
       "id": "nicholas",
+      "no": 1207054,
       "name": "ニコラス (Nicholas)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3349,6 +3535,7 @@
     },
     {
       "id": "de_haven",
+      "no": 1207055,
       "name": "デヘイヴン (De Haven)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3367,6 +3554,7 @@
     },
     {
       "id": "johnston",
+      "no": 1207056,
       "name": "ジョンストン (Johnston)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3385,6 +3573,7 @@
     },
     {
       "id": "hoel",
+      "no": 1207057,
       "name": "ホーエル (Hoel)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3403,6 +3592,7 @@
     },
     {
       "id": "heermann",
+      "no": 1207058,
       "name": "ヒーアマン (Heermann)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3421,6 +3611,7 @@
     },
     {
       "id": "kidd",
+      "no": 1207059,
       "name": "キッド (Kidd)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3439,6 +3630,7 @@
     },
     {
       "id": "the_sullivans",
+      "no": 1207060,
       "name": "ザ・サリヴァンズ (The Sullivans)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3457,6 +3649,7 @@
     },
     {
       "id": "radford",
+      "no": 1207061,
       "name": "ラドフォード (Radford)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3475,6 +3668,7 @@
     },
     {
       "id": "jenkins",
+      "no": 1207062,
       "name": "ジェンキンス (Jenkins)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3493,6 +3687,7 @@
     },
     {
       "id": "laffey_dd724",
+      "no": 1207064,
       "name": "ラフィー (2 代目) (Laffey (DD-724))",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3511,6 +3706,7 @@
     },
     {
       "id": "english",
+      "no": 1207065,
       "name": "イングリッシュ (English)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3529,6 +3725,7 @@
     },
     {
       "id": "ingraham",
+      "no": 1207066,
       "name": "イングラハム (Ingraham)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3547,6 +3744,7 @@
     },
     {
       "id": "moale",
+      "no": 1207067,
       "name": "モール (Moale)",
       "nation": "USN",
       "shipClass": "Destroyer",
@@ -3565,6 +3763,7 @@
     },
     {
       "id": "wahoo",
+      "no": 1212002,
       "name": "ワフー (Wahoo)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3581,6 +3780,7 @@
     },
     {
       "id": "flasher",
+      "no": 1212003,
       "name": "フラッシャー (Flasher)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3597,6 +3797,7 @@
     },
     {
       "id": "harder",
+      "no": 1212004,
       "name": "ハーダー (Harder)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3613,6 +3814,7 @@
     },
     {
       "id": "silversides",
+      "no": 1212005,
       "name": "シルバーサイズ (Silversides)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3629,6 +3831,7 @@
     },
     {
       "id": "growler",
+      "no": 1212006,
       "name": "グロウラー (Growler)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3645,6 +3848,7 @@
     },
     {
       "id": "trigger",
+      "no": 1212007,
       "name": "トリガー (Trigger)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3661,6 +3865,7 @@
     },
     {
       "id": "barb",
+      "no": 1212008,
       "name": "バーブ (Barb)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3677,6 +3882,7 @@
     },
     {
       "id": "drum",
+      "no": 1212009,
       "name": "ドラム (Drum)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3693,6 +3899,7 @@
     },
     {
       "id": "tang",
+      "no": 1212011,
       "name": "タング (Tang)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3709,6 +3916,7 @@
     },
     {
       "id": "archerfish",
+      "no": 1212012,
       "name": "アーチャーフィッシュ (Archerfish)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3725,6 +3933,7 @@
     },
     {
       "id": "batfish",
+      "no": 1212013,
       "name": "バットフィッシュ (Batfish)",
       "nation": "USN",
       "shipClass": "Submarine",
@@ -3741,6 +3950,7 @@
     },
     {
       "id": "spadefish",
+      "no": 1212014,
       "name": "スペードフィッシュ (Spadefish)",
       "nation": "USN",
       "shipClass": "Submarine",

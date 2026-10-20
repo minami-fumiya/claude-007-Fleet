@@ -17,7 +17,7 @@ import { GOLD_SWEEP } from '@/systems/GoldSystem';
 import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
-import { prerequisitesOf, areasOf, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
+import { prerequisitesOf, areasOf, firstSReward, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { captainsLeft } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
@@ -247,10 +247,11 @@ export class CampaignMapScene extends Phaser.Scene {
     // The area's reward-only ship for the nation being played, until it is won with an S rank (#160).
     const progress = loadProgress();
     const roster = registry.byNation(progress.nation);
-    const rewardShip = rewardShipFor(roster, ownedIds(progress, roster), a.id);
-    const reward = formatResources(a.reward) + (rewardShip ? `  /  S 評価で ${rewardShip.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(rewardShip)})` : '');
-    // The area's first S brings a captain (#179 #215), while someone is left to join; who it is stays a surprise.
-    const captain = progress.perfect.includes(a.id) || captainsLeft(progress.nation, progress.captains) === 0 ? '' : 'S 評価で艦長 +1';
+    // One S-rank reward an area (#247): its reward-only ship, else a captain on the first S (who stays a surprise);
+    // none in a training area.
+    const sReward = firstSReward(a, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), a.id), perfect: progress.perfect, captainsLeft: captainsLeft(progress.nation, progress.captains) });
+    const reward = formatResources(a.reward) + (sReward?.kind === 'ship' ? `  /  S 評価の報酬: ${sReward.ship.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(sReward.ship)})` : '');
+    const captain = sReward?.kind === 'captain' ? 'S 評価の報酬: 艦長 +1' : '';
     const giantEvent = activeEvent();
     const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [

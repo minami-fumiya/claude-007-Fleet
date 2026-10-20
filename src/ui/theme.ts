@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { IS_PORTRAIT } from '@/config/GameConstants';
+import { jaWordWrap } from '@/utils/JaWrap';
 
 /**
  * Shared visual tokens for every scene.
@@ -62,12 +63,15 @@ export function textStyle(
   color: string = Css.text,
   extra: Phaser.Types.GameObjects.Text.TextStyle = {},
 ): Phaser.Types.GameObjects.Text.TextStyle {
+  // Wrapped text keeps the Japanese line-breaking rules (#248): every screen's descriptions go through here.
+  const wrap = extra.wordWrap?.width && !extra.wordWrap.callback ? { wordWrap: { ...extra.wordWrap, callback: jaWordWrap } } : {};
   return {
     fontFamily: Fonts.body,
     fontSize: `${uiFontSize(size)}px`,
     color,
     resolution: TEXT_RESOLUTION,
     ...extra,
+    ...wrap,
   };
 }
 

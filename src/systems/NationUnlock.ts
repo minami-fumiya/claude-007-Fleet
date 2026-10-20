@@ -2,6 +2,7 @@ import { Nation } from '@/types/Nation';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { IRankProgress, RANKS, rankOf } from './RankSystem';
 import campaignData from '@/data/campaign.json';
+import { theaterFinalArea } from './CampaignSystem';
 
 /**
  * Nations open one step at a time (#134, pure). A new admiral picks one of four; the others open once that first
@@ -28,9 +29,9 @@ export interface INationLock {
 
 const THEATERS = campaignData.theaters.map((t) => t.id);
 
-/** A theater's final area (its last listed one). */
+/** A theater's final area (its last listed one, training areas aside: #241). */
 export function theaterFinal(theater: string): string | undefined {
-  return campaignData.areas.filter((a) => a.theater === theater).pop()?.id;
+  return theaterFinalArea(campaignData, theater);
 }
 
 function clearedTheater(p: Progress, theater: string): boolean {

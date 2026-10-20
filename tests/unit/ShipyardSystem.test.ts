@@ -246,11 +246,15 @@ describe('construction time (#143)', () => {
     expect(p.resources.steel).toBeLessThan(rich.steel);
     expect(buildState(p, roster, byId('etorofu'))).toBe('building');
     expect(startBuild(p, roster, byId('etorofu'), now)).toBeNull();
-    // Builds and repairs share the base's docks (#211): two at the start, so a second build fits, a third waits.
-    expect(buildState(p, roster, byId('i19'))).toBe('ready');
-    const two = startBuild(p, roster, byId('i19'), now)!;
-    expect(docksInUse(two)).toBe(buildDockCount(two));
+    // Builds and repairs share the base's docks (#211): one at the start (#244), so a second build waits for it; a
+    // base with two fits the second.
+    expect(docksInUse(p)).toBe(buildDockCount(p));
+    expect(buildState(p, roster, byId('i19'))).toBe('dock');
     expect(buildStateLabel('dock', byId('i19'))).toBe('ドック満杯');
+    const wide = { ...p, baseDocks: { [currentBaseId(p)]: 2 } };
+    expect(buildState(wide, roster, byId('i19'))).toBe('ready');
+    const two = startBuild(wide, roster, byId('i19'), now)!;
+    expect(docksInUse(two)).toBe(buildDockCount(two));
     // A ship in for repair takes a dock as well.
     const repairing = { ...p, docks: [{ shipId: 'fubuki', endsAt: now + 1000 }] };
     expect(buildState(repairing, roster, byId('i19'))).toBe('dock');
@@ -263,7 +267,7 @@ describe('construction time (#143)', () => {
   });
 
   it('builds use the base\'s docks (#211); a 高速建造材 finishes a build at once', () => {
-    expect(buildDockCount(player())).toBe(2);
+    expect(buildDockCount(player())).toBe(1);
     expect(buildDockCount(player({ baseDocks: { [currentBaseId(player())]: 5 } }))).toBe(5);
     const p = startBuild(ready({ items: { fastRepair: 0, fastBuild: 1 } }), IJN, byId('etorofu'), now)!;
     const fast = fastBuild(p, IJN, 'etorofu', now)!;

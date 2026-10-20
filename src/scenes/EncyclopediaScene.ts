@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
+import { formatNo } from '@/systems/Numbering';
+import { HIDDEN_NAME, hiddenShipName } from '@/systems/RevealSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
@@ -6,7 +9,6 @@ import { DataLoader } from '@/utils/DataLoader';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import {
   CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
-  sisterNames,
 } from '@/systems/EncyclopediaSystem';
 import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
 import { SKILL_COLOR } from '@/ui/SkillColors';
@@ -43,7 +45,7 @@ const ROW_GAP = 6;
 const COUNT_H = IS_PORTRAIT ? 34 : 26;
 const AREA_NAMES: Record<string, string> = Object.fromEntries(campaignData.areas.map((a) => [a.id, a.name]));
 
-interface IAircraftEntry { id: string; nation: string; type: AircraftType; name: string; description: string }
+interface IAircraftEntry { id: string; no?: number; nation: string; type: AircraftType; name: string; description: string }
 const AIRCRAFT = (aircraftData as { aircraft: IAircraftEntry[] }).aircraft;
 const AIRCRAFT_TYPE_JA: Record<AircraftType, string> = {
   [AircraftType.Fighter]: '艦上戦闘機', [AircraftType.DiveBomber]: '艦上爆撃機', [AircraftType.TorpedoBomber]: '艦上攻撃機', [AircraftType.Recon]: '水上偵察機',
@@ -57,7 +59,7 @@ const AIRCRAFT_ROLE: Record<AircraftType, string> = {
   [AircraftType.TorpedoBomber]: '低空から魚雷を放つ。大型艦に大きな損害を与える。',
   [AircraftType.Recon]: '戦艦・巡洋艦から飛び、敵を見つけて触接する (#98)。',
 };
-interface IGroundEntry { id: string; name: string; spriteKey: string; hp: number; armor: number; description: string }
+interface IGroundEntry { id: string; no?: number; name: string; spriteKey: string; hp: number; armor: number; description: string }
 const GROUND: IGroundEntry[] = [
   { ...specialData.convoy, description: '作戦「船団護衛」で守る、または沈める輸送船。武装は無い。' },
   ...specialData.landTargets.map((t) => ({
@@ -171,20 +173,25 @@ export class EncyclopediaScene extends Phaser.Scene {
     switch (this.tab) {
       case 'ships': {
         const owned = this.ownedShipIds();
-        return filterEntries(DataLoader.getRegistry(this).byNation(this.nation), this.shipClass).map((s) => ({
-          id: s.id, name: s.name.replace(/\s*\(.*\)\s*$/, ''), sub: `${s.fictional ? '架空  ' : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: owned.includes(s.id),
-        }));
+        const roster = DataLoader.getRegistry(this).byNation(this.nation);
+        // Not owned yet (#245): the name stays hidden ("長門型 ？番艦" once a ship of the class is owned).
+        return filterEntries(roster, this.shipClass).map((s) => {
+          const have = owned.includes(s.id);
+          return {
+            id: s.id, name: have ? s.name.replace(/\s*\(.*\)\s*$/, '') : hiddenShipName(roster, s, owned), sub: `${s.fictional && have ? '架空  ' : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: have,
+          };
+        });
       }
       case 'captains': {
         const owned = this.ownedCaptainIds();
         const xp = loadSave().nations[this.nation]?.captainXp ?? {};
         return nationCaptains(this.nation).map((c) => ({
-          id: c.id, name: c.name, sub: owned.includes(c.id) ? `Lv${withProgress(c, xp[c.id] ?? 0).level}  ${SKILL_LABEL[c.skill]}` : SKILL_LABEL[c.skill], icon: '', owned: owned.includes(c.id),
+          id: c.id, name: owned.includes(c.id) ? c.name : HIDDEN_NAME, sub: owned.includes(c.id) ? `Lv${withProgress(c, xp[c.id] ?? 0).level}  ${SKILL_LABEL[c.skill]}` : SKILL_LABEL[c.skill], icon: '', owned: owned.includes(c.id),
         }));
       }
       case 'aircraft':
         return AIRCRAFT.filter((a) => a.nation === this.nation).map((a) => ({
-          id: a.id, name: a.name, sub: AIRCRAFT_TYPE_JA[a.type], icon: AIRCRAFT_TEXTURE[a.type], owned: this.aircraftKnown(a.type),
+          id: a.id, name: this.aircraftKnown(a.type) ? a.name : HIDDEN_NAME, sub: AIRCRAFT_TYPE_JA[a.type], icon: AIRCRAFT_TEXTURE[a.type], owned: this.aircraftKnown(a.type),
         }));
       case 'ground':
         return GROUND.map((g) => ({ id: g.id, name: g.name, sub: g.id === 'convoy_ship' ? '支援' : '地上', icon: g.spriteKey, owned: true }));
@@ -324,9 +331,9 @@ export class EncyclopediaScene extends Phaser.Scene {
 
   private shipSource(ship: IShipData): string {
     const area = rewardAreaOf(ship);
-    if (area) return `報酬限定艦 — 作戦「${AREA_NAMES[area] ?? area}」の初回攻略で入手`;
+    if (area) return `報酬限定艦 — 作戦「${AREA_NAMES[area] ?? area}」で S 評価を取ると入手`;
     if (ship.fictional) return '工廠で建造 (研究「架空艦計画」が必要)';
-    return '工廠で建造、または作戦の初回攻略の報酬';
+    return '工廠で建造 (研究と階級で建造できる艦が増えます)';
   }
 
   private buildShipDetail(ship: IShipData, owned: boolean): void {
@@ -334,11 +341,18 @@ export class EncyclopediaScene extends Phaser.Scene {
     const x = d.x + 26;
     const w = d.w - 52;
     const kind = ship.fictional ? `${kindLabel(ship)}  ·  架空艦` : kindLabel(ship);
-    let y = this.detailHeader(`${NATION_INFO[ship.nation].ja}  ·  ${kind}${owned ? '  ·  保有' : '  ·  未入手'}`, ship.name, owned ? Css.cyan : Css.dim);
+    const roster = DataLoader.getRegistry(this).byNation(ship.nation);
+    const hull = hullNumber(roster, ship);
+    const title = owned ? ship.name : hiddenShipName(roster, ship, this.ownedShipIds());
+    let y = this.detailHeader(`${formatNo(ship.no)}  ·  ${NATION_INFO[ship.nation].ja}  ·  ${owned ? kind : kindLabel(ship)}${owned ? '  ·  保有' : '  ·  未入手'}`, title, owned ? Css.cyan : Css.dim);
     const icon = this.track(this.add.image(d.x + d.w - 30, d.y + 22, ship.spriteKey).setOrigin(1, 0));
     icon.setScale(Math.min(2, (IS_PORTRAIT ? 130 : 140) / Math.max(1, icon.height)));
-    if (!owned) icon.setTintFill(0x101a2c).setAlpha(0.8);
-    if (!owned) y = this.section(y, '入手方法', this.shipSource(ship), Css.gold);
+    if (!owned) {
+      // Not owned yet (#245): a silhouette, the kind and how it comes; no name, stats or story.
+      icon.setTintFill(0x101a2c).setAlpha(0.8);
+      this.section(y, '入手方法', this.shipSource(ship), Css.gold);
+      return;
+    }
 
     const meters = this.track(this.add.graphics());
     const stats: Array<[string, number, number, number]> = [
@@ -372,8 +386,13 @@ export class EncyclopediaScene extends Phaser.Scene {
     }
     y = this.section(y, '兵装', lines.join('\n') || '—');
     // The class's other ships (#85): same performance, other names.
-    const sisters = sisterNames(DataLoader.getRegistry(this).byNation(ship.nation), ship);
-    if (sisters.length > 0) y = this.section(y, `同型艦 (${sisters.length + 1} 隻)`, sisters.join('・'), Css.muted);
+    // The class, its hull number (#246) and the other ships of it, by name once owned (#245).
+    if (hull.of > 1) {
+      const have = this.ownedShipIds();
+      const others = shipClasses(roster.filter((s) => classKey(s) === classKey(ship)))[0].ships.filter((s) => s.id !== ship.id);
+      const names = others.map((s) => (have.includes(s.id) ? s.name.replace(/\s*\(.*\)\s*$/, '') : HIDDEN_NAME));
+      y = this.section(y, `同型艦 — ${hull.className} ${hull.number} 番艦 (全 ${hull.of} 隻)`, names.join('・'), Css.muted);
+    }
     this.section(y, '解説', ship.description ?? '—', Css.muted);
   }
 
@@ -387,12 +406,13 @@ export class EncyclopediaScene extends Phaser.Scene {
     const np = loadSave().nations[this.nation];
     const captain = withProgress(data, np?.captainXp[data.id] ?? 0);
     const sc = SKILL_COLOR[data.skill];
-    let y = this.detailHeader(`${NATION_INFO[data.nation].ja}  ·  艦長${owned ? `  ·  Lv${captain.level}` : ''}`, data.name, owned ? Css.cyan : Css.dim);
-    y = this.section(y, '略歴', data.bio ?? '—');
+    let y = this.detailHeader(`${formatNo(data.no)}  ·  ${NATION_INFO[data.nation].ja}  ·  艦長${owned ? `  ·  Lv${captain.level}` : ''}`, owned ? data.name : HIDDEN_NAME, owned ? Css.cyan : Css.dim);
+    // Not met yet (#245): no name or biography, only the skill and how captains join.
+    if (owned) y = this.section(y, '略歴', data.bio ?? '—');
     y = this.section(y, `固有スキル「${owned ? inherentLabel(captain) : SKILL_LABEL[data.skill]}」`, `${modifierLines(skillModifiers(data.skill, SKILL_LEVEL_CAP, { night: true })).join('・')} (Lv${SKILL_LEVEL_CAP})\nLv10 で II (1.5 倍)、Lv50 で III (2 倍) に強化`, sc.css);
     y = this.section(y, '搭乗適性', CLASS_ORDER.map((c) => `${CLASS_JA[c].slice(0, 2)} ${aptitudeFor(data, c)}`).join('   '));
     if (!owned) {
-      this.section(y, '入手方法', '作戦の初回攻略・昇進・戦闘の勝利 (低確率) で、まだ仲間になっていない艦長が加わります。', Css.gold);
+      this.section(y, '入手方法', '報酬艦のない海域で初めて S 評価を取る・昇進・S 評価の勝利 (低確率) で、まだ仲間になっていない艦長が加わります。', Css.gold);
       return;
     }
     const earned = earnedTraits(np?.captainStats[data.id]);
@@ -411,7 +431,7 @@ export class EncyclopediaScene extends Phaser.Scene {
 
   private buildAircraftDetail(a: IAircraftEntry, owned: boolean): void {
     const d = L.detail;
-    let y = this.detailHeader(`${NATION_INFO[a.nation as Nation].ja}  ·  ${AIRCRAFT_TYPE_JA[a.type]}`, a.name, owned ? Css.cyan : Css.dim);
+    let y = this.detailHeader(`${formatNo(a.no)}  ·  ${NATION_INFO[a.nation as Nation].ja}  ·  ${AIRCRAFT_TYPE_JA[a.type]}`, owned ? a.name : HIDDEN_NAME, owned ? Css.cyan : Css.dim);
     const icon = this.track(this.add.image(d.x + d.w - 60, d.y + 50, AIRCRAFT_TEXTURE[a.type]).setScale(4));
     if (!owned) {
       icon.setTintFill(0x101a2c).setAlpha(0.8);
@@ -419,11 +439,11 @@ export class EncyclopediaScene extends Phaser.Scene {
     }
     y = this.section(y, '役割', AIRCRAFT_ROLE[a.type]);
     y = this.section(y, '搭載', a.type === AircraftType.Recon ? '戦艦・巡洋艦 (偵察機 1 機)' : '空母の航空隊');
-    this.section(y, '解説', a.description, Css.muted);
+    if (owned) this.section(y, '解説', a.description, Css.muted);
   }
 
   private buildGroundDetail(g: IGroundEntry): void {
-    let y = this.detailHeader(g.id === 'convoy_ship' ? '支援' : '地上目標', g.name);
+    let y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.id === 'convoy_ship' ? '支援' : '地上目標'}`, g.name);
     const d = L.detail;
     this.track(this.add.image(d.x + d.w - 60, d.y + 60, g.spriteKey).setScale(2));
     y = this.section(y, '性能', `耐久 ${g.hp}  装甲 ${g.armor}`);

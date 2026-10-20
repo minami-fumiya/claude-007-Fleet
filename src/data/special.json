@@ -1,6 +1,7 @@
 {
   "convoy": {
     "id": "convoy_ship",
+    "no": 4001001,
     "name": "輸送船",
     "nation": "IJN",
     "shipClass": "Cruiser",
@@ -13,6 +14,7 @@
   "landTargets": [
     {
       "id": "land_battery",
+      "no": 4002001,
       "name": "沿岸砲台",
       "nation": "IJN",
       "shipClass": "Battleship",
@@ -26,6 +28,7 @@
     },
     {
       "id": "land_harbor",
+      "no": 4003001,
       "name": "港湾施設",
       "nation": "IJN",
       "shipClass": "Carrier",
@@ -37,6 +40,7 @@
     },
     {
       "id": "land_airfield",
+      "no": 4004001,
       "name": "飛行場",
       "nation": "IJN",
       "shipClass": "Carrier",

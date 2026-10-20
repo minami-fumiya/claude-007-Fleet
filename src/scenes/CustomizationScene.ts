@@ -4,7 +4,7 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
-import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
+import { CLASS_JA, CLASS_ORDER, filterEntries, kindLabel } from '@/systems/EncyclopediaSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { selectionFor } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
@@ -99,7 +99,8 @@ export class CustomizationScene extends Phaser.Scene {
     const selection = selectionFor(this.registry, loadProgress().nation);
     const registry = DataLoader.getRegistry(this);
     // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.
-    const owned = ownedShips(loadProgress(), registry.byNation(loadProgress().nation));
+    // In list order (#246): by kind, then class by class, hulls in order.
+    const owned = filterEntries(ownedShips(loadProgress(), registry.byNation(loadProgress().nation)), null);
     this.fleetIds = (selection?.slotIds ?? []).filter((id): id is string => !!id);
     this.ships = customizeShips(owned, this.fleetIds, this.showAll);
     // A ship asked for by id (#178) is shown even when it is not in the fleet.

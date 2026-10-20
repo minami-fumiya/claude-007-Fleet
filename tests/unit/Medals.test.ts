@@ -18,7 +18,7 @@ describe('medals (#92)', () => {
 
   it('new features bring medals and none is ever removed (0.0.25: convoy escort, captain instruction; 0.0.26: captain sinks)', () => {
     // Raise this floor whenever medals are added; it never goes down.
-    expect(MEDALS.length).toBeGreaterThanOrEqual(204);
+    expect(MEDALS.length).toBeGreaterThanOrEqual(208);
     for (const id of ['convoy', 'convoy_2', 'convoy_3', 'instructor', 'instructor_2', 'instructor_3', 'captain_ace', 'captain_ace_2', 'captain_ace_3', 'task_force', 'task_force_2', 'task_force_3', 'veteran_player', 'veteran_player_2', 'veteran_player_3', 'dock_expansion', 'dock_expansion_2', 'dock_expansion_3', 'rush_work', 'rush_work_2', 's_recruiter', 's_recruiter_2', 'event_tour', 'event_tour_2']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
     const r = emptyRecord();
     expect(newMedals(r, { clearedTheaters: [], totals: { convoyWin: 3, learnSkill: 1 } }).map((m) => m.id)).toEqual(expect.arrayContaining(['convoy', 'instructor']));
@@ -27,6 +27,18 @@ describe('medals (#92)', () => {
     // 0.0.26: carriers built now that none is reward-only (#204)
     const save = { ...emptySave(), nations: { IJN: { ...emptyNationProgress('IJN'), ships: ['fubuki', 'kaga', 'taiho'] } } };
     expect(medalContext(save).carriersOwned).toBe(2);
+  });
+
+  it('0.0.34: the second dock (#244) and the kinds of ship by number (#249); real sisters make a class (#246)', () => {
+    const r = emptyRecord();
+    expect(newMedals(r, { clearedTheaters: [], maxDocks: 2 }).map((m) => m.id)).toContain('second_dock');
+    const save = { ...emptySave(), nations: { IJN: { ...emptyNationProgress('IJN'), ships: ['fubuki', 'kongo', 'nagato', 'mutsu', 'takao', 'akagi', 'i19'] } } };
+    const ctx = medalContext(save);
+    // 駆逐艦・巡洋戦艦・戦艦・重巡・空母・潜水艦
+    expect(ctx.shipTypes).toBe(6);
+    expect(newMedals(r, ctx).map((m) => m.id)).toEqual(expect.arrayContaining(['ship_types', 'ship_types_2']));
+    // 長門 and 陸奥 are one class now (#246).
+    expect(ctx.classesComplete).toBe(1);
   });
 
   it('ladders: each tier at its goal, with progress shown towards the next', () => {

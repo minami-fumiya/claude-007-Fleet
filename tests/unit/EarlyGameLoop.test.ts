@@ -67,10 +67,11 @@ describe('campaign data for the growth curve (#25 / #18)', () => {
     }
   });
 
-  it('every area grants a ship class on its first clear; every enemy ship id exists', () => {
+  it('every area but the training ones names a ship class for its reward (#247: training areas none); every enemy ship id exists', () => {
     const classes = new Set<string>(Object.values(ShipClass));
     for (const a of data.areas) {
-      expect(classes.has(a.rewardShip ?? '')).toBe(true);
+      if (a.training) expect(a.rewardShip).toBeUndefined();
+      else expect(classes.has(a.rewardShip ?? '')).toBe(true);
       expect(enemyShips(a, registry)).toHaveLength(a.enemy.ships.length);
     }
   });

@@ -137,6 +137,8 @@ for (const [file, table] of Object.entries(TABLES)) {
   const path = join(process.cwd(), 'src', 'data', 'ships', `${file}.json`);
   const data = JSON.parse(readFileSync(path, 'utf8')) as { ships: IShipData[] };
   const kept = data.ships.filter((s) => !s.sisterOf);
+  // A sister keeps the number it was given (#249); a new one gets its own from scripts/gen-numbers.ts.
+  const numbers = new Map(data.ships.filter((s) => s.sisterOf && s.no !== undefined).map((s) => [s.id, s.no]));
   const ids = new Set(kept.map((s) => s.id));
   const out = [...kept];
   for (const [leadId, [label, sisters]] of Object.entries(table)) {
@@ -146,8 +148,9 @@ for (const [file, table] of Object.entries(TABLES)) {
     for (const [id, ja, en] of sisters) {
       if (ids.has(id)) throw new Error(`${file}: duplicate id ${id}`);
       ids.add(id);
-      const { description: _d, ...stats } = lead;
-      out.push({ ...stats, id, name: `${ja} (${en})`, description: `${label}の同型艦。性能は${leadName}と同じ。`, sisterOf: leadId });
+      const { description: _d, no: _n, id: _id, ...stats } = lead;
+      const no = numbers.get(id);
+      out.push({ id, ...(no !== undefined ? { no } : {}), ...stats, name: `${ja} (${en})`, description: `${label}の同型艦。性能は${leadName}と同じ。`, sisterOf: leadId });
     }
   }
   writeFileSync(path, JSON.stringify({ ...data, ships: out }, null, 2) + '\n');

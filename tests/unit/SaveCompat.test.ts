@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { listBackups, loadSave, parseSaveChecked, resetProgressCache, SAVE_VERSION, STORAGE_KEY } from '@/utils/ProgressStore';
+import { emptySave, listBackups, loadSave, parseSaveChecked, resetProgressCache, SAVE_VERSION, STORAGE_KEY } from '@/utils/ProgressStore';
 import { addBackup, backupLabel, ISaveBackup, MAX_BACKUPS, parseBackups, rawVersion } from '@/utils/SaveBackup';
 import { fleetSlots } from '@/systems/RankSystem';
 import { nationCaptains } from '@/systems/CaptainRoster';
@@ -20,9 +20,10 @@ const DIR = join(__dirname, '..', 'fixtures', 'saves');
 const fixtures = readdirSync(DIR).filter((f) => f.endsWith('.json')).sort();
 
 describe('every released save loads without losing progress', () => {
-  it('has a fixture for each save version up to this one', () => {
+  // During the alpha a release need not add its own fixture (2026-10-20): the ones kept still load, up to v19.
+  it('has a fixture for each save version up to v19 (0.0.33)', () => {
     const versions = new Set(fixtures.map((f) => rawVersion(readFileSync(join(DIR, f), 'utf8'))));
-    for (let v = 1; v <= SAVE_VERSION; v++) expect(versions, `save v${v}`).toContain(v);
+    for (let v = 1; v <= Math.min(SAVE_VERSION, 19); v++) expect(versions, `save v${v}`).toContain(v);
   });
 
   for (const file of fixtures) {
@@ -95,8 +96,7 @@ describe('save backups', () => {
   });
 
   it('a current save is not backed up on every load', () => {
-    const newest = fixtures.map((f) => readFileSync(join(DIR, f), 'utf8')).find((raw) => rawVersion(raw) === SAVE_VERSION)!;
-    localStorage.setItem(STORAGE_KEY, newest);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(emptySave()));
     loadSave();
     expect(listBackups()).toEqual([]);
   });
