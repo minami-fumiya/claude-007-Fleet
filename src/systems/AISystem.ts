@@ -7,6 +7,8 @@ import { maxSurfaceRange, selectWeapons, weaponKind, WeaponKind } from './Weapon
 import { interceptAngle } from '@/utils/MathUtils';
 import { ShipClass } from '@/types/ShipClass';
 import { aimErrorMul } from './ProficiencySystem';
+import { FormationSystem } from './FormationSystem';
+import { IFormationSlotOffset } from '@/types/Formation';
 
 /** One ship as seen by the other side this frame. */
 export interface IShipView extends IAITarget {
@@ -103,6 +105,11 @@ export class AISystem {
   goalThrottle = 1;
   /** Where the ship searches when nothing is visible (default: the middle of the sea) */
   patrol: { x: number; y: number } | null = null;
+  /**
+   * An enemy escort's place in its fleet's formation (#82): kept until a target is in sight, then the ship fights
+   * on its own (散開).
+   */
+  station: { lead: BaseShip; offset: IFormationSlotOffset } | null = null;
 
   /** The ship this AI is attacking (null when it has no target). */
   get targetShip(): BaseShip | null {
@@ -141,6 +148,13 @@ export class AISystem {
     const target = decision.target;
     if (!target && this.goal) {
       ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: this.goalThrottle }, dtSec, turnRate);
+      return;
+    }
+    if (!target && this.station?.lead.isAlive) {
+      // In formation: make for the slot beside the flagship, slowing as the ship gets there.
+      const slot = FormationSystem.getWorldPosition(this.station.lead, this.station.offset);
+      const dist = Math.hypot(slot.x - ship.x, slot.y - ship.y);
+      ship.steer({ headingDeg: dist < 30 ? this.station.lead.angle : headingTo(ship, slot), throttle: Math.max(0.35, Math.min(1, dist / 220)) }, dtSec, turnRate);
       return;
     }
     if (!target) {

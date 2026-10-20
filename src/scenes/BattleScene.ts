@@ -32,6 +32,7 @@ import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoi
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
+import { enemyFormation } from '@/systems/EnemyFormation';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -186,6 +187,8 @@ export class BattleScene extends Phaser.Scene {
   private scenario: IScenario | null = null;
   /** Free battle (演習, #15): starts at full HP and keeps no damage */
   private exercise = false;
+  /** The enemy fleet's formation (#82) */
+  private enemyFormation: Formation = Formation.LineAhead;
   /** 難易度 (#100) of this battle: scenarios always 普通 */
   private difficulty: IDifficulty = DIFFICULTIES.normal;
   private scenarioSetup: IScenarioSetup | null = null;
@@ -409,7 +412,8 @@ export class BattleScene extends Phaser.Scene {
       ...shipView(s, this.seenByEnemy.has(s)),
       priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY + FORMATION_RULES[this.formation].flagshipPriority + this.difficulty.flagshipPriority : 0,
     }));
-    const enemyView = this.enemies.map((s) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : 0 }));
+    // The enemy flagship is screened by its formation (#82) as the player's is.
+    const enemyView = this.enemies.map((s, i) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : i === 0 ? FORMATION_RULES[this.enemyFormation].flagshipPriority : 0 }));
 
     if (!this.isTouch) {
       // Re-project the cursor every frame: the camera moves even when the mouse doesn't.
@@ -678,12 +682,23 @@ export class BattleScene extends Phaser.Scene {
   private spawnEnemyFleet(fleet: IFleet): void {
     const profile = TACTICS[fleet.nation];
     const ships = FleetSystem.getShips(fleet);
-    // A line abreast north of the middle, moved off any island as a whole.
+    // 敵の陣形 (#82): chosen by the situation unless the area or scenario names one; its effects apply as for the
+    // player, the first ship leads and the others keep their slots until they have a target (散開).
+    const named = this.scenarioSetup?.enemy.formation ?? (this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId)?.enemy.formation : undefined);
+    this.enemyFormation = enemyFormation({
+      nation: fleet.nation, enemy: ships.map((s) => s.shipClass), player: this.playerSide().map((s) => s.stats.shipClass),
+      night: this.conditions.time === TimeOfDay.Night, named,
+    });
+    const offsets = FormationSystem.getOffsets(this.enemyFormation, Math.max(0, ships.length - 1));
+    // The flagship starts in the middle of a line north of the centre (moved off any island), the rest in formation.
     const line = lineAtSea(this.map, enemySpawnPoints(ships.length, WORLD));
+    const lead = line[Math.floor(line.length / 2)];
+    let flagship: BaseShip | null = null;
     ships.forEach((shipData, i) => {
       const placed = this.scenarioSetup?.enemy.positions[i];
-      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : line[i];
-      const enemy = this.spawnShip(shipData, pos.x, pos.y);
+      const slot = i === 0 ? lead : FormationSystem.getWorldPositionFromValues(lead.x, lead.y, 180, offsets[i - 1]);
+      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : slot;
+      const enemy = this.spawnShip(shipData, pos.x, pos.y, combineModifiers(formationModifiers(this.enemyFormation, i === 0)));
       // 難易度 (#100): how well the enemy aims and how much it takes.
       enemy.aimErrorMul *= this.difficulty.aimMul;
       enemy.stats.maxHp = Math.round(enemy.stats.maxHp * this.difficulty.hpMul);
@@ -696,6 +711,8 @@ export class BattleScene extends Phaser.Scene {
       const ai = new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS);
       // Searching ships sweep towards the middle in their own lane instead of all meeting at one point.
       ai.patrol = { x: enemy.x, y: WORLD.h / 2 };
+      if (i === 0) flagship = enemy;
+      else if (flagship && !placed) ai.station = { lead: flagship, offset: offsets[i - 1] };
       const side = this.side;
       if (side?.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
       const target = (side?.targets ?? []).includes(shipData.id) || (side?.targetLead === true && i === 0);
