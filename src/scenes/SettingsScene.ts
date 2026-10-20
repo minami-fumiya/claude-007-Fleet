@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DIFFICULTIES, nextDifficulty } from '@/systems/DifficultySystem';
 import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -15,7 +16,7 @@ import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKi
 /** Landscape lays the settings out in two columns (sound / controls / builder | save data), so nothing runs off the bottom. */
 const P = IS_PORTRAIT ? { x: 16, y: 140, w: CANVAS_W - 32, h: CANVAS_H - 156 } : { x: 40, y: 96, w: CANVAS_W - 80, h: 604 };
 const COL_GAP = 48;
-const ROW_H = IS_PORTRAIT ? 84 : 64;
+const ROW_H = IS_PORTRAIT ? 80 : 64;
 const BTN_H = IS_PORTRAIT ? 64 : 48;
 
 /** 設定: sound volumes and mute, and save data transfer / reset. */
@@ -86,7 +87,7 @@ export class SettingsScene extends Phaser.Scene {
         variant: s.muted ? 'secondary' : 'primary', width: muteW, height: BTN_H, fontSize: 16,
       }),
     );
-    y += BTN_H + (IS_PORTRAIT ? 44 : 32);
+    y += BTN_H + (IS_PORTRAIT ? 30 : 32);
 
     this.track(this.add.text(x, y, '操作', eyebrowStyle(11)));
     y += 34;
@@ -98,7 +99,7 @@ export class SettingsScene extends Phaser.Scene {
     );
     y += BTN_H + 6;
     this.track(this.add.text(x, y, '非表示にすると、海面のタップと AUTO で移動します。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
-    y += IS_PORTRAIT ? 44 : 32;
+    y += IS_PORTRAIT ? 36 : 32;
 
     this.track(this.add.text(x, y, '編成', eyebrowStyle(11)));
     y += 34;
@@ -111,6 +112,17 @@ export class SettingsScene extends Phaser.Scene {
     y += BTN_H + 6;
     this.track(this.add.text(x, y, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回 標準」にすると、編成画面を開くたびに標準 (戦域の相手国・水上戦・晴天・昼・同数) から始まります。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 84 : 32;
+    // 難易度 (#100): taps cycle 易しい → 普通 → 難しい.
+    const diff = DIFFICULTIES[s.difficulty];
+    this.track(this.add.text(x, y + BTN_H / 2, '難易度', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    this.track(
+      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, diff.label, () => this.change({ difficulty: nextDifficulty(s.difficulty) }), {
+        variant: s.difficulty === 'normal' ? 'secondary' : 'primary', width: muteW, height: BTN_H, fontSize: 16,
+      }),
+    );
+    y += BTN_H + 6;
+    this.track(this.add.text(x, y, `作戦と演習の敵の強さ。報酬 ×${diff.rewardMul}・敵の耐久 ×${diff.hpMul} (史実は常に普通)`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    y += IS_PORTRAIT ? 36 : 32;
 
     if (!IS_PORTRAIT) {
       x = P.x + 28 + colW + COL_GAP;

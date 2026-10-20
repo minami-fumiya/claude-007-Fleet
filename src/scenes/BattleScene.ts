@@ -13,13 +13,14 @@ import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
 import { FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
+import { airfieldRearmMs, REARM_MS } from '@/systems/AirWingSystem';
 import { AircraftType } from '@/types/Aircraft';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
-import { applyCritical, CRITICAL_LABEL, LAND_CRITICAL_LABEL, rollCriticalHit } from '@/systems/DamageSystem';
+import { applyCritical, applyStatus, CRITICAL_LABEL, effectiveShell, LAND_CRITICAL_LABEL, nextShellMode, rollCriticalHit, rollStatus, SHELL_LABEL, statusDamage, STATUS_LABEL, damageReadout, weaponReadout } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
@@ -32,6 +33,9 @@ import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoi
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
+import { enemyFormation } from '@/systems/EnemyFormation';
+import { BRIDGE_AIM_MUL, newlyBroken, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
+import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
@@ -185,6 +189,15 @@ export class BattleScene extends Phaser.Scene {
   private scenario: IScenario | null = null;
   /** Free battle (演習, #15): starts at full HP and keeps no damage */
   private exercise = false;
+  /** 超兵器 (#148): whether the enemy brings one, and the one on the sea */
+  private bringsSuperweapon = false;
+  private superweapon: BaseShip | null = null;
+  /** Fires and floods the player's side started on enemy ships (#48) */
+  private firesSet = 0;
+  /** The enemy fleet's formation (#82) */
+  private enemyFormation: Formation = Formation.LineAhead;
+  /** 難易度 (#100) of this battle: scenarios always 普通 */
+  private difficulty: IDifficulty = DIFFICULTIES.normal;
   private scenarioSetup: IScenarioSetup | null = null;
   /** Objective details: the scenario side's, or the campaign area's (#40) */
   private side: (IScenarioSide & { targetLead?: boolean; arrivalSec?: number }) | null = null;
@@ -262,6 +275,8 @@ export class BattleScene extends Phaser.Scene {
     this.enemies = [];
     this.aiSystems = [];
     this.escortAISystems = [];
+    this.firesSet = 0;
+    this.superweapon = null;
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
     this.convoy = [];
@@ -328,6 +343,10 @@ export class BattleScene extends Phaser.Scene {
     const bossNode = this.battleData?.sortie?.boss ?? true;
     this.side = this.scenarioSetup?.side ?? (bossNode ? campaignSide(battleArea) : null);
     this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
+    this.difficulty = battleDifficulty(audio.settings.difficulty, this.scenario !== null);
+    // 超兵器出現 (#148 #89): a main fleet in the event's theater brings its superweapon (not training areas).
+    const event = eventEffects(activeEvent());
+    this.bringsSuperweapon = this.battleData?.superweapon === true || (bossNode && battleArea !== undefined && !battleArea.training && event.superweaponTheater === battleArea.theater);
     this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);
@@ -397,15 +416,17 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const dtSec = delta / 1000;
+    this.burnAndFlood(delta);
     this.updateSubmarines(dtSec);
     this.playerRecon.update(time, delta, aaGuns(this.enemies), this.enemies);
     this.enemyRecon.update(time, delta, aaGuns(this.playerSide()), this.playerSide());
     this.updateDetection();
     const playerView = this.playerSide().map((s) => ({
       ...shipView(s, this.seenByEnemy.has(s)),
-      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY + FORMATION_RULES[this.formation].flagshipPriority : 0,
+      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY + FORMATION_RULES[this.formation].flagshipPriority + this.difficulty.flagshipPriority : 0,
     }));
-    const enemyView = this.enemies.map((s) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : 0 }));
+    // The enemy flagship is screened by its formation (#82) as the player's is.
+    const enemyView = this.enemies.map((s, i) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : i === 0 ? FORMATION_RULES[this.enemyFormation].flagshipPriority : 0 }));
 
     if (!this.isTouch) {
       // Re-project the cursor every frame: the camera moves even when the mouse doesn't.
@@ -451,6 +472,8 @@ export class BattleScene extends Phaser.Scene {
     this.hud.update(this.flagship, this.enemies, this.escorts, {
       reload: this.playerWeapons.reloadProgress(this.flagship, this.playerWeapon, time),
       elapsedSec: (time - this.battleStartedAt) / 1000,
+      weapons: weaponReadout(this.weaponStates(time)),
+      damage: damageReadout(this.flagship.criticals, this.flagship.status, this.battleNow()),
     });
     this.refreshDiveUi();
     this.refreshAirUi();
@@ -534,6 +557,8 @@ export class BattleScene extends Phaser.Scene {
       (target.body as Phaser.Physics.Arcade.Body).setImmovable(true);
       this.enemies.push(target);
       this.landTargets.push(target);
+      // 飛行場 (#83): its air group strikes the fleet until it is destroyed.
+      if (data.airWing) this.enemyAir.register(target, AirOpsSystem.wingFor(data));
       this.aiSystems.push(new AISystem(this.enemyWeapons, TACTICS[this.enemyNation], WORLD_BOUNDS));
     });
   }
@@ -673,14 +698,35 @@ export class BattleScene extends Phaser.Scene {
 
   private spawnEnemyFleet(fleet: IFleet): void {
     const profile = TACTICS[fleet.nation];
-    const ships = FleetSystem.getShips(fleet);
-    // A line abreast north of the middle, moved off any island as a whole.
+    // The superweapon (#148) sails at the head of the fleet.
+    const giant = this.bringsSuperweapon ? superweaponOf(fleet.nation) : undefined;
+    const ships = giant ? [giant, ...FleetSystem.getShips(fleet)] : FleetSystem.getShips(fleet);
+    // 敵の陣形 (#82): chosen by the situation unless the area or scenario names one; its effects apply as for the
+    // player, the first ship leads and the others keep their slots until they have a target (散開).
+    const named = this.scenarioSetup?.enemy.formation ?? (this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId)?.enemy.formation : undefined);
+    this.enemyFormation = enemyFormation({
+      nation: fleet.nation, enemy: ships.map((s) => s.shipClass), player: this.playerSide().map((s) => s.stats.shipClass),
+      night: this.conditions.time === TimeOfDay.Night, named,
+    });
+    const offsets = FormationSystem.getOffsets(this.enemyFormation, Math.max(0, ships.length - 1));
+    // The flagship starts in the middle of a line north of the centre (moved off any island), the rest in formation.
     const line = lineAtSea(this.map, enemySpawnPoints(ships.length, WORLD));
+    const lead = line[Math.floor(line.length / 2)];
+    let flagship: BaseShip | null = null;
     ships.forEach((shipData, i) => {
       const placed = this.scenarioSetup?.enemy.positions[i];
-      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : line[i];
-      const enemy = this.spawnShip(shipData, pos.x, pos.y);
+      const slot = i === 0 ? lead : FormationSystem.getWorldPositionFromValues(lead.x, lead.y, 180, offsets[i - 1]);
+      const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : slot;
+      const enemy = this.spawnShip(shipData, pos.x, pos.y, combineModifiers(formationModifiers(this.enemyFormation, i === 0)));
+      // 難易度 (#100): how well the enemy aims and how much it takes.
+      enemy.aimErrorMul *= this.difficulty.aimMul;
+      enemy.stats.maxHp = Math.round(enemy.stats.maxHp * this.difficulty.hpMul);
+      enemy.stats.currentHp = enemy.stats.maxHp;
       enemy.setTint(0xdd4444);
+      if (giant && i === 0) {
+        enemy.setScale(giant.scale);
+        this.superweapon = enemy;
+      }
       enemy.setAngle(placed ? placed.angle : 180);
       this.enemies.push(enemy);
       this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
@@ -688,6 +734,8 @@ export class BattleScene extends Phaser.Scene {
       const ai = new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS);
       // Searching ships sweep towards the middle in their own lane instead of all meeting at one point.
       ai.patrol = { x: enemy.x, y: WORLD.h / 2 };
+      if (i === 0) flagship = enemy;
+      else if (flagship && !placed) ai.station = { lead: flagship, offset: offsets[i - 1] };
       const side = this.side;
       if (side?.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = placeAt(side.zone, WORLD.w, WORLD.h);
       const target = (side?.targets ?? []).includes(shipData.id) || (side?.targetLead === true && i === 0);
@@ -955,6 +1003,11 @@ export class BattleScene extends Phaser.Scene {
         return pick(this.playerNation)(carrier, foes);
       },
     );
+    // A damaged airfield re-arms slower (#83).
+    for (const t of this.landTargets) {
+      const wing = this.enemyAir.wing(t);
+      if (wing) wing.rearmMs = airfieldRearmMs(REARM_MS, t.stats.currentHp / Math.max(1, t.stats.maxHp));
+    }
     this.enemyAir.update(
       time,
       delta,
@@ -1149,10 +1202,16 @@ export class BattleScene extends Phaser.Scene {
       projectile.missed.add(target);
       return;
     }
-    const weapon = projectile.weapon ?? FALLBACK_WEAPON;
+    const fired = projectile.weapon ?? FALLBACK_WEAPON;
+    // 弾種 (#48): a gun's shell is AP or HE by the firing ship's choice (AUTO picks by the target).
+    const shell = effectiveShell(fired.type, projectile.source?.shellMode ?? 'auto', target.stats.shipClass);
+    const weapon = shell === fired.type ? fired : { ...fired, type: shell };
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
+    const hpBefore = target.stats.currentHp / Math.max(1, target.stats.maxHp);
     CombatSystem.applyDamage(target, dmg, projectile.source);
+    if (target === this.superweapon) this.breakParts(target, hpBefore);
     this.rollCritical(target, weapon, dmg);
+    this.rollFireOrFlood(target, weapon);
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
     this.sound3d('explosion', projectile.x, projectile.y);
@@ -1170,6 +1229,68 @@ export class BattleScene extends Phaser.Scene {
   private logDamage(target: BaseShip, weapon: IWeaponData, dmg: number): void {
     const side = this.enemies.includes(target) ? 'player' : 'enemy';
     this.damageLog[side][weapon.id] = (this.damageLog[side][weapon.id] ?? 0) + Math.round(dmg);
+  }
+
+  /** 超兵器 (#148): parts give way as it is worn down, each for the rest of the battle. */
+  private breakParts(ship: BaseShip, hpBefore: number): void {
+    if (!ship.isAlive) return;
+    for (const part of newlyBroken(hpBefore, ship.stats.currentHp / Math.max(1, ship.stats.maxHp))) {
+      const crit = PART_CRITICAL[part];
+      if (crit) ship.criticals = { ...ship.criticals, [crit]: Number.POSITIVE_INFINITY };
+      else ship.aimErrorMul *= BRIDGE_AIM_MUL;
+      const t = this.add
+        .text(ship.x, ship.y - 70, PART_LABEL[part], textStyle(16, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
+        .setOrigin(0.5)
+        .setDepth(DEPTH_HUD - 2);
+      this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 1800, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+    }
+  }
+
+  /** 火災・浸水 (#48): a hit may start a fire (HE, bombs) or flooding (torpedoes); damage control shortens them. */
+  private rollFireOrFlood(target: BaseShip, weapon: IWeaponData): void {
+    if (!target.isAlive || target.isLand) return;
+    const kind = rollStatus(weapon.type, Math.random, target.mods.fireFloodMul);
+    if (!kind) return;
+    target.status = applyStatus(target.status, kind, this.battleNow(), target.mods.fireFloodMul);
+    const friendly = this.playerSide().includes(target);
+    if (!friendly) this.firesSet++;
+    if (!target.visible) return;
+    const t = this.add
+      .text(target.x, target.y - 46, STATUS_LABEL[kind], textStyle(13, friendly ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+      .setOrigin(0.5)
+      .setDepth(DEPTH_HUD - 2);
+    this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+  }
+
+  /** Fires and flooding burn every ship each frame (#48), credited to whoever caused them. */
+  private burnAndFlood(delta: number): void {
+    const now = this.battleNow();
+    for (const s of [...this.playerSide(), ...this.enemies]) {
+      if (!s.isAlive || s.isLand) continue;
+      const dmg = statusDamage(s.status, now, delta, s.stats.maxHp);
+      if (dmg > 0) s.takeDamage(dmg);
+    }
+  }
+
+  /** Each kind of weapon the flagship carries and how far it has reloaded (#81): 主砲 / 副砲 / 魚雷 / 爆雷. */
+  private weaponStates(time: number): Array<{ label: string; progress: number }> {
+    const out: Array<{ label: string; progress: number }> = [];
+    let guns = 0;
+    for (const w of this.flagship.loadout) {
+      const kind = weaponKind(w);
+      const label = kind === WeaponKind.Gun ? (guns++ === 0 ? '主砲' : '副砲') : kind === WeaponKind.Torpedo ? '魚雷' : kind === WeaponKind.DepthCharge ? '爆雷' : '';
+      if (!label || out.some((o) => o.label === label)) continue;
+      out.push({ label, progress: this.playerWeapons.reloadProgress(this.flagship, w, time) });
+    }
+    return out;
+  }
+
+  /** 弾種 (#48): AUTO → 徹甲弾 → 榴弾; the guns reload when the shells change. */
+  cycleShells(): void {
+    if (!this.flagship?.isAlive) return;
+    this.flagship.shellMode = nextShellMode(this.flagship.shellMode);
+    this.playerWeapons.restartReload(this.flagship, this.flagship.loadout, this.battleNow());
+    for (const e of this.escorts) e.shellMode = this.flagship.shellMode;
   }
 
   /** A hit may knock out a component; show it over the ship. */
@@ -1328,6 +1449,15 @@ export class BattleScene extends Phaser.Scene {
         .setOrigin(1, 1)
         .setDepth(DEPTH_HUD + 2)
         .setScrollFactor(0);
+      y -= a.h + a.gap;
+    }
+    // 弾種 (#48): ships with guns can force AP or HE (AUTO picks by the target).
+    if (!this.flagship.sub && this.flagship.loadout.some((w) => weaponKind(w) === WeaponKind.Gun)) {
+      const shellBtn = new UIButton(this, x, y, SHELL_LABEL[this.flagship.shellMode], () => {
+        this.cycleShells();
+        shellBtn.setLabel(SHELL_LABEL[this.flagship.shellMode]);
+      }, opts);
+      shellBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
       y -= a.h + a.gap;
     }
     if (this.flagship.sub) {
@@ -1588,7 +1718,7 @@ export class BattleScene extends Phaser.Scene {
       planesLost: this.playerAir.totalLost(),
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) });
+    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) * this.difficulty.rewardMul });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over. The record keeps
       // their results apart (#177), out of the career totals.
@@ -1649,7 +1779,7 @@ export class BattleScene extends Phaser.Scene {
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
@@ -1708,7 +1838,9 @@ export class BattleScene extends Phaser.Scene {
     const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
     progress = addMerit(progress, merit).progress;
     // ゴールド (#183): campaign wins by rank, more on a first clear.
-    const gold = battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training });
+    // Sinking a superweapon (#148) pays extra gold.
+    const giantSunk = this.superweapon !== null && !this.superweapon.isAlive;
+    const gold = Math.round(battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training }) * this.difficulty.rewardMul) + (giantSunk ? SUPERWEAPON_GOLD : 0);
     if (gold > 0) progress = { ...progress, wallet: addGold(walletOf(progress), gold) };
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };
@@ -1747,6 +1879,7 @@ export class BattleScene extends Phaser.Scene {
     result.reward = `${formatResources(settlement.reward)}${gold > 0 ? `・ゴールド ${gold}` : ''}${lostNote(lost)}`;
     // On its own line under the reward (it ran into the reward and wrapped mid-word).
     if (eventAppliesToBattle(event, area?.theater)) result.event = `イベント: ${eventLabel(event)}`;
+    if (giantSunk) result.event = [result.event ?? '', `超兵器撃沈: ${this.superweapon?.stats.name ?? ''}`].filter((l) => l).join('  ·  ');
     result.cost = formatResources(settlement.aircraftCost);
     this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
   }

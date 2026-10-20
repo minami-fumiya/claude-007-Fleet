@@ -6,8 +6,8 @@ import { ShipClass } from '@/types/ShipClass';
 import { ISteer } from '@/systems/AutoPilot';
 import { createSubmarineState, ISubmarineState, speedFactor } from '@/systems/SubmarineSystem';
 import { rotateTowardsDegrees } from '@/utils/MathUtils';
-import { CriticalState, ICriticalEffects } from '@/types/ShipDamage';
-import { criticalEffects } from '@/systems/DamageSystem';
+import { CriticalState, ICriticalEffects, IStatusState, ShellMode } from '@/types/ShipDamage';
+import { criticalEffects, statusSpeedMul } from '@/systems/DamageSystem';
 
 export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   stats: IShipStats;
@@ -36,6 +36,10 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   avoid: ((x: number, y: number, headingDeg: number) => number) | null = null;
   /** Component damage (expiry times, on `clock`) */
   criticals: CriticalState = {};
+  /** 火災・浸水 (#48) */
+  status: IStatusState = {};
+  /** 弾種 (#48): AUTO for AI ships; the player can force AP or HE */
+  shellMode: ShellMode = 'auto';
   /** Short note the HUD shows after the name, e.g. why an escort left the formation (#80) */
   aiNote = '';
   /** The battle clock (ms) that critical-damage expiry times use; the battle stops it while paused (#79) */
@@ -67,7 +71,7 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
 
   /** Top speed right now (submerged boats and damaged engines are slower). */
   get currentSpeed(): number {
-    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul * this.envSpeedMul;
+    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul * statusSpeedMul(this.status, this.clock()) * this.envSpeedMul;
   }
 
   /** Turns toward the requested heading at `turnRateDeg` and moves along the bow at the throttle. */

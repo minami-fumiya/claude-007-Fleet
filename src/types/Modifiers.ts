@@ -24,6 +24,8 @@ export interface IShipModifiers {
   nightVisionMul: number;
   /** Chance added to dodging a shell or torpedo (formations, #59) */
   evadeAdd: number;
+  /** Damage control (#48): chance and length of fires and flooding (lower is better) */
+  fireFloodMul: number;
 }
 
 export const NO_MODIFIERS: IShipModifiers = {
@@ -43,6 +45,7 @@ export const NO_MODIFIERS: IShipModifiers = {
   nightAimMul: 1,
   nightVisionMul: 1,
   evadeAdd: 0,
+  fireFloodMul: 1,
 };
 
 /** Fields that are added when modifiers combine; every other field multiplies. */

@@ -92,6 +92,7 @@ const MODIFIER_LABEL: Record<keyof IShipModifiers, string> = {
   nightAimMul: '夜間照準誤差',
   nightVisionMul: '夜間視界',
   evadeAdd: '回避',
+  fireFloodMul: '火災・浸水',
 };
 
 /** Short labels for every modifier that differs from "no change", e.g. ['砲火力 ×1.10', '装甲 +6']. */
