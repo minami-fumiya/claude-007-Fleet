@@ -386,6 +386,95 @@
       "year": 1940
     },
     {
+      "id": "kent",
+      "no": 1404003,
+      "name": "ケント (Kent)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "kent",
+      "description": "カウンティ級重巡洋艦ケント級の 1 番艦。長い航続力で、インド洋や南大西洋の通商路を守った。",
+      "year": 1928
+    },
+    {
+      "id": "exeter",
+      "no": 1404008,
+      "name": "エクセター (Exeter)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 174,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "exeter",
+      "description": "ヨーク級重巡洋艦。ラプラタ沖海戦で装甲艦グラーフ・シュペーと撃ち合い、大きな損傷を受けながら戦い抜いた。",
+      "year": 1931
+    },
+    {
+      "id": "leander",
+      "no": 1405017,
+      "name": "リアンダー (Leander)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "leander",
+      "description": "リアンダー級軽巡洋艦の 1 番艦。同型のエイジャックスとアキリーズは、ラプラタ沖海戦でグラーフ・シュペーを追い詰めた。",
+      "year": 1933
+    },
+    {
+      "id": "revenge",
+      "no": 1401014,
+      "name": "リヴェンジ (Revenge)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 660,
+      "armor": 54,
+      "speed": 120,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "revenge",
+      "description": "リヴェンジ級 (R 級) 戦艦。低速だが 15 インチ砲 8 門を持ち、船団の護衛やインド洋の東洋艦隊で働いた。",
+      "year": 1916
+    },
+    {
+      "id": "atherstone",
+      "no": 1408005,
+      "name": "アサーストン (Atherstone)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 190,
+      "armor": 10,
+      "speed": 165,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "atherstone",
+      "description": "ハント級護衛駆逐艦。小型で対空と対潜に優れ、北海や地中海の船団を守った。",
+      "year": 1940
+    },
+    {
       "id": "prince_of_wales",
       "no": 1401009,
       "name": "プリンス・オブ・ウェールズ (Prince of Wales)",
@@ -1143,6 +1232,408 @@
       "year": 1940,
       "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
       "sisterOf": "black_swan"
+    },
+    {
+      "id": "berwick",
+      "no": 1404004,
+      "name": "バーウィック (Berwick)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "kent",
+      "year": 1928,
+      "description": "ケント級重巡洋艦の同型艦。性能はケントと同じ。",
+      "sisterOf": "kent"
+    },
+    {
+      "id": "cornwall",
+      "no": 1404005,
+      "name": "コーンウォール (Cornwall)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "kent",
+      "year": 1928,
+      "description": "ケント級重巡洋艦の同型艦。性能はケントと同じ。",
+      "sisterOf": "kent"
+    },
+    {
+      "id": "cumberland",
+      "no": 1404006,
+      "name": "カンバーランド (Cumberland)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "kent",
+      "year": 1928,
+      "description": "ケント級重巡洋艦の同型艦。性能はケントと同じ。",
+      "sisterOf": "kent"
+    },
+    {
+      "id": "suffolk",
+      "no": 1404007,
+      "name": "サフォーク (Suffolk)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "kent",
+      "year": 1928,
+      "description": "ケント級重巡洋艦の同型艦。性能はケントと同じ。",
+      "sisterOf": "kent"
+    },
+    {
+      "id": "york",
+      "no": 1404009,
+      "name": "ヨーク (York)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 174,
+      "weapons": [
+        "8in_mk8",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "exeter",
+      "year": 1931,
+      "description": "ヨーク級重巡洋艦の同型艦。性能はエクセターと同じ。",
+      "sisterOf": "exeter"
+    },
+    {
+      "id": "achilles",
+      "no": 1405018,
+      "name": "アキリーズ (Achilles)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "leander",
+      "year": 1933,
+      "description": "リアンダー級軽巡洋艦の同型艦。性能はリアンダーと同じ。",
+      "sisterOf": "leander"
+    },
+    {
+      "id": "neptune",
+      "no": 1405019,
+      "name": "ネプチューン (Neptune)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "leander",
+      "year": 1933,
+      "description": "リアンダー級軽巡洋艦の同型艦。性能はリアンダーと同じ。",
+      "sisterOf": "leander"
+    },
+    {
+      "id": "orion",
+      "no": 1405020,
+      "name": "オライオン (Orion)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "leander",
+      "year": 1933,
+      "description": "リアンダー級軽巡洋艦の同型艦。性能はリアンダーと同じ。",
+      "sisterOf": "leander"
+    },
+    {
+      "id": "ajax",
+      "no": 1405021,
+      "name": "エイジャックス (Ajax)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 180,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "leander",
+      "year": 1933,
+      "description": "リアンダー級軽巡洋艦の同型艦。性能はリアンダーと同じ。",
+      "sisterOf": "leander"
+    },
+    {
+      "id": "royal_sovereign",
+      "no": 1401015,
+      "name": "ロイヤル・ソヴリン (Royal Sovereign)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 660,
+      "armor": 54,
+      "speed": 120,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "revenge",
+      "year": 1916,
+      "description": "リヴェンジ級戦艦の同型艦。性能はリヴェンジと同じ。",
+      "sisterOf": "revenge"
+    },
+    {
+      "id": "royal_oak",
+      "no": 1401016,
+      "name": "ロイヤル・オーク (Royal Oak)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 660,
+      "armor": 54,
+      "speed": 120,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "revenge",
+      "year": 1916,
+      "description": "リヴェンジ級戦艦の同型艦。性能はリヴェンジと同じ。",
+      "sisterOf": "revenge"
+    },
+    {
+      "id": "resolution",
+      "no": 1401017,
+      "name": "レゾリューション (Resolution)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 660,
+      "armor": 54,
+      "speed": 120,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "revenge",
+      "year": 1916,
+      "description": "リヴェンジ級戦艦の同型艦。性能はリヴェンジと同じ。",
+      "sisterOf": "revenge"
+    },
+    {
+      "id": "ramillies",
+      "no": 1401018,
+      "name": "ラミリーズ (Ramillies)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "hp": 660,
+      "armor": 54,
+      "speed": 120,
+      "weapons": [
+        "15in_mk1",
+        "6in_mk23"
+      ],
+      "spriteKey": "revenge",
+      "year": 1916,
+      "description": "リヴェンジ級戦艦の同型艦。性能はリヴェンジと同じ。",
+      "sisterOf": "revenge"
+    },
+    {
+      "id": "blencathra",
+      "no": 1408006,
+      "name": "ブレンカスラ (Blencathra)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 190,
+      "armor": 10,
+      "speed": 165,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "atherstone",
+      "year": 1940,
+      "description": "ハント級護衛駆逐艦の同型艦。性能はアサーストンと同じ。",
+      "sisterOf": "atherstone"
+    },
+    {
+      "id": "brocklesby",
+      "no": 1408007,
+      "name": "ブロックルズビー (Brocklesby)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 190,
+      "armor": 10,
+      "speed": 165,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "atherstone",
+      "year": 1940,
+      "description": "ハント級護衛駆逐艦の同型艦。性能はアサーストンと同じ。",
+      "sisterOf": "atherstone"
+    },
+    {
+      "id": "cattistock",
+      "no": 1408008,
+      "name": "キャティストック (Cattistock)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 190,
+      "armor": 10,
+      "speed": 165,
+      "weapons": [
+        "4in_mk16",
+        "depth_charge"
+      ],
+      "spriteKey": "atherstone",
+      "year": 1940,
+      "description": "ハント級護衛駆逐艦の同型艦。性能はアサーストンと同じ。",
+      "sisterOf": "atherstone"
+    },
+    {
+      "id": "thrasher",
+      "no": 1412003,
+      "name": "スラッシャー (Thrasher)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "truant",
+      "year": 1940,
+      "description": "T 級潜水艦の同型艦。性能はトルーアントと同じ。",
+      "sisterOf": "truant"
+    },
+    {
+      "id": "tally_ho",
+      "no": 1412004,
+      "name": "タリホー (Tally-Ho)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "truant",
+      "year": 1940,
+      "description": "T 級潜水艦の同型艦。性能はトルーアントと同じ。",
+      "sisterOf": "truant"
+    },
+    {
+      "id": "trenchant",
+      "no": 1412005,
+      "name": "トレンチャント (Trenchant)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 150,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "truant",
+      "year": 1940,
+      "description": "T 級潜水艦の同型艦。性能はトルーアントと同じ。",
+      "sisterOf": "truant"
+    },
+    {
+      "id": "unbroken",
+      "no": 1412006,
+      "name": "アンブロークン (Unbroken)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 135,
+      "armor": 5,
+      "speed": 140,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "upholder",
+      "year": 1940,
+      "description": "U 級潜水艦の同型艦。性能はアップホルダーと同じ。",
+      "sisterOf": "upholder"
+    },
+    {
+      "id": "urge",
+      "no": 1412007,
+      "name": "アージ (Urge)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 135,
+      "armor": 5,
+      "speed": 140,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "upholder",
+      "year": 1940,
+      "description": "U 級潜水艦の同型艦。性能はアップホルダーと同じ。",
+      "sisterOf": "upholder"
+    },
+    {
+      "id": "upright",
+      "no": 1412008,
+      "name": "アップライト (Upright)",
+      "nation": "RN",
+      "shipClass": "Submarine",
+      "hp": 135,
+      "armor": 5,
+      "speed": 140,
+      "weapons": [
+        "mk8_sub_torpedo"
+      ],
+      "spriteKey": "upholder",
+      "year": 1940,
+      "description": "U 級潜水艦の同型艦。性能はアップホルダーと同じ。",
+      "sisterOf": "upholder"
     }
   ]
 }

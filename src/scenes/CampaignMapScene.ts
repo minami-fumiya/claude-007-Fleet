@@ -7,7 +7,7 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
-import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
@@ -17,7 +17,8 @@ import { GOLD_SWEEP } from '@/systems/GoldSystem';
 import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
-import { prerequisitesOf, areasOf, firstSReward, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
+import { areaDepth, curveText, fleetPower } from '@/systems/DifficultyCurve';
+import { prerequisitesOf, areasOf, firstSReward, lockText, sevenSeasText, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { captainsLeft } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
@@ -112,6 +113,9 @@ export class CampaignMapScene extends Phaser.Scene {
     const workNote = works.includes('building') ? '工事中' : works.includes('ready') ? '着工できます' : '';
     if (workNote) this.add.text(CANVAS_W - back.x, back.y + back.h / 2 + 4, workNote, textStyle(11, Css.cyan)).setOrigin(0.5, 0);
 
+    // 七つの海 (#250): how many of the seven this admiral has taken, any navy's conquests counted.
+    // Portrait: in the row of the back button, where the title leaves room; landscape: under the title.
+    this.add.text(CANVAS_W / 2, IS_PORTRAIT ? back.y : 86, sevenSeasText(DATA, loadSave().nations), textStyle(12, Css.gold)).setOrigin(0.5);
     this.theaters = theatersFor(DATA, loadProgress().nation);
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
     // A sortie left unfinished (#138) opens on its area.
@@ -138,7 +142,11 @@ export class CampaignMapScene extends Phaser.Scene {
     this.theaters.forEach((t, i) => {
       const pct = Math.round(theaterProgress(DATA, t.id, cleared) * 100);
       // A theater out of the current base's reach (#145) is marked; its map can still be read.
-      this.tabs[i].setLabel(`${t.name}  ${pct}%${baseReaches(base, t.id) ? '' : '  (他港)'}`).setVariant(t.id === id ? 'primary' : 'secondary');
+      // Up to six theaters a navy (#250): portrait puts the percentage under the name. 内海 marks the Baltic and the
+      // Black Sea where the tab has room (landscape).
+      const away = baseReaches(base, t.id) ? '' : ' 他港';
+      const name = `${t.name}${t.inland && !IS_PORTRAIT ? '(内海)' : ''}`;
+      this.tabs[i].setLabel(IS_PORTRAIT ? `${name}\n${pct}%${away}` : `${name} ${pct}%${away}`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
     const areas = areasOf(DATA, id);
     const pending = pendingSortie(this);
@@ -263,7 +271,12 @@ export class CampaignMapScene extends Phaser.Scene {
       ...(giantHere ? [['超兵器', `${giantHere.name} が主力艦隊に加わる (撃沈でゴールド +${SUPERWEAPON_GOLD})`] as [string, string]] : []),
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
-      ['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')],
+      // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.
+      // Portrait shares the route's row, so the briefing stays clear of the buttons.
+      ...(IS_PORTRAIT
+        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(fleetPower(enemy), areaDepth(DATA, a))}`] as [string, string]]
+        : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(fleetPower(enemy), areaDepth(DATA, a))]] as Array<[string, string]>),
+      ...(open ? [] : [['解放の条件', lockText(DATA, a, cleared)] as [string, string]]),
       ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {

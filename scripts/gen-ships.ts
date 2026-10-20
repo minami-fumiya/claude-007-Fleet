@@ -90,6 +90,9 @@ const FR: Table = {
   la_galissonniere: ['ラ・ガリソニエール級軽巡洋艦', [['jean_de_vienne', 'ジャン・ド・ヴィエンヌ', 'Jean de Vienne'], ['marseillaise', 'マルセイエーズ', 'Marseillaise'], ['gloire', 'グロワール', 'Gloire'], ['montcalm', 'モンカルム', 'Montcalm'], ['georges_leygues', 'ジョルジュ・レイグ', 'Georges Leygues']]],
   le_fantasque: ['ル・ファンタスク級駆逐艦', [['le_terrible', 'ル・テリブル', 'Le Terrible'], ['le_triomphant', 'ル・トリオンファン', 'Le Triomphant'], ['l_indomptable', "ランドンターブル", "L'Indomptable"], ['le_malin', 'ル・マラン', 'Le Malin'], ['l_audacieux', 'ロダシュー', "L'Audacieux"]]],
   mogador: ['モガドール級駆逐艦', [['volta', 'ヴォルタ', 'Volta']]],
+  bretagne: ['ブルターニュ級戦艦', [['provence', 'プロヴァンス', 'Provence'], ['lorraine', 'ロレーヌ', 'Lorraine']]],
+  duguay_trouin: ['デュゲ・トルーアン級軽巡洋艦', [['lamotte_picquet', 'ラモット・ピケ', 'Lamotte-Picquet'], ['primauguet', 'プリモゲ', 'Primauguet']]],
+  le_hardi: ['ル・アルディ級駆逐艦', [['fleuret', 'フルーレ', 'Fleuret'], ['epee', 'エペ', 'Épée'], ['lansquenet', 'ランスクネ', 'Lansquenet']]],
 };
 
 const RM: Table = {
@@ -101,12 +104,19 @@ const RM: Table = {
   montecuccoli: ['モンテクッコリ級軽巡洋艦', [['muzio_attendolo', 'ムツィオ・アッテンドーロ', 'Muzio Attendolo']]],
   maestrale: ['マエストラーレ級駆逐艦', [['libeccio', 'リベッチオ', 'Libeccio'], ['grecale', 'グレカーレ', 'Grecale'], ['scirocco', 'シロッコ', 'Scirocco']]],
   aviere: ['ソルダティ級駆逐艦', [['artigliere', 'アルティリエーレ', 'Artigliere'], ['ascari', 'アスカリ', 'Ascari'], ['bersagliere', 'ベルサリエーレ', 'Bersagliere'], ['carabiniere', 'カラビニエーレ', 'Carabiniere'], ['corazziere', 'コラッツィエーレ', 'Corazziere'], ['granatiere', 'グラナティエーレ', 'Granatiere'], ['lanciere', 'ランチエーレ', 'Lanciere'], ['alpino', 'アルピーノ', 'Alpino']]],
+  andrea_doria: ['アンドレア・ドーリア級戦艦', [['caio_duilio', 'カイオ・ドゥイリオ', 'Caio Duilio']]],
+  alberto_di_giussano: ['ジュッサーノ級軽巡洋艦', [['alberico_da_barbiano', 'アルベリコ・ダ・バルビアーノ', 'Alberico da Barbiano'], ['bartolomeo_colleoni', 'バルトロメオ・コレオーニ', 'Bartolomeo Colleoni'], ['giovanni_delle_bande_nere', 'ジョヴァンニ・デッレ・バンデ・ネーレ', 'Giovanni delle Bande Nere']]],
+  antonio_da_noli: ['ナヴィガトーリ級駆逐艦', [['ugolino_vivaldi', 'ウゴリーノ・ヴィヴァルディ', 'Ugolino Vivaldi'], ['nicoloso_da_recco', 'ニコローゾ・ダ・レッコ', 'Nicoloso da Recco'], ['lanzerotto_malocello', 'ランツェロット・マロチェッロ', 'Lanzerotto Malocello'], ['leone_pancaldo', 'レオーネ・パンカルド', 'Leone Pancaldo']]],
+  alfredo_oriani: ['オリアーニ級駆逐艦', [['vittorio_alfieri', 'ヴィットリオ・アルフィエーリ', 'Vittorio Alfieri'], ['giosue_carducci', 'ジョズエ・カルドゥッチ', 'Giosuè Carducci'], ['vincenzo_gioberti', 'ヴィンチェンツォ・ジョベルティ', 'Vincenzo Gioberti']]],
 };
 
 const SU: Table = {
   kirov: ['キーロフ級軽巡洋艦', [['voroshilov', 'ヴォロシーロフ', 'Voroshilov']]],
   maxim_gorky: ['マクシム・ゴーリキー級軽巡洋艦', [['molotov', 'モロトフ', 'Molotov'], ['kalinin', 'カリーニン', 'Kalinin'], ['kaganovich', 'カガノーヴィチ', 'Kaganovich']]],
   gnevny: ['グネフヌイ級駆逐艦', [['grozny', 'グロズヌイ', 'Grozny'], ['gromky', 'グロムキー', 'Gromky'], ['gremyashchy', 'グレミャーシチー', 'Gremyashchy'], ['stremitelny', 'ストレミーチェリヌイ', 'Stremitelny']]],
+  marat: ['ガングート級戦艦', [['parizhskaya_kommuna', 'パリジスカヤ・コンムナ', 'Parizhskaya Kommuna']]],
+  storozhevoy: ['7U 型駆逐艦', [['soobrazitelny', 'ソオブラジーテリヌイ', 'Soobrazitelny'], ['sposobny', 'スポソーブヌイ', 'Sposobny'], ['svirepy', 'スヴィレプイ', 'Svirepy']]],
+  leningrad: ['レニングラード級嚮導駆逐艦', [['moskva', 'モスクワ', 'Moskva'], ['kharkov', 'ハリコフ', 'Kharkov'], ['minsk', 'ミンスク', 'Minsk'], ['baku', 'バクー', 'Baku'], ['tbilisi', 'トビリシ', 'Tbilisi']]],
 };
 
 /** Britain and Germany (#85 stage 2): the sisters of the classes already in the data. */
@@ -122,6 +132,13 @@ const RN: Table = {
   cossack: ['トライバル級駆逐艦', [['afridi', 'アフリディ', 'Afridi'], ['ashanti', 'アシャンティ', 'Ashanti'], ['maori', 'マオリ', 'Maori'], ['sikh', 'シーク', 'Sikh'], ['zulu', 'ズールー', 'Zulu'], ['tartar', 'タータ', 'Tartar'], ['eskimo', 'エスキモー', 'Eskimo'], ['bedouin', 'ベドウィン', 'Bedouin']]],
   javelin: ['J 級駆逐艦', [['jervis', 'ジャーヴィス', 'Jervis'], ['jupiter', 'ジュピター', 'Jupiter'], ['juno', 'ジュノー', 'Juno'], ['janus', 'ジェーナス', 'Janus'], ['jackal', 'ジャッカル', 'Jackal']]],
   black_swan: ['ブラック・スワン級スループ', [['starling', 'スターリング', 'Starling'], ['wren', 'レン', 'Wren'], ['woodpecker', 'ウッドペッカー', 'Woodpecker']]],
+  kent: ['ケント級重巡洋艦', [['berwick', 'バーウィック', 'Berwick'], ['cornwall', 'コーンウォール', 'Cornwall'], ['cumberland', 'カンバーランド', 'Cumberland'], ['suffolk', 'サフォーク', 'Suffolk']]],
+  exeter: ['ヨーク級重巡洋艦', [['york', 'ヨーク', 'York']]],
+  leander: ['リアンダー級軽巡洋艦', [['achilles', 'アキリーズ', 'Achilles'], ['neptune', 'ネプチューン', 'Neptune'], ['orion', 'オライオン', 'Orion'], ['ajax', 'エイジャックス', 'Ajax']]],
+  revenge: ['リヴェンジ級戦艦', [['royal_sovereign', 'ロイヤル・ソヴリン', 'Royal Sovereign'], ['royal_oak', 'ロイヤル・オーク', 'Royal Oak'], ['resolution', 'レゾリューション', 'Resolution'], ['ramillies', 'ラミリーズ', 'Ramillies']]],
+  atherstone: ['ハント級護衛駆逐艦', [['blencathra', 'ブレンカスラ', 'Blencathra'], ['brocklesby', 'ブロックルズビー', 'Brocklesby'], ['cattistock', 'キャティストック', 'Cattistock']]],
+  truant: ['T 級潜水艦', [['thrasher', 'スラッシャー', 'Thrasher'], ['tally_ho', 'タリホー', 'Tally-Ho'], ['trenchant', 'トレンチャント', 'Trenchant']]],
+  upholder: ['U 級潜水艦', [['unbroken', 'アンブロークン', 'Unbroken'], ['urge', 'アージ', 'Urge'], ['upright', 'アップライト', 'Upright']]],
 };
 
 const KM: Table = {
@@ -129,6 +146,7 @@ const KM: Table = {
   z1: ['1934 型駆逐艦', [['z2', 'Z2 ゲオルク・ティーレ', 'Z2'], ['z3', 'Z3 マックス・シュルツ', 'Z3'], ['z4', 'Z4 リヒャルト・バイツェン', 'Z4']]],
   z20: ['1936 型駆逐艦', [['z17', 'Z17 ディーター・フォン・レーダー', 'Z17'], ['z18', 'Z18 ハンス・リューデマン', 'Z18'], ['z19', 'Z19 ヘルマン・キュンネ', 'Z19'], ['z21', 'Z21 ヴィルヘルム・ハイドカンプ', 'Z21'], ['z22', 'Z22 アントン・シュミット', 'Z22']]],
   z23: ['1936A 型駆逐艦', [['z24', 'Z24', 'Z24'], ['z25', 'Z25', 'Z25'], ['z26', 'Z26', 'Z26'], ['z27', 'Z27', 'Z27']]],
+  koenigsberg: ['ケーニヒスベルク級軽巡洋艦', [['karlsruhe', 'カールスルーエ', 'Karlsruhe'], ['koeln', 'ケルン', 'Köln']]],
 };
 
 const TABLES: Record<string, Table> = { ijn: IJN, usn: USN, fr: FR, rm: RM, su: SU, rn: RN, km: KM };

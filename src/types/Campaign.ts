@@ -75,6 +75,10 @@ export interface ITheater {
   opponents: Partial<Record<Nation, Nation>>;
   /** False for a theater added later (#202): its final area is no promotion exam */
   exam?: boolean;
+  /** 内海 (#250): the Baltic and the Black Sea, kept beside the seven seas rather than counted among them */
+  inland?: boolean;
+  /** Where on the difficulty curve its first area sits (#254): 0 for the first theaters, 1 for the seas added later */
+  tier?: number;
 }
 
 export interface ICampaignData {

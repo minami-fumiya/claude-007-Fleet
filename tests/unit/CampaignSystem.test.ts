@@ -143,7 +143,7 @@ describe('more areas and branches (#40)', () => {
       expect(list.some((a) => (a.requiresAny ?? []).length >= 2), t.id).toBe(true);
     }
     // Training areas (#202) are listed after the finals and never count as one.
-    expect(data.theaters.map((t) => areasOf(data, t.id).filter((a) => !a.training).pop()!.id)).toEqual(['p6', 'a5', 'm5', 'b5', 'bs5']);
+    expect(data.theaters.map((t) => areasOf(data, t.id).filter((a) => !a.training).pop()!.id)).toEqual(['p6', 'a5', 'm5', 'b5', 'bs5', 'np5', 'sa5', 'io5', 'ar5']);
   });
 
   it('a merge opens after either route; a branch area is not free', () => {
@@ -182,7 +182,7 @@ describe('delay battles can be won (#40)', () => {
 
 describe('more theaters and training areas (#202)', () => {
   it('the USSR gets the Black Sea, reachable from Sevastopol by 少尉; its final is no promotion exam', () => {
-    expect(theatersFor(data, Nation.SU).map((t) => t.id)).toEqual(['baltic', 'blacksea']);
+    expect(theatersFor(data, Nation.SU).map((t) => t.id)).toEqual(['baltic', 'blacksea', 'north_pacific', 'arctic']);
     expect(areasOf(data, 'blacksea').filter((a) => !a.training)).toHaveLength(8);
     expect(finalAreas('SU')).toEqual(['b5']);
   });

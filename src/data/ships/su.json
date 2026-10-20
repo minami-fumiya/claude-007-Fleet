@@ -181,6 +181,42 @@
       "year": 1941
     },
     {
+      "id": "storozhevoy",
+      "no": 1607013,
+      "name": "ストロジェヴォイ (Storozhevoy)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "storozhevoy",
+      "description": "7U 型駆逐艦の 1 番艦。7 型の機関配置を改め、損傷に強くした。バルト海・黒海・北方で戦った。",
+      "year": 1940
+    },
+    {
+      "id": "leningrad",
+      "no": 1607007,
+      "name": "レニングラード (Leningrad)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 13,
+      "speed": 265,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "leningrad",
+      "description": "レニングラード級嚮導駆逐艦の 1 番艦。駆逐隊を率いる大型・高速の駆逐艦。",
+      "year": 1936
+    },
+    {
       "id": "voroshilov",
       "no": 1605002,
       "name": "ヴォロシーロフ (Voroshilov)",
@@ -331,6 +367,176 @@
       "year": 1938,
       "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
       "sisterOf": "gnevny"
+    },
+    {
+      "id": "parizhskaya_kommuna",
+      "no": 1601004,
+      "name": "パリジスカヤ・コンムナ (Parizhskaya Kommuna)",
+      "nation": "SU",
+      "shipClass": "Battleship",
+      "hp": 680,
+      "armor": 52,
+      "speed": 125,
+      "weapons": [
+        "305mm_obukhov",
+        "120mm_vickers"
+      ],
+      "spriteKey": "marat",
+      "year": 1914,
+      "description": "ガングート級戦艦の同型艦。性能はマラートと同じ。",
+      "sisterOf": "marat"
+    },
+    {
+      "id": "soobrazitelny",
+      "no": 1607014,
+      "name": "ソオブラジーテリヌイ (Soobrazitelny)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "storozhevoy",
+      "year": 1940,
+      "description": "7U 型駆逐艦の同型艦。性能はストロジェヴォイと同じ。",
+      "sisterOf": "storozhevoy"
+    },
+    {
+      "id": "sposobny",
+      "no": 1607015,
+      "name": "スポソーブヌイ (Sposobny)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "storozhevoy",
+      "year": 1940,
+      "description": "7U 型駆逐艦の同型艦。性能はストロジェヴォイと同じ。",
+      "sisterOf": "storozhevoy"
+    },
+    {
+      "id": "svirepy",
+      "no": 1607016,
+      "name": "スヴィレプイ (Svirepy)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 215,
+      "armor": 14,
+      "speed": 240,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "storozhevoy",
+      "year": 1940,
+      "description": "7U 型駆逐艦の同型艦。性能はストロジェヴォイと同じ。",
+      "sisterOf": "storozhevoy"
+    },
+    {
+      "id": "moskva",
+      "no": 1607008,
+      "name": "モスクワ (Moskva)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 13,
+      "speed": 265,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "leningrad",
+      "year": 1936,
+      "description": "レニングラード級嚮導駆逐艦の同型艦。性能はレニングラードと同じ。",
+      "sisterOf": "leningrad"
+    },
+    {
+      "id": "kharkov",
+      "no": 1607009,
+      "name": "ハリコフ (Kharkov)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 13,
+      "speed": 265,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "leningrad",
+      "year": 1936,
+      "description": "レニングラード級嚮導駆逐艦の同型艦。性能はレニングラードと同じ。",
+      "sisterOf": "leningrad"
+    },
+    {
+      "id": "minsk",
+      "no": 1607010,
+      "name": "ミンスク (Minsk)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 13,
+      "speed": 265,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "leningrad",
+      "year": 1936,
+      "description": "レニングラード級嚮導駆逐艦の同型艦。性能はレニングラードと同じ。",
+      "sisterOf": "leningrad"
+    },
+    {
+      "id": "baku",
+      "no": 1607011,
+      "name": "バクー (Baku)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 13,
+      "speed": 265,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "leningrad",
+      "year": 1936,
+      "description": "レニングラード級嚮導駆逐艦の同型艦。性能はレニングラードと同じ。",
+      "sisterOf": "leningrad"
+    },
+    {
+      "id": "tbilisi",
+      "no": 1607012,
+      "name": "トビリシ (Tbilisi)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 13,
+      "speed": 265,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "leningrad",
+      "year": 1936,
+      "description": "レニングラード級嚮導駆逐艦の同型艦。性能はレニングラードと同じ。",
+      "sisterOf": "leningrad"
     }
   ]
 }

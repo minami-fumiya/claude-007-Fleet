@@ -2,6 +2,7 @@ import { EVENT_KINDS } from './EventKinds';
 import { IBattleRecordInput, IMedal, IModeRecord, IScenarioBest, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
 import { ALL_SCENARIOS } from '@/data/scenarios';
 import { ShipClass } from '@/types/ShipClass';
+import campaignData from '@/data/campaign.json';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
 
@@ -112,6 +113,9 @@ export function scenarioWins(r: Pick<IServiceRecord, 'scenarios'>): { won: numbe
 }
 
 /** Context medals may need beyond the record itself (#92): totals over every nation the admiral has played. */
+/** 七つの海 (#250): the theaters that are seas, the Baltic and the Black Sea (inland seas) aside. */
+export const SEVEN_SEAS: string[] = (campaignData.theaters as Array<{ id: string; inland?: boolean }>).filter((t) => !t.inland).map((t) => t.id);
+
 export interface IMedalContext {
   /** Campaign theaters with every area cleared */
   clearedTheaters: string[];
@@ -198,21 +202,27 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('night_fighter', '夜戦章', 'battle', [5, 30, 100], (g) => `夜戦で ${g} 回勝利する`, (_r, c) => total(c, 'nightWin')),
   ...ladder('s_rank', '完勝章', 'battle', [10, 50, 200], (g) => `S 評価で ${g} 回勝利する`, (_r, c) => total(c, 'winS')),
   // 作戦
-  { id: 'pacific', name: '太平洋制覇章', description: '太平洋戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('pacific') ? 1 : 0), goal: 1 },
-  { id: 'atlantic', name: '大西洋制覇章', description: '大西洋戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('atlantic') ? 1 : 0), goal: 1 },
+  { id: 'pacific', name: '南太平洋制覇章', description: '南太平洋の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('pacific') ? 1 : 0), goal: 1 },
+  { id: 'atlantic', name: '北大西洋制覇章', description: '北大西洋の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('atlantic') ? 1 : 0), goal: 1 },
   { id: 'baltic', name: 'バルト海制覇章', description: 'バルト海戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('baltic') ? 1 : 0), goal: 1 },
-  { id: 'mediterranean', name: '地中海制覇章', description: '地中海戦域 (インド洋を含む) の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('mediterranean') ? 1 : 0), goal: 1 },
+  { id: 'mediterranean', name: '地中海制覇章', description: '地中海の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('mediterranean') ? 1 : 0), goal: 1 },
   ...ladder('explorer', '攻略章', 'campaign', [5, 15, 30], (g) => `作戦の海域を ${g} か所攻略する`, (_r, c) => c.areasCleared ?? 0),
   ...ladder('flawless', '海域完勝章', 'campaign', [3, 10, 25], (g) => `${g} か所の海域で S 評価を取る`, (_r, c) => c.areasS ?? 0),
   ...ladder('operations', '作戦従事章', 'campaign', [20, 100, 400], (g) => `作戦の海域で ${g} 回勝利する`, (_r, c) => total(c, 'campaignWin')),
   ...ladder('convoy', '船団護衛章', 'campaign', [3, 15, 50], (g) => `輸送船団の護衛で ${g} 回勝利する`, (_r, c) => total(c, 'convoyWin')),
   ...ladder('mission', '任務達成章', 'campaign', [10, 50], (g) => `目的がある海域で ${g} 回勝利する`, (_r, c) => total(c, 'objectiveWin')),
-  ...ladder('pacific_war', '太平洋従軍章', 'campaign', [10, 50], (g) => `太平洋で ${g} 回勝利する`, (_r, c) => total(c, 'winPacific')),
-  ...ladder('atlantic_war', '大西洋従軍章', 'campaign', [10, 50], (g) => `大西洋で ${g} 回勝利する`, (_r, c) => total(c, 'winAtlantic')),
+  ...ladder('pacific_war', '南太平洋従軍章', 'campaign', [10, 50], (g) => `南太平洋で ${g} 回勝利する`, (_r, c) => total(c, 'winPacific')),
+  ...ladder('atlantic_war', '北大西洋従軍章', 'campaign', [10, 50], (g) => `北大西洋で ${g} 回勝利する`, (_r, c) => total(c, 'winAtlantic')),
   ...ladder('med_war', '地中海従軍章', 'campaign', [10, 50], (g) => `地中海で ${g} 回勝利する`, (_r, c) => total(c, 'winMediterranean')),
   { id: 'blacksea', name: '黒海制覇章', description: '黒海戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('blacksea') ? 1 : 0), goal: 1 },
   ...ladder('blacksea_war', '黒海従軍章', 'campaign', [10, 50], (g) => `黒海で ${g} 回勝利する`, (_r, c) => total(c, 'winBlackSea')),
   ...ladder('training', '訓練章', 'campaign', [5, 30], (g) => `訓練海域で ${g} 回勝利する`, (_r, c) => total(c, 'trainingWin')),
+  // 七つの海 (#250): each sea added in 0.0.35, its battles, and the seven together (the inland seas aside).
+  ...([['north_pacific', '北太平洋', 'winNorthPacific'], ['south_atlantic', '南大西洋', 'winSouthAtlantic'], ['indian', 'インド洋', 'winIndian'], ['arctic', '北極海', 'winArctic']] as const).flatMap(([t, name, event]): IMedalRule[] => [
+    { id: t, name: `${name}制覇章`, description: `${name}の全海域を攻略する`, category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes(t) ? 1 : 0), goal: 1 },
+    ...ladder(`${t}_war`, `${name}従軍章`, 'campaign', [10, 50], (g) => `${name}で ${g} 回勝利する`, (_r, c) => total(c, event)),
+  ]),
+  ...ladder('seas', '七つの海章', 'campaign', [1, 3, 7], (g) => (g === 7 ? '七つの海すべての全海域を攻略する' : `七つの海のうち ${g} つの全海域を攻略する`), (_r, c) => c.clearedTheaters.filter((t) => SEVEN_SEAS.includes(t)).length),
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
   ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),

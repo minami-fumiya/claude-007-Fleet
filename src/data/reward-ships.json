@@ -1,9 +1,9 @@
 {
   "IJN": {"p3": "i400", "p5": "takao", "p8": "myoko", "p6": "nagato", "m2": "mogami", "m5": "mutsu"},
   "USN": {"p3": "balao", "p5": "independence", "p8": "cleveland", "p6": "south_dakota", "a2": "gearing", "a7": "des_moines", "a5": "north_carolina"},
-  "KM": {"a2": "u_boat_ixc", "a7": "prinz_eugen", "a5": "scharnhorst", "m2": "nurnberg", "m4": "deutschland", "m7": "u_boat_xxi", "m5": "tirpitz", "b2": "z23", "b4": "blucher", "b7": "admiral_graf_spee", "b5": "gneisenau"},
-  "RN": {"a2": "truant", "a4": "hermes", "a7": "belfast", "a5": "renown", "m2": "southampton", "m5": "warspite"},
-  "FR": {"a7": "dupleix", "a5": "dunkerque", "m2": "la_galissonniere", "m4": "algerie", "m5": "strasbourg"},
-  "SU": {"b4": "kirov", "b7": "maxim_gorky", "b5": "marat", "bs4": "voroshilov", "bs5": "molotov"},
-  "RM": {"m2": "garibaldi", "m4": "zara", "m7": "trento", "m5": "conte_di_cavour"}
+  "KM": {"a2": "u_boat_ixc", "a7": "prinz_eugen", "a5": "scharnhorst", "m2": "nurnberg", "m4": "deutschland", "m7": "u_boat_xxi", "m5": "tirpitz", "b2": "z23", "b4": "blucher", "b7": "admiral_graf_spee", "b5": "gneisenau", "ar3": "koenigsberg"},
+  "RN": {"a2": "truant", "a4": "hermes", "a7": "belfast", "a5": "renown", "m2": "southampton", "m5": "warspite", "sa3": "exeter", "ar7": "leander"},
+  "FR": {"a7": "dupleix", "a5": "dunkerque", "m2": "la_galissonniere", "m4": "algerie", "m5": "strasbourg", "sa8": "bretagne"},
+  "SU": {"b4": "kirov", "b7": "maxim_gorky", "b5": "marat", "bs4": "voroshilov", "bs5": "molotov", "ar7": "leningrad"},
+  "RM": {"m2": "garibaldi", "m4": "zara", "m7": "trento", "m5": "conte_di_cavour", "io3": "alberto_di_giussano", "sa5": "andrea_doria"}
 }

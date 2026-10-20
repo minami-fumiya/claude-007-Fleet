@@ -7,7 +7,7 @@ import { paySortie, settleBattle, sortieBlockers } from '@/systems/ProgressionSy
 import { repairCost, startRepair, completeRepairs, SUNK_HP_FRACTION } from '@/systems/DockSystem';
 import { buildCost, buildShip, grantShip, isRewardOnly, ownedIds, ownedShips, rewardShipFor, starterShip } from '@/systems/ShipyardSystem';
 import { addMerit, addRankStats, fleetSlots, meritFor, rankOf } from '@/systems/RankSystem';
-import { areasOf, enemyShips, isFreeArea, recordClear, theatersFor } from '@/systems/CampaignSystem';
+import { areasOf, enemyShips, isFreeArea, isUnlocked, recordClear, theatersFor } from '@/systems/CampaignSystem';
 import { addResources, battleReward, resources, sortieCost } from '@/systems/ResourceSystem';
 import { IResources } from '@/types/Progression';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -52,8 +52,8 @@ describe('natural regeneration (#28)', () => {
 });
 
 describe('campaign data for the growth curve (#25 / #18)', () => {
-  it('every theater opens with a single enemy and grows to 6–8 ships', () => {
-    for (const t of data.theaters) {
+  it('every first theater opens with a single enemy and grows to 6–8 ships (the seas of #250 start a step in, #254)', () => {
+    for (const t of data.theaters.filter((x) => !x.tier)) {
       const sizes = areasOf(data, t.id).map((a) => a.enemy.ships.length);
       expect(sizes[0]).toBe(1);
       expect(Math.max(...sizes)).toBeGreaterThanOrEqual(6);
@@ -76,11 +76,21 @@ describe('campaign data for the growth curve (#25 / #18)', () => {
     }
   });
 
-  it('only the first area of each theater is free', () => {
+  it('only the first area of each first theater is free; the seas of 0.0.35 open from them (#250)', () => {
     for (const t of data.theaters) {
       // Besides the training area (#202), which is free too.
-      expect(areasOf(data, t.id).filter((a) => isFreeArea(a) && !a.training)).toHaveLength(1);
-      expect(isFreeArea(areasOf(data, t.id)[0])).toBe(true);
+      const free = areasOf(data, t.id).filter((a) => isFreeArea(a) && !a.training);
+      if (t.tier) {
+        expect(free, t.id).toHaveLength(0);
+        // The first area opens once any first theater's third area is won.
+        const first = areasOf(data, t.id)[0];
+        expect(isUnlocked(first, [])).toBe(false);
+        expect(isUnlocked(first, ['p1', 'p2', 'p3'])).toBe(true);
+        expect(isUnlocked(first, ['b1', 'b2', 'b3'])).toBe(true);
+      } else {
+        expect(free, t.id).toHaveLength(1);
+        expect(isFreeArea(areasOf(data, t.id)[0])).toBe(true);
+      }
     }
   });
 });
@@ -115,9 +125,10 @@ describe('a brand-new player can always progress', () => {
       expect(fleetSlots(p)).toBe(1);
       const fleet = ownedShips(p, roster);
 
-      // 1) With nothing at all, both an exercise and every theater's first area can be sortied.
+      // 1) With nothing at all, both an exercise and every first theater's first area can be sortied (the seas added
+      // in 0.0.35 open later, #250).
       expect(sortieBlockers(p, fleet, T0, { exercise: true })).toEqual([]);
-      for (const t of data.theaters) {
+      for (const t of data.theaters.filter((x) => !x.tier)) {
         const first = areasOf(data, t.id)[0];
         expect(first.enemy.ships).toHaveLength(1);
         expect(sortieBlockers(p, fleet, T0, { area: first })).toEqual([]);

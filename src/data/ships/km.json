@@ -343,6 +343,24 @@
       "year": 1944
     },
     {
+      "id": "koenigsberg",
+      "no": 1305003,
+      "name": "ケーニヒスベルク (Königsberg)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 175,
+      "weapons": [
+        "15cm_skc25",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "koenigsberg",
+      "description": "ケーニヒスベルク級軽巡洋艦の 1 番艦。ノルウェー侵攻でベルゲンを攻め、航空攻撃で沈んだ。",
+      "year": 1929
+    },
+    {
       "id": "admiral_scheer",
       "no": 1304002,
       "name": "アドミラル・シェーア (Admiral Scheer)",
@@ -588,6 +606,44 @@
       "year": 1940,
       "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
       "sisterOf": "z23"
+    },
+    {
+      "id": "karlsruhe",
+      "no": 1305004,
+      "name": "カールスルーエ (Karlsruhe)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 175,
+      "weapons": [
+        "15cm_skc25",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "koenigsberg",
+      "year": 1929,
+      "description": "ケーニヒスベルク級軽巡洋艦の同型艦。性能はケーニヒスベルクと同じ。",
+      "sisterOf": "koenigsberg"
+    },
+    {
+      "id": "koeln",
+      "no": 1305005,
+      "name": "ケルン (Köln)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 340,
+      "armor": 28,
+      "speed": 175,
+      "weapons": [
+        "15cm_skc25",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "koenigsberg",
+      "year": 1929,
+      "description": "ケーニヒスベルク級軽巡洋艦の同型艦。性能はケーニヒスベルクと同じ。",
+      "sisterOf": "koenigsberg"
     }
   ]
 }
