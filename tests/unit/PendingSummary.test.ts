@@ -30,7 +30,7 @@ describe('お知らせ (#192)', () => {
     expect(claimableCount(p.quests, NOW)).toBeGreaterThan(0);
     expect(s.map((i) => [i.id, i.count])).toEqual([['quests', claimableCount(p.quests, NOW)], ['sweeps', 2], ['books', 2]]);
     expect(s.find((i) => i.id === 'sweeps')?.scene).toBe(SceneKeys.CAMPAIGN);
-    // An hour on, p2 has one too.
-    expect(pendingSummary(p, NOW + HOUR, 0).find((i) => i.id === 'sweeps')?.count).toBe(3);
+    // An hour on, p1 is full (3) and p2 has its first.
+    expect(pendingSummary(p, NOW + HOUR, 0).find((i) => i.id === 'sweeps')?.count).toBe(4);
   });
 });
