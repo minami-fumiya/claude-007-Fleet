@@ -105,6 +105,13 @@ export function canAfford(have: Partial<IResources>, cost: Partial<IResources>):
   return RESOURCE_KEYS.every((k) => h[k] >= c[k]);
 }
 
+/** What `have` lacks of `cost`, per resource (0 where enough): "鋼材 120 不足" (#262). */
+export function shortfall(have: Partial<IResources>, cost: Partial<IResources>): IResources {
+  const h = resources(have);
+  const c = resources(cost);
+  return Object.fromEntries(RESOURCE_KEYS.map((k) => [k, Math.max(0, c[k] - h[k])])) as unknown as IResources;
+}
+
 /** Pays `cost`, or returns null if any resource is short. */
 export function pay(have: Partial<IResources>, cost: Partial<IResources>): IResources | null {
   return canAfford(have, cost) ? addResources(have, cost, -1) : null;

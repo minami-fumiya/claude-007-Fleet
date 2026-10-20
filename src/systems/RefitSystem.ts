@@ -4,7 +4,7 @@ import { IShipData } from '@/types/Ship';
 import { IAirWing } from '@/types/Aircraft';
 import { ShipClass } from '@/types/ShipClass';
 import { combineModifiers } from './CustomizationSystem';
-import { canAfford, pay } from './ResourceSystem';
+import { canAfford, pay, scaleCost } from './ResourceSystem';
 import refitsData from '@/data/refits.json';
 
 /**
@@ -117,12 +117,17 @@ export function nextStage(table: RefitTable, ship: RefitShip, stage: number, bra
  * Switching a fully remodelled ship to another branch (#86) costs the last stage again; null when it can't (not at
  * the last stage, no such branch, already on it, or short of resources).
  */
+/** What changing a finished ship's direction costs (#265): half the last stage's resources. */
+export const SWITCH_COST_MUL = 0.5;
+export function switchCost(table: RefitTable, ship: RefitShip): Partial<IResources> {
+  return scaleCost(stagesFor(table, ship)[maxStage(table, ship) - 1]?.cost ?? {}, SWITCH_COST_MUL);
+}
+
 export function switchBranch(table: RefitTable, ship: RefitShip, stage: number, from: string | undefined, to: string, have: IResources): IResources | null {
   const last = maxStage(table, ship);
   if (stage < last || (from ?? 'standard') === to) return null;
   if (to !== 'standard' && !branchesFor(table, ship).some((b) => b.id === to)) return null;
-  const cost = stagesFor(table, ship)[last - 1]?.cost ?? {};
-  return pay(have, cost);
+  return pay(have, switchCost(table, ship));
 }
 
 export function canRefit(table: RefitTable, ship: RefitShip, stage: number, proficiency: number, have: IResources): boolean {

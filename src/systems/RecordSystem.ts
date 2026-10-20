@@ -238,10 +238,13 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('s_recruiter', '完勝の将章', 'growth', [5, 15], (g) => `S 評価と昇進で艦長を ${g} 名迎える`, (_r, c) => total(c, 'captainJoin')),
   ...ladder('instructor', '教官章', 'growth', [1, 10, 30], (g) => `艦長にスキルを ${g} 回習得させる`, (_r, c) => total(c, 'learnSkill')),
   ...ladder('refit_branch', '改造方向章', 'growth', [1, 5, 15], (g) => `改三の方向 (甲・乙・丙) を選んで ${g} 隻改造する`, (_r, c) => total(c, 'refitBranch')),
+  ...ladder('refit_rebranch', '改装の匠章', 'growth', [1, 3, 10], (g) => `改造を終えた艦の方向を ${g} 回変える`, (_r, c) => total(c, 'refitRebranch')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
   ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
   // 軍港・工廠
   ...ladder('shipwright', '造船章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻建造する`, (_r, c) => total(c, 'build')),
+  ...ladder('list_search', '捜索章', 'special', [1, 30], (g) => `一覧で艦を名前で ${g} 回検索する`, (_r, c) => total(c, 'listSearch')),
+  ...ladder('build_done', '竣工章', 'base', [5, 30, 100], (g) => `建造した艦が ${g} 隻竣工する`, (_r, c) => total(c, 'buildDone')),
   ...ladder('rush_work', '突貫工事章', 'base', [2, 3], (g) => `1 つの軍港で施設を ${g} つ同時に建設する`, (_r, c) => c.parallelFacilities ?? 0),
   ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `1 つの軍港のドックを ${g} 本にする`, (_r, c) => c.maxDocks ?? 0),
   // A new base starts with one dock (#244): the second is the first step.
