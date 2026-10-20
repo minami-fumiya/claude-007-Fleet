@@ -9,6 +9,7 @@ import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
+import { GOLD_SWEEP } from '@/systems/GoldSystem';
 import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
@@ -338,7 +339,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const now = Date.now();
     const ledger = recordLedger(recordLedger(recordLedger(r.progress.ledger, 'sweep', addResources(r.reward, r.lost, -1), now), 'sortie', r.cost, now), 'overflow', r.lost, now);
     saveProgress({ ...r.progress, ledger });
-    this.status = `掃討完了: ${formatResources(r.reward)}${lostNote(r.lost)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
+    this.status = `掃討完了: ${formatResources(r.reward)}・ゴールド ${GOLD_SWEEP}${lostNote(r.lost)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
     this.drawDetail();
   }
 

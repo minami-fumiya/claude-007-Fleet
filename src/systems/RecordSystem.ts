@@ -113,6 +113,8 @@ export interface IMedalContext {
   nationsPlayed?: number;
   /** Highest rank index reached (0 = 准尉) */
   rankIndex?: number;
+  /** Lifetime gold earned (#183) */
+  goldEarned?: number;
 }
 
 export type MedalCategory = 'sink' | 'battle' | 'campaign' | 'growth' | 'base' | 'special' | 'quest';
@@ -209,6 +211,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
   ...ladder('history_battles', '史実従軍章', 'special', [10, 50], (g) => `史実のシナリオで ${g} 回勝利する`, (r) => r.byMode?.scenario?.victories ?? 0),
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
+  ...ladder('shopper', '御用達章', 'base', [5, 30, 100], (g) => `ショップで ${g} 回買い物をする`, (_r, c) => total(c, 'shopBuy')),
+  ...ladder('treasury', '蓄財章', 'special', [5000, 50000, 200000], (g) => `ゴールドを累計 ${g.toLocaleString()} 手に入れる`, (_r, c) => c.goldEarned ?? 0),
   ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them
   ...([

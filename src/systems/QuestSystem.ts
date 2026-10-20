@@ -1,5 +1,6 @@
 import type { EventKind } from './EventSystem';
 import questData from '@/data/quests.json';
+import itemData from '@/data/items.json';
 import { IItems, IResources } from '@/types/Progression';
 
 /**
@@ -31,7 +32,9 @@ export type QuestEvent =
   // the Black Sea theater and training areas (#202)
   | 'winBlackSea' | 'trainingWin'
   // 0.0.31: quests claimed (#180)
-  | 'questClaim';
+  | 'questClaim'
+  // 0.0.32: shop purchases (#183)
+  | 'shopBuy';
 
 export interface IQuest {
   id: string;
@@ -47,6 +50,8 @@ export interface IQuest {
   medal?: string;
   /** Captains who join on claiming it (#209) */
   captains?: number;
+  /** ゴールド paid with the reward (#183) */
+  gold?: number;
 }
 
 export interface IQuestState {
@@ -199,11 +204,11 @@ export function claimableCount(state: IQuestState, now: number): number {
 }
 
 /** Takes a finished quest's reward; null when it isn't finished, isn't on the board or was already taken. */
-export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems>; medal?: string; captains: number } | null {
+export function claimQuest(state: IQuestState, id: string, now: number): { state: IQuestState; reward: Partial<IResources>; items: Partial<IItems>; medal?: string; captains: number; gold: number } | null {
   const s = refreshQuests(state, now);
   const q = QUESTS.find((x) => x.id === id);
   if (!q || !isActive(q, now) || !isClaimable(s, q)) return null;
-  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {}, medal: q.medal, captains: q.captains ?? 0 };
+  return { state: { ...s, claimed: [...s.claimed, id] }, reward: q.reward, items: q.items ?? {}, medal: q.medal, captains: q.captains ?? 0, gold: q.gold ?? 0 };
 }
 
 /** Tolerant parse of a stored quest state. */
@@ -236,7 +241,8 @@ export function withQuestEvents<T extends { quests: IQuestState }>(progress: T, 
   return quests === progress.quests ? progress : { ...progress, quests };
 }
 
-export const ITEM_LABEL: Record<keyof IItems, string> = { fastRepair: '高速修理材', fastBuild: '高速建造材', captainBook: '艦長教本' };
+/** Item names (#184): from items.json, the one table of items. */
+export const ITEM_LABEL = Object.fromEntries((itemData as { items: Array<{ id: string; name: string }> }).items.filter((i) => i.id !== 'gold').map((i) => [i.id, i.name])) as Record<keyof IItems, string>;
 
 /** "高速修理材 2・高速建造材 1" ('' when none). */
 export function formatItems(items: Partial<IItems>): string {

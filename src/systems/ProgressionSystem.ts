@@ -10,6 +10,7 @@ import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
 import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
 import { isAtCurrentBase } from './BaseSystem';
 import { withQuestEvents } from './QuestSystem';
+import { addGold, emptyWallet, GOLD_SWEEP } from './GoldSystem';
 import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
 
 export { nextSweepMs, SWEEP_MAX, SWEEP_RECHARGE_MS, sweepCharges } from './SweepSystem';
@@ -178,7 +179,7 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   const after = rankOf(merited);
   const promoted = { progress: merited, promotedTo: after.index > before.index ? after : null };
   const of = (c: ShipClass): number => enemy.filter((s) => s.shipClass === c).length;
-  const counted = { ...promoted.progress, sweepCharges: { ...progress.sweepCharges, [area.id]: useSweepCharge(progress.sweepCharges[area.id], now) } };
+  const counted = { ...promoted.progress, wallet: addGold(promoted.progress.wallet ?? emptyWallet(), GOLD_SWEEP), sweepCharges: { ...progress.sweepCharges, [area.id]: useSweepCharge(progress.sweepCharges[area.id], now) } };
   const next = withQuestEvents(counted, [
     ['sortie', 1], ['win', 1], ['sink', enemy.length], ['sweep', 1],
     ['sinkDestroyer', of(ShipClass.Destroyer)], ['sinkCruiser', of(ShipClass.Cruiser)],

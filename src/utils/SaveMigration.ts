@@ -206,6 +206,13 @@ export const MIGRATIONS: MigrationStep[] = [
     const sweepCharges = Object.fromEntries(open.map((id) => [id, { charges: 3, at: 0 }]));
     return { ...nation, sweepCharges: { ...sweepCharges, ...(typeof nation.sweepCharges === 'object' && nation.sweepCharges !== null ? nation.sweepCharges as RawSave : {}) } };
   }),
+  // v18 → v19 (0.0.32, #183): ゴールド, shared by every nation. An existing admiral starts with 10 for each victory
+  // in the record, so the shop is open from the first visit.
+  (data) => {
+    const record = typeof data.record === 'object' && data.record !== null ? data.record as RawSave : {};
+    const wins = typeof record.victories === 'number' && Number.isFinite(record.victories) ? Math.max(0, Math.floor(record.victories)) : 0;
+    return typeof data.wallet === 'object' && data.wallet !== null ? data : { ...data, wallet: { gold: wins * 10, earned: wins * 10, shop: { day: 0, bought: {} } } };
+  },
 ];
 
 /** The v18 record (#177): totals kept, an empty split by kind of battle and by scenario. */

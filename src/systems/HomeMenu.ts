@@ -46,12 +46,16 @@ export const HOME_MENU: IHomeMenuTab[] = [
     id: 'arsenal', label: '工廠', items: [
       { label: '研究', caption: '艦種と部品', scene: SceneKeys.ARSENAL, variant: 'gold' },
       { label: '建造', caption: '新しい艦', scene: SceneKeys.SHIPYARD, variant: 'primary' },
+      // ゴールドとショップ (#183)
+      { label: 'ショップ', caption: 'ゴールドで交換', scene: SceneKeys.SHOP, variant: 'primary' },
     ],
   },
   {
     id: 'record', label: '記録', items: [
       { label: '図鑑', caption: '艦・艦長・機', scene: SceneKeys.ENCYCLOPEDIA, variant: 'primary', data: { tab: 'ships' } },
       { label: '戦績', caption: '戦いの記録', scene: SceneKeys.RECORD, variant: 'primary' },
+      // 持っているアイテム (#184)
+      { label: 'アイテム', caption: '所持品', scene: SceneKeys.ITEMS, variant: 'primary' },
       { label: '階級', caption: '昇進の条件', scene: SceneKeys.HOME, variant: 'primary', action: 'ranks' },
       { label: 'ヘルプ', caption: '遊び方', scene: SceneKeys.HELP, variant: 'secondary' },
       { label: '設定', caption: '音・保存', scene: SceneKeys.SETTINGS, variant: 'secondary' },

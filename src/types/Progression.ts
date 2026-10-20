@@ -27,6 +27,18 @@ export interface IItems {
   captainBook: number;
 }
 
+/**
+ * ゴールド and the shop (#183): the admiral's purse, shared by every nation. Earned in battles, first clears, quests,
+ * sweeps and with medals; spent in the shop. No real money buys any of it.
+ */
+export interface IWallet {
+  gold: number;
+  /** Lifetime gold earned (medals read it) */
+  earned: number;
+  /** Shop purchases of the current game day, by shop entry id; `day` is the game day they belong to */
+  shop: { day: number; bought: Record<string, number> };
+}
+
 /** Research branches (系統) of the tech tree, in display order. */
 export type TechBranch =
   | 'gunnery'
