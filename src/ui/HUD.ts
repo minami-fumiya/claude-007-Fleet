@@ -66,6 +66,9 @@ export interface IHudStatus {
   /** Main gun reload progress, 0..1 */
   reload: number;
   elapsedSec: number;
+  /** Every weapon's readiness and the flagship's damage (#81), one line each under the strip */
+  weapons?: string;
+  damage?: string;
 }
 
 /** Name plus badges for component damage, e.g. "大和 (Yamato) [機舵]". */
@@ -101,6 +104,8 @@ export class HUD {
   private hpText: Phaser.GameObjects.Text;
   private gunText: Phaser.GameObjects.Text;
   private timeText: Phaser.GameObjects.Text;
+  /** Weapons and damage of the flagship (#81), under the strip */
+  private detailText: Phaser.GameObjects.Text;
   private staticTexts: Phaser.GameObjects.Text[] = [];
   private status: IHudStatus = { reload: 1, elapsedSec: 0 };
 
@@ -138,12 +143,16 @@ export class HUD {
     this.gunText = value(L.gunText, 11, Css.cyan);
     this.timeText = value(L.timeText, 16, Css.text).setText('0:00');
 
+    // Weapons and damage (#81): portrait right of the weather chip, landscape under the strip.
+    this.detailText = scene.add.text(IS_PORTRAIT ? 176 : BX + 8, BY + L.bar.h + (IS_PORTRAIT ? 6 : 6), '', textStyle(11, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3, lineSpacing: 3 }))
+      .setDepth(STRIP_DEPTH + 1);
+
     // Segment dividers
     this.barBg.lineStyle(1, Colors.rim, 0.15);
     for (const [x1, y1, x2, y2] of L.dividers) this.barBg.lineBetween(BX + x1, BY + y1, BX + x2, BY + y2);
 
     // The strip stays on screen while the camera follows the flagship; ship labels stay in the world.
-    for (const o of [this.barBg, this.meters, this.hpText, this.killText, this.gunText, this.timeText, ...this.staticTexts]) {
+    for (const o of [this.barBg, this.meters, this.hpText, this.killText, this.gunText, this.timeText, this.detailText, ...this.staticTexts]) {
       o.setScrollFactor(0);
     }
 
@@ -183,6 +192,10 @@ export class HUD {
 
   update(player: BaseShip, enemies: BaseShip[], _escorts: BaseShip[] = [], status?: IHudStatus): void {
     if (status) this.status = status;
+    const detail = [this.status.weapons ?? '', this.status.damage ?? ''].filter((l) => l).join('\n');
+    if (this.detailText.text !== detail) {
+      this.detailText.setText(detail).setColor(this.status.damage ? Css.danger : Css.cyan);
+    }
     // Player HP bar and name follow the flagship
     if (player.active) {
       syncLabel(this.playerNameLabel, player);

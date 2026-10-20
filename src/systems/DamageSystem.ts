@@ -145,3 +145,28 @@ export function effectiveShell(type: WeaponType, mode: ShellMode, target: ShipCl
 export function nextShellMode(m: ShellMode): ShellMode {
   return m === 'auto' ? 'AP' : m === 'AP' ? 'HE' : 'auto';
 }
+
+// ---------------------------------------------------------------------------
+// HUD readouts (#81)
+// ---------------------------------------------------------------------------
+
+const EFFECT_TEXT: Record<CriticalType, string> = {
+  [CriticalType.MainGun]: `装填 ×${EFFECTS[CriticalType.MainGun].gunReloadMul}`,
+  [CriticalType.Engine]: `速力 −${Math.round((1 - (EFFECTS[CriticalType.Engine].speedMul ?? 1)) * 100)}%`,
+  [CriticalType.Rudder]: `旋回 −${Math.round((1 - (EFFECTS[CriticalType.Rudder].turnMul ?? 1)) * 100)}%`,
+};
+
+/** "機関損傷 速力 −40% 12秒  ·  火災 8秒" for what is wrong with a ship now (#81); '' when nothing is. */
+export function damageReadout(crits: CriticalState, status: IStatusState, now: number): string {
+  const secs = (until: number | undefined): number => Math.ceil(((until ?? now) - now) / 1000);
+  const parts = [
+    ...activeCriticals(crits, now).map((c) => `${CRITICAL_LABEL[c]} ${EFFECT_TEXT[c]} ${secs(crits[c])}秒`),
+    ...activeStatus(status, now).map((k) => `${STATUS_LABEL[k]}${k === 'flood' ? ` 速力 −${Math.round((1 - FLOOD_SPEED_MUL) * 100)}%` : ''} ${secs(status[k])}秒`),
+  ];
+  return parts.join('  ·  ');
+}
+
+/** "主砲 ●  副砲 64%  魚雷 ●" (#81): each kind of weapon the ship carries, ready (●) or how far reloaded. */
+export function weaponReadout(weapons: Array<{ label: string; progress: number }>): string {
+  return weapons.map((w) => `${w.label} ${w.progress >= 1 ? '●' : `${Math.floor(w.progress * 100)}%`}`).join('  ');
+}

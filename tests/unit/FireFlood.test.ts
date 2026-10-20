@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  activeStatus, applyStatus, effectiveShell, FLOOD_SPEED_MUL, nextShellMode, rollStatus, STATUS_DPS, STATUS_DURATION_MS, statusDamage, statusSpeedMul,
+  activeStatus, applyCritical, applyStatus, CRITICAL_DURATION_MS, damageReadout, effectiveShell, weaponReadout, FLOOD_SPEED_MUL, nextShellMode, rollStatus, STATUS_DPS, STATUS_DURATION_MS, statusDamage, statusSpeedMul,
 } from '@/systems/DamageSystem';
 import { CombatSystem } from '@/systems/CombatSystem';
 import { ShipClass } from '@/types/ShipClass';
+import { CriticalType } from '@/types/ShipDamage';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 
 const seq = (...v: number[]): (() => number) => {
@@ -41,5 +42,22 @@ describe('弾種と火災・浸水 (#48)', () => {
     expect(vsBB(WeaponType.ShellAP)).toBeGreaterThan(vsBB(WeaponType.ShellHE));
     expect(vsDD(WeaponType.ShellHE)).toBeGreaterThan(vsDD(WeaponType.ShellAP));
     expect([nextShellMode('auto'), nextShellMode('AP'), nextShellMode('HE')]).toEqual(['AP', 'HE', 'auto']);
+  });
+});
+
+describe('HUD readouts (#81)', () => {
+  it('lists each weapon as ready or how far reloaded', () => {
+    expect(weaponReadout([{ label: '主砲', progress: 1 }, { label: '魚雷', progress: 0.645 }])).toBe('主砲 ●  魚雷 64%');
+    expect(weaponReadout([])).toBe('');
+  });
+
+  it('names what is damaged, what it does and how long it lasts', () => {
+    const crits = applyCritical({}, CriticalType.Engine, 0);
+    const status = applyStatus({}, 'fire', 0);
+    const line = damageReadout(crits, status, 3000);
+    expect(line).toContain('機関損傷 速力 −40%');
+    expect(line).toContain(`${Math.ceil((CRITICAL_DURATION_MS - 3000) / 1000)}秒`);
+    expect(line).toContain('火災 9秒');
+    expect(damageReadout({}, {}, 0)).toBe('');
   });
 });

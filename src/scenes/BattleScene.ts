@@ -19,7 +19,7 @@ import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
 import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
-import { applyCritical, applyStatus, CRITICAL_LABEL, effectiveShell, LAND_CRITICAL_LABEL, nextShellMode, rollCriticalHit, rollStatus, SHELL_LABEL, statusDamage, STATUS_LABEL } from '@/systems/DamageSystem';
+import { applyCritical, applyStatus, CRITICAL_LABEL, effectiveShell, LAND_CRITICAL_LABEL, nextShellMode, rollCriticalHit, rollStatus, SHELL_LABEL, statusDamage, STATUS_LABEL, damageReadout, weaponReadout } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
 import { ReconSystem } from '@/systems/ReconSystem';
@@ -463,6 +463,8 @@ export class BattleScene extends Phaser.Scene {
     this.hud.update(this.flagship, this.enemies, this.escorts, {
       reload: this.playerWeapons.reloadProgress(this.flagship, this.playerWeapon, time),
       elapsedSec: (time - this.battleStartedAt) / 1000,
+      weapons: weaponReadout(this.weaponStates(time)),
+      damage: damageReadout(this.flagship.criticals, this.flagship.status, this.battleNow()),
     });
     this.refreshDiveUi();
     this.refreshAirUi();
@@ -1229,6 +1231,19 @@ export class BattleScene extends Phaser.Scene {
       const dmg = statusDamage(s.status, now, delta, s.stats.maxHp);
       if (dmg > 0) s.takeDamage(dmg);
     }
+  }
+
+  /** Each kind of weapon the flagship carries and how far it has reloaded (#81): 主砲 / 副砲 / 魚雷 / 爆雷. */
+  private weaponStates(time: number): Array<{ label: string; progress: number }> {
+    const out: Array<{ label: string; progress: number }> = [];
+    let guns = 0;
+    for (const w of this.flagship.loadout) {
+      const kind = weaponKind(w);
+      const label = kind === WeaponKind.Gun ? (guns++ === 0 ? '主砲' : '副砲') : kind === WeaponKind.Torpedo ? '魚雷' : kind === WeaponKind.DepthCharge ? '爆雷' : '';
+      if (!label || out.some((o) => o.label === label)) continue;
+      out.push({ label, progress: this.playerWeapons.reloadProgress(this.flagship, w, time) });
+    }
+    return out;
   }
 
   /** 弾種 (#48): AUTO → 徹甲弾 → 榴弾; the guns reload when the shells change. */
