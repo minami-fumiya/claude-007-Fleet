@@ -617,9 +617,9 @@ export class HomeScene extends Phaser.Scene {
     const items = pendingSummary(progress, Date.now(), freeDocks);
     if (items.length === 0) return;
     const d = L.dock;
-    const h = IS_PORTRAIT ? 30 : 26;
+    const h = 26;
     const gap = 6;
-    const y = d.y + (IS_PORTRAIT ? 64 : 22);
+    const y = d.y + (IS_PORTRAIT ? 69 : 22);
     const right = d.x + d.w - 22;
     const left = IS_PORTRAIT ? d.x + 22 : d.x + 260;
     const w = Math.min(IS_PORTRAIT ? 150 : 120, (right - left - gap * (items.length - 1)) / items.length);

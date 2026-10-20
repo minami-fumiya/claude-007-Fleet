@@ -733,7 +733,8 @@ test.describe('screens', () => {
     const day = Math.floor((now - 15 * 3_600_000) / 86_400_000);
     const hourly = (JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', 'quests.json'), 'utf8')) as { quests: Array<{ id: string; kind: string; goal: number }> }).quests.filter((q) => q.kind === 'hourly');
     const quests = { hour: Math.floor(now / 3_600_000), day, week: Math.floor((day + 4) / 7), progress: Object.fromEntries(hourly.map((q) => [q.id, q.goal])), claimed: [], totals: {} };
-    const save = { ...SAVE, version: 8, nations: { IJN: { ...SAVE.nations.IJN, perfect: ['p2'], quests, items: { fastRepair: 0, fastBuild: 0, captainBook: 1 } } } };
+    // v17: the v8 step would reset the quests; the v18 step opens p2 for sweeping, full.
+    const save = { ...SAVE, version: 17, nations: { IJN: { ...SAVE.nations.IJN, perfect: ['p2'], quests, items: { fastRepair: 0, fastBuild: 0, captainBook: 1 } } } };
     const errors = await boot(page, layout, save);
     await open(page, 'HomeScene');
     const texts = (): Promise<string[]> => page.evaluate(() => {
@@ -761,6 +762,7 @@ test.describe('screens', () => {
     const claimed = await page.evaluate(() => {
       const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
       const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => x.type === 'Text' && (x as Phaser.GameObjects.Text).text.startsWith('まとめて受け取る')));
+      btn?.emit('pointerdown');
       btn?.emit('pointerup');
       const stored = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { quests: { claimed: string[]; totals: Record<string, number> } } } };
       return { found: btn !== undefined, claimed: stored.nations.IJN.quests.claimed.length, total: stored.nations.IJN.quests.totals.questClaim ?? 0 };
