@@ -1,3 +1,4 @@
+import { Formation } from './Formation';
 import { Nation } from './Nation';
 import { Objective } from './Campaign';
 import { TimeOfDay, Weather } from './Weather';
@@ -15,6 +16,8 @@ export interface IScenarioForce {
   ships: string[];
   /** One placement per ship */
   positions: IScenarioPlacement[];
+  /** Formation when this force is the enemy (#82); chosen by the situation when absent */
+  formation?: Formation;
 }
 
 export interface IScenarioZone {

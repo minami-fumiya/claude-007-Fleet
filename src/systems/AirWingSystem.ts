@@ -89,3 +89,12 @@ export function tickAirWing(state: IAirWingState, now: number): IAirWingState {
   }
   return { ...state, ready, rearming };
 }
+
+/**
+ * 飛行場 (#83): an airfield launches like a carrier that can't move, and slower as it burns: half its HP doubles the
+ * time to re-arm, down to a quarter (four times). A destroyed one launches nothing.
+ */
+export function airfieldRearmMs(base: number, hpFraction: number): number {
+  return Math.round(base / Math.max(0.25, Math.min(1, hpFraction)));
+}
+

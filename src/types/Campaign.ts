@@ -1,3 +1,4 @@
+import { Formation } from './Formation';
 import { Nation } from './Nation';
 import { ShipClass } from './ShipClass';
 import { IResources } from './Progression';
@@ -47,7 +48,8 @@ export interface ICampaignArea {
   requires: string[];
   /** Branch merge (#40): at least one of these must be cleared too */
   requiresAny?: string[];
-  enemy: { nation: Nation; ships: string[] };
+  /** The enemy fleet; `formation` names its formation instead of the usual choice (#82) */
+  enemy: { nation: Nation; ships: string[]; formation?: Formation };
   objective: Objective;
   map: string;
   weather: Weather;

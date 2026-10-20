@@ -44,7 +44,12 @@
       "armor": 15,
       "speed": 0,
       "weapons": [],
-      "spriteKey": "land-airfield"
+      "spriteKey": "land-airfield",
+      "airWing": {
+        "fighters": 2,
+        "diveBombers": 3,
+        "torpedoBombers": 1
+      }
     }
   ],
   "bombardLayout": [

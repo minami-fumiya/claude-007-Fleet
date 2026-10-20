@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** The last released version's save (tests/fixtures/saves): a release must load it without losing anything. */
-const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.31.json'), 'utf8');
+const PREVIOUS_SAVE = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.32.json'), 'utf8');
 
 /**
  * Screen smoke tests (#101). Each screen is opened straight from `window.game` with a seeded save, then checked for
@@ -909,6 +909,49 @@ test.describe('screens', () => {
     expect(await overflowingTexts(page, 'SettingsScene')).toEqual([]);
     expect(await overlappingTexts(page, 'SettingsScene')).toEqual([]);
     await page.screenshot({ path: info.outputPath('backups.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('a bombardment: the airfield sends its planes at the fleet (#83)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.scene.start('BattleScene', { objective: 'Bombard', mapKey: 'atoll' }));
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    type B = { setPaused(p: boolean): void; landTargets: Array<{ stats: { name: string } }>; enemyAir: { squadrons: Array<{ alive: boolean }>; hasCarrier(s: unknown): boolean } };
+    const airfields = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+      b.setPaused(false);
+      return b.landTargets.filter((t) => b.enemyAir.hasCarrier(t)).length;
+    });
+    expect(airfields).toBe(1);
+    // A strike goes up once the fleet is within reach; give it time.
+    await page.waitForFunction(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+      return b.enemyAir.squadrons.some((s) => s.alive);
+    }, null, { timeout: 60_000 });
+    await page.screenshot({ path: info.outputPath('airfield-strike.png') });
+    expect(errors).toEqual([]);
+  });
+
+  test('a superweapon leads the enemy fleet and loses its parts as it is worn down (#148)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.scene.start('BattleScene', { superweapon: true, mapKey: 'open-sea' }));
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    type S = { stats: { name: string; currentHp: number; maxHp: number }; scale: number; criticals: Record<string, number> };
+    type B = { setPaused(p: boolean): void; superweapon: S | null; enemies: S[]; breakParts(s: S, before: number): void };
+    const giant = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+      b.setPaused(false);
+      const sw = b.superweapon!;
+      // Down to 40%: the turrets and the engines give way.
+      sw.stats.currentHp = sw.stats.maxHp * 0.4;
+      b.breakParts(sw, 1);
+      return { name: sw.stats.name, first: b.enemies[0] === sw, scale: sw.scale, crits: Object.keys(sw.criticals).sort() };
+    });
+    expect(giant.first).toBe(true);
+    expect(giant.scale).toBeGreaterThan(1);
+    expect(giant.crits).toEqual(['Engine', 'MainGun']);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: info.outputPath('superweapon.png') });
     expect(errors).toEqual([]);
   });
 
