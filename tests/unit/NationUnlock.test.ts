@@ -3,6 +3,7 @@ import { firstNation, nationLocks, newlyUnlocked, STARTER_NATIONS, theaterFinal 
 import { Nation } from '@/types/Nation';
 import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
+import campaignData from '@/data/campaign.json';
 
 const p = (merit: number, campaign: string[] = []) => ({ merit, campaign, rankFloor: 0, rankStats: ALL_MISSIONS_DONE });
 const open = (locks: ReturnType<typeof nationLocks>): Nation[] => PLAYABLE_NATIONS.filter((n) => locks[n].unlocked);
@@ -29,6 +30,14 @@ describe('nations open step by step (#134)', () => {
     const med = nationLocks({ RN: p(100, [theaterFinal('mediterranean')!]) });
     expect(med.FR.unlocked && med.RM.unlocked).toBe(true);
     expect(nationLocks({ KM: p(500) }).SU.unlocked).toBe(true);
+  });
+
+  it('a training area is no theater final: winning one opens nothing (#241)', () => {
+    const training = campaignData.areas.filter((a) => (a as { training?: boolean }).training).map((a) => a.id);
+    expect(training.length).toBeGreaterThan(0);
+    for (const t of campaignData.theaters) expect(training).not.toContain(theaterFinal(t.id));
+    expect(open(nationLocks({ IJN: p(100, training) }))).toEqual([Nation.IJN]);
+    expect(open(nationLocks({ RN: p(100, training) }))).toEqual([Nation.RN]);
   });
 
   it('a nation already started is never locked (saves from before #134)', () => {

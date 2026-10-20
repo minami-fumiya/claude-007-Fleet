@@ -32,6 +32,32 @@ export function areasOf(data: ICampaignData, theater: string): ICampaignArea[] {
   return data.areas.filter((a) => a.theater === theater);
 }
 
+/**
+ * A theater's final area: its last listed one, training areas aside (#241). Nation unlocks, promotion exams and the
+ * theater's progress all count from this, so a training area listed last never stands in for the real final.
+ */
+export function theaterFinalArea(data: { areas: ReadonlyArray<{ id: string; theater: string; training?: boolean }> }, theater: string): string | undefined {
+  return data.areas.filter((a) => a.theater === theater && !a.training).pop()?.id;
+}
+
+/** What an area's first S rank brings (#247): one thing only — its reward-only ship, else a captain. */
+export type FirstSReward = { kind: 'ship'; ship: IShipData } | { kind: 'captain' } | null;
+
+/**
+ * The one reward of an area's S rank (#247). A training area brings none. An area with a reward-only ship the nation
+ * does not own yet brings that ship (on any S until it is won, #160); otherwise the area's first S brings a captain
+ * while someone is left to join.
+ */
+export function firstSReward(
+  area: Pick<ICampaignArea, 'id' | 'training'>,
+  input: { rewardShip?: IShipData; perfect: string[]; captainsLeft: number },
+): FirstSReward {
+  if (area.training) return null;
+  if (input.rewardShip) return { kind: 'ship', ship: input.rewardShip };
+  if (input.perfect.includes(area.id) || input.captainsLeft <= 0) return null;
+  return { kind: 'captain' };
+}
+
 /** Records a victory. `firstClear` is true when the area had not been cleared before (reward due). */
 export function recordClear(cleared: string[], areaId: string): { cleared: string[]; firstClear: boolean } {
   if (cleared.includes(areaId)) return { cleared, firstClear: false };

@@ -213,6 +213,18 @@ export const MIGRATIONS: MigrationStep[] = [
     const wins = typeof record.victories === 'number' && Number.isFinite(record.victories) ? Math.max(0, Math.floor(record.victories)) : 0;
     return typeof data.wallet === 'object' && data.wallet !== null ? data : { ...data, wallet: { gold: wins * 10, earned: wins * 10, shop: { day: 0, bought: {} } } };
   },
+  // v19 → v20 (0.0.34, #244): a new base starts with one dock instead of two. Every base already open keeps the two
+  // (or more) it had: its count is written down, since a base without an entry now means one.
+  (data) => mapNations(data, (nation, key) => {
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const campaign = Array.isArray(nation.campaign) ? (nation.campaign as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+    const before = typeof nation.baseDocks === 'object' && nation.baseDocks !== null ? nation.baseDocks as Record<string, unknown> : {};
+    const open = Array.isArray(nation.basesOpen) ? (nation.basesOpen as unknown[]).filter((b): b is string => typeof b === 'string') : [];
+    const home = currentBase(key, { campaign, merit: num(nation.merit), rankFloor: num(nation.rankFloor), nation: key, base: typeof nation.base === 'string' ? nation.base : '' })?.id;
+    const bases = new Set([...Object.keys(before), ...open, ...(home ? [home] : [])]);
+    const baseDocks = Object.fromEntries([...bases].map((b) => [b, Math.min(8, Math.max(2, num(before[b])))]));
+    return { ...nation, baseDocks };
+  }),
 ];
 
 /** The v18 record (#177): totals kept, an empty split by kind of battle and by scenario. */

@@ -48,7 +48,9 @@ const L = IS_PORTRAIT
       admiral: { x: 16, y: 272, w: CANVAS_W - 32, h: 90 } as IRect,
       menu: { x: 16, y: 374, w: CANVAS_W - 32, h: 196 } as IRect,
       menuCols: 4,
-      dock: { x: 16, y: 584, w: CANVAS_W - 32, h: CANVAS_H - 600 } as IRect,
+      /** お知らせ (#243): its own strip between the menu and the docks */
+      notice: { x: 16, y: 582, w: CANVAS_W - 32, h: 48 } as IRect,
+      dock: { x: 16, y: 640, w: CANVAS_W - 32, h: CANVAS_H - 656 } as IRect,
       rowH: 92,
     }
   : {
@@ -57,7 +59,8 @@ const L = IS_PORTRAIT
       admiral: { x: 444, y: 158, w: 812, h: 48 } as IRect,
       menu: { x: 24, y: 96, w: 400, h: 600 } as IRect,
       menuCols: 1,
-      dock: { x: 444, y: 216, w: 812, h: 480 } as IRect,
+      notice: { x: 444, y: 214, w: 812, h: 34 } as IRect,
+      dock: { x: 444, y: 256, w: 812, h: 440 } as IRect,
       rowH: 62,
     };
 
@@ -77,7 +80,7 @@ function longClock(ms: number): string {
 
 /**
  * 鎮守府: the home port hub. Shows resources, opens the sortie / arsenal / refit screens and runs the
- * docks, where damaged ships are repaired in real time (two at once) or instantly for a fee.
+ * docks, where damaged ships are repaired in real time (one at a time per dock) or instantly for a fee.
  */
 
 /** 任務 tab (#158): a quest kind, or the promotion missions. */
@@ -270,7 +273,7 @@ export class HomeScene extends Phaser.Scene {
     const rowH = IS_PORTRAIT ? 84 : 52;
     const gap = IS_PORTRAIT ? 12 : 8;
     const w = IS_PORTRAIT ? CANVAS_W - 64 : 620;
-    const h = (IS_PORTRAIT ? 230 : 150) + PLAYABLE_NATIONS.length * (rowH + gap) + (closable ? rowH : 0);
+    const h = (IS_PORTRAIT ? 230 : 150) + PLAYABLE_NATIONS.length * (rowH + gap) + rowH;
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(20, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.95, glow: 0.8 }));
@@ -292,11 +295,17 @@ export class HomeScene extends Phaser.Scene {
       })).setEnabled(lock.unlocked);
       ry += rowH + gap;
     }
-    if (closable) {
-      add(new UIButton(this, x + w / 2, ry + rowH / 2, '閉じる', () => this.closeNationPicker(), {
-        variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: rowH - 8, fontSize: 15,
-      }));
-    }
+    // Always a way out (#242): back to the title, and 閉じる once a base is running.
+    const bw = IS_PORTRAIT ? 260 : 200;
+    const toTitle = (): void => {
+      this.closeNationPicker();
+      this.scene.start(SceneKeys.MAIN_MENU);
+    };
+    const buttons: Array<[string, () => void]> = closable ? [['‹  タイトルへ', toTitle], ['閉じる', () => this.closeNationPicker()]] : [['‹  タイトルへ', toTitle]];
+    buttons.forEach(([label, fn], i) => {
+      const cx = x + w / 2 + (i - (buttons.length - 1) / 2) * (bw + 16);
+      add(new UIButton(this, cx, ry + rowH / 2, label, fn, { variant: 'secondary', width: bw, height: rowH - 8, fontSize: 15 }));
+    });
   }
 
   /**
@@ -620,25 +629,27 @@ export class HomeScene extends Phaser.Scene {
   }
 
   /**
-   * お知らせ (#192): a chip for each thing waiting on the admiral, at the top of the dock panel; a tap goes there.
-   * Portrait: a row under the panel title; landscape: right of it.
+   * お知らせ (#192): a chip for each thing waiting on the admiral; a tap goes there. Since #243 they sit in a strip of
+   * their own above the dock panel, so a finished quest no longer reads as part of the docks; the free docks stay in
+   * the dock panel's own summary line.
    */
-  private drawPending(progress: IProgress, freeDocks: number, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
-    const items = pendingSummary(progress, Date.now(), freeDocks);
-    if (items.length === 0) return;
-    const d = L.dock;
-    const h = 26;
-    const gap = 6;
-    const y = d.y + (IS_PORTRAIT ? 69 : 22);
-    const right = d.x + d.w - 22;
-    const left = IS_PORTRAIT ? d.x + 22 : d.x + 260;
-    const w = Math.min(IS_PORTRAIT ? 150 : 120, (right - left - gap * (items.length - 1)) / items.length);
+  private drawPending(progress: IProgress, add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
+    const items = pendingSummary(progress, Date.now(), 0).filter((p) => p.id !== 'docks');
+    const n = L.notice;
+    add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
+    if (items.length === 0) {
+      add(this.add.text(n.x + 96, n.y + n.h / 2, 'ありません', textStyle(12, Css.dim)).setOrigin(0, 0.5));
+      return;
+    }
+    const gap = 8;
+    const left = n.x + 96;
+    const right = n.x + n.w;
+    const w = Math.min(IS_PORTRAIT ? 200 : 150, (right - left - gap * (items.length - 1)) / items.length);
     items.forEach((it, i) => {
-      const x = (IS_PORTRAIT ? left : right - items.length * (w + gap) + gap) + i * (w + gap) + w / 2;
-      add(new UIButton(this, x, y, `${it.label} ${it.count}`, () => {
+      add(new UIButton(this, left + i * (w + gap) + w / 2, n.y + n.h / 2, `${it.label} ${it.count}`, () => {
         if (it.id === 'quests') this.openQuests();
         else this.scene.start(it.scene, { returnTo: SceneKeys.HOME });
-      }, { variant: it.id === 'quests' ? 'gold' : 'primary', width: w, height: h, fontSize: 12 }));
+      }, { variant: it.id === 'quests' ? 'gold' : 'primary', width: w, height: n.h - 6, fontSize: IS_PORTRAIT ? 14 : 12 }));
     });
   }
 
@@ -669,7 +680,7 @@ export class HomeScene extends Phaser.Scene {
 
     const d = L.dock;
     const pad = 22;
-    let y = d.y + (IS_PORTRAIT ? 86 : 66);
+    let y = d.y + (IS_PORTRAIT ? 72 : 66);
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       this.dynamic.push(o);
       return o;
@@ -682,7 +693,7 @@ export class HomeScene extends Phaser.Scene {
     const docks = dockCount(progress);
     const building = buildsHere(all).length;
     const used = progress.docks.length + building;
-    this.drawPending(all, Math.max(0, docks - used), add);
+    this.drawPending(all, add);
     add(this.add.text(d.x + pad, y, 'ドック', eyebrowStyle(10, Css.gold)));
     add(this.add.text(d.x + pad + 110, y - 2, `使用中 ${used} / ${docks}  ·  入渠 ${progress.docks.length}・建造 ${building}  ·  空き ${Math.max(0, docks - used)}`, textStyle(13, used >= docks ? Css.gold : Css.muted)));
     y += IS_PORTRAIT ? 48 : 36;
