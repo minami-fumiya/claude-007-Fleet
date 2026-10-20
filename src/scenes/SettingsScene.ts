@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DIFFICULTIES, nextDifficulty } from '@/systems/DifficultySystem';
 import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -111,6 +112,17 @@ export class SettingsScene extends Phaser.Scene {
     y += BTN_H + 6;
     this.track(this.add.text(x, y, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回 標準」にすると、編成画面を開くたびに標準 (戦域の相手国・水上戦・晴天・昼・同数) から始まります。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 84 : 32;
+    // 難易度 (#100): taps cycle 易しい → 普通 → 難しい.
+    const diff = DIFFICULTIES[s.difficulty];
+    this.track(this.add.text(x, y + BTN_H / 2, '難易度', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    this.track(
+      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, diff.label, () => this.change({ difficulty: nextDifficulty(s.difficulty) }), {
+        variant: s.difficulty === 'normal' ? 'secondary' : 'primary', width: muteW, height: BTN_H, fontSize: 16,
+      }),
+    );
+    y += BTN_H + 6;
+    this.track(this.add.text(x, y, `作戦と演習の敵の強さ。報酬 ×${diff.rewardMul}・敵の耐久 ×${diff.hpMul} (史実は常に普通)`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    y += IS_PORTRAIT ? 44 : 32;
 
     if (!IS_PORTRAIT) {
       x = P.x + 28 + colW + COL_GAP;

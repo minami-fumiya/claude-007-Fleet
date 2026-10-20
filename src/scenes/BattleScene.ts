@@ -32,6 +32,7 @@ import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoi
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
+import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
@@ -185,6 +186,8 @@ export class BattleScene extends Phaser.Scene {
   private scenario: IScenario | null = null;
   /** Free battle (演習, #15): starts at full HP and keeps no damage */
   private exercise = false;
+  /** 難易度 (#100) of this battle: scenarios always 普通 */
+  private difficulty: IDifficulty = DIFFICULTIES.normal;
   private scenarioSetup: IScenarioSetup | null = null;
   /** Objective details: the scenario side's, or the campaign area's (#40) */
   private side: (IScenarioSide & { targetLead?: boolean; arrivalSec?: number }) | null = null;
@@ -328,6 +331,7 @@ export class BattleScene extends Phaser.Scene {
     const bossNode = this.battleData?.sortie?.boss ?? true;
     this.side = this.scenarioSetup?.side ?? (bossNode ? campaignSide(battleArea) : null);
     this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
+    this.difficulty = battleDifficulty(audio.settings.difficulty, this.scenario !== null);
     this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);
@@ -403,7 +407,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateDetection();
     const playerView = this.playerSide().map((s) => ({
       ...shipView(s, this.seenByEnemy.has(s)),
-      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY + FORMATION_RULES[this.formation].flagshipPriority : 0,
+      priority: s.isConvoy ? CONVOY_PRIORITY : s === this.flagship ? FLAGSHIP_PRIORITY + FORMATION_RULES[this.formation].flagshipPriority + this.difficulty.flagshipPriority : 0,
     }));
     const enemyView = this.enemies.map((s) => ({ ...shipView(s, this.seenByPlayer.has(s)), priority: this.scenarioTargets.includes(s) ? OBJECTIVE_PRIORITY : 0 }));
 
@@ -680,6 +684,10 @@ export class BattleScene extends Phaser.Scene {
       const placed = this.scenarioSetup?.enemy.positions[i];
       const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : line[i];
       const enemy = this.spawnShip(shipData, pos.x, pos.y);
+      // 難易度 (#100): how well the enemy aims and how much it takes.
+      enemy.aimErrorMul *= this.difficulty.aimMul;
+      enemy.stats.maxHp = Math.round(enemy.stats.maxHp * this.difficulty.hpMul);
+      enemy.stats.currentHp = enemy.stats.maxHp;
       enemy.setTint(0xdd4444);
       enemy.setAngle(placed ? placed.angle : 180);
       this.enemies.push(enemy);
@@ -1588,7 +1596,7 @@ export class BattleScene extends Phaser.Scene {
       planesLost: this.playerAir.totalLost(),
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) });
+    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) * this.difficulty.rewardMul });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over. The record keeps
       // their results apart (#177), out of the career totals.
@@ -1649,7 +1657,7 @@ export class BattleScene extends Phaser.Scene {
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
@@ -1708,7 +1716,7 @@ export class BattleScene extends Phaser.Scene {
     const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
     progress = addMerit(progress, merit).progress;
     // ゴールド (#183): campaign wins by rank, more on a first clear.
-    const gold = battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training });
+    const gold = Math.round(battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training }) * this.difficulty.rewardMul);
     if (gold > 0) progress = { ...progress, wallet: addGold(walletOf(progress), gold) };
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };

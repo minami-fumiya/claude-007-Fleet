@@ -1,3 +1,5 @@
+import { Difficulty, isDifficulty } from './DifficultySystem';
+
 /** Player settings (pure): sound volumes and mute, touch controls and Fleet Builder defaults, kept apart from game progress. */
 
 export interface ISettings {
@@ -16,9 +18,11 @@ export interface ISettings {
   customizeAll: boolean;
   /** The last version whose changes the title screen showed (#205); '' before 0.0.26 */
   lastSeenVersion: string;
+  /** 難易度 (#100): campaign and exercise battles */
+  difficulty: Difficulty;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '' };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal' };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -48,6 +52,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       encyclopediaOwnedOnly: typeof d.encyclopediaOwnedOnly === 'boolean' ? d.encyclopediaOwnedOnly : DEFAULT_SETTINGS.encyclopediaOwnedOnly,
       customizeAll: typeof d.customizeAll === 'boolean' ? d.customizeAll : DEFAULT_SETTINGS.customizeAll,
       lastSeenVersion: typeof d.lastSeenVersion === 'string' ? d.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
+      difficulty: isDifficulty(d.difficulty) ? d.difficulty : DEFAULT_SETTINGS.difficulty,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };
