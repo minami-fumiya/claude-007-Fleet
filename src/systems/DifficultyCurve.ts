@@ -1,5 +1,6 @@
 import { ICampaignArea, ICampaignData } from '@/types/Campaign';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
+import { ShipClass } from '@/types/ShipClass';
 import { RANKS, START_RANK } from './RankSystem';
 
 /**
@@ -15,6 +16,18 @@ export const CURVE_BASE = 250;
 export const CURVE_GROWTH = 1.5;
 /** How far an area's enemy may sit below or above the target (historical battles vary). */
 export const CURVE_BAND = { low: 0.4, high: 2.5 } as const;
+/** The opening (#268): up to this depth the band tops out lower, so a starting fleet of destroyers can win. */
+export const EARLY_DEPTH = 3;
+export const EARLY_HIGH = 1.6;
+/** Up to this depth no heavy cruiser, battleship or carrier sails against a new admiral (#268). */
+export const LIGHT_ONLY_DEPTH = 2;
+
+/** Whether a ship may appear at `depth`: the first steps keep to destroyers, submarines and light cruisers. */
+export function allowedAtDepth(ship: Pick<IShipData, 'shipClass' | 'subtype'>, depth: number): boolean {
+  if (depth > LIGHT_ONLY_DEPTH) return true;
+  if (ship.shipClass === ShipClass.Battleship || ship.shipClass === ShipClass.Carrier) return false;
+  return !(ship.shipClass === ShipClass.Cruiser && ship.subtype !== ShipSubtype.LightCruiser);
+}
 
 /** One ship's weight in the strength sum. */
 export function shipPower(ship: Pick<IShipData, 'hp' | 'armor'>): number {
@@ -53,7 +66,8 @@ export function targetPower(depth: number): number {
 /** Whether `power` sits inside the band at `depth`. */
 export function withinCurve(power: number, depth: number): boolean {
   const t = targetPower(depth);
-  return power >= t * CURVE_BAND.low && power <= t * CURVE_BAND.high;
+  const high = depth <= EARLY_DEPTH ? EARLY_HIGH : CURVE_BAND.high;
+  return power >= t * CURVE_BAND.low && power <= t * high;
 }
 
 /** The rank an area is meant for: 准尉 for the first two steps, one rank a step after that. */

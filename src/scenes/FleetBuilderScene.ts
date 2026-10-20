@@ -18,6 +18,7 @@ import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/
 import { ICaptain, ICaptainData } from '@/types/Captain';
 import { aptitudeFor, assignCaptains, captainFit, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { askShipName } from '@/ui/components/FilterBar';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { formatResources } from '@/systems/ResourceSystem';
@@ -32,12 +33,13 @@ import { ShipClass } from '@/types/ShipClass';
 import { filterAndSort, isHeavyCruiser, KIND_FILTERS, KindFilter, kindBreakdown, kindGroups, kindShort, ShipSort, SORT_LABEL } from '@/systems/ShipKind';
 import { FORMATION_ORDER, FORMATION_RULES, formationUnlocked, usableFormation } from '@/systems/FormationRules';
 import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, withPreset } from '@/systems/PresetSystem';
+import { filterShips, NO_FILTER } from '@/systems/ListFilter';
 import { filterEntries, kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
 import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { actionVariant, addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie, sortieShipIds } from '@/utils/SortieFlow';
@@ -319,6 +321,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Ship list filter and order (#33), shared by the landscape list and the picker sheet */
   private kindFilter: KindFilter = KindFilter.All;
   private sort: ShipSort = ShipSort.Default;
+  /** Name search over the ship list (#263) */
+  private query = '';
   private listControls: IListControls | null = null;
   /** Preset buttons; while `saveArmed` the next preset tapped is overwritten with the current fleet */
   private presetButtons: UIButton[] = [];
@@ -620,8 +624,14 @@ export class FleetBuilderScene extends Phaser.Scene {
         this.kindFilter = KIND_FILTERS[i].id;
         onChange();
       }),
-      sorts: row(y + h + rowGap, SORTS.map((k) => `並び: ${SORT_LABEL[k]}`), (i) => {
-        this.sort = SORTS[i];
+      // The sort row ends with a name search (#263).
+      sorts: row(y + h + rowGap, [...SORTS.map((k) => `並び: ${SORT_LABEL[k]}`), '名前で検索'], (i) => {
+        if (i < SORTS.length) this.sort = SORTS[i];
+        else {
+          const query = askShipName(this.query);
+          if (query === null) return;
+          this.query = query;
+        }
         onChange();
       }),
     };
@@ -633,6 +643,13 @@ export class FleetBuilderScene extends Phaser.Scene {
     if (!c) return;
     FleetBuilderScene.setToggle(c.filters, KIND_FILTERS.findIndex((k) => k.id === this.kindFilter));
     FleetBuilderScene.setToggle(c.sorts, SORTS.indexOf(this.sort));
+    const search = c.sorts[SORTS.length];
+    search?.setLabel(this.query ? `検索: ${this.query}` : '名前で検索').setVariant(this.query ? 'primary' : 'secondary');
+  }
+
+  /** The kind filter, the sort and the name search (#263) over `ships`. */
+  private listed(ships: IShipData[]): IShipData[] {
+    return filterShips(filterAndSort(ships, this.kindFilter, this.sort), { ...NO_FILTER, query: this.query }, { owned: [], roster: this.shipRegistry.byNation(this.nation) });
   }
 
   private rebuildShipList(): void {
@@ -731,7 +748,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const itemH = this.L.shipItemH;
     // Rows leave a gutter on the right for the scrollbar.
     const w = this.L.ships.w - PANEL_PAD * 2 - 12;
-    const shown = filterAndSort(this.ships, this.kindFilter, this.sort);
+    const shown = this.listed(this.ships);
     shown.forEach((ship, i) => {
       const card = this.shipRow(ship, w, itemH, null).setY(i * (itemH + ITEM_GAP));
       list.addItem(card, w, itemH, this.onTap(() => this.addShipToFleet(ship)));
@@ -802,7 +819,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     list.clear();
     const itemH = this.L.shipItemH;
     const w = (IS_PORTRAIT ? CANVAS_W - 32 : 812) - (PANEL_PAD + 8) * 2 - 12;
-    const shown = filterAndSort(this.ships, this.kindFilter, this.sort);
+    const shown = this.listed(this.ships);
     shown.forEach((ship, i) => {
       const at = this.slotOf(ship);
       // A ship already in another slot swaps places with this one (#147); it is never in two slots (#76).
@@ -1603,7 +1620,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
     // In organize mode the buttons only move on, so they stay enabled.
-    if (!this.organizeOnly) this.startBtn.setEnabled(this.canStart());
+    if (!this.organizeOnly) this.startBtn.setEnabled(this.canStart()).setVariant(actionVariant(this.canStart()));
   }
 
   /**

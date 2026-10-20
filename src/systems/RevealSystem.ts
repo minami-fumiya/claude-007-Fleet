@@ -18,6 +18,17 @@ export function buildNameShown(state: BuildState): boolean {
   return !LOCKED.has(state);
 }
 
+/**
+ * How the shipyard draws a card (#262): in colour only when it can be built now, is owned or is being built; grey
+ * for everything else — out of resources or docks too — and grey with the name hidden when it is out of reach.
+ */
+export type BuildLook = 'owned' | 'building' | 'ready' | 'grey' | 'hidden';
+
+export function buildLook(state: BuildState): BuildLook {
+  if (state === 'owned' || state === 'building' || state === 'ready') return state;
+  return buildNameShown(state) ? 'grey' : 'hidden';
+}
+
 /** The name a hidden ship goes by: "長門型 ？番艦" when a ship of its class is owned, else "？？？". */
 export function hiddenShipName(roster: readonly IShipData[], ship: IShipData, owned: readonly string[]): string {
   const key = classKey(ship);

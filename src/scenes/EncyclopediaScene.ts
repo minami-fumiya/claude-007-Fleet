@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
+import { filterShips, IListFilter, kindsOf, NO_FILTER } from '@/systems/ListFilter';
+import { FilterBar, loadFilter } from '@/ui/components/FilterBar';
 import { formatNo } from '@/systems/Numbering';
 import { HIDDEN_NAME, hiddenShipName } from '@/systems/RevealSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -85,6 +87,8 @@ export class EncyclopediaScene extends Phaser.Scene {
   private shipClass: ShipClass | null = null;
   /** Show only what the player has (#44); off shows everything, the rest as silhouettes */
   private ownedOnly = true;
+  /** The ship list's kind and name search (#263), kept between visits */
+  private shipFilter: IListFilter = NO_FILTER;
   private list!: ScrollList;
   private countText!: Phaser.GameObjects.Text;
   private selectedId = '';
@@ -117,6 +121,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.dynamic = [];
     this.nation = loadSave().current;
     this.ownedOnly = audio.settings.encyclopediaOwnedOnly;
+    this.shipFilter = loadFilter('encyclopedia');
     const all = DataLoader.getRegistry(this).all();
     this.maxStat = {
       hp: Math.max(...all.map((s) => s.hp)),
@@ -132,7 +137,8 @@ export class EncyclopediaScene extends Phaser.Scene {
     addPanel(this, L.list.x, L.list.y, L.list.w, L.list.h, { radius: 24, fillAlpha: 0.5 });
     addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
     const { x, y, w, h } = L.list;
-    const top = y + PAD + (NATION_ROWS + 2) * (L.tabH + TAB_GAP) + 4;
+    // Rows: what to look at, the nations, the ship classes and the filter bar (#263).
+    const top = y + PAD + (NATION_ROWS + 3) * (L.tabH + TAB_GAP) + 4;
     // The list scrolls (#20); its right edge leaves a gutter for the scrollbar.
     this.list = new ScrollList(this, { x: x + PAD, y: top, w: w - PAD * 2 + 4, h: y + h - PAD - COUNT_H - top });
     this.countText = this.add.text(x + w / 2, y + h - PAD - COUNT_H / 2 + 2, '', textStyle(12, Css.muted)).setOrigin(0.5);
@@ -175,7 +181,9 @@ export class EncyclopediaScene extends Phaser.Scene {
         const owned = this.ownedShipIds();
         const roster = DataLoader.getRegistry(this).byNation(this.nation);
         // Not owned yet (#245): the name stays hidden ("長門型 ？番艦" once a ship of the class is owned).
-        return filterEntries(roster, this.shipClass).map((s) => {
+        // 一覧の絞り込み (#263): the kind and a name search; a ship not yet owned never matches a name.
+        const listed = filterShips(filterEntries(roster, this.shipClass), this.shipFilter, { owned, roster, nameKnown: (s) => owned.includes(s.id) });
+        return listed.map((s) => {
           const have = owned.includes(s.id);
           return {
             id: s.id, name: have ? s.name.replace(/\s*\(.*\)\s*$/, '') : hiddenShipName(roster, s, owned), sub: `${s.fictional && have ? '架空  ' : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: have,
@@ -268,6 +276,20 @@ export class EncyclopediaScene extends Phaser.Scene {
         this.list.setOffset(0);
         this.refresh();
       }, 12);
+      const bar = new FilterBar(this, { x: x + PAD, y: y + PAD + (NATION_ROWS + 2) * (L.tabH + TAB_GAP), w: inner, h: L.tabH }, {
+        key: 'encyclopedia', states: null,
+        kinds: () => kindsOf(filterEntries(DataLoader.getRegistry(this).byNation(this.nation), this.shipClass)),
+        onChange: (f) => {
+          this.shipFilter = f;
+          this.list.setOffset(0);
+          this.refresh();
+        },
+        fontSize: 12,
+      });
+      this.shipFilter = bar.filter;
+      bar.fitKinds();
+      this.shipFilter = bar.filter;
+      for (const b of bar.buttons) this.track(b);
     }
   }
 

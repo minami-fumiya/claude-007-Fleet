@@ -143,8 +143,9 @@ export class ResearchView {
     TECH_BRANCHES.forEach((b, i) => {
       const p = branchProgress(this.tree, b.id, done);
       const tab = this.tabs[i];
-      tab.setVariant(b.id === lastBranch ? 'primary' : p.done === p.total ? 'gold' : 'secondary');
-      tab.setCaption(`${p.done}/${p.total}`);
+      // A finished branch is not a call to action (#269): it stays plain and says so.
+      tab.setVariant(b.id === lastBranch ? 'primary' : 'secondary');
+      tab.setCaption(p.done === p.total ? '完了' : `${p.done}/${p.total}`);
     });
     this.summary.setText(this.summaryText(done));
     for (const c of this.cards) {

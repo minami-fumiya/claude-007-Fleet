@@ -87,9 +87,9 @@ describe('quests (#52)', () => {
   it('progress, claim once, daily reset keeps one-time quests', () => {
     let s = refreshQuests(emptyQuestState(), MONDAY_5AM);
     const weekly = activeQuests('weekly', MONDAY_5AM)[0];
-    s = recordQuestEvent(s, 'sortie', MONDAY_5AM, 7);
+    s = recordQuestEvent(s, 'sortie', MONDAY_5AM, 25);
     s = recordQuestEvent(s, weekly.event, MONDAY_5AM, 1);
-    expect(s.progress.d_sortie).toBe(5);
+    expect(s.progress.d_sortie).toBe(20);
     expect(s.progress[weekly.id]).toBeGreaterThanOrEqual(1);
     s = recordQuestEvent(s, 'build', MONDAY_5AM);
     expect(isClaimable(s, QUESTS.find((q) => q.id === 'a_build')!)).toBe(true);
@@ -239,5 +239,21 @@ describe('sweep (#57)', () => {
     expect(sweepsLeft(p, area.id, MONDAY_5AM + HOUR)).toBe(1);
     // Areas keep their own charges; an area open from before the charges counts as full.
     expect(sweepsLeft(p, 'other', MONDAY_5AM)).toBe(SWEEP_MAX);
+  });
+
+  it('dailies ask about 10x an hourly, weeklies about 100x, and pay more for it (#266)', () => {
+    // Builds, remodels, research, repairs and sweeps are limited by docks, resources and charges: they scale less.
+    const limited = ['build', 'refit', 'research', 'repair', 'sweep'];
+    const hourly = new Map(QUESTS.filter((q) => q.kind === 'hourly').map((q) => [q.event, q]));
+    for (const q of QUESTS.filter((x) => (x.kind === 'daily' || x.kind === 'weekly') && hourly.has(x.event))) {
+      const h = hourly.get(q.event)!;
+      const ratio = q.goal / h.goal;
+      const [lo, hi] = limited.includes(q.event) ? (q.kind === 'daily' ? [3, 10] : [15, 50]) : q.kind === 'daily' ? [8, 12] : [80, 120];
+      expect(ratio, q.id).toBeGreaterThanOrEqual(lo);
+      expect(ratio, q.id).toBeLessThanOrEqual(hi);
+      const sum = (r: Partial<Record<string, number>>): number => Object.values(r).reduce<number>((a, b) => a + (b ?? 0), 0);
+      expect(sum(q.reward ?? {}), q.id).toBeGreaterThan(sum(h.reward ?? {}) * (q.kind === 'daily' ? 2 : 8));
+      expect(q.text, q.id).toContain(`${q.goal} `);
+    }
   });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { classKey, className, hullNumber, shipClasses, shipOrder } from '@/systems/ShipOrder';
-import { buildNameShown, HIDDEN_NAME, hiddenShipName } from '@/systems/RevealSystem';
+import { buildLook, buildNameShown, HIDDEN_NAME, hiddenShipName } from '@/systems/RevealSystem';
+import { shortfall } from '@/systems/ResourceSystem';
 import { filterEntries } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
@@ -81,5 +82,17 @@ describe('what is out of reach stays nameless (#245)', () => {
     expect(hiddenShipName(j, byId(j, 'mutsu'), [])).toBe(HIDDEN_NAME);
     expect(hiddenShipName(j, byId(j, 'mutsu'), ['nagato'])).toBe('長門型 ？番艦');
     expect(hiddenShipName(j, byId(j, 'mutsu'), ['mutsu'])).toBe(HIDDEN_NAME);
+  });
+});
+
+describe('the shipyard card look (#262)', () => {
+  it('only what can be built now, is owned or is building is in colour; short of resources or docks is grey', () => {
+    expect(buildLook('ready')).toBe('ready');
+    expect(buildLook('owned')).toBe('owned');
+    expect(buildLook('building')).toBe('building');
+    expect(buildLook('resources')).toBe('grey');
+    expect(buildLook('dock')).toBe('grey');
+    for (const s of ['reward', 'research', 'fictional', 'rank', 'medal'] as BuildState[]) expect(buildLook(s), s).toBe('hidden');
+    expect(shortfall({ fuel: 50, ammo: 500, steel: 100, bauxite: 0 }, { fuel: 100, ammo: 100, steel: 220 })).toEqual({ fuel: 50, ammo: 0, steel: 120, bauxite: 0 });
   });
 });
