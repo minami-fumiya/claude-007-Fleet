@@ -78,3 +78,25 @@ export function playableScenarios(list: readonly IScenario[], nation: string): I
 export function playableSides(sc: IScenario, nation: string): number[] {
   return sc.sides.map((side, i) => ({ side, i })).filter(({ side }) => sc.forces[side.force].nation === nation).map(({ i }) => i);
 }
+
+/**
+ * 史実との比較 (#200): the battle against the real one, from the side played. `sunk` is enemy ships sunk, `lost` the
+ * player's own. Better than history: more sunk for no more lost, as many for fewer, or a win where history lost.
+ */
+export function historyComparison(sc: IScenario, force: 'A' | 'B', r: { victory: boolean; sunk: number; lost: number }): { text: string; better: boolean } | null {
+  const h = sc.history;
+  if (!h) return null;
+  const histSunk = h.lost[force === 'A' ? 'B' : 'A'];
+  const histLost = h.lost[force];
+  const overturned = r.victory && h.winner !== 'draw' && h.winner !== force;
+  const better = overturned || (r.sunk > histSunk && r.lost <= histLost) || (r.sunk >= histSunk && r.lost < histLost);
+  const worse = !better && (r.sunk < histSunk || r.lost > histLost);
+  const verdict = overturned ? '史実を覆した' : better ? '史実を上回る戦果' : worse ? '史実に及ばず' : '史実どおり';
+  return { text: `史実との比較: 撃沈 ${r.sunk} 隻 (史実 ${histSunk})・損失 ${r.lost} 隻 (史実 ${histLost}) — ${verdict}`, better };
+}
+
+/** The force that lost the real battle (#200), or null for a draw or a scenario without history. */
+export function historicalLoser(sc: IScenario): 'A' | 'B' | null {
+  const w = sc.history?.winner;
+  return w === 'A' ? 'B' : w === 'B' ? 'A' : null;
+}

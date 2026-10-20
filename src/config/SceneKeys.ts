@@ -17,6 +17,8 @@ export const SceneKeys = {
   SETTINGS: 'SettingsScene',
   HELP: 'HelpScene',
   HOME: 'HomeScene',
+  SHOP: 'ShopScene',
+  ITEMS: 'ItemScene',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];

@@ -25,7 +25,7 @@ describe('service record by kind of battle (#177)', () => {
     expect(r.sorties).toBe(0);
     expect(r.sunk).toEqual({});
     expect(r.byMode?.scenario?.victories).toBe(3);
-    expect(r.scenarios?.midway).toEqual({ wins: { A: 1, B: 1 }, losses: { B: 1 } });
+    expect(r.scenarios?.midway).toEqual(expect.objectContaining({ wins: { A: 1, B: 1 }, losses: { B: 1 } }));
     expect(scenarioWins(r)).toEqual({ won: 2, bothSides: 1 });
     expect(medalProgress('both_sides', r, { clearedTheaters: [] })).toEqual([1, 1]);
     expect(medalProgress('historian', r, { clearedTheaters: [] })).toEqual([2, 3]);

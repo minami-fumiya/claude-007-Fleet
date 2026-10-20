@@ -117,7 +117,11 @@ export class ScenarioScene extends Phaser.Scene {
       if (IS_PORTRAIT && vs.width > room) vs.setScale(room / vs.width);
       const title = this.add.text(18, IS_PORTRAIT ? 38 : 34, sc.name, displayStyle(IS_PORTRAIT ? 18 : 20));
       if (title.width > r.w - 30) title.setScale((r.w - 30) / title.width);
-      const card = track(this.add.container(r.x, r.y, [frame, date, title, vs]));
+      // ★ for a scenario won from a side this nation plays (#200).
+      const rec = loadProgress().record.scenarios?.[sc.id];
+      const won = playableSides(sc, this.nation).some((si) => (rec?.wins[sc.sides[si].force] ?? 0) > 0);
+      const star = this.add.text(r.w - 16, r.h - (IS_PORTRAIT ? 24 : 28), won ? '★ 勝利済み' : '', textStyle(11, Css.gold)).setOrigin(1, 0);
+      const card = track(this.add.container(r.x, r.y, [frame, date, title, vs, star]));
       makeClickable(card, r.w, r.h);
       card.on('pointerup', () => {
         this.selected = i;
@@ -198,10 +202,13 @@ export class ScenarioScene extends Phaser.Scene {
     for (const [vi, variant] of variants.entries()) {
       const placed: Phaser.GameObjects.Text[] = [];
       y = top;
+      // 史実 (#200): what really happened, and this side's best battle so far.
+      const best = loadProgress().record.scenarios?.[sc.id]?.best?.[setup.side.force];
       const rows: Array<[string, string]> = [
         ['勝利条件', `${OBJECTIVE_LABEL[setup.side.objective]} — ${setup.side.brief}`],
         ['味方', variant(lineups[0])],
         ['敵', variant(lineups[1])],
+        ...(sc.history ? [['史実', `${sc.history.text}${best ? `\n最良の記録: ${best.victory ? '勝利' : '敗北'}・撃沈 ${best.sunk} 隻・損失 ${best.lost} 隻` : ''}`] as [string, string]] : []),
       ];
       for (const [k, v] of rows) {
         placed.push(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));

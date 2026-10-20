@@ -57,7 +57,8 @@ import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { applyToStats, applyToWeapons, combineModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, levelUpNotes, MAX_LEVEL, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { ShipClass } from '@/types/ShipClass';
-import { IProgress, loadProgress, loadSave, saveProgress, withProgress as withSaveProgress } from '@/utils/ProgressStore';
+import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
+import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
@@ -79,7 +80,7 @@ import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
 import { IScenario, IScenarioSide } from '@/types/Scenario';
-import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
+import { historyComparison, inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
@@ -1591,10 +1592,19 @@ export class BattleScene extends Phaser.Scene {
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over. The record keeps
       // their results apart (#177), out of the career totals.
-      saveProgress(this.updateRecord(loadProgress(), victory, fleet.filter((s) => !s.isAlive).length, result));
+      const before = loadProgress();
+      let after = this.updateRecord(before, victory, fleet.filter((s) => !s.isAlive).length, result);
+      // A side's first win pays a little gold (#200 #183); scenarios stay exhibitions otherwise.
+      const force = this.scenarioSetup?.side.force;
+      const firstWin = victory && force !== undefined && (before.record.scenarios?.[this.scenario.id]?.wins[force] ?? 0) === 0;
+      if (firstWin) after = { ...after, wallet: addGold(walletOf(after), GOLD_SCENARIO_FIRST) };
+      saveProgress(after);
       result.reward = undefined;
       result.cost = undefined;
-      result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}`;
+      result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}${firstWin ? `  ·  初勝利 ゴールド ${GOLD_SCENARIO_FIRST}` : ''}`;
+      // 史実との比較 (#200), on its own line.
+      const cmp = force ? historyComparison(this.scenario, force, { victory, sunk: enemiesSunk, lost: fleet.filter((s) => !s.isAlive).length }) : null;
+      if (cmp) result.event = cmp.text;
       result.returnScene = SceneKeys.SCENARIO;
       result.retry = this.battleData ?? undefined;
       this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
@@ -1697,6 +1707,9 @@ export class BattleScene extends Phaser.Scene {
     }
     const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
     progress = addMerit(progress, merit).progress;
+    // ゴールド (#183): campaign wins by rank, more on a first clear.
+    const gold = battleGold({ victory, campaign: area !== undefined, rank, firstClear, training: area?.training });
+    if (gold > 0) progress = { ...progress, wallet: addGold(walletOf(progress), gold) };
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };
     if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
@@ -1731,7 +1744,7 @@ export class BattleScene extends Phaser.Scene {
     // Tutorial (#90): any battle moves the battle step on; a first clear finishes the campaign step.
     emitTutorial('battleEnd', this.registry);
     if (firstClear) emitTutorial('firstClear', this.registry);
-    result.reward = `${formatResources(settlement.reward)}${lostNote(lost)}`;
+    result.reward = `${formatResources(settlement.reward)}${gold > 0 ? `・ゴールド ${gold}` : ''}${lostNote(lost)}`;
     // On its own line under the reward (it ran into the reward and wrapped mid-word).
     if (eventAppliesToBattle(event, area?.theater)) result.event = `イベント: ${eventLabel(event)}`;
     result.cost = formatResources(settlement.aircraftCost);
@@ -1752,7 +1765,8 @@ export class BattleScene extends Phaser.Scene {
     const medals = awarded.medals;
     record = awarded.save.record;
     if (medals.length > 0) result.medals = medals.map((m) => m.name);
-    return { ...progress, record };
+    // Medals bring gold (#183): the purse goes back with the record.
+    return { ...progress, record, wallet: awarded.save.wallet };
   }
 
 }

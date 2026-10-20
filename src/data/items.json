@@ -1,0 +1,9 @@
+{
+  "_comment": "Items the admiral holds (#184). `id` matches IItems (and 'gold' for the purse, #183); `scene` is where the item is used.",
+  "items": [
+    { "id": "gold", "name": "ゴールド", "description": "ショップで資源やアイテムと交換できる通貨。全ての国で共通", "sources": ["戦闘の勝利 (作戦)", "海域の初回攻略", "任務", "掃討", "勲章の授与"], "scene": "ShopScene", "use": "ショップへ" },
+    { "id": "fastRepair", "name": "高速修理材", "description": "入渠中の艦の修理をすぐに終わらせる", "sources": ["任務", "ショップ", "作戦の報酬"], "scene": "HomeScene", "use": "入渠へ" },
+    { "id": "fastBuild", "name": "高速建造材", "description": "建造中の艦や軍港の工事をすぐに終わらせる", "sources": ["任務", "ショップ"], "scene": "ShipyardScene", "use": "建造へ" },
+    { "id": "captainBook", "name": "艦長教本", "description": "好きな艦長に使うと経験値が増える", "sources": ["艦長が全員そろった後の S 評価・昇進", "ショップ"], "scene": "CaptainScene", "use": "艦長へ" }
+  ]
+}

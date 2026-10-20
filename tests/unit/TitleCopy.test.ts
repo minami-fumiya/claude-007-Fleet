@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { titleTiles } from '@/systems/TitleCopy';
+import { continueLabel, titleTiles } from '@/systems/TitleCopy';
 import { Formation } from '@/types/Formation';
 import { Objective } from '@/types/Campaign';
 
@@ -13,3 +13,11 @@ describe('title copy (#197)', () => {
     }
   });
 });
+
+describe('the title button (#198)', () => {
+  it('names the nation and rank to go back to, or the home port for a new save', () => {
+    expect(continueLabel('日本', '少佐')).toBe('日本 · 少佐 で続ける');
+    expect(continueLabel(null, null)).toBe('鎮守府へ  →');
+  });
+});
+

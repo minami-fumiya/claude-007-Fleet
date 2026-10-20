@@ -162,4 +162,12 @@ describe('v11 → v12: hourly quests and lifetime totals (#158)', () => {
     const n = parseSave(JSON.stringify(fixture)).nations[Nation.IJN]!;
     expect(n.sweepCharges).toEqual({ p1: { charges: 3, at: 0 }, p2: { charges: 3, at: 0 } });
   });
+
+  it('v18 → v19 (#183): the purse starts with 10 gold for each victory in the record', () => {
+    const fixture = JSON.parse(readFileSync(join(process.cwd(), 'tests', 'fixtures', 'saves', 'save-0.0.31.json'), 'utf8'));
+    const save = parseSave(JSON.stringify(fixture));
+    expect(save.wallet.gold).toBe(fixture.record.victories * 10);
+    expect(save.wallet.earned).toBe(save.wallet.gold);
+    expect(save.wallet.shop).toEqual({ day: 0, bought: {} });
+  });
 });

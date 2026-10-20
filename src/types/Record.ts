@@ -14,10 +14,18 @@ export interface IModeRecord {
   shipsLost: number;
 }
 
-/** Wins and losses of one historical scenario by side (force A / B, #177). */
+/** The best battle of a scenario from one side (#200): a win first, then more sunk, then fewer lost. */
+export interface IScenarioBest {
+  victory: boolean;
+  sunk: number;
+  lost: number;
+}
+
+/** Wins and losses of one historical scenario by side (force A / B, #177), and each side's best (#200). */
 export interface IScenarioRecord {
   wins: Partial<Record<'A' | 'B', number>>;
   losses: Partial<Record<'A' | 'B', number>>;
+  best?: Partial<Record<'A' | 'B', IScenarioBest>>;
 }
 
 /**
