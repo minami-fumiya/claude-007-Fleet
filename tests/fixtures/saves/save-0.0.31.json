@@ -1,0 +1,381 @@
+{
+  "version": 18,
+  "current": "IJN",
+  "nations": {
+    "IJN": {
+      "resources": {
+        "fuel": 1200,
+        "ammo": 900,
+        "steel": 10500,
+        "bauxite": 300
+      },
+      "regenAt": 1700000000000,
+      "damage": {
+        "nagato": 0.5,
+        "shimakaze": 0.2
+      },
+      "docks": [
+        {
+          "shipId": "nagato",
+          "endsAt": 1700000600000,
+          "base": "ijn_light"
+        }
+      ],
+      "research": [
+        "build_cruiser",
+        "gunnery_1",
+        "gunnery_2",
+        "gunnery_3"
+      ],
+      "ships": [
+        "fubuki",
+        "yukikaze",
+        "takao",
+        "nagato",
+        "shimakaze",
+        "etorofu",
+        "hiei"
+      ],
+      "upgrades": {
+        "takao": [
+          "heavy_shells"
+        ]
+      },
+      "refits": {
+        "takao": 3
+      },
+      "refitBranches": {
+        "takao": "aa_cruiser"
+      },
+      "proficiency": {
+        "fubuki": 30
+      },
+      "captainXp": {
+        "ijn_c1": 120,
+        "ijn_sakai": 60000,
+        "ijn_murase": 900
+      },
+      "campaign": [
+        "p1",
+        "p2",
+        "p3",
+        "p7",
+        "p0"
+      ],
+      "presets": [
+        {
+          "slotIds": [
+            "nagato",
+            "takao",
+            null
+          ],
+          "captainIds": [
+            null,
+            null,
+            null
+          ],
+          "formation": "LineAhead"
+        },
+        null,
+        null
+      ],
+      "merit": 340,
+      "rankFloor": 4,
+      "docksOwned": 1,
+      "captains": [
+        "ijn_sakai",
+        "ijn_murase",
+        "ijn_tachibana"
+      ],
+      "captainSkills": {
+        "ijn_sakai": [
+          "Torpedo",
+          "Night",
+          "Recon",
+          "Damecon"
+        ],
+        "ijn_murase": [
+          "ASW"
+        ]
+      },
+      "captainBonus": {},
+      "captainStats": {
+        "ijn_sakai": {
+          "nightSinks": 3,
+          "subSinks": 0,
+          "sinks": 12,
+          "heavySurvivals": 1
+        }
+      },
+      "base": "ijn_light",
+      "quests": {
+        "day": 19675,
+        "week": 2811,
+        "hour": 472222,
+        "progress": {
+          "a_build": 1,
+          "a_s30": 3,
+          "a_facility10": 1,
+          "a_dd50": 12
+        },
+        "claimed": [
+          "a_build",
+          "a_build"
+        ],
+        "totals": {
+          "sink": 18,
+          "campaignWin": 4,
+          "nightWin": 1,
+          "build": 1,
+          "winS": 3,
+          "facility": 1,
+          "sinkDestroyer": 12,
+          "convoyWin": 1,
+          "learnSkill": 5
+        }
+      },
+      "perfect": [
+        "p1",
+        "p2"
+      ],
+      "sweepCharges": {
+        "p1": {
+          "charges": 1,
+          "at": 1792458000000
+        },
+        "p2": {
+          "charges": 3,
+          "at": 0
+        }
+      },
+      "builds": [
+        {
+          "shipId": "i19",
+          "endsAt": 1700000300000,
+          "base": "ijn_light"
+        }
+      ],
+      "items": {
+        "fastRepair": 3,
+        "fastBuild": 1,
+        "captainBook": 2
+      },
+      "areaRanks": {
+        "p1": "S",
+        "p2": "B"
+      },
+      "rankStats": {
+        "campaignWin": 4,
+        "sink": 18,
+        "nightWin": 1
+      },
+      "ledger": {
+        "472222:battle": {
+          "fuel": 320,
+          "ammo": 280,
+          "steel": 410,
+          "bauxite": 0
+        },
+        "472222:repair": {
+          "fuel": 90,
+          "ammo": 0,
+          "steel": 55,
+          "bauxite": 0
+        }
+      },
+      "sortie": {
+        "areaId": "p4",
+        "route": [
+          {
+            "kind": "battle",
+            "ships": [
+              "fletcher"
+            ]
+          },
+          {
+            "kind": "boss",
+            "ships": [
+              "fletcher",
+              "fletcher"
+            ]
+          }
+        ],
+        "at": 0,
+        "nation": "IJN",
+        "enemyNation": "USN",
+        "shipIds": [
+          "fubuki"
+        ],
+        "captainIds": [
+          null
+        ],
+        "formation": "LineAhead",
+        "fought": true
+      },
+      "shipBases": {
+        "fubuki": "ijn_light",
+        "yukikaze": "ijn_light",
+        "takao": "ijn_light",
+        "nagato": "ijn_light",
+        "shimakaze": "ijn_light",
+        "etorofu": "ijn_home"
+      },
+      "baseDocks": {
+        "ijn_light": 4
+      },
+      "facilities": {
+        "ijn_home": {
+          "fuelTank": 2,
+          "unique": 2
+        },
+        "ijn_light": {
+          "steelMill": 1,
+          "fuelTank": 3
+        }
+      },
+      "facilityJobs": [
+        {
+          "base": "ijn_home",
+          "id": "ammoDepot",
+          "level": 1,
+          "endsAt": 1700000600000
+        }
+      ],
+      "basesOpen": [
+        "ijn_light"
+      ],
+      "baseWork": null
+    },
+    "USN": {
+      "resources": {
+        "fuel": 0,
+        "ammo": 0,
+        "steel": 0,
+        "bauxite": 0
+      },
+      "regenAt": 1700000000000,
+      "damage": {},
+      "docks": [],
+      "research": [],
+      "ships": [
+        "fletcher"
+      ],
+      "upgrades": {},
+      "refits": {},
+      "refitBranches": {},
+      "proficiency": {},
+      "captainXp": {},
+      "campaign": [],
+      "presets": [],
+      "merit": 0,
+      "rankFloor": 1,
+      "docksOwned": 1,
+      "captains": [
+        "usn_miller"
+      ],
+      "captainSkills": {},
+      "captainBonus": {},
+      "captainStats": {},
+      "base": "",
+      "quests": {
+        "day": 0,
+        "week": 0,
+        "hour": 0,
+        "progress": {},
+        "claimed": [],
+        "totals": {}
+      },
+      "perfect": [],
+      "sweepCharges": {},
+      "builds": [],
+      "items": {
+        "fastRepair": 2,
+        "fastBuild": 2,
+        "captainBook": 0
+      },
+      "areaRanks": {},
+      "rankStats": {},
+      "ledger": {},
+      "sortie": null,
+      "shipBases": {
+        "fletcher": "usn_home"
+      },
+      "baseDocks": {
+        "usn_home": 1
+      },
+      "facilities": {},
+      "facilityJobs": [],
+      "basesOpen": [],
+      "baseWork": null
+    }
+  },
+  "record": {
+    "sorties": 2,
+    "victories": 2,
+    "perfectVictories": 2,
+    "sunk": {
+      "Destroyer": 1,
+      "Cruiser": 1
+    },
+    "damageDealt": 1700,
+    "bestDamage": 900,
+    "shipsLost": 0,
+    "medals": [
+      "q_build10",
+      "battleship_slayer",
+      "builder"
+    ],
+    "byMode": {
+      "campaign": {
+        "sorties": 1,
+        "victories": 1,
+        "perfectVictories": 1,
+        "sunk": {
+          "Destroyer": 1
+        },
+        "damageDealt": 800,
+        "bestDamage": 800,
+        "shipsLost": 0
+      },
+      "exercise": {
+        "sorties": 1,
+        "victories": 1,
+        "perfectVictories": 1,
+        "sunk": {
+          "Cruiser": 1
+        },
+        "damageDealt": 900,
+        "bestDamage": 900,
+        "shipsLost": 0
+      },
+      "scenario": {
+        "sorties": 1,
+        "victories": 1,
+        "perfectVictories": 0,
+        "sunk": {
+          "Battleship": 1
+        },
+        "damageDealt": 3000,
+        "bestDamage": 3000,
+        "shipsLost": 1
+      }
+    },
+    "scenarios": {
+      "midway": {
+        "wins": {
+          "A": 1
+        },
+        "losses": {}
+      }
+    }
+  },
+  "tutorial": {
+    "step": 0,
+    "done": false
+  },
+  "seenHelp": [
+    "HomeScene",
+    "FleetBuilderScene"
+  ],
+  "lastSeenAt": 1792353600000
+}

@@ -51,6 +51,8 @@ interface IEconomyData {
   playHoursPerDay: number;
   playHoursPerWeek: number;
   rankRewardMul: number;
+  /** Share of each board's quests finished (#180) */
+  questCompletion: Record<'hourly' | 'daily' | 'weekly', number>;
   /** Share of battles won; a defeat pays half per sink and no victory bonus */
   winRate: number;
   phases: IEconomyPhase[];
@@ -78,10 +80,10 @@ export interface IHourBudget {
 }
 
 /** Average reward of the quests of one kind on a board (the board shows QUESTS_SHOWN of them). */
-function questShare(kind: 'hourly' | 'daily' | 'weekly'): IResources {
+function questShare(kind: 'hourly' | 'daily' | 'weekly', data: IEconomyData = ECONOMY): IResources {
   const pool = (questData.quests as Array<{ kind: string; reward?: Partial<IResources> }>).filter((q) => q.kind === kind);
   const sum = pool.reduce((s, q) => addResources(s, q.reward ?? {}), resources());
-  return addResources(resources(), sum, pool.length > 0 ? QUESTS_SHOWN[kind] / pool.length : 0);
+  return addResources(resources(), sum, pool.length > 0 ? (QUESTS_SHOWN[kind] / pool.length) * data.questCompletion[kind] : 0);
 }
 
 function researchCost(level: number): IResources {
@@ -109,7 +111,7 @@ export function hourBudget(phase: IEconomyPhase, data: IEconomyData = ECONOMY): 
     battle: addResources(resources(), win, phase.battlesPerHour),
     sweep: addResources(resources(), battleReward(true, enemies.length, enemies), SWEEP_REWARD_SCALE * phase.sweepsPerHour),
     regen: addResources(resources(), regen, ticks),
-    quest: addResources(addResources(questShare('hourly'), questShare('daily'), 1 / data.playHoursPerDay), questShare('weekly'), 1 / data.playHoursPerWeek),
+    quest: addResources(addResources(questShare('hourly', data), questShare('daily', data), 1 / data.playHoursPerDay), questShare('weekly', data), 1 / data.playHoursPerWeek),
   };
   const repairs = fleet.reduce((s, x) => addResources(s, repairCost(x.hp, 1 - phase.damagePerBattle)), resources());
   const spending: Record<string, IResources> = {

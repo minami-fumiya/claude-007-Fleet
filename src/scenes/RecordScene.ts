@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { MEDAL_CATEGORY_LABEL, MedalCategory, medalProgress, MEDALS, totalSunk } from '@/systems/RecordSystem';
+import { MEDAL_CATEGORY_LABEL, MedalCategory, medalProgress, MEDALS, RECORD_MODE_LABEL, RECORD_MODES, scenarioWins, totalSunk, unsortedRecord, emptyModeRecord } from '@/systems/RecordSystem';
 import { medalContext } from '@/utils/MedalContext';
 import { unlocksOf } from '@/systems/MedalGate';
 import { TECH_TREE } from '@/systems/ResearchSystem';
@@ -12,13 +12,13 @@ import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerHours, ledger
 import { RESOURCE_KEYS, RESOURCE_LABEL, resources } from '@/systems/ResourceSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
-import { IServiceRecord } from '@/types/Record';
+import { IModeRecord, IServiceRecord, RecordMode } from '@/types/Record';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { stats: { x: 16, y: 140, w: CANVAS_W - 32, h: 340 } as IRect, statCols: 3, medals: { x: 16, y: 496, w: CANVAS_W - 32, h: CANVAS_H - 512 } as IRect, medalCols: 2 }
+  ? { stats: { x: 16, y: 140, w: CANVAS_W - 32, h: 384 } as IRect, statCols: 3, medals: { x: 16, y: 540, w: CANVAS_W - 32, h: CANVAS_H - 556 } as IRect, medalCols: 2 }
   : { stats: { x: 24, y: 96, w: 400, h: 604 } as IRect, statCols: 2, medals: { x: 440, y: 96, w: 816, h: 604 } as IRect, medalCols: 3 };
 
 /** 戦績: career totals and the medal case. */
@@ -29,6 +29,9 @@ export class RecordScene extends Phaser.Scene {
   /** Medal case category and page (#92) */
   private medalCategory: MedalCategory = 'sink';
   private medalPage = 0;
+  /** Which battles the figures count (#177): all, or one kind */
+  private mode: RecordMode | 'all' = 'all';
+  private statsLayer: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: SceneKeys.RECORD });
@@ -50,10 +53,11 @@ export class RecordScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 60, '戦績', displayStyle(24)).setOrigin(0.5);
 
     awardPendingMedals();
-    const record = loadProgress().record;
-    this.buildStats(record);
-    const p = L.medals;
-    addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
+    const p = L.stats;
+    addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.55, glow: 0.5 });
+    this.buildStats(loadProgress().record);
+    const m = L.medals;
+    addPanel(this, m.x, m.y, m.w, m.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
     this.layer = [];
     this.showView(this.view);
   }
@@ -147,10 +151,34 @@ export class RecordScene extends Phaser.Scene {
     }
   }
 
-  private buildStats(r: IServiceRecord): void {
+  /**
+   * 通算 (#177): the career totals or one kind of battle, picked with the tabs. 全体 is the career totals (作戦と演習);
+   * 史実 adds how many scenarios were won, and from both sides.
+   */
+  private buildStats(record: IServiceRecord): void {
+    for (const o of this.statsLayer) o.destroy();
+    this.statsLayer = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      this.statsLayer.push(o);
+      return o;
+    };
     const p = L.stats;
-    addPanel(this, p.x, p.y, p.w, p.h, { radius: 24, fillAlpha: 0.55, glow: 0.5 });
-    this.add.text(p.x + 22, p.y + 18, '通算', eyebrowStyle(11));
+    const tabs: Array<RecordMode | 'all'> = ['all', ...RECORD_MODES];
+    const tw = (p.w - 44 - 6 * (tabs.length - 1)) / tabs.length;
+    const th = IS_PORTRAIT ? 40 : 30;
+    tabs.forEach((t, i) => {
+      add(new UIButton(this, p.x + 22 + i * (tw + 6) + tw / 2, p.y + 16 + th / 2, t === 'all' ? '全体' : RECORD_MODE_LABEL[t], () => {
+        this.mode = t;
+        this.buildStats(loadProgress().record);
+      }, { variant: t === this.mode ? 'primary' : 'secondary', width: tw, height: th, fontSize: IS_PORTRAIT ? 14 : 12 }));
+    });
+    const r: IModeRecord = this.mode === 'all' ? record : record.byMode?.[this.mode] ?? emptyModeRecord();
+    const old = unsortedRecord(record);
+    const wins = scenarioWins(record);
+    const note = this.mode === 'all'
+      ? `作戦と演習の通算${old.sorties > 0 ? ` (うち区分なし・0.0.30 以前: 出撃 ${old.sorties}・勝利 ${old.victories})` : ''}`
+      : this.mode === 'scenario' ? `通算には入りません  ·  勝利したシナリオ ${wins.won} 種類・両陣営で勝利 ${wins.bothSides} 種類` : `${RECORD_MODE_LABEL[this.mode]}の戦闘 (0.0.31 から)`;
+    add(this.add.text(p.x + 22, p.y + 24 + th, note, textStyle(IS_PORTRAIT ? 12 : 11, Css.muted, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } })));
     const winRate = r.sorties > 0 ? `${Math.round((r.victories / r.sorties) * 100)}%` : '—';
     const cards: Array<[string, string, string]> = [
       ['出撃', String(r.sorties), Css.text],
@@ -163,26 +191,26 @@ export class RecordScene extends Phaser.Scene {
     const gap = 10;
     const cw = (p.w - 44 - gap * (L.statCols - 1)) / L.statCols;
     const ch = IS_PORTRAIT ? 78 : 70;
-    const top = p.y + 46;
+    const top = p.y + th + (IS_PORTRAIT ? 62 : 70);
     cards.forEach(([label, value, css], i) => {
-      addStatCard(this, p.x + 22 + (i % L.statCols) * (cw + gap), top + Math.floor(i / L.statCols) * (ch + gap), cw, ch, label, value, css);
+      add(addStatCard(this, p.x + 22 + (i % L.statCols) * (cw + gap), top + Math.floor(i / L.statCols) * (ch + gap), cw, ch, label, value, css).container);
     });
     let y = top + Math.ceil(cards.length / L.statCols) * (ch + gap) + 12;
-    this.add.text(p.x + 22, y, '艦種別撃沈', eyebrowStyle(10, Css.gold));
+    add(this.add.text(p.x + 22, y, '艦種別撃沈', eyebrowStyle(10, Css.gold)));
     y += 22;
     if (IS_PORTRAIT) {
       // One row: class name over its count.
       const colW = (p.w - 44) / CLASS_ORDER.length;
       CLASS_ORDER.forEach((c, i) => {
         const cx = p.x + 22 + i * colW + colW / 2;
-        this.add.text(cx, y, CLASS_JA[c], textStyle(12, Css.muted)).setOrigin(0.5, 0);
-        this.add.text(cx, y + 22, String(r.sunk[c] ?? 0), textStyle(20, Css.text, { fontStyle: 'bold' })).setOrigin(0.5, 0);
+        add(this.add.text(cx, y, CLASS_JA[c], textStyle(12, Css.muted)).setOrigin(0.5, 0));
+        add(this.add.text(cx, y + 22, String(r.sunk[c] ?? 0), textStyle(20, Css.text, { fontStyle: 'bold' })).setOrigin(0.5, 0));
       });
       return;
     }
     for (const c of CLASS_ORDER) {
-      this.add.text(p.x + 22, y, CLASS_JA[c], textStyle(13, Css.muted));
-      this.add.text(p.x + p.w - 22, y, String(r.sunk[c] ?? 0), textStyle(13, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0);
+      add(this.add.text(p.x + 22, y, CLASS_JA[c], textStyle(13, Css.muted)));
+      add(this.add.text(p.x + p.w - 22, y, String(r.sunk[c] ?? 0), textStyle(13, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0));
       y += 22;
     }
   }
