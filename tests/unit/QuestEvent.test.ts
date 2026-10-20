@@ -122,9 +122,15 @@ describe('quests: the board (#158)', () => {
     for (const k of QUEST_KINDS) expect(QUESTS.filter((q) => q.kind === k).length).toBeGreaterThanOrEqual(QUESTS_SHOWN[k]);
   });
 
-  it('three hourly quests turn over every hour; dailies and weeklies are picked per period, at most 10 on a tab', () => {
+  it('ten of each turn over every hour, day and week (#180), picked per period from a larger pool', () => {
     const now = MONDAY_5AM + 30 * 60_000;
-    expect(activeQuests('hourly', now)).toHaveLength(3);
+    for (const k of ['hourly', 'daily', 'weekly'] as const) {
+      expect(activeQuests(k, now), k).toHaveLength(10);
+      expect(questBoard(emptyQuestState(), k, now), k).toHaveLength(10);
+    }
+    expect(QUESTS.filter((q) => q.kind === 'hourly').length).toBeGreaterThanOrEqual(30);
+    expect(QUESTS.filter((q) => q.kind === 'daily').length).toBeGreaterThanOrEqual(30);
+    expect(QUESTS.filter((q) => q.kind === 'weekly').length).toBeGreaterThanOrEqual(25);
     expect(activeQuests('hourly', now + 10 * 60_000)).toEqual(activeQuests('hourly', now));
     const hours = new Set(Array.from({ length: 12 }, (_, i) => activeQuests('hourly', now + i * HOUR).map((q) => q.id).join()));
     expect(hours.size).toBeGreaterThan(6);
@@ -133,6 +139,21 @@ describe('quests: the board (#158)', () => {
     expect(activeQuests('daily', now + 24 * HOUR)).not.toEqual(activeQuests('daily', now));
     for (const k of QUEST_KINDS) expect(questBoard(emptyQuestState(), k, now).length).toBeLessThanOrEqual(10);
     expect(nextReset('hourly', now)).toBe(MONDAY_5AM + HOUR);
+  });
+
+  it('a full hourly board pays about 600 fuel and ammo; dailies bring 3〜4 time-saving items a day (#180)', () => {
+    const hourly = QUESTS.filter((q) => q.kind === 'hourly');
+    for (const k of ['fuel', 'ammo'] as const) {
+      const perHour = (hourly.reduce((s, q) => s + (q.reward[k] ?? 0), 0) / hourly.length) * QUESTS_SHOWN.hourly;
+      expect(perHour, k).toBeGreaterThanOrEqual(500);
+      expect(perHour, k).toBeLessThanOrEqual(700);
+    }
+    // Expected items over many days: the four core dailies always, the rest drawn.
+    const days = Array.from({ length: 60 }, (_, i) => activeQuests('daily', MONDAY_5AM + i * 24 * HOUR));
+    const items = days.map((d) => d.reduce((s, q) => s + (q.items?.fastRepair ?? 0) + (q.items?.fastBuild ?? 0), 0));
+    const mean = items.reduce((a, b) => a + b, 0) / items.length;
+    expect(mean).toBeGreaterThanOrEqual(3);
+    expect(mean).toBeLessThanOrEqual(4);
   });
 
   it('hourly progress resets on the hour; an off-board quest gains nothing', () => {

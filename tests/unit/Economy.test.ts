@@ -18,6 +18,14 @@ describe('economy (#222)', () => {
         }
       });
 
+      it('quests pay 30〜50% of what battles do in fuel and ammo (#180)', () => {
+        for (const k of ['fuel', 'ammo'] as const) {
+          const share = b.income.quest[k] / b.income.battle[k];
+          expect(share, `${phase.id} ${k}`).toBeGreaterThanOrEqual(0.3);
+          expect(share, `${phase.id} ${k}`).toBeLessThanOrEqual(0.5);
+        }
+      });
+
       it("saves the steel for at least one of the stage's ships an hour", () => {
         expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(1);
       });
