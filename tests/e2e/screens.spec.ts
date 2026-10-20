@@ -108,6 +108,32 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
 }
 
 /**
+ * Wrapped texts of `key` whose second or later line starts with a character a Japanese line may not start with
+ * (#248 禁則処理): "。", "、", small kana, "ー", closing brackets.
+ */
+async function badLineStarts(page: Page, key: string): Promise<string[]> {
+  return page.evaluate((k) => {
+    const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene(k);
+    const banned = '、。・ーっゃゅょッャュョ）」』';
+    const out: string[] = [];
+    const visit = (o: Phaser.GameObjects.GameObject): void => {
+      if (o.type === 'Container') {
+        (o as Phaser.GameObjects.Container).list.forEach(visit);
+        return;
+      }
+      const t = o as Phaser.GameObjects.Text;
+      if (o.type !== 'Text' || !t.style.wordWrapWidth) return;
+      const lines = t.getWrappedText(t.text);
+      lines.forEach((line, i) => {
+        if (i > 0 && line.length > 0 && banned.includes(line[0]) && !t.text.includes(`\n${line}`)) out.push(`${lines[i - 1]} | ${line}`);
+      });
+    };
+    scene.children.list.forEach(visit);
+    return out;
+  }, key);
+}
+
+/**
  * Visible texts that overlap another visible text (#163): "a × b" for each pair crossing by more than a few pixels both
  * ways. Only texts at the same depth count: a sheet over the screen, or content scrolling under a fixed bar, is meant
  * to cover what lies beneath. Masked (scroll list) texts are left out like in overflowingTexts.
@@ -166,6 +192,7 @@ test.describe('screens', () => {
       await open(page, key);
       expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
       expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
+      expect(await badLineStarts(page, key), `${key} line breaks (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
     expect(errors).toEqual([]);

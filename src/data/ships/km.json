@@ -2,6 +2,7 @@
   "ships": [
     {
       "id": "bismarck",
+      "no": 1301001,
       "name": "ビスマルク (Bismarck)",
       "nation": "KM",
       "shipClass": "Battleship",
@@ -13,10 +14,12 @@
         "15cm_skc28"
       ],
       "spriteKey": "bismarck",
-      "description": "ビスマルク級戦艦1番艦。1941年5月、デンマーク海峡で巡洋戦艦フッドを撃沈したが、英艦隊の追撃を受けて撃沈された。"
+      "description": "ビスマルク級戦艦1番艦。1941年5月、デンマーク海峡で巡洋戦艦フッドを撃沈したが、英艦隊の追撃を受けて撃沈された。",
+      "year": 1940
     },
     {
       "id": "tirpitz",
+      "no": 1301002,
       "name": "ティルピッツ (Tirpitz)",
       "nation": "KM",
       "shipClass": "Battleship",
@@ -28,10 +31,13 @@
         "15cm_skc28"
       ],
       "spriteKey": "tirpitz",
-      "description": "ビスマルク級戦艦2番艦。ノルウェーのフィヨルドに潜んで英艦隊を牽制し続けたが、1944年11月に英空軍の爆撃で転覆した。"
+      "description": "ビスマルク級戦艦2番艦。ノルウェーのフィヨルドに潜んで英艦隊を牽制し続けたが、1944年11月に英空軍の爆撃で転覆した。",
+      "year": 1941,
+      "classOf": "bismarck"
     },
     {
       "id": "scharnhorst",
+      "no": 1302001,
       "name": "シャルンホルスト (Scharnhorst)",
       "nation": "KM",
       "shipClass": "Battleship",
@@ -44,10 +50,12 @@
         "15cm_skc28"
       ],
       "spriteKey": "scharnhorst",
-      "description": "シャルンホルスト級戦艦1番艦。28cm砲を搭載した高速戦艦。1943年12月、北岬沖海戦で英艦隊に撃沈された。"
+      "description": "シャルンホルスト級戦艦1番艦。28cm砲を搭載した高速戦艦。1943年12月、北岬沖海戦で英艦隊に撃沈された。",
+      "year": 1939
     },
     {
       "id": "gneisenau",
+      "no": 1302002,
       "name": "グナイゼナウ (Gneisenau)",
       "nation": "KM",
       "shipClass": "Battleship",
@@ -60,10 +68,13 @@
         "15cm_skc28"
       ],
       "spriteKey": "gneisenau",
-      "description": "シャルンホルスト級戦艦2番艦。姉妹艦とともに通商破壊で戦果を挙げた。1942年の空襲で損傷し、戦線に戻らなかった。"
+      "description": "シャルンホルスト級戦艦2番艦。姉妹艦とともに通商破壊で戦果を挙げた。1942年の空襲で損傷し、戦線に戻らなかった。",
+      "year": 1938,
+      "classOf": "scharnhorst"
     },
     {
       "id": "h39",
+      "no": 1301003,
       "name": "H級 (H-39)",
       "nation": "KM",
       "shipClass": "Battleship",
@@ -76,10 +87,12 @@
       ],
       "spriteKey": "h39",
       "fictional": true,
-      "description": "Z計画で起工された戦艦。40.6cm砲8門を搭載する予定だったが、開戦により建造は中止された (架空艦)。"
+      "description": "Z計画で起工された戦艦。40.6cm砲8門を搭載する予定だったが、開戦により建造は中止された (架空艦)。",
+      "year": 1944
     },
     {
       "id": "prinz_eugen",
+      "no": 1304006,
       "name": "プリンツ・オイゲン (Prinz Eugen)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -92,10 +105,13 @@
         "g7a_torpedo"
       ],
       "spriteKey": "prinz_eugen",
-      "description": "アドミラル・ヒッパー級重巡洋艦3番艦。ビスマルクとともに出撃し、終戦まで生き残った。"
+      "description": "アドミラル・ヒッパー級重巡洋艦3番艦。ビスマルクとともに出撃し、終戦まで生き残った。",
+      "year": 1940,
+      "classOf": "admiral_hipper"
     },
     {
       "id": "admiral_hipper",
+      "no": 1304004,
       "name": "アドミラル・ヒッパー (Admiral Hipper)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -108,10 +124,12 @@
         "g7a_torpedo"
       ],
       "spriteKey": "admiral_hipper",
-      "description": "アドミラル・ヒッパー級重巡洋艦1番艦。ノルウェー侵攻や大西洋での通商破壊に参加した。"
+      "description": "アドミラル・ヒッパー級重巡洋艦1番艦。ノルウェー侵攻や大西洋での通商破壊に参加した。",
+      "year": 1939
     },
     {
       "id": "deutschland",
+      "no": 1304001,
       "name": "ドイッチュラント (Deutschland)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -124,10 +142,12 @@
         "15cm_skc28"
       ],
       "spriteKey": "deutschland",
-      "description": "装甲艦 (ポケット戦艦) 1番艦。28cm砲を持つ通商破壊艦で、1939年末にリュッツォウと改名され、のちに重巡洋艦に類別変更された。"
+      "description": "装甲艦 (ポケット戦艦) 1番艦。28cm砲を持つ通商破壊艦で、1939年末にリュッツォウと改名され、のちに重巡洋艦に類別変更された。",
+      "year": 1933
     },
     {
       "id": "admiral_graf_spee",
+      "no": 1304003,
       "name": "アドミラル・グラーフ・シュペー (Admiral Graf Spee)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -140,10 +160,13 @@
         "15cm_skc28"
       ],
       "spriteKey": "admiral_graf_spee",
-      "description": "ドイッチュラント級装甲艦3番艦。南大西洋で通商破壊を行い、1939年12月のラプラタ沖海戦の後、モンテビデオ沖で自沈した。"
+      "description": "ドイッチュラント級装甲艦3番艦。南大西洋で通商破壊を行い、1939年12月のラプラタ沖海戦の後、モンテビデオ沖で自沈した。",
+      "year": 1936,
+      "classOf": "deutschland"
     },
     {
       "id": "blucher",
+      "no": 1304005,
       "name": "ブリュッヒャー (Blücher)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -156,10 +179,13 @@
         "g7a_torpedo"
       ],
       "spriteKey": "blucher",
-      "description": "アドミラル・ヒッパー級重巡洋艦2番艦。1940年4月のノルウェー侵攻で、オスロフィヨルドの要塞から砲撃と魚雷を受けて沈没した。"
+      "description": "アドミラル・ヒッパー級重巡洋艦2番艦。1940年4月のノルウェー侵攻で、オスロフィヨルドの要塞から砲撃と魚雷を受けて沈没した。",
+      "year": 1939,
+      "classOf": "admiral_hipper"
     },
     {
       "id": "nurnberg",
+      "no": 1305002,
       "name": "ニュルンベルク (Nürnberg)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -172,10 +198,12 @@
         "g7a_torpedo"
       ],
       "spriteKey": "nurnberg",
-      "description": "ライプツィヒ級を改良した軽巡洋艦。終戦まで生き残り、戦後はソ連海軍に引き渡されてアドミラル・マカロフとなった。"
+      "description": "ライプツィヒ級を改良した軽巡洋艦。終戦まで生き残り、戦後はソ連海軍に引き渡されてアドミラル・マカロフとなった。",
+      "year": 1935
     },
     {
       "id": "emden",
+      "no": 1305001,
       "name": "エムデン (Emden)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -188,10 +216,12 @@
         "g7a_torpedo"
       ],
       "spriteKey": "emden",
-      "description": "第一次世界大戦後にドイツで最初に建造された軽巡洋艦。練習艦として多くの士官候補生を育てた。"
+      "description": "第一次世界大戦後にドイツで最初に建造された軽巡洋艦。練習艦として多くの士官候補生を育てた。",
+      "year": 1925
     },
     {
       "id": "z1",
+      "no": 1307001,
       "name": "Z1 レーベレヒト・マース (Z1)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -204,10 +234,12 @@
         "depth_charge"
       ],
       "spriteKey": "z1",
-      "description": "1934年型駆逐艦の1番艦「レーベレヒト・マース」。1940年2月、味方機の誤爆と触雷により沈没した。"
+      "description": "1934年型駆逐艦の1番艦「レーベレヒト・マース」。1940年2月、味方機の誤爆と触雷により沈没した。",
+      "year": 1937
     },
     {
       "id": "z23",
+      "no": 1307011,
       "name": "Z23 (Z23)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -220,10 +252,12 @@
         "depth_charge"
       ],
       "spriteKey": "z23",
-      "description": "1936A型駆逐艦 (ナルヴィク級) の1番艦。巡洋艦並みの15cm砲を積んだが、重い艦首砲塔のため凌波性は悪かった。"
+      "description": "1936A型駆逐艦 (ナルヴィク級) の1番艦。巡洋艦並みの15cm砲を積んだが、重い艦首砲塔のため凌波性は悪かった。",
+      "year": 1940
     },
     {
       "id": "z20",
+      "no": 1307005,
       "name": "Z20 カール・ガルスター (Z20)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -236,10 +270,12 @@
         "depth_charge"
       ],
       "spriteKey": "z20",
-      "description": "1936年型駆逐艦。同型艦のうち5隻はナルヴィクで失われ、ただ1隻戦争を生き延びて戦後はソ連海軍に引き渡された。"
+      "description": "1936年型駆逐艦。同型艦のうち5隻はナルヴィクで失われ、ただ1隻戦争を生き延びて戦後はソ連海軍に引き渡された。",
+      "year": 1939
     },
     {
       "id": "graf_zeppelin",
+      "no": 1309001,
       "name": "グラーフ・ツェッペリン (Graf Zeppelin)",
       "nation": "KM",
       "shipClass": "Carrier",
@@ -255,10 +291,12 @@
         "diveBombers": 4,
         "torpedoBombers": 2
       },
-      "description": "ドイツ唯一の航空母艦として建造されたが、未完成のまま終戦を迎えた。本ゲームでは完成した姿を想定している。"
+      "description": "ドイツ唯一の航空母艦として建造されたが、未完成のまま終戦を迎えた。本ゲームでは完成した姿を想定している。",
+      "year": 1942
     },
     {
       "id": "u_boat_viic",
+      "no": 1312001,
       "name": "U ボート VIIC 型 (Type VIIC)",
       "nation": "KM",
       "shipClass": "Submarine",
@@ -269,10 +307,12 @@
         "g7e_torpedo"
       ],
       "spriteKey": "u_boat_viic",
-      "description": "VIIC型Uボート。大西洋の戦いで群狼戦術を担った、最も多く建造された潜水艦。"
+      "description": "VIIC型Uボート。大西洋の戦いで群狼戦術を担った、最も多く建造された潜水艦。",
+      "year": 1940
     },
     {
       "id": "u_boat_ixc",
+      "no": 1312002,
       "name": "U ボート IXC 型 (Type IXC)",
       "nation": "KM",
       "shipClass": "Submarine",
@@ -283,10 +323,12 @@
         "g7e_torpedo"
       ],
       "spriteKey": "u_boat_ixc",
-      "description": "IXC型Uボート。航続距離の長い大型潜水艦で、遠方の海域で通商破壊を行った。"
+      "description": "IXC型Uボート。航続距離の長い大型潜水艦で、遠方の海域で通商破壊を行った。",
+      "year": 1940
     },
     {
       "id": "u_boat_xxi",
+      "no": 1312003,
       "name": "U ボート XXI 型 (Type XXI)",
       "nation": "KM",
       "shipClass": "Submarine",
@@ -297,10 +339,12 @@
         "g7e_torpedo"
       ],
       "spriteKey": "u_boat_xxi",
-      "description": "XXI型Uボート。大容量の電池で長時間の水中高速航行ができた「エレクトロボート」。実戦投入は終戦直前だった。"
+      "description": "XXI型Uボート。大容量の電池で長時間の水中高速航行ができた「エレクトロボート」。実戦投入は終戦直前だった。",
+      "year": 1944
     },
     {
       "id": "admiral_scheer",
+      "no": 1304002,
       "name": "アドミラル・シェーア (Admiral Scheer)",
       "nation": "KM",
       "shipClass": "Cruiser",
@@ -313,11 +357,13 @@
         "15cm_skc28"
       ],
       "spriteKey": "deutschland",
+      "year": 1933,
       "description": "ドイッチュラント級装甲艦の同型艦。性能はドイッチュラントと同じ。",
       "sisterOf": "deutschland"
     },
     {
       "id": "z2",
+      "no": 1307002,
       "name": "Z2 ゲオルク・ティーレ (Z2)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -330,11 +376,13 @@
         "depth_charge"
       ],
       "spriteKey": "z1",
+      "year": 1937,
       "description": "1934 型駆逐艦の同型艦。性能はZ1 レーベレヒト・マースと同じ。",
       "sisterOf": "z1"
     },
     {
       "id": "z3",
+      "no": 1307003,
       "name": "Z3 マックス・シュルツ (Z3)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -347,11 +395,13 @@
         "depth_charge"
       ],
       "spriteKey": "z1",
+      "year": 1937,
       "description": "1934 型駆逐艦の同型艦。性能はZ1 レーベレヒト・マースと同じ。",
       "sisterOf": "z1"
     },
     {
       "id": "z4",
+      "no": 1307004,
       "name": "Z4 リヒャルト・バイツェン (Z4)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -364,11 +414,13 @@
         "depth_charge"
       ],
       "spriteKey": "z1",
+      "year": 1937,
       "description": "1934 型駆逐艦の同型艦。性能はZ1 レーベレヒト・マースと同じ。",
       "sisterOf": "z1"
     },
     {
       "id": "z17",
+      "no": 1307006,
       "name": "Z17 ディーター・フォン・レーダー (Z17)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -381,11 +433,13 @@
         "depth_charge"
       ],
       "spriteKey": "z20",
+      "year": 1939,
       "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
       "sisterOf": "z20"
     },
     {
       "id": "z18",
+      "no": 1307007,
       "name": "Z18 ハンス・リューデマン (Z18)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -398,11 +452,13 @@
         "depth_charge"
       ],
       "spriteKey": "z20",
+      "year": 1939,
       "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
       "sisterOf": "z20"
     },
     {
       "id": "z19",
+      "no": 1307008,
       "name": "Z19 ヘルマン・キュンネ (Z19)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -415,11 +471,13 @@
         "depth_charge"
       ],
       "spriteKey": "z20",
+      "year": 1939,
       "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
       "sisterOf": "z20"
     },
     {
       "id": "z21",
+      "no": 1307009,
       "name": "Z21 ヴィルヘルム・ハイドカンプ (Z21)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -432,11 +490,13 @@
         "depth_charge"
       ],
       "spriteKey": "z20",
+      "year": 1939,
       "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
       "sisterOf": "z20"
     },
     {
       "id": "z22",
+      "no": 1307010,
       "name": "Z22 アントン・シュミット (Z22)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -449,11 +509,13 @@
         "depth_charge"
       ],
       "spriteKey": "z20",
+      "year": 1939,
       "description": "1936 型駆逐艦の同型艦。性能はZ20 カール・ガルスターと同じ。",
       "sisterOf": "z20"
     },
     {
       "id": "z24",
+      "no": 1307012,
       "name": "Z24 (Z24)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -466,11 +528,13 @@
         "depth_charge"
       ],
       "spriteKey": "z23",
+      "year": 1940,
       "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
       "sisterOf": "z23"
     },
     {
       "id": "z25",
+      "no": 1307013,
       "name": "Z25 (Z25)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -483,11 +547,13 @@
         "depth_charge"
       ],
       "spriteKey": "z23",
+      "year": 1940,
       "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
       "sisterOf": "z23"
     },
     {
       "id": "z26",
+      "no": 1307014,
       "name": "Z26 (Z26)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -500,11 +566,13 @@
         "depth_charge"
       ],
       "spriteKey": "z23",
+      "year": 1940,
       "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
       "sisterOf": "z23"
     },
     {
       "id": "z27",
+      "no": 1307015,
       "name": "Z27 (Z27)",
       "nation": "KM",
       "shipClass": "Destroyer",
@@ -517,6 +585,7 @@
         "depth_charge"
       ],
       "spriteKey": "z23",
+      "year": 1940,
       "description": "1936A 型駆逐艦の同型艦。性能はZ23と同じ。",
       "sisterOf": "z23"
     }

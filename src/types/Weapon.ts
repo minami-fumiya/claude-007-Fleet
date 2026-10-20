@@ -9,6 +9,8 @@ export enum WeaponType {
 
 export interface IWeaponData {
   id: string;
+  /** 通し番号 (#249) */
+  no?: number;
   name: string;
   type: WeaponType;
   firePower: number;

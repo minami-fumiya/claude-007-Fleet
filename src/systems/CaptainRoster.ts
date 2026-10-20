@@ -12,8 +12,11 @@ import { aptitudeFor } from './CaptainSystem';
 
 export const ALL_CAPTAINS = (captainData as { captains: ICaptainData[] }).captains;
 
-/** Chance an S-rank win brings a new captain: 5% → 8% with 30 captains per nation (#209). */
-export const CAPTAIN_DROP_CHANCE = 0.08;
+/**
+ * Chance an S-rank win brings a new captain: 5% → 8% with 30 captains per nation (#209), 10% since an area with a
+ * reward ship no longer also brings a captain (#247).
+ */
+export const CAPTAIN_DROP_CHANCE = 0.1;
 
 /**
  * The order captains join in (#159): destroyer specialists first, since a new nation owns only a destroyer; the

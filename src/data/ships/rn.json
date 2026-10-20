@@ -2,6 +2,7 @@
   "ships": [
     {
       "id": "hood",
+      "no": 1402003,
       "name": "フッド (Hood)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -14,10 +15,12 @@
         "4_5in_mk1"
       ],
       "spriteKey": "hood",
-      "description": "巡洋戦艦。長く世界最大の軍艦として英海軍の象徴だった。1941年5月、デンマーク海峡でビスマルクに撃沈された。"
+      "description": "巡洋戦艦。長く世界最大の軍艦として英海軍の象徴だった。1941年5月、デンマーク海峡でビスマルクに撃沈された。",
+      "year": 1920
     },
     {
       "id": "king_george_v",
+      "no": 1401008,
       "name": "キング・ジョージ5世 (King George V)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -29,10 +32,12 @@
         "4_5in_mk1"
       ],
       "spriteKey": "king_george_v",
-      "description": "キング・ジョージ5世級戦艦1番艦。14インチ4連装砲を備え、ビスマルク追撃戦に参加した。"
+      "description": "キング・ジョージ5世級戦艦1番艦。14インチ4連装砲を備え、ビスマルク追撃戦に参加した。",
+      "year": 1940
     },
     {
       "id": "warspite",
+      "no": 1401002,
       "name": "ウォースパイト (Warspite)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -44,10 +49,13 @@
         "6in_mk23"
       ],
       "spriteKey": "warspite",
-      "description": "クイーン・エリザベス級戦艦。二度の世界大戦で数多くの海戦に参加した殊勲艦。"
+      "description": "クイーン・エリザベス級戦艦。二度の世界大戦で数多くの海戦に参加した殊勲艦。",
+      "year": 1915,
+      "classOf": "queen_elizabeth"
     },
     {
       "id": "rodney",
+      "no": 1401007,
       "name": "ロドニー (Rodney)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -59,10 +67,13 @@
         "6in_mk23"
       ],
       "spriteKey": "rodney",
-      "description": "ネルソン級戦艦2番艦。16インチ砲を艦の前部に集中配置した独特の艦形。ビスマルク撃沈に大きく貢献した。"
+      "description": "ネルソン級戦艦2番艦。16インチ砲を艦の前部に集中配置した独特の艦形。ビスマルク撃沈に大きく貢献した。",
+      "year": 1927,
+      "classOf": "nelson"
     },
     {
       "id": "nelson",
+      "no": 1401006,
       "name": "ネルソン (Nelson)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -74,10 +85,12 @@
         "6in_mk23"
       ],
       "spriteKey": "nelson",
-      "description": "ネルソン級戦艦1番艦。主砲3基をすべて艦橋より前に集めた独特の艦形を持つ。ノルマンディー上陸作戦などを艦砲射撃で支援した。"
+      "description": "ネルソン級戦艦1番艦。主砲3基をすべて艦橋より前に集めた独特の艦形を持つ。ノルマンディー上陸作戦などを艦砲射撃で支援した。",
+      "year": 1927
     },
     {
       "id": "queen_elizabeth",
+      "no": 1401001,
       "name": "クイーン・エリザベス (Queen Elizabeth)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -89,10 +102,12 @@
         "6in_mk23"
       ],
       "spriteKey": "queen_elizabeth",
-      "description": "クイーン・エリザベス級戦艦1番艦。重油専焼の高速戦艦の先駆け。1941年12月、アレクサンドリア港でイタリアの人間魚雷に大破着底させられた。"
+      "description": "クイーン・エリザベス級戦艦1番艦。重油専焼の高速戦艦の先駆け。1941年12月、アレクサンドリア港でイタリアの人間魚雷に大破着底させられた。",
+      "year": 1915
     },
     {
       "id": "renown",
+      "no": 1402001,
       "name": "レナウン (Renown)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -105,10 +120,12 @@
         "4_5in_mk1"
       ],
       "spriteKey": "renown",
-      "description": "レナウン級巡洋戦艦1番艦。1940年4月、ノルウェー沖でシャルンホルストとグナイゼナウの2隻と交戦した。"
+      "description": "レナウン級巡洋戦艦1番艦。1940年4月、ノルウェー沖でシャルンホルストとグナイゼナウの2隻と交戦した。",
+      "year": 1916
     },
     {
       "id": "lion",
+      "no": 1401013,
       "name": "ライオン (Lion)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -121,10 +138,12 @@
       ],
       "spriteKey": "lion",
       "fictional": true,
-      "description": "キング・ジョージ5世級に続く戦艦。16インチ砲9門を搭載する予定で起工されたが、建造は中止された (架空艦)。"
+      "description": "キング・ジョージ5世級に続く戦艦。16インチ砲9門を搭載する予定で起工されたが、建造は中止された (架空艦)。",
+      "year": 1946
     },
     {
       "id": "belfast",
+      "no": 1405009,
       "name": "ベルファスト (Belfast)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -137,10 +156,12 @@
         "mk8_torpedo"
       ],
       "spriteKey": "belfast",
-      "description": "タウン級軽巡洋艦。北岬沖海戦に参加した。現在はロンドンのテムズ川で博物館船として保存されている。"
+      "description": "タウン級軽巡洋艦。北岬沖海戦に参加した。現在はロンドンのテムズ川で博物館船として保存されている。",
+      "year": 1939
     },
     {
       "id": "southampton",
+      "no": 1405001,
       "name": "サウサンプトン (Southampton)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -153,10 +174,12 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
-      "description": "タウン級軽巡洋艦1番艦。1941年1月、地中海でドイツ空軍の急降下爆撃を受けて沈没した。"
+      "description": "タウン級軽巡洋艦1番艦。1941年1月、地中海でドイツ空軍の急降下爆撃を受けて沈没した。",
+      "year": 1937
     },
     {
       "id": "dorsetshire",
+      "no": 1404001,
       "name": "ドーセットシャー (Dorsetshire)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -169,10 +192,12 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dorsetshire",
-      "description": "カウンティ級重巡洋艦。1941年5月、魚雷でビスマルクにとどめを刺した。1942年4月、インド洋で日本の空母機に撃沈された。"
+      "description": "カウンティ級重巡洋艦。1941年5月、魚雷でビスマルクにとどめを刺した。1942年4月、インド洋で日本の空母機に撃沈された。",
+      "year": 1930
     },
     {
       "id": "dido",
+      "no": 1405011,
       "name": "ダイドー (Dido)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -185,10 +210,12 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dido",
-      "description": "ダイドー級軽巡洋艦1番艦。両用砲を主砲とした防空巡洋艦で、地中海の船団護衛で活躍した。"
+      "description": "ダイドー級軽巡洋艦1番艦。両用砲を主砲とした防空巡洋艦で、地中海の船団護衛で活躍した。",
+      "year": 1940
     },
     {
       "id": "cossack",
+      "no": 1407001,
       "name": "コサック (Cossack)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -201,10 +228,12 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
-      "description": "トライバル級駆逐艦。1940年のアルトマルク号事件で捕虜を救出し、ビスマルク追撃戦では夜間雷撃に加わった。"
+      "description": "トライバル級駆逐艦。1940年のアルトマルク号事件で捕虜を救出し、ビスマルク追撃戦では夜間雷撃に加わった。",
+      "year": 1938
     },
     {
       "id": "javelin",
+      "no": 1407010,
       "name": "ジャベリン (Javelin)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -217,10 +246,12 @@
         "depth_charge"
       ],
       "spriteKey": "javelin",
-      "description": "J級駆逐艦。大戦を通じて地中海などで行動し、終戦まで生き残った。"
+      "description": "J級駆逐艦。大戦を通じて地中海などで行動し、終戦まで生き残った。",
+      "year": 1939
     },
     {
       "id": "black_swan",
+      "no": 1408001,
       "name": "ブラック・スワン (Black Swan)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -233,10 +264,12 @@
         "depth_charge"
       ],
       "spriteKey": "black_swan",
-      "description": "ブラック・スワン級スループ1番艦。対空・対潜に優れた護衛艦で、同級はウォーカー大佐の部隊でUボート狩りに活躍した。"
+      "description": "ブラック・スワン級スループ1番艦。対空・対潜に優れた護衛艦で、同級はウォーカー大佐の部隊でUボート狩りに活躍した。",
+      "year": 1940
     },
     {
       "id": "illustrious",
+      "no": 1409002,
       "name": "イラストリアス (Illustrious)",
       "nation": "RN",
       "shipClass": "Carrier",
@@ -252,10 +285,12 @@
         "diveBombers": 2,
         "torpedoBombers": 4
       },
-      "description": "イラストリアス級航空母艦1番艦。装甲飛行甲板を持ち、1940年のタラント空襲でイタリア艦隊を攻撃した。"
+      "description": "イラストリアス級航空母艦1番艦。装甲飛行甲板を持ち、1940年のタラント空襲でイタリア艦隊を攻撃した。",
+      "year": 1940
     },
     {
       "id": "ark_royal",
+      "no": 1409001,
       "name": "アーク・ロイヤル (Ark Royal)",
       "nation": "RN",
       "shipClass": "Carrier",
@@ -271,10 +306,12 @@
         "diveBombers": 2,
         "torpedoBombers": 5
       },
-      "description": "航空母艦。搭載するソードフィッシュの雷撃でビスマルクの舵を損傷させた。1941年11月、U-81の雷撃で沈没。"
+      "description": "航空母艦。搭載するソードフィッシュの雷撃でビスマルクの舵を損傷させた。1941年11月、U-81の雷撃で沈没。",
+      "year": 1938
     },
     {
       "id": "hermes",
+      "no": 1410001,
       "name": "ハーミーズ (Hermes)",
       "nation": "RN",
       "shipClass": "Carrier",
@@ -291,10 +328,12 @@
         "diveBombers": 1,
         "torpedoBombers": 2
       },
-      "description": "世界で初めて空母として設計・起工された艦。1942年4月、セイロン沖で日本の空母機の攻撃を受けて沈没した。"
+      "description": "世界で初めて空母として設計・起工された艦。1942年4月、セイロン沖で日本の空母機の攻撃を受けて沈没した。",
+      "year": 1924
     },
     {
       "id": "avenger",
+      "no": 1411001,
       "name": "アヴェンジャー (Avenger)",
       "nation": "RN",
       "shipClass": "Carrier",
@@ -311,10 +350,12 @@
         "diveBombers": 1,
         "torpedoBombers": 2
       },
-      "description": "米国製の商船を改造した護衛空母。1942年9月にPQ18船団を護衛したが、同年11月にUボートの雷撃で沈没した。"
+      "description": "米国製の商船を改造した護衛空母。1942年9月にPQ18船団を護衛したが、同年11月にUボートの雷撃で沈没した。",
+      "year": 1942
     },
     {
       "id": "truant",
+      "no": 1412001,
       "name": "トルーアント (Truant)",
       "nation": "RN",
       "shipClass": "Submarine",
@@ -325,10 +366,12 @@
         "mk8_sub_torpedo"
       ],
       "spriteKey": "truant",
-      "description": "T級潜水艦。地中海や極東で多くの戦果を挙げた。"
+      "description": "T級潜水艦。地中海や極東で多くの戦果を挙げた。",
+      "year": 1940
     },
     {
       "id": "upholder",
+      "no": 1412002,
       "name": "アップホルダー (Upholder)",
       "nation": "RN",
       "shipClass": "Submarine",
@@ -339,10 +382,12 @@
         "mk8_sub_torpedo"
       ],
       "spriteKey": "upholder",
-      "description": "U級潜水艦。地中海で活躍したエース潜水艦。1942年4月に消息を絶った。"
+      "description": "U級潜水艦。地中海で活躍したエース潜水艦。1942年4月に消息を絶った。",
+      "year": 1940
     },
     {
       "id": "prince_of_wales",
+      "no": 1401009,
       "name": "プリンス・オブ・ウェールズ (Prince of Wales)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -354,11 +399,13 @@
         "4_5in_mk1"
       ],
       "spriteKey": "king_george_v",
+      "year": 1940,
       "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
       "sisterOf": "king_george_v"
     },
     {
       "id": "duke_of_york",
+      "no": 1401010,
       "name": "デューク・オブ・ヨーク (Duke of York)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -370,11 +417,13 @@
         "4_5in_mk1"
       ],
       "spriteKey": "king_george_v",
+      "year": 1940,
       "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
       "sisterOf": "king_george_v"
     },
     {
       "id": "anson",
+      "no": 1401011,
       "name": "アンソン (Anson)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -386,11 +435,13 @@
         "4_5in_mk1"
       ],
       "spriteKey": "king_george_v",
+      "year": 1940,
       "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
       "sisterOf": "king_george_v"
     },
     {
       "id": "howe",
+      "no": 1401012,
       "name": "ハウ (Howe)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -402,11 +453,13 @@
         "4_5in_mk1"
       ],
       "spriteKey": "king_george_v",
+      "year": 1940,
       "description": "キング・ジョージ5世級戦艦の同型艦。性能はキング・ジョージ5世と同じ。",
       "sisterOf": "king_george_v"
     },
     {
       "id": "valiant",
+      "no": 1401003,
       "name": "ヴァリアント (Valiant)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -418,11 +471,13 @@
         "6in_mk23"
       ],
       "spriteKey": "queen_elizabeth",
+      "year": 1915,
       "description": "クイーン・エリザベス級戦艦の同型艦。性能はクイーン・エリザベスと同じ。",
       "sisterOf": "queen_elizabeth"
     },
     {
       "id": "barham",
+      "no": 1401004,
       "name": "バーラム (Barham)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -434,11 +489,13 @@
         "6in_mk23"
       ],
       "spriteKey": "queen_elizabeth",
+      "year": 1915,
       "description": "クイーン・エリザベス級戦艦の同型艦。性能はクイーン・エリザベスと同じ。",
       "sisterOf": "queen_elizabeth"
     },
     {
       "id": "malaya",
+      "no": 1401005,
       "name": "マレーヤ (Malaya)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -450,11 +507,13 @@
         "6in_mk23"
       ],
       "spriteKey": "queen_elizabeth",
+      "year": 1915,
       "description": "クイーン・エリザベス級戦艦の同型艦。性能はクイーン・エリザベスと同じ。",
       "sisterOf": "queen_elizabeth"
     },
     {
       "id": "repulse",
+      "no": 1402002,
       "name": "レパルス (Repulse)",
       "nation": "RN",
       "shipClass": "Battleship",
@@ -467,11 +526,13 @@
         "4_5in_mk1"
       ],
       "spriteKey": "renown",
+      "year": 1916,
       "description": "レナウン級巡洋戦艦の同型艦。性能はレナウンと同じ。",
       "sisterOf": "renown"
     },
     {
       "id": "victorious",
+      "no": 1409003,
       "name": "ヴィクトリアス (Victorious)",
       "nation": "RN",
       "shipClass": "Carrier",
@@ -487,11 +548,13 @@
         "diveBombers": 2,
         "torpedoBombers": 4
       },
+      "year": 1940,
       "description": "イラストリアス級航空母艦の同型艦。性能はイラストリアスと同じ。",
       "sisterOf": "illustrious"
     },
     {
       "id": "formidable",
+      "no": 1409004,
       "name": "フォーミダブル (Formidable)",
       "nation": "RN",
       "shipClass": "Carrier",
@@ -507,11 +570,13 @@
         "diveBombers": 2,
         "torpedoBombers": 4
       },
+      "year": 1940,
       "description": "イラストリアス級航空母艦の同型艦。性能はイラストリアスと同じ。",
       "sisterOf": "illustrious"
     },
     {
       "id": "newcastle",
+      "no": 1405002,
       "name": "ニューカッスル (Newcastle)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -524,11 +589,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "sheffield",
+      "no": 1405003,
       "name": "シェフィールド (Sheffield)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -541,11 +608,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "glasgow",
+      "no": 1405004,
       "name": "グラスゴー (Glasgow)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -558,11 +627,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "birmingham_rn",
+      "no": 1405005,
       "name": "バーミンガム (Birmingham)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -575,11 +646,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "manchester",
+      "no": 1405006,
       "name": "マンチェスター (Manchester)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -592,11 +665,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "liverpool",
+      "no": 1405007,
       "name": "リヴァプール (Liverpool)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -609,11 +684,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "gloucester",
+      "no": 1405008,
       "name": "グロスター (Gloucester)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -626,11 +703,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "southampton",
+      "year": 1937,
       "description": "タウン級軽巡洋艦の同型艦。性能はサウサンプトンと同じ。",
       "sisterOf": "southampton"
     },
     {
       "id": "edinburgh",
+      "no": 1405010,
       "name": "エディンバラ (Edinburgh)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -643,11 +722,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "belfast",
+      "year": 1939,
       "description": "エディンバラ級軽巡洋艦の同型艦。性能はベルファストと同じ。",
       "sisterOf": "belfast"
     },
     {
       "id": "norfolk",
+      "no": 1404002,
       "name": "ノーフォーク (Norfolk)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -660,11 +741,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dorsetshire",
+      "year": 1930,
       "description": "ノーフォーク級重巡洋艦の同型艦。性能はドーセットシャーと同じ。",
       "sisterOf": "dorsetshire"
     },
     {
       "id": "naiad",
+      "no": 1405012,
       "name": "ナイアド (Naiad)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -677,11 +760,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dido",
+      "year": 1940,
       "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
       "sisterOf": "dido"
     },
     {
       "id": "phoebe",
+      "no": 1405013,
       "name": "フィービ (Phoebe)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -694,11 +779,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dido",
+      "year": 1940,
       "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
       "sisterOf": "dido"
     },
     {
       "id": "sirius",
+      "no": 1405014,
       "name": "シリアス (Sirius)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -711,11 +798,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dido",
+      "year": 1940,
       "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
       "sisterOf": "dido"
     },
     {
       "id": "euryalus",
+      "no": 1405015,
       "name": "ユーライアラス (Euryalus)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -728,11 +817,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dido",
+      "year": 1940,
       "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
       "sisterOf": "dido"
     },
     {
       "id": "cleopatra",
+      "no": 1405016,
       "name": "クレオパトラ (Cleopatra)",
       "nation": "RN",
       "shipClass": "Cruiser",
@@ -745,11 +836,13 @@
         "mk8_torpedo"
       ],
       "spriteKey": "dido",
+      "year": 1940,
       "description": "ダイドー級軽巡洋艦の同型艦。性能はダイドーと同じ。",
       "sisterOf": "dido"
     },
     {
       "id": "afridi",
+      "no": 1407002,
       "name": "アフリディ (Afridi)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -762,11 +855,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "ashanti",
+      "no": 1407003,
       "name": "アシャンティ (Ashanti)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -779,11 +874,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "maori",
+      "no": 1407004,
       "name": "マオリ (Maori)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -796,11 +893,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "sikh",
+      "no": 1407005,
       "name": "シーク (Sikh)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -813,11 +912,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "zulu",
+      "no": 1407006,
       "name": "ズールー (Zulu)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -830,11 +931,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "tartar",
+      "no": 1407007,
       "name": "タータ (Tartar)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -847,11 +950,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "eskimo",
+      "no": 1407008,
       "name": "エスキモー (Eskimo)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -864,11 +969,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "bedouin",
+      "no": 1407009,
       "name": "ベドウィン (Bedouin)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -881,11 +988,13 @@
         "depth_charge"
       ],
       "spriteKey": "cossack",
+      "year": 1938,
       "description": "トライバル級駆逐艦の同型艦。性能はコサックと同じ。",
       "sisterOf": "cossack"
     },
     {
       "id": "jervis",
+      "no": 1407011,
       "name": "ジャーヴィス (Jervis)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -898,11 +1007,13 @@
         "depth_charge"
       ],
       "spriteKey": "javelin",
+      "year": 1939,
       "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
       "sisterOf": "javelin"
     },
     {
       "id": "jupiter",
+      "no": 1407012,
       "name": "ジュピター (Jupiter)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -915,11 +1026,13 @@
         "depth_charge"
       ],
       "spriteKey": "javelin",
+      "year": 1939,
       "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
       "sisterOf": "javelin"
     },
     {
       "id": "juno",
+      "no": 1407013,
       "name": "ジュノー (Juno)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -932,11 +1045,13 @@
         "depth_charge"
       ],
       "spriteKey": "javelin",
+      "year": 1939,
       "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
       "sisterOf": "javelin"
     },
     {
       "id": "janus",
+      "no": 1407014,
       "name": "ジェーナス (Janus)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -949,11 +1064,13 @@
         "depth_charge"
       ],
       "spriteKey": "javelin",
+      "year": 1939,
       "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
       "sisterOf": "javelin"
     },
     {
       "id": "jackal",
+      "no": 1407015,
       "name": "ジャッカル (Jackal)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -966,11 +1083,13 @@
         "depth_charge"
       ],
       "spriteKey": "javelin",
+      "year": 1939,
       "description": "J 級駆逐艦の同型艦。性能はジャベリンと同じ。",
       "sisterOf": "javelin"
     },
     {
       "id": "starling",
+      "no": 1408002,
       "name": "スターリング (Starling)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -983,11 +1102,13 @@
         "depth_charge"
       ],
       "spriteKey": "black_swan",
+      "year": 1940,
       "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
       "sisterOf": "black_swan"
     },
     {
       "id": "wren",
+      "no": 1408003,
       "name": "レン (Wren)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -1000,11 +1121,13 @@
         "depth_charge"
       ],
       "spriteKey": "black_swan",
+      "year": 1940,
       "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
       "sisterOf": "black_swan"
     },
     {
       "id": "woodpecker",
+      "no": 1408004,
       "name": "ウッドペッカー (Woodpecker)",
       "nation": "RN",
       "shipClass": "Destroyer",
@@ -1017,6 +1140,7 @@
         "depth_charge"
       ],
       "spriteKey": "black_swan",
+      "year": 1940,
       "description": "ブラック・スワン級スループの同型艦。性能はブラック・スワンと同じ。",
       "sisterOf": "black_swan"
     }

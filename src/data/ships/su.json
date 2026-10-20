@@ -2,6 +2,7 @@
   "ships": [
     {
       "id": "marat",
+      "no": 1601001,
       "name": "マラート (Marat)",
       "nation": "SU",
       "shipClass": "Battleship",
@@ -13,10 +14,12 @@
         "120mm_vickers"
       ],
       "spriteKey": "marat",
-      "description": "ガングート級戦艦。1941年9月、クロンシュタットでドイツ空軍の爆撃を受けて大破着底したが、浮き砲台として砲撃を続けた。"
+      "description": "ガングート級戦艦。1941年9月、クロンシュタットでドイツ空軍の爆撃を受けて大破着底したが、浮き砲台として砲撃を続けた。",
+      "year": 1914
     },
     {
       "id": "oktyabrskaya_revolutsiya",
+      "no": 1601002,
       "name": "オクチャブリスカヤ・レボリューツィヤ (Oktyabrskaya Revolutsiya)",
       "nation": "SU",
       "shipClass": "Battleship",
@@ -28,10 +31,13 @@
         "120mm_vickers"
       ],
       "spriteKey": "oktyabrskaya_revolutsiya",
-      "description": "ガングート級戦艦 (旧名ガングート)。レニングラード包囲戦で艦砲射撃を行い、たびたび損傷しながらも戦争を生き延びた。"
+      "description": "ガングート級戦艦 (旧名ガングート)。レニングラード包囲戦で艦砲射撃を行い、たびたび損傷しながらも戦争を生き延びた。",
+      "year": 1914,
+      "classOf": "marat"
     },
     {
       "id": "sovetsky_soyuz",
+      "no": 1601003,
       "name": "ソビエツキー・ソユーズ (Sovetsky Soyuz)",
       "nation": "SU",
       "shipClass": "Battleship",
@@ -44,10 +50,12 @@
       ],
       "spriteKey": "sovetsky_soyuz",
       "fictional": true,
-      "description": "40.6cm砲9門を持つ大型戦艦として起工されたが、独ソ戦の開始で工事が止まり、未完成のまま解体された (架空艦)。"
+      "description": "40.6cm砲9門を持つ大型戦艦として起工されたが、独ソ戦の開始で工事が止まり、未完成のまま解体された (架空艦)。",
+      "year": 1945
     },
     {
       "id": "kirov",
+      "no": 1605001,
       "name": "キーロフ (Kirov)",
       "nation": "SU",
       "shipClass": "Cruiser",
@@ -60,10 +68,12 @@
         "53_38_torpedo"
       ],
       "spriteKey": "kirov",
-      "description": "キーロフ級巡洋艦1番艦。18cm砲9門を持つ。バルト艦隊に属し、レニングラード防衛戦で艦砲射撃を行った。"
+      "description": "キーロフ級巡洋艦1番艦。18cm砲9門を持つ。バルト艦隊に属し、レニングラード防衛戦で艦砲射撃を行った。",
+      "year": 1938
     },
     {
       "id": "maxim_gorky",
+      "no": 1605003,
       "name": "マクシム・ゴーリキー (Maxim Gorky)",
       "nation": "SU",
       "shipClass": "Cruiser",
@@ -76,10 +86,12 @@
         "53_38_torpedo"
       ],
       "spriteKey": "maxim_gorky",
-      "description": "キーロフ級の改良型 (26-bis型)。1941年6月に触雷して艦首を失ったが修理され、レニングラード防衛戦を戦った。"
+      "description": "キーロフ級の改良型 (26-bis型)。1941年6月に触雷して艦首を失ったが修理され、レニングラード防衛戦を戦った。",
+      "year": 1940
     },
     {
       "id": "tashkent",
+      "no": 1607006,
       "name": "タシュケント (Tashkent)",
       "nation": "SU",
       "shipClass": "Destroyer",
@@ -92,10 +104,12 @@
         "depth_charge"
       ],
       "spriteKey": "tashkent",
-      "description": "イタリアで建造された嚮導駆逐艦。公試で43ノットを超えた高速艦で、包囲されたセヴァストポリへの輸送で活躍したが、1942年7月に爆撃で沈没した。"
+      "description": "イタリアで建造された嚮導駆逐艦。公試で43ノットを超えた高速艦で、包囲されたセヴァストポリへの輸送で活躍したが、1942年7月に爆撃で沈没した。",
+      "year": 1939
     },
     {
       "id": "gnevny",
+      "no": 1607001,
       "name": "グネフヌイ (Gnevny)",
       "nation": "SU",
       "shipClass": "Destroyer",
@@ -108,10 +122,12 @@
         "depth_charge"
       ],
       "spriteKey": "gnevny",
-      "description": "7型駆逐艦1番艦。独ソ戦の開戦直後の1941年6月、バルト海で触雷して沈没した。"
+      "description": "7型駆逐艦1番艦。独ソ戦の開戦直後の1941年6月、バルト海で触雷して沈没した。",
+      "year": 1938
     },
     {
       "id": "project71",
+      "no": 1610001,
       "name": "71号計画空母 (Project 71)",
       "nation": "SU",
       "shipClass": "Carrier",
@@ -129,10 +145,12 @@
         "torpedoBombers": 2
       },
       "fictional": true,
-      "description": "1930年代末に計画されたソ連初の空母。巡洋艦の船体を使う設計だったが、起工されなかった (架空艦)。"
+      "description": "1930年代末に計画されたソ連初の空母。巡洋艦の船体を使う設計だったが、起工されなかった (架空艦)。",
+      "year": 1945
     },
     {
       "id": "shch",
+      "no": 1612001,
       "name": "Shch 型潜水艦 (Shchuka)",
       "nation": "SU",
       "shipClass": "Submarine",
@@ -143,10 +161,12 @@
         "53_38_sub_torpedo"
       ],
       "spriteKey": "shch",
-      "description": "シチューカ (Shch) 型潜水艦。多くの改良型が建造され、バルト海や黒海で通商破壊に従事した。"
+      "description": "シチューカ (Shch) 型潜水艦。多くの改良型が建造され、バルト海や黒海で通商破壊に従事した。",
+      "year": 1933
     },
     {
       "id": "s13",
+      "no": 1612002,
       "name": "S-13 (S-13)",
       "nation": "SU",
       "shipClass": "Submarine",
@@ -157,10 +177,12 @@
         "53_38_sub_torpedo"
       ],
       "spriteKey": "s13",
-      "description": "S型潜水艦。1945年1月、マリネスコ艦長のもとでドイツの客船ヴィルヘルム・グストロフを撃沈した。"
+      "description": "S型潜水艦。1945年1月、マリネスコ艦長のもとでドイツの客船ヴィルヘルム・グストロフを撃沈した。",
+      "year": 1941
     },
     {
       "id": "voroshilov",
+      "no": 1605002,
       "name": "ヴォロシーロフ (Voroshilov)",
       "nation": "SU",
       "shipClass": "Cruiser",
@@ -173,11 +195,13 @@
         "53_38_torpedo"
       ],
       "spriteKey": "kirov",
+      "year": 1938,
       "description": "キーロフ級軽巡洋艦の同型艦。性能はキーロフと同じ。",
       "sisterOf": "kirov"
     },
     {
       "id": "molotov",
+      "no": 1605004,
       "name": "モロトフ (Molotov)",
       "nation": "SU",
       "shipClass": "Cruiser",
@@ -190,11 +214,13 @@
         "53_38_torpedo"
       ],
       "spriteKey": "maxim_gorky",
+      "year": 1940,
       "description": "マクシム・ゴーリキー級軽巡洋艦の同型艦。性能はマクシム・ゴーリキーと同じ。",
       "sisterOf": "maxim_gorky"
     },
     {
       "id": "kalinin",
+      "no": 1605005,
       "name": "カリーニン (Kalinin)",
       "nation": "SU",
       "shipClass": "Cruiser",
@@ -207,11 +233,13 @@
         "53_38_torpedo"
       ],
       "spriteKey": "maxim_gorky",
+      "year": 1940,
       "description": "マクシム・ゴーリキー級軽巡洋艦の同型艦。性能はマクシム・ゴーリキーと同じ。",
       "sisterOf": "maxim_gorky"
     },
     {
       "id": "kaganovich",
+      "no": 1605006,
       "name": "カガノーヴィチ (Kaganovich)",
       "nation": "SU",
       "shipClass": "Cruiser",
@@ -224,11 +252,13 @@
         "53_38_torpedo"
       ],
       "spriteKey": "maxim_gorky",
+      "year": 1940,
       "description": "マクシム・ゴーリキー級軽巡洋艦の同型艦。性能はマクシム・ゴーリキーと同じ。",
       "sisterOf": "maxim_gorky"
     },
     {
       "id": "grozny",
+      "no": 1607002,
       "name": "グロズヌイ (Grozny)",
       "nation": "SU",
       "shipClass": "Destroyer",
@@ -241,11 +271,13 @@
         "depth_charge"
       ],
       "spriteKey": "gnevny",
+      "year": 1938,
       "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
       "sisterOf": "gnevny"
     },
     {
       "id": "gromky",
+      "no": 1607003,
       "name": "グロムキー (Gromky)",
       "nation": "SU",
       "shipClass": "Destroyer",
@@ -258,11 +290,13 @@
         "depth_charge"
       ],
       "spriteKey": "gnevny",
+      "year": 1938,
       "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
       "sisterOf": "gnevny"
     },
     {
       "id": "gremyashchy",
+      "no": 1607004,
       "name": "グレミャーシチー (Gremyashchy)",
       "nation": "SU",
       "shipClass": "Destroyer",
@@ -275,11 +309,13 @@
         "depth_charge"
       ],
       "spriteKey": "gnevny",
+      "year": 1938,
       "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
       "sisterOf": "gnevny"
     },
     {
       "id": "stremitelny",
+      "no": 1607005,
       "name": "ストレミーチェリヌイ (Stremitelny)",
       "nation": "SU",
       "shipClass": "Destroyer",
@@ -292,6 +328,7 @@
         "depth_charge"
       ],
       "spriteKey": "gnevny",
+      "year": 1938,
       "description": "グネフヌイ級駆逐艦の同型艦。性能はグネフヌイと同じ。",
       "sisterOf": "gnevny"
     }

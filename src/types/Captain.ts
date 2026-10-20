@@ -26,6 +26,8 @@ export enum CaptainSkill {
 /** Static captain data (src/data/captains.json). */
 export interface ICaptainData {
   id: string;
+  /** 通し番号 (#249) */
+  no?: number;
   name: string;
   nation: Nation;
   skill: CaptainSkill;
