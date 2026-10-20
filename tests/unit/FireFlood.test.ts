@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { airfieldRearmMs } from '@/systems/AirWingSystem';
+import special from '@/data/special.json';
 import {
   activeStatus, applyCritical, applyStatus, CRITICAL_DURATION_MS, damageReadout, effectiveShell, weaponReadout, FLOOD_SPEED_MUL, nextShellMode, rollStatus, STATUS_DPS, STATUS_DURATION_MS, statusDamage, statusSpeedMul,
 } from '@/systems/DamageSystem';
@@ -59,5 +61,20 @@ describe('HUD readouts (#81)', () => {
     expect(line).toContain(`${Math.ceil((CRITICAL_DURATION_MS - 3000) / 1000)}秒`);
     expect(line).toContain('火災 9秒');
     expect(damageReadout({}, {}, 0)).toBe('');
+  });
+});
+
+describe('飛行場 (#83)', () => {
+  it('re-arms slower as it is damaged, at most four times as slow', () => {
+    expect(airfieldRearmMs(18_000, 1)).toBe(18_000);
+    expect(airfieldRearmMs(18_000, 0.5)).toBe(36_000);
+    expect(airfieldRearmMs(18_000, 0.1)).toBe(72_000);
+    expect(airfieldRearmMs(18_000, 1.4)).toBe(18_000);
+  });
+
+  it('the airfield has an air group; batteries and the harbour have none', () => {
+    const land = (special as unknown as { landTargets: Array<{ id: string; airWing?: unknown }> }).landTargets;
+    expect(land.find((t) => t.id === 'land_airfield')?.airWing).toBeDefined();
+    expect(land.filter((t) => t.airWing).map((t) => t.id)).toEqual(['land_airfield']);
   });
 });

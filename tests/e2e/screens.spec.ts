@@ -912,6 +912,26 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a bombardment: the airfield sends its planes at the fleet (#83)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.scene.start('BattleScene', { objective: 'Bombard', mapKey: 'atoll' }));
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    type B = { setPaused(p: boolean): void; landTargets: Array<{ stats: { name: string } }>; enemyAir: { squadrons: Array<{ alive: boolean }>; hasCarrier(s: unknown): boolean } };
+    const airfields = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+      b.setPaused(false);
+      return b.landTargets.filter((t) => b.enemyAir.hasCarrier(t)).length;
+    });
+    expect(airfields).toBe(1);
+    // A strike goes up once the fleet is within reach; give it time.
+    await page.waitForFunction(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+      return b.enemyAir.squadrons.some((s) => s.alive);
+    }, null, { timeout: 60_000 });
+    await page.screenshot({ path: info.outputPath('airfield-strike.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));

@@ -255,6 +255,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('shopper', '御用達章', 'base', [5, 30, 100], (g) => `ショップで ${g} 回買い物をする`, (_r, c) => total(c, 'shopBuy')),
   ...ladder('treasury', '蓄財章', 'special', [5000, 50000, 200000], (g) => `ゴールドを累計 ${g.toLocaleString()} 手に入れる`, (_r, c) => c.goldEarned ?? 0),
   ...ladder('fire_flood', '火攻め章', 'battle', [20, 100, 400], (g) => `敵艦に火災・浸水を ${g} 回起こす`, (_r, c) => total(c, 'fireSet')),
+  ...ladder('airfield', '飛行場制圧章', 'battle', [3, 15, 50], (g) => `敵の飛行場を ${g} か所破壊する`, (_r, c) => total(c, 'airfieldDown')),
   ...ladder('hard_mode', '精鋭章', 'battle', [10, 50, 200], (g) => `難易度「難しい」で ${g} 回勝利する`, (_r, c) => total(c, 'hardWin')),
   ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them

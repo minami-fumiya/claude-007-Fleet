@@ -13,6 +13,7 @@ import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
 import { FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
+import { airfieldRearmMs, REARM_MS } from '@/systems/AirWingSystem';
 import { AircraftType } from '@/types/Aircraft';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
@@ -548,6 +549,8 @@ export class BattleScene extends Phaser.Scene {
       (target.body as Phaser.Physics.Arcade.Body).setImmovable(true);
       this.enemies.push(target);
       this.landTargets.push(target);
+      // 飛行場 (#83): its air group strikes the fleet until it is destroyed.
+      if (data.airWing) this.enemyAir.register(target, AirOpsSystem.wingFor(data));
       this.aiSystems.push(new AISystem(this.enemyWeapons, TACTICS[this.enemyNation], WORLD_BOUNDS));
     });
   }
@@ -986,6 +989,11 @@ export class BattleScene extends Phaser.Scene {
         return pick(this.playerNation)(carrier, foes);
       },
     );
+    // A damaged airfield re-arms slower (#83).
+    for (const t of this.landTargets) {
+      const wing = this.enemyAir.wing(t);
+      if (wing) wing.rearmMs = airfieldRearmMs(REARM_MS, t.stats.currentHp / Math.max(1, t.stats.maxHp));
+    }
     this.enemyAir.update(
       time,
       delta,
@@ -1740,7 +1748,7 @@ export class BattleScene extends Phaser.Scene {
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
