@@ -80,7 +80,7 @@ import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
 import { IScenario, IScenarioSide } from '@/types/Scenario';
-import { inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
+import { historyComparison, inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
@@ -1602,6 +1602,9 @@ export class BattleScene extends Phaser.Scene {
       result.reward = undefined;
       result.cost = undefined;
       result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}${firstWin ? `  ·  初勝利 ゴールド ${GOLD_SCENARIO_FIRST}` : ''}`;
+      // 史実との比較 (#200), on its own line.
+      const cmp = force ? historyComparison(this.scenario, force, { victory, sunk: enemiesSunk, lost: fleet.filter((s) => !s.isAlive).length }) : null;
+      if (cmp) result.event = cmp.text;
       result.returnScene = SceneKeys.SCENARIO;
       result.retry = this.battleData ?? undefined;
       this.time.delayedCall(1200, () => this.scene.start(SceneKeys.RESULTS, result));
