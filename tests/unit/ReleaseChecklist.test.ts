@@ -10,9 +10,12 @@ const ROOT = process.cwd();
 const VERSION = (JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { version: string }).version;
 const SHORT = VERSION.replace(/-alpha(\.\d+)?$/, (_m, patch: string | undefined) => patch ?? '');
 const SAVES = join(ROOT, 'tests', 'fixtures', 'saves');
+/** During the alpha a release needs no save fixture of its own (CLAUDE.md, 2026-10-20); from the beta on it does. */
+const SAVES_REQUIRED = !VERSION.includes('alpha');
 
 describe(`release checklist for ${VERSION} (#207)`, () => {
-  it('has a save fixture made with this version', () => {
+  it('has a save fixture made with this version (from the beta on)', () => {
+    if (!SAVES_REQUIRED) return;
     const file = `save-${SHORT}.json`;
     expect(existsSync(join(SAVES, file)), `tests/fixtures/saves/${file} を追加してください (この版のコードで作ったセーブ)`).toBe(true);
   });
@@ -32,7 +35,8 @@ describe(`release checklist for ${VERSION} (#207)`, () => {
     expect(existsSync(join(ROOT, 'docs', 'balance', `${SHORT}.md`)), `docs/balance/${SHORT}.md にバランス確認の結果を書いてください (CLAUDE.md「版ごとのバランス確認」)`).toBe(true);
   });
 
-  it('the E2E reads the previous version\'s save', () => {
+  it('the E2E reads the previous version\'s save (from the beta on)', () => {
+    if (!SAVES_REQUIRED) return;
     const versions = readdirSync(SAVES).map((f) => /^save-(.+)\.json$/.exec(f)?.[1]).filter((v): v is string => !!v).sort(compareVersions);
     const previous = versions[versions.indexOf(SHORT) - 1];
     const spec = readFileSync(join(ROOT, 'tests', 'e2e', 'screens.spec.ts'), 'utf8');
