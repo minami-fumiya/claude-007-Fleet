@@ -1589,7 +1589,9 @@ export class BattleScene extends Phaser.Scene {
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
     }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) });
     if (this.scenario) {
-      // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over.
+      // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over. The record keeps
+      // their results apart (#177), out of the career totals.
+      saveProgress(this.updateRecord(loadProgress(), victory, fleet.filter((s) => !s.isAlive).length, result));
       result.reward = undefined;
       result.cost = undefined;
       result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}`;
@@ -1743,7 +1745,8 @@ export class BattleScene extends Phaser.Scene {
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       damageDealt: Object.values(this.damageLog.player).reduce((a, n) => a + n, 0),
       shipsLost,
-    });
+    }, this.scenario ? 'scenario' : this.exercise ? 'exercise' : 'campaign',
+    this.scenario && this.scenarioSetup ? { id: this.scenario.id, force: this.scenarioSetup.side.force } : undefined);
     // Medals look at every nation's progress too (#92): the save as it will be written.
     const awarded = awardEarnedMedals(withSaveProgress(loadSave(), { ...progress, record }));
     const medals = awarded.medals;
