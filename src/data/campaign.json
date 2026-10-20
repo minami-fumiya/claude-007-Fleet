@@ -314,35 +314,35 @@
       "x": 0.05, "y": 0.92, "requires": [], "training": true,
       "enemy": { "nation": "USN", "ships": ["fletcher"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }
     },
     {
       "id": "a0", "theater": "atlantic", "name": "大西洋訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
       "x": 0.05, "y": 0.92, "requires": [], "training": true,
       "enemy": { "nation": "KM", "ships": ["z1"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }
     },
     {
       "id": "m0", "theater": "mediterranean", "name": "地中海訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
       "x": 0.05, "y": 0.92, "requires": [], "training": true,
       "enemy": { "nation": "RN", "ships": ["javelin"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }
     },
     {
       "id": "b0", "theater": "baltic", "name": "バルト海訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
       "x": 0.05, "y": 0.92, "requires": [], "training": true,
       "enemy": { "nation": "KM", "ships": ["z1"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }
     },
     {
       "id": "bs0", "theater": "blacksea", "name": "黒海訓練海域", "description": "敵が弱い訓練用の海域。新しい艦や艦長を試せる。報酬と経験は少なめで、戦域の攻略には数えない。",
       "x": 0.05, "y": 0.92, "requires": [], "training": true,
       "enemy": { "nation": "KM", "ships": ["z1"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }, "rewardShip": "Destroyer"
+      "reward": { "fuel": 100, "ammo": 100, "steel": 100, "bauxite": 0 }
     }
   ]
 }

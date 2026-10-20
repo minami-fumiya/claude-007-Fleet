@@ -6,19 +6,23 @@ import { ShipClass } from '@/types/ShipClass';
 /**
  * Damage and repairs (pure). Damage is the HP fraction a ship came home with (missing = undamaged).
  * Docks repair in parallel in real time; a fast repair finishes a docked ship at once for a fee. Since #211 builds
- * take a dock too: a base's docks are shared by its repairs and its builds. A new admiral has two docks and builds
- * more (up to MAX_DOCKS) as the rank allows (#38).
+ * take a dock too: a base's docks are shared by its repairs and its builds. A new base has one dock and builds more
+ * (up to MAX_DOCKS) as the rank allows (#38).
  */
 
-/** Docks a new admiral starts with, and the most a base can have (#211: 1 → 2 and 4 → 8). */
-export const START_DOCKS = 2;
+/**
+ * Docks a new base starts with, and the most a base can have (#211: 1 → 2 and 4 → 8; #244: back to 1, the second
+ * one cheap at 少尉). Bases built before 0.0.34 keep the two they had (the v20 migration writes them down).
+ */
+export const START_DOCKS = 1;
 export const MAX_DOCKS = 8;
 
-/** Docks 3〜8: the rank index each needs (少尉・中尉・大尉・少佐・大佐・少将) and what it costs. */
+/** Docks 2〜8 (#244): the rank index each needs (少尉・中尉・大尉・准佐・少佐・大佐・少将) and what it costs. */
 export const DOCK_UPGRADES: Array<{ rank: number; cost: IResources }> = [
-  { rank: 2, cost: { fuel: 200, ammo: 0, steel: 300, bauxite: 0 } },
-  { rank: 3, cost: { fuel: 300, ammo: 0, steel: 500, bauxite: 0 } },
-  { rank: 4, cost: { fuel: 500, ammo: 0, steel: 800, bauxite: 0 } },
+  { rank: 2, cost: { fuel: 100, ammo: 0, steel: 150, bauxite: 0 } },
+  { rank: 3, cost: { fuel: 200, ammo: 0, steel: 300, bauxite: 0 } },
+  { rank: 4, cost: { fuel: 300, ammo: 0, steel: 500, bauxite: 0 } },
+  { rank: 5, cost: { fuel: 500, ammo: 0, steel: 800, bauxite: 0 } },
   { rank: 6, cost: { fuel: 800, ammo: 0, steel: 1200, bauxite: 0 } },
   { rank: 8, cost: { fuel: 1200, ammo: 0, steel: 1800, bauxite: 0 } },
   { rank: 10, cost: { fuel: 1800, ammo: 0, steel: 2500, bauxite: 0 } },

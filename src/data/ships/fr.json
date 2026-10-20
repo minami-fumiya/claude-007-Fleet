@@ -2,6 +2,7 @@
   "ships": [
     {
       "id": "richelieu",
+      "no": 1701001,
       "name": "リシュリュー (Richelieu)",
       "nation": "FR",
       "shipClass": "Battleship",
@@ -13,10 +14,12 @@
         "152mm_m1930"
       ],
       "spriteKey": "richelieu",
-      "description": "リシュリュー級戦艦1番艦。38cm4連装砲塔2基を艦の前部に集中配置した。1940年のダカール沖海戦で英艦隊と交戦し、のちに連合国側で戦った。"
+      "description": "リシュリュー級戦艦1番艦。38cm4連装砲塔2基を艦の前部に集中配置した。1940年のダカール沖海戦で英艦隊と交戦し、のちに連合国側で戦った。",
+      "year": 1940
     },
     {
       "id": "dunkerque",
+      "no": 1702001,
       "name": "ダンケルク (Dunkerque)",
       "nation": "FR",
       "shipClass": "Battleship",
@@ -29,10 +32,12 @@
         "130mm_m1932"
       ],
       "spriteKey": "dunkerque",
-      "description": "ダンケルク級戦艦1番艦。33cm4連装砲塔2基を前部に集めた高速戦艦。1940年7月、メルセルケビールで英艦隊の攻撃を受けて損傷した。"
+      "description": "ダンケルク級戦艦1番艦。33cm4連装砲塔2基を前部に集めた高速戦艦。1940年7月、メルセルケビールで英艦隊の攻撃を受けて損傷した。",
+      "year": 1937
     },
     {
       "id": "strasbourg",
+      "no": 1702002,
       "name": "ストラスブール (Strasbourg)",
       "nation": "FR",
       "shipClass": "Battleship",
@@ -45,10 +50,13 @@
         "130mm_m1932"
       ],
       "spriteKey": "strasbourg",
-      "description": "ダンケルク級戦艦2番艦。メルセルケビールでの英艦隊の攻撃から脱出してトゥーロンへ逃れたが、1942年11月にトゥーロンで自沈した。"
+      "description": "ダンケルク級戦艦2番艦。メルセルケビールでの英艦隊の攻撃から脱出してトゥーロンへ逃れたが、1942年11月にトゥーロンで自沈した。",
+      "year": 1938,
+      "classOf": "dunkerque"
     },
     {
       "id": "algerie",
+      "no": 1704005,
       "name": "アルジェリー (Algérie)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -61,10 +69,12 @@
         "550mm_torpedo"
       ],
       "spriteKey": "algerie",
-      "description": "フランス最後の条約型重巡洋艦。防御を重視した設計で、1942年11月にトゥーロンで自沈した。"
+      "description": "フランス最後の条約型重巡洋艦。防御を重視した設計で、1942年11月にトゥーロンで自沈した。",
+      "year": 1934
     },
     {
       "id": "dupleix",
+      "no": 1704001,
       "name": "デュプレクス (Dupleix)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -77,10 +87,12 @@
         "550mm_torpedo"
       ],
       "spriteKey": "dupleix",
-      "description": "シュフラン級重巡洋艦。地中海で船団護衛などに従事し、1942年11月にトゥーロンで自沈した。"
+      "description": "シュフラン級重巡洋艦。地中海で船団護衛などに従事し、1942年11月にトゥーロンで自沈した。",
+      "year": 1932
     },
     {
       "id": "la_galissonniere",
+      "no": 1705001,
       "name": "ラ・ガリソニエール (La Galissonnière)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -93,10 +105,12 @@
         "550mm_torpedo"
       ],
       "spriteKey": "la_galissonniere",
-      "description": "ラ・ガリソニエール級軽巡洋艦1番艦。攻防のバランスのよい設計で知られ、1942年11月にトゥーロンで自沈した。"
+      "description": "ラ・ガリソニエール級軽巡洋艦1番艦。攻防のバランスのよい設計で知られ、1942年11月にトゥーロンで自沈した。",
+      "year": 1936
     },
     {
       "id": "le_fantasque",
+      "no": 1707001,
       "name": "ル・ファンタスク (Le Fantasque)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -109,10 +123,12 @@
         "depth_charge"
       ],
       "spriteKey": "le_fantasque",
-      "description": "ル・ファンタスク級大型駆逐艦1番艦。巡洋艦に迫る砲力を持つ高速艦で、同型艦ル・テリブルは公試で45ノットを記録した。"
+      "description": "ル・ファンタスク級大型駆逐艦1番艦。巡洋艦に迫る砲力を持つ高速艦で、同型艦ル・テリブルは公試で45ノットを記録した。",
+      "year": 1935
     },
     {
       "id": "mogador",
+      "no": 1707007,
       "name": "モガドール (Mogador)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -125,10 +141,12 @@
         "depth_charge"
       ],
       "spriteKey": "mogador",
-      "description": "モガドール級大型駆逐艦1番艦。13.86cm連装砲4基を持つ。1940年7月、メルセルケビールで英戦艦の砲弾を受けて艦尾を失った。"
+      "description": "モガドール級大型駆逐艦1番艦。13.86cm連装砲4基を持つ。1940年7月、メルセルケビールで英戦艦の砲弾を受けて艦尾を失った。",
+      "year": 1938
     },
     {
       "id": "bearn",
+      "no": 1709001,
       "name": "ベアルン (Béarn)",
       "nation": "FR",
       "shipClass": "Carrier",
@@ -144,10 +162,12 @@
         "diveBombers": 3,
         "torpedoBombers": 2
       },
-      "description": "建造途中の戦艦を改造したフランス唯一の航空母艦。低速のため、戦時は主に航空機の輸送に使われた。"
+      "description": "建造途中の戦艦を改造したフランス唯一の航空母艦。低速のため、戦時は主に航空機の輸送に使われた。",
+      "year": 1927
     },
     {
       "id": "surcouf",
+      "no": 1712001,
       "name": "シュルクーフ (Surcouf)",
       "nation": "FR",
       "shipClass": "Submarine",
@@ -158,10 +178,12 @@
         "550mm_sub_torpedo"
       ],
       "spriteKey": "surcouf",
-      "description": "20.3cm連装砲を備えた大型潜水艦 (潜水巡洋艦)。自由フランス海軍に加わったが、1942年2月にカリブ海で消息を絶った。"
+      "description": "20.3cm連装砲を備えた大型潜水艦 (潜水巡洋艦)。自由フランス海軍に加わったが、1942年2月にカリブ海で消息を絶った。",
+      "year": 1934
     },
     {
       "id": "jean_bart",
+      "no": 1701002,
       "name": "ジャン・バール (Jean Bart)",
       "nation": "FR",
       "shipClass": "Battleship",
@@ -173,11 +195,13 @@
         "152mm_m1930"
       ],
       "spriteKey": "richelieu",
+      "year": 1940,
       "description": "リシュリュー級戦艦の同型艦。性能はリシュリューと同じ。",
       "sisterOf": "richelieu"
     },
     {
       "id": "suffren",
+      "no": 1704002,
       "name": "シュフラン (Suffren)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -190,11 +214,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "dupleix",
+      "year": 1932,
       "description": "シュフラン級重巡洋艦の同型艦。性能はデュプレクスと同じ。",
       "sisterOf": "dupleix"
     },
     {
       "id": "colbert",
+      "no": 1704003,
       "name": "コルベール (Colbert)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -207,11 +233,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "dupleix",
+      "year": 1932,
       "description": "シュフラン級重巡洋艦の同型艦。性能はデュプレクスと同じ。",
       "sisterOf": "dupleix"
     },
     {
       "id": "foch",
+      "no": 1704004,
       "name": "フォッシュ (Foch)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -224,11 +252,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "dupleix",
+      "year": 1932,
       "description": "シュフラン級重巡洋艦の同型艦。性能はデュプレクスと同じ。",
       "sisterOf": "dupleix"
     },
     {
       "id": "jean_de_vienne",
+      "no": 1705002,
       "name": "ジャン・ド・ヴィエンヌ (Jean de Vienne)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -241,11 +271,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "la_galissonniere",
+      "year": 1936,
       "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
       "sisterOf": "la_galissonniere"
     },
     {
       "id": "marseillaise",
+      "no": 1705003,
       "name": "マルセイエーズ (Marseillaise)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -258,11 +290,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "la_galissonniere",
+      "year": 1936,
       "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
       "sisterOf": "la_galissonniere"
     },
     {
       "id": "gloire",
+      "no": 1705004,
       "name": "グロワール (Gloire)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -275,11 +309,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "la_galissonniere",
+      "year": 1936,
       "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
       "sisterOf": "la_galissonniere"
     },
     {
       "id": "montcalm",
+      "no": 1705005,
       "name": "モンカルム (Montcalm)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -292,11 +328,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "la_galissonniere",
+      "year": 1936,
       "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
       "sisterOf": "la_galissonniere"
     },
     {
       "id": "georges_leygues",
+      "no": 1705006,
       "name": "ジョルジュ・レイグ (Georges Leygues)",
       "nation": "FR",
       "shipClass": "Cruiser",
@@ -309,11 +347,13 @@
         "550mm_torpedo"
       ],
       "spriteKey": "la_galissonniere",
+      "year": 1936,
       "description": "ラ・ガリソニエール級軽巡洋艦の同型艦。性能はラ・ガリソニエールと同じ。",
       "sisterOf": "la_galissonniere"
     },
     {
       "id": "le_terrible",
+      "no": 1707002,
       "name": "ル・テリブル (Le Terrible)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -326,11 +366,13 @@
         "depth_charge"
       ],
       "spriteKey": "le_fantasque",
+      "year": 1935,
       "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
       "sisterOf": "le_fantasque"
     },
     {
       "id": "le_triomphant",
+      "no": 1707003,
       "name": "ル・トリオンファン (Le Triomphant)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -343,11 +385,13 @@
         "depth_charge"
       ],
       "spriteKey": "le_fantasque",
+      "year": 1935,
       "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
       "sisterOf": "le_fantasque"
     },
     {
       "id": "l_indomptable",
+      "no": 1707004,
       "name": "ランドンターブル (L'Indomptable)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -360,11 +404,13 @@
         "depth_charge"
       ],
       "spriteKey": "le_fantasque",
+      "year": 1935,
       "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
       "sisterOf": "le_fantasque"
     },
     {
       "id": "le_malin",
+      "no": 1707005,
       "name": "ル・マラン (Le Malin)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -377,11 +423,13 @@
         "depth_charge"
       ],
       "spriteKey": "le_fantasque",
+      "year": 1935,
       "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
       "sisterOf": "le_fantasque"
     },
     {
       "id": "l_audacieux",
+      "no": 1707006,
       "name": "ロダシュー (L'Audacieux)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -394,11 +442,13 @@
         "depth_charge"
       ],
       "spriteKey": "le_fantasque",
+      "year": 1935,
       "description": "ル・ファンタスク級駆逐艦の同型艦。性能はル・ファンタスクと同じ。",
       "sisterOf": "le_fantasque"
     },
     {
       "id": "volta",
+      "no": 1707008,
       "name": "ヴォルタ (Volta)",
       "nation": "FR",
       "shipClass": "Destroyer",
@@ -411,6 +461,7 @@
         "depth_charge"
       ],
       "spriteKey": "mogador",
+      "year": 1938,
       "description": "モガドール級駆逐艦の同型艦。性能はモガドールと同じ。",
       "sisterOf": "mogador"
     }

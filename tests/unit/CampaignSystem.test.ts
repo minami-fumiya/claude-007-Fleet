@@ -1,6 +1,6 @@
 import { finalAreas } from '@/systems/RankSystem';
 import { describe, it, expect } from 'vitest';
-import { areaMode, areasOf, campaignSide, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, prerequisitesOf, recordClear, theaterProgress, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
+import { areaMode, areasOf, campaignSide, firstSReward, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, prerequisitesOf, recordClear, theaterProgress, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -9,6 +9,7 @@ import { IShipData } from '@/types/Ship';
 import { BattleMode } from '@/types/Battle';
 import { ShipClass } from '@/types/ShipClass';
 import campaign from '@/data/campaign.json';
+import rewardShips from '@/data/reward-ships.json';
 import { goalThrottle } from '@/systems/ObjectiveSystem';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
@@ -195,5 +196,26 @@ describe('more theaters and training areas (#202)', () => {
       expect(theaterProgress(data, t.id, [tr[0].id])).toBe(0);
     }
     expect(TRAINING_SCALE).toBeLessThan(1);
+  });
+});
+
+describe('the S-rank reward (#247)', () => {
+  const ship = { id: 'takao' } as unknown as Parameters<typeof firstSReward>[1]['rewardShip'];
+  it('one reward: the area\'s reward-only ship, else a captain on the first S; a training area none', () => {
+    expect(firstSReward({ id: 'p5' }, { rewardShip: ship, perfect: [], captainsLeft: 5 })).toEqual({ kind: 'ship', ship });
+    expect(firstSReward({ id: 'p1' }, { perfect: [], captainsLeft: 5 })).toEqual({ kind: 'captain' });
+    expect(firstSReward({ id: 'p1' }, { perfect: ['p1'], captainsLeft: 5 })).toBeNull();
+    expect(firstSReward({ id: 'p1' }, { perfect: [], captainsLeft: 0 })).toBeNull();
+    expect(firstSReward({ id: 'p0', training: true }, { rewardShip: ship, perfect: [], captainsLeft: 5 })).toBeNull();
+    expect(firstSReward({ id: 'p0', training: true }, { perfect: [], captainsLeft: 5 })).toBeNull();
+  });
+
+  it('no training area lists a reward ship, in the campaign or the reward-ship table', () => {
+    const training = campaign.areas.filter((a) => (a as { training?: boolean }).training);
+    expect(training.length).toBeGreaterThan(0);
+    for (const a of training) {
+      expect((a as { rewardShip?: string }).rewardShip, a.id).toBeUndefined();
+      for (const table of Object.values(rewardShips)) expect((table as Record<string, string>)[a.id], a.id).toBeUndefined();
+    }
   });
 });

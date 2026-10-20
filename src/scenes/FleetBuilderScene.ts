@@ -32,7 +32,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { filterAndSort, isHeavyCruiser, KIND_FILTERS, KindFilter, kindBreakdown, kindGroups, kindShort, ShipSort, SORT_LABEL } from '@/systems/ShipKind';
 import { FORMATION_ORDER, FORMATION_RULES, formationUnlocked, usableFormation } from '@/systems/FormationRules';
 import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, withPreset } from '@/systems/PresetSystem';
-import { kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
+import { filterEntries, kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
 import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData } from '@/types/Scene';
@@ -536,7 +536,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Owned ships of the current nation (#18), with fictional designs still gated by their research. */
   private offeredShips(): IShipData[] {
     const progress = loadProgress();
-    return availableShips(ownedShips(progress, this.shipRegistry.byNation(this.nation)), progress.research);
+    // By kind, then class by class oldest first, hulls in order (#246).
+    return filterEntries(availableShips(ownedShips(progress, this.shipRegistry.byNation(this.nation)), progress.research), null);
   }
 
   /** The base's own ships first; ships at other bases (#145) are listed after them. */

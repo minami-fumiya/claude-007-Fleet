@@ -1,4 +1,5 @@
 import campaignData from '@/data/campaign.json';
+import { theaterFinalArea } from './CampaignSystem';
 
 /**
  * Admiral rank (#30 / #36, pure). Each nation climbs 14 ranks, from 士官候補生 to 元帥, with merit (戦功) earned in
@@ -146,7 +147,7 @@ export function finalAreas(nation?: string): string[] {
   const data = campaignData as unknown as { theaters: ITheaterAreas[]; areas: Array<{ id: string; theater: string; training?: boolean }> };
   return data.theaters
     .filter((t) => t.exam !== false && (!nation || t.opponents[nation] !== undefined))
-    .map((t) => data.areas.filter((a) => a.theater === t.id && !a.training).pop()?.id)
+    .map((t) => theaterFinalArea(data, t.id))
     .filter((id): id is string => id !== undefined);
 }
 

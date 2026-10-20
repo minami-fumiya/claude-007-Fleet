@@ -137,6 +137,8 @@ export interface IMedalContext {
   basesOpen?: number;
   /** Classes (lead + sisters, #85) one nation owns every ship of, best nation */
   classesComplete?: number;
+  /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
+  shipTypes?: number;
   /** Lowest level among the four resource facilities (all bases summed), best nation (#190) */
   supplyLevel?: number;
   /** Most carriers one nation owns (#204) */
@@ -214,6 +216,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
   ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),
+  // The 図鑑 numbers ships by type (#249): owning many kinds of ship.
+  ...ladder('ship_types', '艦種章', 'growth', [3, 6, 9], (g) => `1 か国で ${g} 種類の艦種 (図鑑の No. の種別) の艦を保有する`, (_r, c) => c.shipTypes ?? 0),
   ...ladder('class_set', '同型艦章', 'growth', [1, 3, 10], (g) => `1 か国で ${g} つの級の艦をすべてそろえる (例: 金剛型 4 隻)`, (_r, c) => c.classesComplete ?? 0),
   ...ladder('fleet', '艦隊章', 'growth', [5, 15, 30, 60, 100], (g) => `艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.shipsOwned ?? 0),
   ...ladder('science', '技術章', 'growth', [5, 15, 30], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
@@ -230,6 +234,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('shipwright', '造船章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻建造する`, (_r, c) => total(c, 'build')),
   ...ladder('rush_work', '突貫工事章', 'base', [2, 3], (g) => `1 つの軍港で施設を ${g} つ同時に建設する`, (_r, c) => c.parallelFacilities ?? 0),
   ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `1 つの軍港のドックを ${g} 本にする`, (_r, c) => c.maxDocks ?? 0),
+  // A new base starts with one dock (#244): the second is the first step.
+  { id: 'second_dock', name: '第二船渠章', description: '1 つの軍港のドックを 2 本にする', category: 'base', value: (_r, c) => c.maxDocks ?? 0, goal: 2 },
   { id: 'stockpile', name: '大備蓄章', description: '4 つの資源をすべて保有上限まで貯める', category: 'base', value: (_r, c) => c.fullStock ?? 0, goal: 1 },
   ...ladder('warehouse', '備蓄拡張章', 'base', [20000, 40000], (g) => `製鋼所で鋼材の保有上限を ${g.toLocaleString()} にする`, (_r, c) => c.steelCap ?? 0),
   ...ladder('harbor_works', '築港章', 'base', [2, 4], (g) => `1 か国で軍港を ${g} つ開く (工事で開港)`, (_r, c) => c.basesOpen ?? 0),

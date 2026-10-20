@@ -2,6 +2,7 @@
   "weapons": [
     {
       "id": "46cm_main_gun",
+      "no": 5001001,
       "name": "46cm 三式弾",
       "type": "ShellAP",
       "firePower": 120,
@@ -11,6 +12,7 @@
     },
     {
       "id": "20cm_twin_gun",
+      "no": 5001002,
       "name": "20cm 連装砲",
       "type": "ShellAP",
       "firePower": 65,
@@ -20,6 +22,7 @@
     },
     {
       "id": "12cm_gun",
+      "no": 5002001,
       "name": "12cm 単装砲",
       "type": "ShellHE",
       "firePower": 35,
@@ -29,6 +32,7 @@
     },
     {
       "id": "torpedo_type93",
+      "no": 5003001,
       "name": "93式酸素魚雷",
       "type": "Torpedo",
       "firePower": 200,
@@ -38,6 +42,7 @@
     },
     {
       "id": "type95_torpedo",
+      "no": 5003002,
       "name": "95式酸素魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 150,
@@ -47,6 +52,7 @@
     },
     {
       "id": "depth_charge",
+      "no": 5004001,
       "name": "爆雷投射機",
       "type": "DepthCharge",
       "firePower": 140,
@@ -56,6 +62,7 @@
     },
     {
       "id": "16in_mk7",
+      "no": 5001003,
       "name": "16in Mk.7 主砲",
       "type": "ShellAP",
       "firePower": 115,
@@ -65,6 +72,7 @@
     },
     {
       "id": "16in_mk6",
+      "no": 5001004,
       "name": "16in Mk.6 主砲",
       "type": "ShellAP",
       "firePower": 105,
@@ -74,6 +82,7 @@
     },
     {
       "id": "8in_mk12",
+      "no": 5001005,
       "name": "8in Mk.12 主砲",
       "type": "ShellAP",
       "firePower": 62,
@@ -83,6 +92,7 @@
     },
     {
       "id": "5in_38",
+      "no": 5002002,
       "name": "5in/38 両用砲",
       "type": "ShellHE",
       "firePower": 32,
@@ -92,6 +102,7 @@
     },
     {
       "id": "mk15_torpedo",
+      "no": 5003003,
       "name": "Mk.15 魚雷",
       "type": "Torpedo",
       "firePower": 170,
@@ -101,6 +112,7 @@
     },
     {
       "id": "mk14_torpedo",
+      "no": 5003004,
       "name": "Mk.14 魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 130,
@@ -110,6 +122,7 @@
     },
     {
       "id": "38cm_skc34",
+      "no": 5001006,
       "name": "38cm SK C/34 主砲",
       "type": "ShellAP",
       "firePower": 108,
@@ -119,6 +132,7 @@
     },
     {
       "id": "20cm_skc34",
+      "no": 5001007,
       "name": "20.3cm SK C/34 主砲",
       "type": "ShellAP",
       "firePower": 64,
@@ -128,6 +142,7 @@
     },
     {
       "id": "15cm_skc28",
+      "no": 5002003,
       "name": "15cm SK C/28 副砲",
       "type": "ShellHE",
       "firePower": 45,
@@ -137,6 +152,7 @@
     },
     {
       "id": "12cm_skc34",
+      "no": 5002004,
       "name": "12.7cm SK C/34 砲",
       "type": "ShellHE",
       "firePower": 34,
@@ -146,6 +162,7 @@
     },
     {
       "id": "g7a_torpedo",
+      "no": 5003005,
       "name": "G7a 魚雷",
       "type": "Torpedo",
       "firePower": 175,
@@ -155,6 +172,7 @@
     },
     {
       "id": "g7e_torpedo",
+      "no": 5003006,
       "name": "G7e 魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 125,
@@ -164,6 +182,7 @@
     },
     {
       "id": "41cm_main_gun",
+      "no": 5001008,
       "name": "41cm 連装砲",
       "type": "ShellAP",
       "firePower": 110,
@@ -173,6 +192,7 @@
     },
     {
       "id": "36cm_main_gun",
+      "no": 5001009,
       "name": "35.6cm 連装砲",
       "type": "ShellAP",
       "firePower": 95,
@@ -182,6 +202,7 @@
     },
     {
       "id": "8in_mk16",
+      "no": 5001010,
       "name": "8in Mk.16 速射砲",
       "type": "ShellAP",
       "firePower": 66,
@@ -191,6 +212,7 @@
     },
     {
       "id": "28cm_skc34",
+      "no": 5001011,
       "name": "28cm SK C/34 主砲",
       "type": "ShellAP",
       "firePower": 85,
@@ -200,6 +222,7 @@
     },
     {
       "id": "15in_mk1",
+      "no": 5001012,
       "name": "15in Mk.I 主砲",
       "type": "ShellAP",
       "firePower": 100,
@@ -209,6 +232,7 @@
     },
     {
       "id": "14in_mk7",
+      "no": 5001013,
       "name": "14in Mk.VII 4 連装砲",
       "type": "ShellAP",
       "firePower": 98,
@@ -218,6 +242,7 @@
     },
     {
       "id": "16in_mk1",
+      "no": 5001014,
       "name": "16in Mk.I 主砲",
       "type": "ShellAP",
       "firePower": 110,
@@ -227,6 +252,7 @@
     },
     {
       "id": "6in_mk23",
+      "no": 5002005,
       "name": "6in Mk.XXIII 砲",
       "type": "ShellHE",
       "firePower": 48,
@@ -236,6 +262,7 @@
     },
     {
       "id": "4_7in_mk12",
+      "no": 5002006,
       "name": "4.7in Mk.XII 砲",
       "type": "ShellHE",
       "firePower": 33,
@@ -245,6 +272,7 @@
     },
     {
       "id": "4_5in_mk1",
+      "no": 5002007,
       "name": "4.5in Mk.I 両用砲",
       "type": "ShellHE",
       "firePower": 30,
@@ -254,6 +282,7 @@
     },
     {
       "id": "mk8_torpedo",
+      "no": 5003007,
       "name": "Mk.VIII 魚雷",
       "type": "Torpedo",
       "firePower": 165,
@@ -263,6 +292,7 @@
     },
     {
       "id": "mk8_sub_torpedo",
+      "no": 5003008,
       "name": "Mk.VIII 魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 125,
@@ -272,6 +302,7 @@
     },
     {
       "id": "aerial_bomb",
+      "no": 5005001,
       "name": "航空爆弾",
       "type": "Bomb",
       "firePower": 65,
@@ -281,6 +312,7 @@
     },
     {
       "id": "aerial_torpedo",
+      "no": 5003009,
       "name": "航空魚雷",
       "type": "Torpedo",
       "firePower": 75,
@@ -290,6 +322,7 @@
     },
     {
       "id": "15_5cm_triple",
+      "no": 5002008,
       "name": "15.5cm 3 連装副砲",
       "type": "ShellHE",
       "firePower": 46,
@@ -299,6 +332,7 @@
     },
     {
       "id": "shore_battery",
+      "no": 5001015,
       "name": "沿岸砲台",
       "type": "ShellAP",
       "firePower": 60,
@@ -308,6 +342,7 @@
     },
     {
       "id": "51cm_main_gun",
+      "no": 5001016,
       "name": "51cm 連装砲",
       "type": "ShellAP",
       "firePower": 135,
@@ -317,6 +352,7 @@
     },
     {
       "id": "16in_mk7_quad",
+      "no": 5001017,
       "name": "16in Mk.7 4連装砲",
       "type": "ShellAP",
       "firePower": 115,
@@ -326,6 +362,7 @@
     },
     {
       "id": "40_6cm_skc34",
+      "no": 5001018,
       "name": "40.6cm SK C/34 主砲",
       "type": "ShellAP",
       "firePower": 120,
@@ -335,6 +372,7 @@
     },
     {
       "id": "16in_mk2",
+      "no": 5001019,
       "name": "16in Mk.II 主砲",
       "type": "ShellAP",
       "firePower": 116,
@@ -344,6 +382,7 @@
     },
     {
       "id": "14cm_gun",
+      "no": 5002009,
       "name": "14cm 単装砲",
       "type": "ShellHE",
       "firePower": 40,
@@ -353,6 +392,7 @@
     },
     {
       "id": "12cm_kaibokan",
+      "no": 5002010,
       "name": "12cm 単装高角砲 (海防艦)",
       "type": "ShellHE",
       "firePower": 34,
@@ -362,6 +402,7 @@
     },
     {
       "id": "6in_47",
+      "no": 5002011,
       "name": "6in/47 Mk.16 砲",
       "type": "ShellHE",
       "firePower": 47,
@@ -371,6 +412,7 @@
     },
     {
       "id": "5in_38_twin",
+      "no": 5002012,
       "name": "5in/38 連装両用砲",
       "type": "ShellHE",
       "firePower": 33,
@@ -380,6 +422,7 @@
     },
     {
       "id": "3in_50",
+      "no": 5002013,
       "name": "3in/50 砲",
       "type": "ShellHE",
       "firePower": 26,
@@ -389,6 +432,7 @@
     },
     {
       "id": "28cm_skc28",
+      "no": 5001020,
       "name": "28cm SK C/28 主砲",
       "type": "ShellAP",
       "firePower": 80,
@@ -398,6 +442,7 @@
     },
     {
       "id": "15cm_skc25",
+      "no": 5002014,
       "name": "15cm SK C/25 砲",
       "type": "ShellHE",
       "firePower": 46,
@@ -407,6 +452,7 @@
     },
     {
       "id": "15cm_skc16",
+      "no": 5002015,
       "name": "15cm SK C/16 砲",
       "type": "ShellHE",
       "firePower": 44,
@@ -416,6 +462,7 @@
     },
     {
       "id": "15cm_tbk_c36",
+      "no": 5002016,
       "name": "15cm TbtsK C/36 砲",
       "type": "ShellHE",
       "firePower": 44,
@@ -425,6 +472,7 @@
     },
     {
       "id": "8in_mk8",
+      "no": 5001021,
       "name": "8in Mk.VIII 主砲",
       "type": "ShellAP",
       "firePower": 62,
@@ -434,6 +482,7 @@
     },
     {
       "id": "5_25in_mk1",
+      "no": 5002017,
       "name": "5.25in Mk.I 両用砲",
       "type": "ShellHE",
       "firePower": 38,
@@ -443,6 +492,7 @@
     },
     {
       "id": "5_5in_mk1",
+      "no": 5002018,
       "name": "5.5in Mk.I 砲",
       "type": "ShellHE",
       "firePower": 40,
@@ -452,6 +502,7 @@
     },
     {
       "id": "4in_mk16",
+      "no": 5002019,
       "name": "4in Mk.XVI 連装高角砲",
       "type": "ShellHE",
       "firePower": 28,
@@ -461,6 +512,7 @@
     },
     {
       "id": "380mm_m1935",
+      "no": 5001022,
       "name": "38cm Mle1935 4 連装砲",
       "type": "ShellAP",
       "firePower": 110,
@@ -470,6 +522,7 @@
     },
     {
       "id": "330mm_m1931",
+      "no": 5001023,
       "name": "33cm Mle1931 4 連装砲",
       "type": "ShellAP",
       "firePower": 88,
@@ -479,6 +532,7 @@
     },
     {
       "id": "152mm_m1930",
+      "no": 5002020,
       "name": "15.2cm Mle1930 砲",
       "type": "ShellHE",
       "firePower": 46,
@@ -488,6 +542,7 @@
     },
     {
       "id": "130mm_m1932",
+      "no": 5002021,
       "name": "13cm Mle1932 両用砲",
       "type": "ShellHE",
       "firePower": 36,
@@ -497,6 +552,7 @@
     },
     {
       "id": "203mm_m1924",
+      "no": 5001024,
       "name": "20.3cm Mle1924 主砲",
       "type": "ShellAP",
       "firePower": 63,
@@ -506,6 +562,7 @@
     },
     {
       "id": "138mm_m1929",
+      "no": 5002022,
       "name": "13.86cm Mle1929 砲",
       "type": "ShellHE",
       "firePower": 40,
@@ -515,6 +572,7 @@
     },
     {
       "id": "155mm_m1920",
+      "no": 5002023,
       "name": "15.5cm Mle1920 砲",
       "type": "ShellHE",
       "firePower": 45,
@@ -524,6 +582,7 @@
     },
     {
       "id": "550mm_torpedo",
+      "no": 5003010,
       "name": "55cm 23DT 魚雷",
       "type": "Torpedo",
       "firePower": 170,
@@ -533,6 +592,7 @@
     },
     {
       "id": "550mm_sub_torpedo",
+      "no": 5003011,
       "name": "55cm 魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 125,
@@ -542,6 +602,7 @@
     },
     {
       "id": "305mm_obukhov",
+      "no": 5001025,
       "name": "30.5cm 52 口径 3 連装砲",
       "type": "ShellAP",
       "firePower": 94,
@@ -551,6 +612,7 @@
     },
     {
       "id": "120mm_vickers",
+      "no": 5002024,
       "name": "12cm 50 口径砲",
       "type": "ShellHE",
       "firePower": 34,
@@ -560,6 +622,7 @@
     },
     {
       "id": "406mm_b37",
+      "no": 5001026,
       "name": "40.6cm B-37 3 連装砲",
       "type": "ShellAP",
       "firePower": 120,
@@ -569,6 +632,7 @@
     },
     {
       "id": "152mm_b38",
+      "no": 5002025,
       "name": "15.2cm B-38 砲",
       "type": "ShellHE",
       "firePower": 46,
@@ -578,6 +642,7 @@
     },
     {
       "id": "180mm_b1p",
+      "no": 5001027,
       "name": "18cm B-1-P 主砲",
       "type": "ShellAP",
       "firePower": 58,
@@ -587,6 +652,7 @@
     },
     {
       "id": "130mm_b13",
+      "no": 5002026,
       "name": "13cm B-13 砲",
       "type": "ShellHE",
       "firePower": 38,
@@ -596,6 +662,7 @@
     },
     {
       "id": "100mm_b34",
+      "no": 5002027,
       "name": "10cm B-34 両用砲",
       "type": "ShellHE",
       "firePower": 30,
@@ -605,6 +672,7 @@
     },
     {
       "id": "53_38_torpedo",
+      "no": 5003012,
       "name": "53-38 魚雷",
       "type": "Torpedo",
       "firePower": 165,
@@ -614,6 +682,7 @@
     },
     {
       "id": "53_38_sub_torpedo",
+      "no": 5003013,
       "name": "53-38 魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 125,
@@ -623,6 +692,7 @@
     },
     {
       "id": "381mm_m1934",
+      "no": 5001028,
       "name": "38.1cm 50 口径 3 連装砲",
       "type": "ShellAP",
       "firePower": 112,
@@ -632,6 +702,7 @@
     },
     {
       "id": "320mm_m1936",
+      "no": 5001029,
       "name": "32cm 44 口径砲",
       "type": "ShellAP",
       "firePower": 90,
@@ -641,6 +712,7 @@
     },
     {
       "id": "152mm_m1934",
+      "no": 5002028,
       "name": "15.2cm 55 口径砲",
       "type": "ShellHE",
       "firePower": 46,
@@ -650,6 +722,7 @@
     },
     {
       "id": "120mm_m1926",
+      "no": 5002029,
       "name": "12cm 50 口径連装砲",
       "type": "ShellHE",
       "firePower": 35,
@@ -659,6 +732,7 @@
     },
     {
       "id": "203mm_ansaldo",
+      "no": 5001030,
       "name": "20.3cm 連装砲",
       "type": "ShellAP",
       "firePower": 64,
@@ -668,6 +742,7 @@
     },
     {
       "id": "100mm_m1928",
+      "no": 5002030,
       "name": "10cm 47 口径連装高角砲",
       "type": "ShellHE",
       "firePower": 30,
@@ -677,6 +752,7 @@
     },
     {
       "id": "135mm_m1938",
+      "no": 5002031,
       "name": "13.5cm 45 口径砲",
       "type": "ShellHE",
       "firePower": 38,
@@ -686,6 +762,7 @@
     },
     {
       "id": "533mm_si270",
+      "no": 5003014,
       "name": "53.3cm SI 270 魚雷",
       "type": "Torpedo",
       "firePower": 165,
@@ -695,6 +772,7 @@
     },
     {
       "id": "533mm_sub_torpedo",
+      "no": 5003015,
       "name": "53.3cm 魚雷 (潜水艦)",
       "type": "Torpedo",
       "firePower": 125,
@@ -704,6 +782,7 @@
     },
     {
       "id": "14in_45",
+      "no": 5001031,
       "name": "14in/45 主砲",
       "type": "ShellAP",
       "firePower": 96,
@@ -713,6 +792,7 @@
     },
     {
       "id": "14in_50",
+      "no": 5001032,
       "name": "14in/50 主砲",
       "type": "ShellAP",
       "firePower": 98,
@@ -722,6 +802,7 @@
     },
     {
       "id": "16in_45_mk5",
+      "no": 5001033,
       "name": "16in/45 Mk.5 主砲",
       "type": "ShellAP",
       "firePower": 108,
@@ -731,6 +812,7 @@
     },
     {
       "id": "10cm_type98",
+      "no": 5002032,
       "name": "10cm 連装高角砲",
       "type": "ShellHE",
       "firePower": 30,

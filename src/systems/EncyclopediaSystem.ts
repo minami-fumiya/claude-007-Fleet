@@ -1,6 +1,7 @@
 import { IShipData, SUBTYPE_JA } from '@/types/Ship';
 import { ADDITIVE_MODIFIERS, IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { ShipClass } from '@/types/ShipClass';
+import { shipOrder } from './ShipOrder';
 
 export const CLASS_JA: Record<ShipClass, string> = {
   [ShipClass.Battleship]: '戦艦',
@@ -26,11 +27,10 @@ export const CLASS_ORDER: ShipClass[] = [
 
 /** Ships of one nation, optionally of one class, sorted by class order (stable within a class). */
 export function filterEntries(ships: IShipData[], shipClass: ShipClass | null): IShipData[] {
-  return ships
-    .filter((s) => shipClass === null || s.shipClass === shipClass)
-    .map((s, i) => ({ s, i }))
-    .sort((a, b) => CLASS_ORDER.indexOf(a.s.shipClass) - CLASS_ORDER.indexOf(b.s.shipClass) || a.i - b.i)
-    .map(({ s }) => s);
+  // By kind, then class by class oldest first, hulls in order inside each (#246).
+  return CLASS_ORDER
+    .filter((c) => shipClass === null || c === shipClass)
+    .flatMap((c) => shipOrder(ships.filter((s) => s.shipClass === c)));
 }
 
 /** Collapses a loadout into weapon ids with mount counts, in first-seen order. */

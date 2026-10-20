@@ -75,7 +75,7 @@ import { addResources, formatResources, gainResources, lostNote } from '@/system
 import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
-import { campaignSide, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
+import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
 import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
@@ -1753,7 +1753,7 @@ export class BattleScene extends Phaser.Scene {
     }
     progress = { ...progress, proficiency };
     let firstClear = false;
-    // The area's first S rank brings a captain (#215), like its reward-only ship.
+    // An area's S rank brings one reward (#247): its reward-only ship, else (the first S) a captain; training none.
     let firstS = false;
     const routeNotes = takeSortieNotes(this);
     if (routeNotes.length > 0) result.route = routeNotes.join('  ·  ');
@@ -1762,8 +1762,9 @@ export class BattleScene extends Phaser.Scene {
     const skirmish = area !== undefined && node !== undefined && !node.boss;
     // An S on the area's main fleet lets it be swept from now on (#57 / #149); the area keeps its best rank.
     if (area && !skirmish) {
-      // A training area's S rank brings no captain (#202).
-      if (rank === 'S' && victory && !progress.perfect.includes(area.id) && !area.training) firstS = true;
+      const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+      const reward = firstSReward(area, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), area.id), perfect: progress.perfect, captainsLeft: Number.POSITIVE_INFINITY });
+      if (rank === 'S' && victory && reward?.kind === 'captain') firstS = true;
       // The first S opens sweeping at 0, one more each hour (#181).
       if (rank === 'S' && !progress.perfect.includes(area.id)) progress = openSweeps({ ...progress, perfect: [...progress.perfect, area.id] }, area.id, Date.now());
       const best = betterRank(progress.areaRanks[area.id], rank);
@@ -1810,7 +1811,7 @@ export class BattleScene extends Phaser.Scene {
       }
       // The area's reward-only ship (#39 #160) joins on an S-rank win, the first clear or any later one.
       const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-      const ship = rewardShipFor(roster, ownedIds(progress, roster), area.id);
+      const ship = area.training ? undefined : rewardShipFor(roster, ownedIds(progress, roster), area.id);
       if (ship && rank === 'S') {
         progress = grantShip(progress, roster, ship.id);
         newShip = `  新しい艦: ${ship.name.replace(/\s*\(.*\)\s*$/, '')}`;

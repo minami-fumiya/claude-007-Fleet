@@ -108,6 +108,32 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
 }
 
 /**
+ * Wrapped texts of `key` whose second or later line starts with a character a Japanese line may not start with
+ * (#248 禁則処理): "。", "、", small kana, "ー", closing brackets.
+ */
+async function badLineStarts(page: Page, key: string): Promise<string[]> {
+  return page.evaluate((k) => {
+    const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene(k);
+    const banned = '、。・ーっゃゅょッャュョ）」』';
+    const out: string[] = [];
+    const visit = (o: Phaser.GameObjects.GameObject): void => {
+      if (o.type === 'Container') {
+        (o as Phaser.GameObjects.Container).list.forEach(visit);
+        return;
+      }
+      const t = o as Phaser.GameObjects.Text;
+      if (o.type !== 'Text' || !t.style.wordWrapWidth) return;
+      const lines = t.getWrappedText(t.text);
+      lines.forEach((line, i) => {
+        if (i > 0 && line.length > 0 && banned.includes(line[0]) && !t.text.includes(`\n${line}`)) out.push(`${lines[i - 1]} | ${line}`);
+      });
+    };
+    scene.children.list.forEach(visit);
+    return out;
+  }, key);
+}
+
+/**
  * Visible texts that overlap another visible text (#163): "a × b" for each pair crossing by more than a few pixels both
  * ways. Only texts at the same depth count: a sheet over the screen, or content scrolling under a fixed bar, is meant
  * to cover what lies beneath. Masked (scroll list) texts are left out like in overflowingTexts.
@@ -166,6 +192,7 @@ test.describe('screens', () => {
       await open(page, key);
       expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
       expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
+      expect(await badLineStarts(page, key), `${key} line breaks (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
     expect(errors).toEqual([]);
@@ -762,11 +789,21 @@ test.describe('screens', () => {
       (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene').children.list.forEach(visit);
       return out;
     });
-    // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full), the captain book.
+    // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full; shown on the 作戦
+    // button, no longer in the strip), the captain book.
     const labels = await texts();
     expect(labels.some((t) => /^任務 \d+$/.test(t)), `quest notice (${layout})`).toBe(true);
     expect(labels.some((t) => t === '掃討 3'), `sweep notice (${layout})`).toBe(true);
     expect(labels.some((t) => t === '艦長教本 1'), `book notice (${layout})`).toBe(true);
+    // #243: the notices have a strip of their own, above the dock panel (its title row is the panel's top).
+    const placed = await page.evaluate(() => {
+      const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
+      const textOf = (o: Phaser.GameObjects.GameObject): string | undefined => (o.type === 'Text' ? (o as Phaser.GameObjects.Text).text : undefined);
+      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => textOf(x) === '艦長教本 1')) as Phaser.GameObjects.Container | undefined;
+      const title = scene.children.list.find((o) => textOf(o) === '入渠 — 損傷艦の修理') as Phaser.GameObjects.Text | undefined;
+      return { chipBottom: chip ? chip.y + chip.height / 2 : NaN, titleTop: title ? title.y : NaN };
+    });
+    expect(placed.chipBottom, `notices above the docks (${layout})`).toBeLessThan(placed.titleTop - 20);
     expect(await overflowingTexts(page, 'HomeScene'), `home (${layout})`).toEqual([]);
     expect.soft(await overlappingTexts(page, 'HomeScene'), `home overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('home-notices.png') });

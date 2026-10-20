@@ -2,6 +2,7 @@
   "ships": [
     {
       "id": "vittorio_veneto",
+      "no": 1501003,
       "name": "ヴィットリオ・ヴェネト (Vittorio Veneto)",
       "nation": "RM",
       "shipClass": "Battleship",
@@ -13,10 +14,12 @@
         "152mm_m1934"
       ],
       "spriteKey": "vittorio_veneto",
-      "description": "リットリオ級戦艦。1941年3月のマタパン岬沖海戦で英雷撃機の魚雷を受けたが、生還した。"
+      "description": "リットリオ級戦艦。1941年3月のマタパン岬沖海戦で英雷撃機の魚雷を受けたが、生還した。",
+      "year": 1940
     },
     {
       "id": "roma",
+      "no": 1501005,
       "name": "ローマ (Roma)",
       "nation": "RM",
       "shipClass": "Battleship",
@@ -28,10 +31,13 @@
         "152mm_m1934"
       ],
       "spriteKey": "roma",
-      "description": "リットリオ級戦艦3番艦。1943年9月、休戦後に艦隊とともに回航中、ドイツ空軍の誘導爆弾フリッツXを受けて沈没した。"
+      "description": "リットリオ級戦艦3番艦。1943年9月、休戦後に艦隊とともに回航中、ドイツ空軍の誘導爆弾フリッツXを受けて沈没した。",
+      "year": 1942,
+      "classOf": "vittorio_veneto"
     },
     {
       "id": "conte_di_cavour",
+      "no": 1501001,
       "name": "コンテ・ディ・カヴール (Conte di Cavour)",
       "nation": "RM",
       "shipClass": "Battleship",
@@ -43,10 +49,12 @@
         "120mm_m1926"
       ],
       "spriteKey": "conte_di_cavour",
-      "description": "第一次世界大戦前に建造され、大改装で近代化された戦艦。1940年11月、タラント空襲で英雷撃機の魚雷を受けて着底した。"
+      "description": "第一次世界大戦前に建造され、大改装で近代化された戦艦。1940年11月、タラント空襲で英雷撃機の魚雷を受けて着底した。",
+      "year": 1915
     },
     {
       "id": "zara",
+      "no": 1504003,
       "name": "ザラ (Zara)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -59,10 +67,12 @@
         "100mm_m1928"
       ],
       "spriteKey": "zara",
-      "description": "ザラ級重巡洋艦1番艦。装甲の厚い重巡だったが、1941年3月のマタパン岬沖海戦の夜戦で英戦艦の砲撃を受けて沈没した。"
+      "description": "ザラ級重巡洋艦1番艦。装甲の厚い重巡だったが、1941年3月のマタパン岬沖海戦の夜戦で英戦艦の砲撃を受けて沈没した。",
+      "year": 1931
     },
     {
       "id": "trento",
+      "no": 1504001,
       "name": "トレント (Trento)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -75,10 +85,12 @@
         "533mm_si270"
       ],
       "spriteKey": "trento",
-      "description": "トレント級重巡洋艦1番艦。速力を重視した設計。1942年6月、マルタへの英船団を迎え撃つ作戦中に航空魚雷と潜水艦の雷撃で沈没した。"
+      "description": "トレント級重巡洋艦1番艦。速力を重視した設計。1942年6月、マルタへの英船団を迎え撃つ作戦中に航空魚雷と潜水艦の雷撃で沈没した。",
+      "year": 1929
     },
     {
       "id": "garibaldi",
+      "no": 1505003,
       "name": "ジュゼッペ・ガリバルディ (Giuseppe Garibaldi)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -91,10 +103,12 @@
         "533mm_si270"
       ],
       "spriteKey": "garibaldi",
-      "description": "コンドッティエーリ級軽巡洋艦の最終型。終戦まで生き残り、戦後はミサイル巡洋艦に改装された。"
+      "description": "コンドッティエーリ級軽巡洋艦の最終型。終戦まで生き残り、戦後はミサイル巡洋艦に改装された。",
+      "year": 1937
     },
     {
       "id": "aviere",
+      "no": 1507005,
       "name": "アヴィエーレ (Aviere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -107,10 +121,12 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
-      "description": "ソルダティ級駆逐艦。北アフリカへの船団護衛に従事し、1942年12月に英潜水艦の雷撃で沈没した。"
+      "description": "ソルダティ級駆逐艦。北アフリカへの船団護衛に従事し、1942年12月に英潜水艦の雷撃で沈没した。",
+      "year": 1939
     },
     {
       "id": "maestrale",
+      "no": 1507001,
       "name": "マエストラーレ (Maestrale)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -123,10 +139,12 @@
         "depth_charge"
       ],
       "spriteKey": "maestrale",
-      "description": "マエストラーレ級駆逐艦1番艦。のちのソルダティ級の原型となった設計で、1943年9月の休戦後にジェノヴァで自沈した。"
+      "description": "マエストラーレ級駆逐艦1番艦。のちのソルダティ級の原型となった設計で、1943年9月の休戦後にジェノヴァで自沈した。",
+      "year": 1934
     },
     {
       "id": "aquila",
+      "no": 1509001,
       "name": "アクィラ (Aquila)",
       "nation": "RM",
       "shipClass": "Carrier",
@@ -143,10 +161,12 @@
         "torpedoBombers": 2
       },
       "fictional": true,
-      "description": "客船ローマを改造したイタリア初の航空母艦。ほぼ完成したが、就役することなく終戦を迎えた (架空艦)。"
+      "description": "客船ローマを改造したイタリア初の航空母艦。ほぼ完成したが、就役することなく終戦を迎えた (架空艦)。",
+      "year": 1945
     },
     {
       "id": "marcello",
+      "no": 1512001,
       "name": "マルチェロ (Marcello)",
       "nation": "RM",
       "shipClass": "Submarine",
@@ -157,10 +177,12 @@
         "533mm_sub_torpedo"
       ],
       "spriteKey": "marcello",
-      "description": "マルチェロ級潜水艦1番艦。大西洋に進出してボルドーの基地から通商破壊を行い、1941年に消息を絶った。"
+      "description": "マルチェロ級潜水艦1番艦。大西洋に進出してボルドーの基地から通商破壊を行い、1941年に消息を絶った。",
+      "year": 1938
     },
     {
       "id": "montecuccoli",
+      "no": 1505001,
       "name": "ライモンド・モンテクッコリ (Raimondo Montecuccoli)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -178,6 +200,7 @@
     },
     {
       "id": "littorio",
+      "no": 1501004,
       "name": "リットリオ (Littorio)",
       "nation": "RM",
       "shipClass": "Battleship",
@@ -189,11 +212,13 @@
         "152mm_m1934"
       ],
       "spriteKey": "vittorio_veneto",
+      "year": 1940,
       "description": "リットリオ級戦艦の同型艦。性能はヴィットリオ・ヴェネトと同じ。",
       "sisterOf": "vittorio_veneto"
     },
     {
       "id": "giulio_cesare",
+      "no": 1501002,
       "name": "ジュリオ・チェーザレ (Giulio Cesare)",
       "nation": "RM",
       "shipClass": "Battleship",
@@ -205,11 +230,13 @@
         "120mm_m1926"
       ],
       "spriteKey": "conte_di_cavour",
+      "year": 1915,
       "description": "コンテ・ディ・カヴール級戦艦の同型艦。性能はコンテ・ディ・カヴールと同じ。",
       "sisterOf": "conte_di_cavour"
     },
     {
       "id": "fiume",
+      "no": 1504004,
       "name": "フィウメ (Fiume)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -222,11 +249,13 @@
         "100mm_m1928"
       ],
       "spriteKey": "zara",
+      "year": 1931,
       "description": "ザラ級重巡洋艦の同型艦。性能はザラと同じ。",
       "sisterOf": "zara"
     },
     {
       "id": "gorizia",
+      "no": 1504005,
       "name": "ゴリツィア (Gorizia)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -239,11 +268,13 @@
         "100mm_m1928"
       ],
       "spriteKey": "zara",
+      "year": 1931,
       "description": "ザラ級重巡洋艦の同型艦。性能はザラと同じ。",
       "sisterOf": "zara"
     },
     {
       "id": "pola",
+      "no": 1504006,
       "name": "ポーラ (Pola)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -256,11 +287,13 @@
         "100mm_m1928"
       ],
       "spriteKey": "zara",
+      "year": 1931,
       "description": "ザラ級重巡洋艦の同型艦。性能はザラと同じ。",
       "sisterOf": "zara"
     },
     {
       "id": "trieste",
+      "no": 1504002,
       "name": "トリエステ (Trieste)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -273,11 +306,13 @@
         "533mm_si270"
       ],
       "spriteKey": "trento",
+      "year": 1929,
       "description": "トレント級重巡洋艦の同型艦。性能はトレントと同じ。",
       "sisterOf": "trento"
     },
     {
       "id": "duca_degli_abruzzi",
+      "no": 1505004,
       "name": "ドゥカ・デッリ・アブルッツィ (Duca degli Abruzzi)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -290,11 +325,13 @@
         "533mm_si270"
       ],
       "spriteKey": "garibaldi",
+      "year": 1937,
       "description": "ドゥカ・デッリ・アブルッツィ級軽巡洋艦の同型艦。性能はジュゼッペ・ガリバルディと同じ。",
       "sisterOf": "garibaldi"
     },
     {
       "id": "muzio_attendolo",
+      "no": 1505002,
       "name": "ムツィオ・アッテンドーロ (Muzio Attendolo)",
       "nation": "RM",
       "shipClass": "Cruiser",
@@ -313,6 +350,7 @@
     },
     {
       "id": "libeccio",
+      "no": 1507002,
       "name": "リベッチオ (Libeccio)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -325,11 +363,13 @@
         "depth_charge"
       ],
       "spriteKey": "maestrale",
+      "year": 1934,
       "description": "マエストラーレ級駆逐艦の同型艦。性能はマエストラーレと同じ。",
       "sisterOf": "maestrale"
     },
     {
       "id": "grecale",
+      "no": 1507003,
       "name": "グレカーレ (Grecale)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -342,11 +382,13 @@
         "depth_charge"
       ],
       "spriteKey": "maestrale",
+      "year": 1934,
       "description": "マエストラーレ級駆逐艦の同型艦。性能はマエストラーレと同じ。",
       "sisterOf": "maestrale"
     },
     {
       "id": "scirocco",
+      "no": 1507004,
       "name": "シロッコ (Scirocco)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -359,11 +401,13 @@
         "depth_charge"
       ],
       "spriteKey": "maestrale",
+      "year": 1934,
       "description": "マエストラーレ級駆逐艦の同型艦。性能はマエストラーレと同じ。",
       "sisterOf": "maestrale"
     },
     {
       "id": "artigliere",
+      "no": 1507006,
       "name": "アルティリエーレ (Artigliere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -376,11 +420,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "ascari",
+      "no": 1507007,
       "name": "アスカリ (Ascari)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -393,11 +439,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "bersagliere",
+      "no": 1507008,
       "name": "ベルサリエーレ (Bersagliere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -410,11 +458,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "carabiniere",
+      "no": 1507009,
       "name": "カラビニエーレ (Carabiniere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -427,11 +477,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "corazziere",
+      "no": 1507010,
       "name": "コラッツィエーレ (Corazziere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -444,11 +496,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "granatiere",
+      "no": 1507011,
       "name": "グラナティエーレ (Granatiere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -461,11 +515,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "lanciere",
+      "no": 1507012,
       "name": "ランチエーレ (Lanciere)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -478,11 +534,13 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     },
     {
       "id": "alpino",
+      "no": 1507013,
       "name": "アルピーノ (Alpino)",
       "nation": "RM",
       "shipClass": "Destroyer",
@@ -495,6 +553,7 @@
         "depth_charge"
       ],
       "spriteKey": "aviere",
+      "year": 1939,
       "description": "ソルダティ級駆逐艦の同型艦。性能はアヴィエーレと同じ。",
       "sisterOf": "aviere"
     }

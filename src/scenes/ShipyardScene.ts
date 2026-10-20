@@ -15,6 +15,9 @@ import { formatResources } from '@/systems/ResourceSystem';
 import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
 import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
+import { shipOrder, hullNumber } from '@/systems/ShipOrder';
+import { formatNo } from '@/systems/Numbering';
+import { buildNameShown, hiddenShipName } from '@/systems/RevealSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { ITechNode } from '@/types/Progression';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -115,7 +118,8 @@ export class ShipyardScene extends Phaser.Scene {
   private classShips(): IShipData[] {
     const progress = loadProgress();
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-    return availableShips(roster, progress.research).filter((s) => s.shipClass === this.shipClass);
+    // Class by class, oldest first, hulls in order (#246).
+    return shipOrder(availableShips(roster, progress.research).filter((s) => s.shipClass === this.shipClass));
   }
 
   private refresh(): void {
@@ -206,27 +210,38 @@ export class ShipyardScene extends Phaser.Scene {
     const frame = drawPanel(this.add.graphics(), 0, 0, r.w, r.h, {
       radius: 16,
       fill: owned ? Colors.panelHi : Colors.panel,
-      fillAlpha: owned ? 0.9 : ready ? 0.7 : 0.4,
-      rim: owned ? Colors.gold : Colors.cyan,
+      fillAlpha: owned ? 0.9 : ready ? 0.7 : buildNameShown(state) ? 0.4 : 0.2,
+      rim: owned ? Colors.gold : buildNameShown(state) ? Colors.cyan : Colors.dim,
       rimAlpha: owned ? 0.7 : ready ? 0.6 : 0.15,
       glow: ready ? 0.6 : 0,
     });
     const grade = shipGrade(ship);
     const pad = 16;
-    const name = this.add.text(pad, 10, ship.name, textStyle(15, owned || ready ? Css.text : Css.muted, { fontStyle: 'bold' }));
+    // Out of reach for now (#245): grey, the name hidden; what it needs is all the card says.
+    const shown = buildNameShown(state);
+    const ownedList = ownedIds(progress, roster);
+    const hull = hullNumber(roster, ship);
+    const title = shown ? ship.name : hiddenShipName(roster, ship, ownedList);
+    const name = this.add.text(pad, 10, title, textStyle(15, owned || ready ? Css.text : Css.muted, { fontStyle: 'bold' }));
     const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
-    if (name.width > room) name.setText(ship.name.replace(/\s*\(.*\)\s*$/, ''));
+    if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
     if (name.width > room) name.setScale(room / name.width);
     const lineH = IS_PORTRAIT ? 30 : 22;
+    // The class and hull number (#246) once the name is known: "長門型 2 番艦".
+    const classLine = `${shown && ship.no ? `${formatNo(ship.no)} · ` : ''}${shown && hull.of > 1 ? `${hull.className} ${hull.number} 番艦 · ` : ''}`;
+    const costLine = owned ? '保有中'
+      : state === 'reward' ? '報酬限定艦 — 作戦の S 評価で入手'
+        : !shown ? ''
+          : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))}`;
     const parts: Phaser.GameObjects.GameObject[] = [
       frame,
       name,
       stateText,
-      this.add.text(pad, 10 + lineH + 4, `${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional ? Css.gold : Css.muted)),
-      this.add.text(pad, 10 + lineH * 2 + 4, `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}`, textStyle(11, Css.muted)),
+      this.fitWidth(this.add.text(pad, 10 + lineH + 4, `${classLine}${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional && shown ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional && shown ? Css.gold : Css.muted)), r.w - pad * 2),
+      this.add.text(pad, 10 + lineH * 2 + 4, shown ? `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}` : '', textStyle(11, Css.muted)),
       // Reward-only ships (#39) show where they come from instead of a build cost.
-      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), owned ? '保有中' : state === 'reward' ? '報酬限定艦 — 建造不可 (作戦の初回攻略で入手)' : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))}`, textStyle(11, owned ? Css.gold : state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), costLine, textStyle(11, owned || state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
     ];
     const job = progress.builds.find((b) => b.shipId === ship.id);
     if (job) {
@@ -238,6 +253,7 @@ export class ShipyardScene extends Phaser.Scene {
       this.fitWidth(last, r.w - pad * 2);
     }
     const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(owned || ready ? 1 : 0.5);
+    if (!shown) icon.setTintFill(0x101a2c).setAlpha(0.7);
     icon.setScale(Math.min(1, (IS_PORTRAIT ? 100 : 80) / Math.max(1, icon.height)));
     parts.splice(1, 0, icon);
     const card = this.add.container(r.x, r.y, parts);

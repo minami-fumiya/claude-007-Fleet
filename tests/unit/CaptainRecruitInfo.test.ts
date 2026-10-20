@@ -43,8 +43,8 @@ describe('when captains join (#179 #215) and who comes (#210)', () => {
   it('lists the ways in: S ranks and promotions (#215), and some quests since there are 30 captains (#209)', () => {
     expect(CAPTAIN_SOURCES).toHaveLength(4);
     expect(CAPTAIN_SOURCES.join('')).toContain('S 評価');
-    expect(CAPTAIN_DROP_CHANCE).toBe(0.08);
-    expect(CAPTAIN_SOURCES[2]).toContain('8%');
+    expect(CAPTAIN_DROP_CHANCE).toBe(0.1);
+    expect(CAPTAIN_SOURCES[2]).toContain('10%');
     expect(CAPTAIN_SOURCES[3]).toContain('任務');
   });
 });
