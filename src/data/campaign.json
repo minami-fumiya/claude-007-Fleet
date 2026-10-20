@@ -19,9 +19,9 @@
       "reward": { "fuel": 300, "ammo": 300, "steel": 300, "bauxite": 100 }, "rewardShip": "Destroyer"
     },
     {
-      "id": "p2", "theater": "pacific", "name": "諸島沖海戦", "description": "島々の間に潜む巡洋艦戦隊を撃滅せよ。",
+      "id": "p2", "theater": "pacific", "name": "諸島沖海戦", "description": "島々の間に潜む駆逐隊を撃滅せよ。",
       "x": 0.22, "y": 0.5, "requires": ["p1"],
-      "enemy": { "nation": "USN", "ships": ["baltimore", "fletcher"] },
+      "enemy": { "nation": "USN", "ships": ["fletcher", "sims"] },
       "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 400, "ammo": 400, "steel": 500, "bauxite": 150 }, "rewardShip": "Cruiser"
     },
@@ -92,9 +92,9 @@
       "reward": { "fuel": 600, "ammo": 300, "steel": 400, "bauxite": 150 }, "rewardShip": "Submarine"
     },
     {
-      "id": "a3", "theater": "atlantic", "name": "ビスマルク追撃", "description": "僚艦と別れ、嵐の大西洋を逃れる戦艦ビスマルクを捕捉、撃沈せよ。近くには U ボートが潜む。",
+      "id": "a3", "theater": "atlantic", "name": "北海の通商破壊", "description": "船団航路を荒らす軽巡洋艦と駆逐艦を撃滅せよ。",
       "x": 0.48, "y": 0.4, "requires": ["a2"],
-      "enemy": { "nation": "KM", "ships": ["bismarck", "u_boat_viic"] },
+      "enemy": { "nation": "KM", "ships": ["nurnberg", "z1"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Storm", "time": "Day",
       "reward": { "fuel": 600, "ammo": 700, "steel": 800, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
@@ -108,15 +108,15 @@
     {
       "id": "a6", "theater": "atlantic", "name": "デンマーク海峡突破", "description": "英艦隊の哨戒をかわし、旗艦を大西洋へ突破させよ。(ビスマルク追撃の別ルート)",
       "x": 0.56, "y": 0.84, "requires": ["a2"],
-      "enemy": { "nation": "KM", "ships": ["prinz_eugen", "z1", "z23"] },
+      "enemy": { "nation": "KM", "ships": ["emden", "z1"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
       "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "大西洋" }, "timeLimitSec": 300 },
       "reward": { "fuel": 600, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
     {
-      "id": "a7", "theater": "atlantic", "name": "通商破壊艦を沈めよ", "description": "船団を襲う戦艦を、逃げられる前に撃沈せよ。",
+      "id": "a7", "theater": "atlantic", "name": "ビスマルク追撃", "description": "僚艦と別れ、嵐の大西洋を逃れる戦艦ビスマルクを、逃げられる前に撃沈せよ。",
       "x": 0.78, "y": 0.42, "requires": ["a4"],
-      "enemy": { "nation": "KM", "ships": ["scharnhorst", "z1", "z20", "z23", "u_boat_viic"] },
+      "enemy": { "nation": "KM", "ships": ["bismarck", "z1", "z20", "z23", "u_boat_viic"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Storm", "time": "Day",
       "side": { "targetLead": true, "timeLimitSec": 360 },
       "reward": { "fuel": 700, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
@@ -146,7 +146,7 @@
     {
       "id": "m2", "theater": "mediterranean", "name": "シドラ湾夜戦", "description": "夜の湾内で英巡洋艦戦隊を迎え撃て。",
       "x": 0.28, "y": 0.66, "requires": ["m1"],
-      "enemy": { "nation": "RN", "ships": ["southampton", "cossack"] },
+      "enemy": { "nation": "RN", "ships": ["javelin", "cossack"] },
       "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
@@ -167,7 +167,7 @@
     {
       "id": "m6", "theater": "mediterranean", "name": "マタパン岬突入", "description": "夜陰に乗じ、旗艦を敵の泊地へ突入させよ。(タラント港砲撃の別ルート)",
       "x": 0.5, "y": 0.86, "requires": ["m2"],
-      "enemy": { "nation": "RN", "ships": ["southampton", "javelin", "cossack"] },
+      "enemy": { "nation": "RN", "ships": ["dido", "javelin", "truant"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
       "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "敵泊地" }, "timeLimitSec": 300 },
       "reward": { "fuel": 600, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Destroyer"
@@ -212,7 +212,7 @@
     {
       "id": "b3", "theater": "baltic", "name": "リガ湾夜戦", "description": "夜のリガ湾で敵巡洋艦戦隊を迎え撃て。",
       "x": 0.46, "y": 0.62, "requires": ["b2"],
-      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "z1", "z23"] },
+      "enemy": { "nation": "KM", "ships": ["z1", "z20", "u_boat_viic"] },
       "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
@@ -271,7 +271,7 @@
     {
       "id": "bs3", "theater": "blacksea", "name": "セヴァストポリ沖夜戦", "description": "夜のセヴァストポリ沖で、敵巡洋艦戦隊を迎え撃て。",
       "x": 0.45, "y": 0.62, "requires": ["bs2"],
-      "enemy": { "nation": "KM", "ships": ["emden", "z1", "z23"] },
+      "enemy": { "nation": "KM", "ships": ["emden", "z1", "u_boat_viic"] },
       "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
@@ -358,7 +358,7 @@
     {
       "id": "np2", "theater": "north_pacific", "name": "北方航路船団", "description": "千島から北方の島々へ向かう船団を、潜水艦と駆逐艦から守れ。",
       "x": 0.3, "y": 0.6, "requires": ["np1"],
-      "enemy": { "nation": "USN", "ships": ["northampton", "fletcher", "gato"] },
+      "enemy": { "nation": "USN", "ships": ["omaha", "fletcher", "gato"] },
       "objective": "Convoy", "map": "convoy-route", "weather": "Storm", "time": "Day",
       "reward": { "fuel": 700, "ammo": 400, "steel": 500, "bauxite": 200 }, "rewardShip": "Submarine"
     },

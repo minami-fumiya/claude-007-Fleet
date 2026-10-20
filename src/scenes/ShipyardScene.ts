@@ -11,13 +11,15 @@ import { buildTimeMul, holdCap } from '@/systems/FacilitySystem';
 import { currentBaseId } from '@/systems/BaseSystem';
 import { availableShips, canResearch, medalMet, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
-import { formatResources } from '@/systems/ResourceSystem';
+import { formatResources, shortfall } from '@/systems/ResourceSystem';
 import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
 import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { shipOrder, hullNumber } from '@/systems/ShipOrder';
+import { filterShips, kindsOf } from '@/systems/ListFilter';
+import { FilterBar } from '@/ui/components/FilterBar';
 import { formatNo } from '@/systems/Numbering';
-import { buildNameShown, hiddenShipName } from '@/systems/RevealSystem';
+import { buildLook, buildNameShown, hiddenShipName } from '@/systems/RevealSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { ITechNode } from '@/types/Progression';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -38,8 +40,8 @@ const AREA_NAMES: Record<string, string> = Object.fromEntries(campaignData.areas
 interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
-  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, tabsY: 300, tabH: 56, info: { x: 16, y: 340, w: CANVAS_W - 32, h: 112 } as IRect, top: 464, cols: 2, cardH: 140, gap: 12, left: 16 }
-  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, tabsY: 178, tabH: 40, info: { x: 24, y: 206, w: CANVAS_W - 48, h: 46 } as IRect, top: 262, cols: 3, cardH: 100, gap: 10, left: 24 };
+  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, tabsY: 300, tabH: 56, tabsW: CANVAS_W - 32, info: { x: 16, y: 340, w: CANVAS_W - 32, h: 112 } as IRect, filter: { x: 16, y: 464, w: CANVAS_W - 32, h: 48 }, top: 524, cols: 2, cardH: 140, gap: 12, left: 16 }
+  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, tabsY: 178, tabH: 40, tabsW: 740, info: { x: 24, y: 206, w: CANVAS_W - 48, h: 46 } as IRect, filter: { x: 776, y: 158, w: CANVAS_W - 24 - 776, h: 40 }, top: 262, cols: 3, cardH: 100, gap: 10, left: 24 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 const ROWS = Math.max(1, Math.floor((CANVAS_H - 16 - L.top + L.gap) / (L.cardH + L.gap)));
 const PAGE_SIZE = ROWS * L.cols;
@@ -57,6 +59,7 @@ export class ShipyardScene extends Phaser.Scene {
   private tabs: UIButton[] = [];
   private layer: Phaser.GameObjects.GameObject[] = [];
   /** Countdown lines of ships under construction (#143), updated every frame */
+  private filterBar!: FilterBar;
   private timers: Array<{ text: Phaser.GameObjects.Text; endsAt: number; items: number }> = [];
   private building = 0;
 
@@ -82,7 +85,8 @@ export class ShipyardScene extends Phaser.Scene {
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, `工廠 — ${NATION_INFO[loadProgress().nation].jaShort}の艦を建造`, displayStyle(24)).setOrigin(0.5);
     this.bar = new ResourceBar(this, L.bar.x, L.bar.y, L.bar.w, L.barCols);
 
-    const w = CANVAS_W - L.left * 2;
+    // Landscape: the class tabs leave the right side to the filter (#263); portrait: the filter has a row of its own.
+    const w = L.tabsW;
     const gap = 8;
     const bw = (w - gap * (CLASS_ORDER.length - 1)) / CLASS_ORDER.length;
     this.tabs = CLASS_ORDER.map(
@@ -91,9 +95,19 @@ export class ShipyardScene extends Phaser.Scene {
           this.shipClass = c;
           this.page = 0;
           this.status = '';
+          this.filterBar.fitKinds();
           this.refresh();
         }, { variant: 'secondary', width: bw, height: L.tabH, fontSize: 14 }),
     );
+    // 一覧の絞り込み (#263): what can be built now first, the kind and a name search.
+    this.filterBar = new FilterBar(this, L.filter, {
+      key: 'shipyard', states: ['buildable', 'all', 'owned', 'unowned'], initial: { state: 'buildable' },
+      kinds: () => kindsOf(this.classRoster()),
+      onChange: () => {
+        this.page = 0;
+        this.refresh();
+      },
+    });
     this.refresh();
   }
 
@@ -114,12 +128,23 @@ export class ShipyardScene extends Phaser.Scene {
     return `建造中  残り ${clock(Math.max(0, left))}${items > 0 ? `  ·  タップで高速建造 (高速建造材 ${items})` : ''}`;
   }
 
-  /** The nation's ships of the selected class (fictional ones only once their research is done). */
-  private classShips(): IShipData[] {
+  /** The nation's ships of the selected class (fictional ones only once their research is done), in list order. */
+  private classRoster(): IShipData[] {
     const progress = loadProgress();
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
     // Class by class, oldest first, hulls in order (#246).
     return shipOrder(availableShips(roster, progress.research).filter((s) => s.shipClass === this.shipClass));
+  }
+
+  /** The tab's ships that pass the filter bar (#263). */
+  private classShips(): IShipData[] {
+    const progress = loadProgress();
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    return filterShips(this.classRoster(), this.filterBar.filter, {
+      owned: ownedIds(progress, roster), roster,
+      buildable: (s) => buildState(progress, roster, s) === 'ready',
+      nameKnown: (s) => buildNameShown(buildState(progress, roster, s)),
+    });
   }
 
   private refresh(): void {
@@ -189,7 +214,7 @@ export class ShipyardScene extends Phaser.Scene {
       };
       add(this.card(ship, r));
     });
-    if (ships.length === 0) add(this.add.text(CANVAS_W / 2, L.top + 60, 'この艦種の艦はありません', textStyle(15, Css.dim)).setOrigin(0.5));
+    if (ships.length === 0) add(this.add.text(CANVAS_W / 2, L.top + 60, this.classRoster().length > 0 ? 'この条件の艦はありません (上の絞り込みを変えてください)' : 'この艦種の艦はありません', textStyle(15, Css.dim)).setOrigin(0.5));
     if (pages > 1) {
       const y = L.top + (ROWS - 1) * (L.cardH + L.gap) + L.cardH / 2;
       const bh = IS_PORTRAIT ? 56 : 36;
@@ -207,12 +232,15 @@ export class ShipyardScene extends Phaser.Scene {
     const state = buildState(progress, roster, ship);
     const owned = state === 'owned';
     const ready = state === 'ready';
+    // Only what can be built now is drawn in colour (#262): short of resources or docks is grey too.
+    const look = buildLook(state);
+    const lit = look === 'owned' || look === 'ready' || look === 'building';
     const frame = drawPanel(this.add.graphics(), 0, 0, r.w, r.h, {
       radius: 16,
       fill: owned ? Colors.panelHi : Colors.panel,
-      fillAlpha: owned ? 0.9 : ready ? 0.7 : buildNameShown(state) ? 0.4 : 0.2,
-      rim: owned ? Colors.gold : buildNameShown(state) ? Colors.cyan : Colors.dim,
-      rimAlpha: owned ? 0.7 : ready ? 0.6 : 0.15,
+      fillAlpha: owned ? 0.9 : lit ? 0.7 : 0.2,
+      rim: owned ? Colors.gold : lit ? Colors.cyan : Colors.dim,
+      rimAlpha: owned ? 0.7 : lit ? 0.6 : 0.15,
       glow: ready ? 0.6 : 0,
     });
     const grade = shipGrade(ship);
@@ -222,7 +250,7 @@ export class ShipyardScene extends Phaser.Scene {
     const ownedList = ownedIds(progress, roster);
     const hull = hullNumber(roster, ship);
     const title = shown ? ship.name : hiddenShipName(roster, ship, ownedList);
-    const name = this.add.text(pad, 10, title, textStyle(15, owned || ready ? Css.text : Css.muted, { fontStyle: 'bold' }));
+    const name = this.add.text(pad, 10, title, textStyle(15, lit ? Css.text : Css.dim, { fontStyle: 'bold' }));
     const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
@@ -233,7 +261,9 @@ export class ShipyardScene extends Phaser.Scene {
     const costLine = owned ? '保有中'
       : state === 'reward' ? '報酬限定艦 — 作戦の S 評価で入手'
         : !shown ? ''
-          : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))}`;
+          // Short of resources (#262): what is missing, in red.
+          : state === 'resources' ? `不足: ${formatResources(shortfall(progress.resources, buildCostAt(progress, ship)))}`
+            : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))}`;
     const parts: Phaser.GameObjects.GameObject[] = [
       frame,
       name,
@@ -241,7 +271,7 @@ export class ShipyardScene extends Phaser.Scene {
       this.fitWidth(this.add.text(pad, 10 + lineH + 4, `${classLine}${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional && shown ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional && shown ? Css.gold : Css.muted)), r.w - pad * 2),
       this.add.text(pad, 10 + lineH * 2 + 4, shown ? `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}` : '', textStyle(11, Css.muted)),
       // Reward-only ships (#39) show where they come from instead of a build cost.
-      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), costLine, textStyle(11, owned || state === 'reward' ? Css.gold : Css.dim)), r.w - pad * 2),
+      this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), costLine, textStyle(11, owned || state === 'reward' ? Css.gold : state === 'resources' ? Css.danger : Css.dim)), r.w - pad * 2),
     ];
     const job = progress.builds.find((b) => b.shipId === ship.id);
     if (job) {
@@ -252,8 +282,9 @@ export class ShipyardScene extends Phaser.Scene {
       last.setText(this.buildingLine(job.endsAt - Date.now(), progress.items.fastBuild));
       this.fitWidth(last, r.w - pad * 2);
     }
-    const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(owned || ready ? 1 : 0.5);
+    const icon = this.add.image(r.w - (IS_PORTRAIT ? 70 : 56), r.h - (IS_PORTRAIT ? 48 : 36), ship.spriteKey).setAngle(90).setAlpha(lit ? 1 : 0.45);
     if (!shown) icon.setTintFill(0x101a2c).setAlpha(0.7);
+    else if (!lit) icon.setTint(0x6a7890);
     icon.setScale(Math.min(1, (IS_PORTRAIT ? 100 : 80) / Math.max(1, icon.height)));
     parts.splice(1, 0, icon);
     const card = this.add.container(r.x, r.y, parts);

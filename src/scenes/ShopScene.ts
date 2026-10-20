@@ -60,7 +60,7 @@ export class ShopScene extends Phaser.Scene {
     this.bar.refresh(p.resources, cap);
     const deal = dailyDeal(now);
     this.track(this.add.text(L.left, L.info, `ゴールド ${w.gold.toLocaleString('en-US')}`, textStyle(20, Css.gold, { fontStyle: 'bold' })));
-    this.track(this.add.text(CANVAS_W - L.left, L.info + 4, `本日のお買い得: ${deal.name} 3 割引  ·  課金要素はありません`, textStyle(12, Css.muted)).setOrigin(1, 0));
+    this.track(this.add.text(CANVAS_W - L.left, L.info + 4, `本日のお買い得: ${deal.name} 3 割引`, textStyle(12, Css.muted)).setOrigin(1, 0));
     if (this.status) this.track(this.add.text(L.left, L.info + 32, this.status, textStyle(12, Css.success)));
     SHOP_ENTRIES.forEach((e, i) => {
       const x = L.left + (i % L.cols) * (CARD_W + L.gap);

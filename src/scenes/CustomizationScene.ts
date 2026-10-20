@@ -4,6 +4,7 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
+import { filterShips, NO_FILTER } from '@/systems/ListFilter';
 import { CLASS_JA, CLASS_ORDER, filterEntries, kindLabel } from '@/systems/EncyclopediaSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { selectionFor } from '@/scenes/FleetBuilderScene';
@@ -66,6 +67,8 @@ export class CustomizationScene extends Phaser.Scene {
   private showAll = true;
   private sheet: Phaser.GameObjects.GameObject[] = [];
   private sheetList?: ScrollList;
+  /** Name search over the ship list sheet (#263) */
+  private query = '';
   private cardFrames: Phaser.GameObjects.Graphics[] = [];
   private cardMarks: Phaser.GameObjects.Text[] = [];
   private statsText: Phaser.GameObjects.Text[] = [];
@@ -225,7 +228,9 @@ export class CustomizationScene extends Phaser.Scene {
     const rowH = IS_PORTRAIT ? 56 : 44;
     const rowW = r.w - 52;
     const refits = loadProgress().refits;
-    const shown = this.ships.map((s, i) => ({ s, i })).filter(({ s }) => filter === null || s.shipClass === filter);
+    // The class tabs and a name search (#263).
+    const matching = new Set(filterShips(this.ships, { ...NO_FILTER, query: this.query }, { owned: [], roster: this.ships }).map((s) => s.id));
+    const shown = this.ships.map((s, i) => ({ s, i })).filter(({ s }) => (filter === null || s.shipClass === filter) && matching.has(s.id));
     shown.forEach(({ s, i }, row) => {
       const on = i === this.selected;
       const frame = drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.8 : 0.15 });
@@ -241,6 +246,13 @@ export class CustomizationScene extends Phaser.Scene {
     list.setContentHeight(Math.max(0, shown.length * (rowH + 6) - 6));
     list.reveal(Math.max(0, shown.findIndex(({ i }) => i === this.selected)) * (rowH + 6), rowH);
     add(this.add.text(r.x + 24, bottom + 8, '⚑ = 艦隊の艦', textStyle(11, Css.dim)));
+    const sw = IS_PORTRAIT ? 240 : 200;
+    add(new UIButton(this, r.x + r.w - 24 - sw / 2, bottom + (IS_PORTRAIT ? 20 : 16), this.query ? `検索: ${this.query}` : '名前で検索', () => {
+      const answer = window.prompt('艦名・級の名前で検索 (空欄で解除)', this.query);
+      if (answer === null) return;
+      this.query = answer.trim();
+      this.openShipList(filter);
+    }, { variant: this.query ? 'primary' : 'secondary', width: sw, height: IS_PORTRAIT ? 40 : 30, fontSize: 13 }));
     add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeShipList(), {
       variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15,
     }));

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { areaDepth, curveText, fleetPower, recommendedRank, targetPower, withinCurve } from '@/systems/DifficultyCurve';
+import { allowedAtDepth, areaDepth, curveText, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve } from '@/systems/DifficultyCurve';
 import { enemyShips, lockText, sevenSeasText, theatersFor } from '@/systems/CampaignSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { SEVEN_SEAS } from '@/systems/RecordSystem';
@@ -55,6 +55,33 @@ describe('the difficulty curve (#254)', () => {
       }
     }
     expect(out).toEqual([]);
+  });
+});
+
+describe('the opening (#268)', () => {
+  it('up to depth 3 the band tops out at 1.6×; up to depth 2 no heavy cruiser, battleship or carrier, for every navy', () => {
+    expect(withinCurve(targetPower(2) * 1.7, 2)).toBe(false);
+    expect(withinCurve(targetPower(4) * 2.4, 4)).toBe(true);
+    const out: string[] = [];
+    for (const a of data.areas.filter((x) => !x.training)) {
+      const depth = areaDepth(data, a);
+      if (depth > EARLY_DEPTH) continue;
+      const theater = data.theaters.find((t) => t.id === a.theater)!;
+      for (const n of new Set([a.enemy.nation, ...Object.values(theater.opponents)])) {
+        const ships = enemyShips(a, registry, n!);
+        if (!withinCurve(fleetPower(ships), depth)) out.push(`${a.id} as ${n}: ${fleetPower(ships)}`);
+        for (const s of ships) if (!allowedAtDepth(s, depth)) out.push(`${a.id} as ${n}: ${s.id}`);
+      }
+    }
+    expect(out).toEqual([]);
+  });
+
+  it('a starting navy of three destroyers faces at most twice its strength in the first three steps', () => {
+    for (const roster of [ijn, usn, km, rn, fr, su, rm].map((f) => f.ships as unknown as IShipData[])) {
+      const destroyers = roster.filter((s) => s.shipClass === 'Destroyer' && !s.subtype).sort((x, y) => x.hp - y.hp).slice(0, 3);
+      const own = fleetPower(destroyers);
+      expect(targetPower(EARLY_DEPTH) * EARLY_HIGH, roster[0].nation).toBeLessThanOrEqual(own * 2);
+    }
   });
 });
 
