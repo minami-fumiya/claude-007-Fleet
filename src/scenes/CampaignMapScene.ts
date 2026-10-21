@@ -87,6 +87,13 @@ export class CampaignMapScene extends Phaser.Scene {
     super({ key: SceneKeys.CAMPAIGN });
   }
 
+  /** An area to open on (#283: the 掃討 notice), once */
+  private focusArea: string | null = null;
+
+  init(data?: { areaId?: string }): void {
+    this.focusArea = data?.areaId ?? null;
+  }
+
   create(): void {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
@@ -122,6 +129,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const pending = pendingSortie(this);
     const pendingArea = pending ? DATA.areas.find((a) => a.id === pending.areaId) : undefined;
     if (pendingArea && this.theaters.some((t) => t.id === pendingArea.theater)) this.theater = pendingArea.theater;
+    const focus = !pendingArea && this.focusArea ? DATA.areas.find((a) => a.id === this.focusArea) : undefined;
+    if (focus && this.theaters.some((t) => t.id === focus.theater)) this.theater = focus.theater;
     const w = CANVAS_W - L.map.x * 2;
     const bw = (w - 8 * (this.theaters.length - 1)) / Math.max(1, this.theaters.length);
     this.tabs = this.theaters.map(
@@ -150,7 +159,8 @@ export class CampaignMapScene extends Phaser.Scene {
     });
     const areas = areasOf(DATA, id);
     const pending = pendingSortie(this);
-    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
+    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => a.id === this.focusArea) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
+    this.focusArea = null;
     this.drawMap();
     this.drawDetail();
   }

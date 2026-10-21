@@ -314,7 +314,7 @@ export class CaptainScene extends Phaser.Scene {
     const bw = IS_PORTRAIT ? colW : d.w - 506;
     let by = IS_PORTRAIT ? y : d.y + 22;
     by = this.buildBreakdown(c, learned, bx, by, bw);
-    this.buildTraits(c, bx, by + 8, bw);
+    this.buildTraits(c, bx, by + 8, bw, d.y + d.h - 16);
   }
 
   private buildSlots(c: ICaptain, learned: CaptainSkill[], x: number, y: number, w: number): number {
@@ -372,8 +372,13 @@ export class CaptainScene extends Phaser.Scene {
       for (const p of row.parts.length > 1 ? row.parts : []) {
         const src = sources[p.source];
         const t = this.track(this.add.text(px, y + 1, `${this.shortSource(src)} ${p.value}`, textStyle(11, this.sourceColor(src).css)));
+        // Shares past the column wrap under the total (#276) instead of being hidden.
+        if (px + t.width > x + w && px > total.x + Math.max(56, total.width + 10)) {
+          y += lineH - 6;
+          px = total.x + Math.max(56, total.width + 10);
+          t.setPosition(px, y + 1);
+        }
         px += t.width + 10;
-        if (px > x + w) t.setVisible(false);
       }
       if (row.parts.length === 1) {
         this.track(this.add.text(px, y + 1, this.shortSource(sources[row.parts[0].source]), textStyle(11, this.sourceColor(sources[row.parts[0].source]).css)));
@@ -394,18 +399,52 @@ export class CaptainScene extends Phaser.Scene {
     return s.label;
   }
 
-  private buildTraits(c: ICaptain, x: number, y: number, w: number): void {
+  /**
+   * 特性 (#199): one short line each — earned ones with their effect, the rest with their progress — down to `bottom`
+   * (#276: the full conditions used to run off the panel). The conditions are on a sheet.
+   */
+  private buildTraits(c: ICaptain, x: number, y: number, w: number, bottom: number): void {
     const save = loadSave();
     const stats = save.nations[save.current]?.captainStats[c.id] ?? NO_STATS;
     const earned = new Set(earnedTraits(stats).map((t) => t.id));
-    y = this.label(x, y, `特性 (この艦長の艦の戦果で獲得)  ·  撃沈 ${stats.sinks ?? 0}`);
-    // Unearned traits show how far along they are (#199).
-    const lines = TRAITS.map((t) => {
-      if (earned.has(t.id)) return `★ ${t.name} — ${t.effect}`;
+    const bw = IS_PORTRAIT ? 180 : 150;
+    const bh = IS_PORTRAIT ? 36 : 26;
+    this.track(new UIButton(this, x + w - bw / 2, y + 8, '特性の条件', () => this.openTraits(c), { variant: 'secondary', width: bw, height: bh, fontSize: 12 }));
+    y = this.label(x, y, `特性 ${earned.size} / ${TRAITS.length}  ·  撃沈 ${stats.sinks ?? 0}`);
+    const lineH = IS_PORTRAIT ? 24 : 20;
+    const ordered = [...TRAITS.filter((t) => earned.has(t.id)), ...TRAITS.filter((t) => !earned.has(t.id))];
+    const room = Math.max(1, Math.floor((bottom - y) / lineH));
+    const shown = ordered.length > room ? ordered.slice(0, room - 1) : ordered;
+    for (const t of shown) {
       const [n, goal] = t.progress(stats);
-      return `☆ ${t.name} — ${t.effect} (条件: ${t.condition} — ${Math.min(n, goal)} / ${goal})`;
+      const text = earned.has(t.id) ? `★ ${t.name} — ${t.effect}` : `☆ ${t.name}  ${Math.min(n, goal)} / ${goal}`;
+      const line = this.track(this.add.text(x, y, text, textStyle(12, earned.has(t.id) ? Css.text : Css.muted)));
+      if (line.width > w) line.setScale(w / line.width);
+      y += lineH;
+    }
+    if (shown.length < ordered.length) this.track(this.add.text(x, y, `ほか ${ordered.length - shown.length} 件 (特性の条件で表示)`, textStyle(12, Css.dim)));
+  }
+
+  /** Every trait with its condition, effect and progress (#276). */
+  private openTraits(c: ICaptain): void {
+    this.closeSheet();
+    const save = loadSave();
+    const stats = save.nations[save.current]?.captainStats[c.id] ?? NO_STATS;
+    const earned = new Set(earnedTraits(stats).map((t) => t.id));
+    const w = IS_PORTRAIT ? CANVAS_W - 48 : 760;
+    const body = TRAITS.map((t) => {
+      const [n, goal] = t.progress(stats);
+      return `${earned.has(t.id) ? '★' : '☆'} ${t.name}  ${Math.min(n, goal)} / ${goal}\n   条件: ${t.condition}\n   効果: ${t.effect}`;
     });
-    this.track(this.add.text(x, y, lines.join('\n'), textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true }, lineSpacing: 4 })));
+    const text = this.add.text(0, 0, body.join('\n'), textStyle(IS_PORTRAIT ? 14 : 13, Css.text, { lineSpacing: 6, wordWrap: { width: w - 52, useAdvancedWrap: true } }));
+    const h = Math.min(CANVAS_H - 32, text.height + 170);
+    const r = { x: (CANVAS_W - w) / 2, y: Math.max(16, (CANVAS_H - h) / 2), w, h };
+    this.sheetAdd(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.75).setOrigin(0, 0).setInteractive());
+    this.sheetAdd(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 22, `${c.name}  ·  特性 ${earned.size} / ${TRAITS.length}`, eyebrowStyle(11, Css.cyan)));
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 44, '特性 (この艦長の艦の戦果で獲得)', displayStyle(20)));
+    this.sheetAdd(text.setPosition(r.x + 26, r.y + 84));
+    this.sheetAdd(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeSheet(), { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15 }));
   }
 
   // -------------------------------------------------------------------------

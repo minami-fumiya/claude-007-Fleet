@@ -29,6 +29,8 @@ export interface IFireContext {
   targetSubmerged: boolean;
   /** The shooter is a submerged submarine (it can only launch torpedoes) */
   shooterSubmerged: boolean;
+  /** The target is a land target (#278): torpedoes and depth charges do nothing to it */
+  targetLand?: boolean;
   /** 0..1: how readily torpedoes are used; below 1 they are held until the target is closer */
   torpedoEagerness?: number;
 }
@@ -40,6 +42,7 @@ const TORPEDO_MIN_RANGE_FRACTION = 0.6;
 export function canEngage(weapon: IWeaponData, ctx: IFireContext): boolean {
   const kind = weaponKind(weapon);
   if (ctx.shooterSubmerged && kind !== WeaponKind.Torpedo) return false;
+  if (ctx.targetLand && (kind === WeaponKind.Torpedo || kind === WeaponKind.DepthCharge)) return false;
   if (kind === WeaponKind.DepthCharge) return ctx.targetSubmerged && ctx.distance <= weapon.range;
   if (ctx.targetSubmerged || kind === WeaponKind.Other) return false;
   if (kind === WeaponKind.Torpedo) {

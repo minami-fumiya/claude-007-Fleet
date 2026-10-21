@@ -15,8 +15,32 @@ describe('refit branches (#86)', () => {
       expect(list.length, cls).toBeGreaterThanOrEqual(2);
       expect(new Set(list.map((b) => b.suffix)).size).toBe(list.length);
     }
-    // Ships whose last stage is a special refit keep it, no branches.
-    expect(branchesFor(REFIT_TABLE, { id: 'yamato', shipClass: ShipClass.Battleship })).toEqual([]);
+    // Ships whose last stage is a special refit get the directions too (#277).
+    expect(branchesFor(REFIT_TABLE, { id: 'yamato', shipClass: ShipClass.Battleship }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('a special last stage keeps its refit and shifts it by the direction (#277)', () => {
+    const yamato = { id: 'yamato', shipClass: ShipClass.Battleship };
+    const last = maxStage(REFIT_TABLE, yamato);
+    const special = stagesFor(REFIT_TABLE, yamato)[last - 1];
+    for (const br of branchesFor(REFIT_TABLE, yamato)) {
+      const s = stagesFor(REFIT_TABLE, yamato, br.id)[last - 1];
+      expect(s.special).toBe(true);
+      expect(s.swap).toEqual(special.swap);
+      expect(s.cost).toEqual(special.cost);
+      expect(s.suffix).not.toBe(special.suffix);
+      expect(s.label).toContain(br.label);
+      expect(refitModifiers(REFIT_TABLE, yamato, last, br.id)).not.toEqual(refitModifiers(REFIT_TABLE, yamato, last));
+    }
+  });
+
+  it('every ship with remodels can choose a direction for its last stage (#277)', () => {
+    for (const id of Object.keys(REFIT_TABLE.ships ?? {})) {
+      for (const cls of Object.values(ShipClass)) {
+        if ((REFIT_TABLE.classes[cls] ?? []).length === 0) continue;
+        expect(branchesFor(REFIT_TABLE, { id, shipClass: cls }).length, `${id} ${cls}`).toBeGreaterThanOrEqual(2);
+      }
+    }
   });
 
   it('a branch replaces the last stage: its name and effects; earlier stages are untouched', () => {

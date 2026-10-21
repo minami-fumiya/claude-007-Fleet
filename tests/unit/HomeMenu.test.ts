@@ -5,8 +5,8 @@ import { EXISTING_PLAYER_HELP } from '@/utils/SaveMigration';
 import { SceneKeys } from '@/config/SceneKeys';
 
 describe('home menu tabs (#61)', () => {
-  it('groups every screen under 出撃 / 艦隊 / 工廠 / 記録', () => {
-    expect(HOME_MENU.map((t) => t.label)).toEqual(['出撃', '艦隊', '工廠', '記録']);
+  it('groups every screen under 出撃 / 艦隊 / 工廠 / 記録 / その他 (#283)', () => {
+    expect(HOME_MENU.map((t) => t.label)).toEqual(['出撃', '艦隊', '工廠', '記録', 'その他']);
     const scenes = new Set(HOME_MENU.flatMap((t) => t.items.map((i) => i.scene)));
     for (const s of [SceneKeys.CAMPAIGN, SceneKeys.FLEET_BUILDER, SceneKeys.SCENARIO, SceneKeys.CUSTOMIZATION, SceneKeys.ENCYCLOPEDIA, SceneKeys.ARSENAL, SceneKeys.SHIPYARD, SceneKeys.RECORD]) {
       expect(scenes, s).toContain(s);
