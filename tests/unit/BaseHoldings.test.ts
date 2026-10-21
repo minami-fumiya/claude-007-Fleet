@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { assignShips, BASES, baseReaches, basesFor, currentBaseId, isAtCurrentBase, nationBases, recallShips, shipBaseOf } from '@/systems/BaseSystem';
-import { START_DOCKS, baseDockView, dockCount, mergeBaseDocks, startRepair, setDamage } from '@/systems/DockSystem';
+import { BASES, baseOfProgress, baseReaches, basesFor, buildMultiplier, currentBaseId, DISCOUNT_CAP, dockTotal, fleetBuildTimeMul, fleetDockView, mergeFleetDocks, nationBases, researchMultiplier, repairTimeMultiplier } from '@/systems/BaseSystem';
+import { buildDock, MAX_DOCKS, dockCount, startRepair, setDamage } from '@/systems/DockSystem';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { buildsHere, startBuild } from '@/systems/ShipyardSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
@@ -10,6 +10,7 @@ import { runMigrations } from '@/utils/SaveMigration';
 import { resources } from '@/systems/ResourceSystem';
 import { Nation } from '@/types/Nation';
 import { IShipData } from '@/types/Ship';
+import { ShipClass } from '@/types/ShipClass';
 import campaign from '@/data/campaign.json';
 import ijn from '@/data/ships/ijn.json';
 
@@ -32,44 +33,55 @@ describe('ships, docks and builds by base (#145)', () => {
     expect(currentBaseId(p)).toBe('usn_home');
   });
 
-  it('ships belong to a base; only the current base sails them, others are brought over for fuel', () => {
+  it('ships belong to no base since #281: any owned ship sails', () => {
     const p = admiral();
-    expect(shipBaseOf(p, 'fubuki')).toBe('ijn_home');
-    expect(isAtCurrentBase(p, 'nagato')).toBe(true);
-    expect(isAtCurrentBase(p, 'fubuki')).toBe(false);
-    expect(sortieBlockers(p, [byId('fubuki')], T0, { exercise: true })[0]).toContain('他の軍港に所属');
-    const moved = assignShips(p, ['fubuki'], currentBaseId(p));
-    expect(sortieBlockers(moved, [byId('fubuki')], T0, { exercise: true })).toEqual([]);
+    expect(sortieBlockers(p, [byId('fubuki'), byId('nagato')], T0, { exercise: true })).toEqual([]);
   });
 
-  it('recalls ships for free, a whole preset at once, leaving those out on a sortie or in a dock (#191)', () => {
-    const p = admiral({ docks: [{ shipId: 'yukikaze', endsAt: T0 + 1000, base: 'ijn_home' }] });
-    const r = recallShips(p, ['fubuki', 'yukikaze', 'nagato', 'unknown'], currentBaseId(p), []);
-    expect(r.moved).toEqual(['fubuki']);
-    expect(r.held).toEqual(['yukikaze']);
-    expect(shipBaseOf(r.progress, 'fubuki')).toBe(currentBaseId(p));
-    expect(r.progress.resources).toEqual(p.resources);
-    expect(recallShips(p, ['fubuki'], currentBaseId(p), ['fubuki']).held).toEqual(['fubuki']);
+  it('every open base works at once: discounts add up to their caps (#281)', () => {
+    const one = admiral({ basesOpen: [] });
+    const all = admiral();
+    // Only the first base: its repair bonus; every base: each base's bonus at once.
+    expect(repairTimeMultiplier(baseOfProgress(one))).toBeLessThan(1);
+    expect(buildMultiplier(baseOfProgress(one), ShipClass.Destroyer)).toBe(1);
+    expect(buildMultiplier(baseOfProgress(all), ShipClass.Destroyer)).toBeLessThan(1);
+    expect(buildMultiplier(baseOfProgress(all), ShipClass.Battleship)).toBeLessThan(1);
+    expect(researchMultiplier(baseOfProgress(all))).toBeLessThan(1);
+    // Facilities raise them, never past the caps.
+    const maxed = admiral({ facilities: Object.fromEntries(nationBases(Nation.IJN).map((b) => [b.id, { unique: 3, workshop: 5 }])) });
+    for (const c of Object.values(ShipClass)) expect(buildMultiplier(baseOfProgress(maxed), c)).toBeGreaterThanOrEqual(1 - DISCOUNT_CAP.build);
+    expect(researchMultiplier(baseOfProgress(maxed))).toBeCloseTo(1 - DISCOUNT_CAP.research);
+    expect(repairTimeMultiplier(baseOfProgress(maxed))).toBeGreaterThanOrEqual(1 - DISCOUNT_CAP.repair);
+    expect(fleetBuildTimeMul(maxed)).toBeCloseTo(1 - DISCOUNT_CAP.buildTime);
+    // The workshops of every open base add up; a closed base's does not count.
+    const shops = { ijn_home: { workshop: 2 }, ijn_heavy: { workshop: 2 } };
+    expect(fleetBuildTimeMul(admiral({ facilities: shops }))).toBeCloseTo(0.8);
+    expect(fleetBuildTimeMul(admiral({ facilities: shops, basesOpen: [] }))).toBeCloseTo(0.9);
   });
 
-  it('each base has its own repair docks', () => {
-    let p = admiral({ baseDocks: { ijn_home: 2 }, docks: [{ shipId: 'fubuki', endsAt: T0 + 1000, base: 'ijn_home' }] });
+  it('the docks of every open base are one pool, up to eight (#281)', () => {
+    let p = admiral({ basesOpen: [], baseDocks: { ijn_home: 2 }, docks: [{ shipId: 'fubuki', endsAt: T0 + 1000, base: 'ijn_heavy' }] });
+    expect(dockTotal(p)).toBe(2);
+    // Opening a base adds its dock; a repair started anywhere fills the pool.
+    p = { ...p, basesOpen: ['ijn_light'] };
+    expect(dockTotal(p)).toBe(3);
     p = { ...p, ...setDamage(p, 'nagato', 0.5) };
-    const here = baseDockView(p, 'ijn_heavy');
-    expect(dockCount(here)).toBe(START_DOCKS);
-    expect(here.docks).toEqual([]);
-    const docked = startRepair(here, 'nagato', 690, T0)!;
-    const merged = mergeBaseDocks(p, 'ijn_heavy', { ...p, ...docked });
-    expect(merged.docks.map((d) => [d.shipId, d.base])).toEqual([['fubuki', 'ijn_home'], ['nagato', 'ijn_heavy']]);
-    expect(merged.baseDocks).toEqual({ ijn_home: 2, ijn_heavy: START_DOCKS });
-    expect(dockCount(baseDockView(merged, 'ijn_home'))).toBe(2);
+    const view = fleetDockView(p);
+    expect(dockCount(view)).toBe(3);
+    const docked = startRepair(view, 'nagato', 690, T0)!;
+    const merged = mergeFleetDocks(p, { ...p, ...docked });
+    expect(merged.docks.map((d) => d.shipId)).toEqual(['fubuki', 'nagato']);
+    expect(merged.baseDocks).toEqual(p.baseDocks);
+    // A new dock goes on the first base.
+    const built = buildDock(fleetDockView(p))!;
+    expect(mergeFleetDocks(p, built).baseDocks).toEqual({ ijn_home: 3 });
+    expect(dockTotal(admiral({ baseDocks: Object.fromEntries(nationBases(Nation.IJN).map((b) => [b.id, 8])) }))).toBe(MAX_DOCKS);
   });
 
-  it('builds use the current base slips and join that base', () => {
+  it('builds share the pooled docks wherever they were laid down', () => {
     const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('etorofu'), T0)!;
-    expect(p.builds[0].base).toBe('ijn_heavy');
     expect(buildsHere(p)).toHaveLength(1);
-    expect(buildsHere({ ...p, base: 'ijn_home' })).toHaveLength(0);
+    expect(buildsHere({ ...p, builds: [...p.builds, { shipId: 'kongo', endsAt: T0, base: 'ijn_light' }] })).toHaveLength(2);
   });
 
   it('every nation reaches its first theater from its first base and every theater by 少尉', () => {

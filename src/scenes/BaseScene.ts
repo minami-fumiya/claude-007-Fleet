@@ -4,10 +4,10 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import {
-  baseBonusLines, baseLockText, baseOfProgress, BaseState, baseState, baseWorkOf, currentBaseId, IBase, isBaseOpen, moveBase, nationBases, rushBaseWork, startBaseWork,
+  baseBonusLines, baseLockText, baseOfProgress, BaseState, baseState, baseWorkOf, currentBaseId, dockTotal, fleetBuildTimeMul, IBase, isBaseOpen, nationBases, rushBaseWork, startBaseWork,
 } from '@/systems/BaseSystem';
 import {
-  COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, facilityPreview, holdCap, regenRules, startFacility, UNIQUE_REGEN_CAP, uniqueStrength,
+  boostedBase, COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, facilityPreview, holdCap, regenRules, startFacility, UNIQUE_REGEN_CAP, uniqueStrength,
 } from '@/systems/FacilitySystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
@@ -123,7 +123,6 @@ export class BaseScene extends Phaser.Scene {
 
   private buildList(): void {
     const progress = loadProgress();
-    const here = currentBaseId(progress);
     const { x, y, w } = L.list;
     const bases = nationBases(progress.nation);
     const gap = 8;
@@ -141,8 +140,8 @@ export class BaseScene extends Phaser.Scene {
       this.track(this.add.text(bx + 16, by + 12, b.name, textStyle(IS_PORTRAIT ? 16 : 15, open ? Css.text : Css.dim, { fontStyle: 'bold' })));
       // A base past its rank is built before it opens (#217).
       const state = baseState(b, progress);
-      const sub = b.id === here ? '在籍中' : open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockText(b);
-      const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, b.id === here ? Css.gold : open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
+      const sub = open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockText(b);
+      const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
       if (state === 'building' && progress.baseWork) {
         this.workTimer = { text: subText, endsAt: progress.baseWork.endsAt, name: b.name };
         subText.setText(`工事中 残り ${clock(progress.baseWork.endsAt - Date.now())}`);
@@ -160,18 +159,13 @@ export class BaseScene extends Phaser.Scene {
     const d = L.detail;
     const x = d.x + 24;
     const w = d.w - 48;
-    const here = currentBaseId(progress) === base.id;
     const open = isBaseOpen(base, progress);
     const facilities = progress.facilities;
     const state = baseState(base, progress);
-    this.track(this.add.text(x, d.y + 18, here ? '在籍中の軍港' : open ? '軍港' : state === 'building' ? '工事中' : '未開港', eyebrowStyle(11, here ? Css.gold : Css.cyan)));
+    // No moving between bases since #281: every open base works at once.
+    this.track(this.add.text(x, d.y + 18, open ? '開港済みの軍港' : state === 'building' ? '工事中' : '未開港', eyebrowStyle(11, open ? Css.gold : Css.cyan)));
     const title = this.track(this.add.text(x, d.y + 38, base.name, displayStyle(22)));
-    if (!here && open) {
-      const moveW = IS_PORTRAIT ? 200 : 180;
-      this.track(new UIButton(this, d.x + d.w - 24 - moveW / 2, d.y + 44, 'ここへ移る', () => this.move(base), {
-        variant: 'gold', width: moveW, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
-      }));
-    } else if (!open) {
+    if (!open) {
       // Construction (#217): start it once the rank is reached, or finish it with a 高速建造材.
       const work = baseWorkOf(base);
       const items = progress.items.fastBuild;
@@ -185,10 +179,12 @@ export class BaseScene extends Phaser.Scene {
       })).setEnabled(enabled);
     }
     let y = title.y + title.height + 10;
-    // Where sorties go from here (#145) and the bonus its own facility gives (#146).
-    const boosted = here ? baseOfProgress(progress) : undefined;
-    const bonus = baseBonusLines(boosted ?? base).join('・');
-    const info = this.track(this.add.text(x, y, `出撃できる戦域: ${(base.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・')}\n特色: ${bonus}${uniqueStrength(facilities, base.id) > 1 ? ` (${uniqueName(base)}で強化)` : ''}`, textStyle(13, Css.muted, { lineSpacing: 4, wordWrap: { width: w, useAdvancedWrap: true } })));
+    // Where sorties go from here (#145), this base's bonus with its own facility (#146), and every open base together (#281).
+    const bonus = baseBonusLines(boostedBase(base, facilities) ?? base).join('・');
+    const all = baseOfProgress(progress);
+    const time = Math.round((1 - fleetBuildTimeMul(progress)) * 100);
+    const total = [...(all ? baseBonusLines(all) : []), ...(time > 0 ? [`建造時間 -${time}%`] : []), `ドック ${dockTotal(progress)} 本`].join('・');
+    const info = this.track(this.add.text(x, y, `出撃できる戦域: ${(base.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・')}\nこの軍港の特色: ${bonus}${uniqueStrength(facilities, base.id) > 1 ? ` (${uniqueName(base)}で強化)` : ''}${open ? '' : ' (開港すると加わる)'}\n全軍港の効果: ${total}`, textStyle(13, Css.muted, { lineSpacing: 4, wordWrap: { width: w, useAdvancedWrap: true } })));
     y = info.y + info.height + 12;
 
     // Facilities: the base's own first, then the common ones.
@@ -262,15 +258,6 @@ export class BaseScene extends Phaser.Scene {
     if (!next) return;
     saveProgress(next);
     this.status = `${name}が開港しました`;
-    this.refresh();
-  }
-
-  private move(base: IBase): void {
-    const progress = loadProgress();
-    const moved = moveBase(progress.nation, progress, base.id);
-    if (!moved) return;
-    saveProgress(moved);
-    this.status = `${base.name}に移りました`;
     this.refresh();
   }
 

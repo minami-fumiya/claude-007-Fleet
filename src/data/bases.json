@@ -7,8 +7,7 @@
       "unlockRank": 0,
       "repairTime": 0.8,
       "theaters": [
-        "pacific",
-        "north_pacific"
+        "pacific"
       ]
     },
     {
@@ -336,15 +335,14 @@
       "repairTime": 0.8,
       "theaters": [
         "baltic",
-        "arctic",
-        "north_pacific"
+        "arctic"
       ]
     },
     {
       "id": "su_light",
       "nation": "SU",
       "name": "ウラジオストク軍港",
-      "unlockRank": 6,
+      "unlockRank": 2,
       "build": {
         "classes": [
           "Destroyer",
@@ -353,7 +351,6 @@
         "mul": 0.8
       },
       "theaters": [
-        "baltic",
         "north_pacific"
       ]
     },

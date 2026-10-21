@@ -248,9 +248,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('list_search', '捜索章', 'special', [1, 30], (g) => `一覧で艦を名前で ${g} 回検索する`, (_r, c) => total(c, 'listSearch')),
   ...ladder('build_done', '竣工章', 'base', [5, 30, 100], (g) => `建造した艦が ${g} 隻竣工する`, (_r, c) => total(c, 'buildDone')),
   ...ladder('rush_work', '突貫工事章', 'base', [2, 3], (g) => `1 つの軍港で施設を ${g} つ同時に建設する`, (_r, c) => c.parallelFacilities ?? 0),
-  ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `1 つの軍港のドックを ${g} 本にする`, (_r, c) => c.maxDocks ?? 0),
+  ...ladder('dock_expansion', '船渠拡張章', 'base', [4, 6, 8], (g) => `ドックを ${g} 本にする (全軍港の合計)`, (_r, c) => c.maxDocks ?? 0),
   // A new base starts with one dock (#244): the second is the first step.
-  { id: 'second_dock', name: '第二船渠章', description: '1 つの軍港のドックを 2 本にする', category: 'base', value: (_r, c) => c.maxDocks ?? 0, goal: 2 },
+  { id: 'second_dock', name: '第二船渠章', description: 'ドックを 2 本にする (全軍港の合計)', category: 'base', value: (_r, c) => c.maxDocks ?? 0, goal: 2 },
   { id: 'stockpile', name: '大備蓄章', description: '4 つの資源をすべて保有上限まで貯める', category: 'base', value: (_r, c) => c.fullStock ?? 0, goal: 1 },
   ...ladder('warehouse', '備蓄拡張章', 'base', [20000, 40000], (g) => `製鋼所で鋼材の保有上限を ${g.toLocaleString()} にする`, (_r, c) => c.steelCap ?? 0),
   ...ladder('harbor_works', '築港章', 'base', [2, 4], (g) => `1 か国で軍港を ${g} つ開く (工事で開港)`, (_r, c) => c.basesOpen ?? 0),
