@@ -376,8 +376,8 @@ test.describe('screens', () => {
     expect(await overflowingTexts(page, 'CampaignMapScene'), `pacific (${layout})`).toEqual([]);
     expect.soft(await overlappingTexts(page, 'CampaignMapScene'), `pacific overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('map-training.png') });
-    // A Soviet admiral: the Baltic and the Black Sea.
-    const su = { ...SAVE, version: 16, current: 'SU', seenHelp: ['CampaignMapScene'], nations: { SU: { ...SAVE.nations.IJN, ships: ['gnevny'], campaign: ['b1'] } } };
+    // A Soviet admiral with every base open: the Baltic and the Black Sea, then the seas of 0.0.35 (#250).
+    const su = { ...SAVE, version: 16, current: 'SU', seenHelp: ['CampaignMapScene'], nations: { SU: { ...SAVE.nations.IJN, ships: ['gnevny'], campaign: ['b1'], basesOpen: ['su_light', 'su_cruiser', 'su_heavy'] } } };
     await page.evaluate((save) => localStorage.setItem('ww2fleet.progress.v2', JSON.stringify(save)), su);
     await page.reload();
     await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScenes(true).length);
@@ -386,10 +386,17 @@ test.describe('screens', () => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }>; selectTheater?(id: string): void };
       return s.theaters.map((t) => t.id);
     });
-    // The Baltic and the Black Sea, then the seas of 0.0.35 the Soviet navy fights in (#250).
     expect(tabs).toEqual(['baltic', 'blacksea', 'north_pacific', 'arctic']);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `SU (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('map-su.png') });
+    // Only Kronstadt open (#282): the seas it reaches; the rest wait for their bases.
+    await page.evaluate((save) => localStorage.setItem('ww2fleet.progress.v2', JSON.stringify(save)), { ...su, nations: { SU: { ...su.nations.SU, basesOpen: [] } } });
+    await page.reload();
+    await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScenes(true).length);
+    await open(page, 'CampaignMapScene');
+    const near = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }> }).theaters.map((t) => t.id));
+    expect(near).toEqual(['baltic', 'arctic']);
+    expect(await overflowingTexts(page, 'CampaignMapScene'), `SU first base (${layout})`).toEqual([]);
     expect(errors).toEqual([]);
   });
 
