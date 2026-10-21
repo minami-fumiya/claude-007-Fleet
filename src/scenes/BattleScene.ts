@@ -91,6 +91,8 @@ import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
 import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
+import { fleetPower } from '@/systems/DifficultyCurve';
+import { UNDERDOG_RATIO } from '@/systems/FleetPower';
 
 
 
@@ -1681,6 +1683,13 @@ export class BattleScene extends Phaser.Scene {
     add(new UIButton(this, CANVAS_W / 2, retreatY, '撤退する', () => this.retreat(), { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
   }
 
+  /** The fleet as it sailed, weighed against the enemy's ships like the map does (#280). */
+  private underdog(): boolean {
+    const weigh = (ships: BaseShip[]): number => fleetPower(ships.map((s) => ({ hp: s.stats.maxHp, armor: s.stats.armor })));
+    const enemy = weigh(this.enemies.filter((e) => !e.isLand));
+    return enemy > 0 && weigh(this.friendlies()) <= enemy * UNDERDOG_RATIO;
+  }
+
   /** Which battle this is and how it is won, for a few seconds as it opens (#279). */
   private showBattleBanner(): void {
     const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
@@ -1821,6 +1830,8 @@ export class BattleScene extends Phaser.Scene {
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
       ['landKill', this.enemies.filter((e) => e.isLand && !e.isAlive).length],
+      // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
+      ['underdogWin', won(!!area && this.underdog())],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
       ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],

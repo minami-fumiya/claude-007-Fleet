@@ -8,7 +8,6 @@ import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } fr
 import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
 import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
-import { isAtCurrentBase } from './BaseSystem';
 import { withQuestEvents } from './QuestSystem';
 import { addGold, emptyWallet, GOLD_SWEEP } from './GoldSystem';
 import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
@@ -77,8 +76,6 @@ export interface ISettlement {
 export function sortieBlockers(progress: IProgress, ships: IShipData[], now: number, opts: ISortieOptions = {}): string[] {
   const state = completeRepairs(progress, now);
   const reasons: string[] = [];
-  // Only the base's own ships sail from it (#145); others are brought over first.
-  for (const s of ships) if (!isAtCurrentBase(progress, s.id)) reasons.push(`${s.name} は他の軍港に所属 (配置換えが必要)`);
   // Ships out on an unfinished campaign sortie (#138) stay with it until it is continued or withdrawn.
   const away = progress.sortie?.shipIds ?? [];
   for (const s of ships) if (away.includes(s.id)) reasons.push(`${s.name} は出撃中 (作戦地図で続けるか撤退)`);

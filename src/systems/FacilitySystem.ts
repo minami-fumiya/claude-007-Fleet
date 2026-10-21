@@ -25,7 +25,7 @@ export const COMMON_FACILITIES: IFacility[] = [
   { id: 'ammoDepot', name: '弾薬庫', effect: '弾薬の回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
   { id: 'steelMill', name: '製鋼所', effect: '鋼材の回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
   { id: 'airBase', name: '航空基地', effect: 'ボーキの回復 +1 / 分・回復上限 +1,000・保有上限 +5,000', maxLevel: 5 },
-  { id: 'workshop', name: '工作部', effect: 'この軍港の研究費・建造時間 −5%', maxLevel: 5 },
+  { id: 'workshop', name: '工作部', effect: '研究費・建造時間 −5% (全軍港で合算)', maxLevel: 5 },
 ];
 
 /** The base's own facility: its bonus grows by half again per level above 1 (up to 3). */

@@ -7,8 +7,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, completeBuilds, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
-import { buildTimeMul, holdCap } from '@/systems/FacilitySystem';
-import { currentBaseId } from '@/systems/BaseSystem';
+import { holdCap } from '@/systems/FacilitySystem';
 import { availableShips, canResearch, medalMet, prerequisitesMet, research } from '@/systems/ResearchSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
 import { formatResources, shortfall } from '@/systems/ResourceSystem';
@@ -30,7 +29,7 @@ import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import techTree from '@/data/tech-tree.json';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
-import { baseOfProgress, researchMultiplier, scaleCost } from '@/systems/BaseSystem';
+import { baseOfProgress, fleetBuildTimeMul, researchMultiplier, scaleCost } from '@/systems/BaseSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
 
 const TREE = techTree.tech as ITechNode[];
@@ -277,7 +276,7 @@ export class ShipyardScene extends Phaser.Scene {
         : !shown ? ''
           // Short of resources (#262): what is missing, in red.
           : state === 'resources' ? `不足: ${formatResources(shortfall(progress.resources, buildCostAt(progress, ship)))}`
-            : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))}`;
+            : `建造 ${formatResources(buildCostAt(loadProgress(), ship))}  ·  ${clock(buildTimeMs(ship, fleetBuildTimeMul(progress)))}`;
     const parts: Phaser.GameObjects.GameObject[] = [
       frame,
       name,
@@ -332,10 +331,10 @@ export class ShipyardScene extends Phaser.Scene {
     }
     const now = Date.now();
     // The base's workshop (#146) shortens construction.
-    const next = startBuild(progress, roster, ship, now, buildTimeMul(progress.facilities, currentBaseId(progress)));
+    const next = startBuild(progress, roster, ship, now, fleetBuildTimeMul(progress));
     if (!next) return;
     saveProgress(withQuestEvents(next, [['build', 1]], now), 'build');
-    this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship, buildTimeMul(progress.facilities, currentBaseId(progress))))})`;
+    this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship, fleetBuildTimeMul(progress)))})`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
   }

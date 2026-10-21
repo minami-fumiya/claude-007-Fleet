@@ -5,11 +5,10 @@ import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH } from './ResearchSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
-import { assignShips, buildMultiplier, currentBase, currentBaseId, scaleCost } from './BaseSystem';
+import { assignShips, baseOfProgress, buildMultiplier, currentBaseId, dockTotal, scaleCost } from './BaseSystem';
 import { isHeavyCruiser, isLightCruiser } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
-import { dockCount } from './DockSystem';
 import { withQuestEvents } from './QuestSystem';
 
 /**
@@ -82,8 +81,9 @@ export function buildCost(ship: IShipData): IResources {
 }
 
 /** Build cost at the admiral's current base (#88), which can make some classes cheaper. */
-export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campaign' | 'merit' | 'rankFloor'>, ship: IShipData): IResources {
-  return scaleCost(buildCost(ship), buildMultiplier(currentBase(progress.nation, progress), ship.shipClass));
+export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campaign' | 'merit' | 'rankFloor' | 'basesOpen' | 'facilities'>, ship: IShipData): IResources {
+  // Every open base's build discount adds up (#281).
+  return scaleCost(buildCost(ship), buildMultiplier(baseOfProgress(progress), ship.shipClass));
 }
 
 /**
@@ -205,21 +205,19 @@ export function buildTimeMs(ship: IShipData, timeMul = 1): number {
   return Math.round(minutes * 60_000 * timeMul);
 }
 
-/** The docks of the base the admiral is at (#211): builds share them with repairs. */
-export function buildDockCount(progress: Pick<IProgress, 'baseDocks' | 'base'> & Partial<IProgress>): number {
-  return dockCount({ docksOwned: progress.baseDocks?.[currentBaseId(progress as IProgress)] });
+/** Every open base's docks (#211 #281): builds share them with repairs. */
+export function buildDockCount(progress: IProgress): number {
+  return dockTotal(progress);
 }
 
-/** Docks of the current base in use: its builds and its repairs (#211). */
+/** Docks in use: every build and every repair (#211). */
 export function docksInUse(progress: IProgress): number {
-  const here = currentBaseId(progress);
-  return buildsHere(progress).length + progress.docks.filter((j) => (j.base ?? here) === here).length;
+  return buildsHere(progress).length + progress.docks.length;
 }
 
-/** Builds on the slips of the base the admiral is at (#145); each base has its own. */
+/** Every build on the slips; the bases share their docks since #281. */
 export function buildsHere(progress: IProgress): IProgress['builds'] {
-  const here = currentBaseId(progress);
-  return (progress.builds ?? []).filter((b) => (b.base ?? here) === here);
+  return progress.builds ?? [];
 }
 
 /** Pays for the ship and lays it down; it joins the fleet when `completeBuilds` finds it finished. */
