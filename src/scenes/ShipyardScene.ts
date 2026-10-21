@@ -16,6 +16,7 @@ import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { shipOrder, hullNumber } from '@/systems/ShipOrder';
 import { filterShips, kindsOf } from '@/systems/ListFilter';
+import { shipSearchNames } from '@/utils/SearchHistory';
 import { FilterBar } from '@/ui/components/FilterBar';
 import { BUILT_KEY } from './HomeScene';
 import { formatNo } from '@/systems/Numbering';
@@ -105,6 +106,13 @@ export class ShipyardScene extends Phaser.Scene {
     this.filterBar = new FilterBar(this, L.filter, {
       key: 'shipyard', states: ['buildable', 'all', 'owned', 'unowned'], initial: { state: 'buildable' },
       kinds: () => kindsOf(this.classRoster()),
+      // Suggestions come from the ships owned, so unseen ships stay hidden (#245 #308).
+      names: () => {
+        const progress = loadProgress();
+        const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+        const owned = ownedIds(progress, roster);
+        return shipSearchNames(roster.filter((s) => owned.includes(s.id)));
+      },
       onChange: () => {
         this.page = 0;
         this.refresh();

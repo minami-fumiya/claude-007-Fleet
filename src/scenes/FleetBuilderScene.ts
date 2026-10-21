@@ -19,6 +19,7 @@ import { ICaptain, ICaptainData } from '@/types/Captain';
 import { aptitudeFor, assignCaptains, captainFit, SKILL_LABEL, withProgress } from '@/systems/CaptainSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { askShipName } from '@/ui/components/FilterBar';
+import { shipSearchNames } from '@/utils/SearchHistory';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { formatResources } from '@/systems/ResourceSystem';
@@ -606,9 +607,12 @@ export class FleetBuilderScene extends Phaser.Scene {
       sorts: row(y + h + rowGap, [...SORTS.map((k) => `並び: ${SORT_LABEL[k]}`), '名前で検索'], (i) => {
         if (i < SORTS.length) this.sort = SORTS[i];
         else {
-          const query = askShipName(this.query);
-          if (query === null) return;
-          this.query = query;
+          void askShipName(this.query, shipSearchNames(this.ships)).then((query) => {
+            if (query === null) return;
+            this.query = query;
+            onChange();
+          });
+          return;
         }
         onChange();
       }),

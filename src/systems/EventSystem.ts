@@ -122,6 +122,22 @@ export function eventEffects(event: IGameEvent | null): IEventEffects {
   }
 }
 
+/** What an event does, from its effects (#316: the help's event tab never drifts from the numbers). */
+export function eventHelp(kind: EventKind): string {
+  const e = eventEffects({ kind, theater: 'pacific' } as IGameEvent);
+  const pct = (m: number): string => `${Math.round(Math.abs(m - 1) * 100)}%`;
+  switch (kind) {
+    case 'double': return `1 つの戦域で、作戦の報酬が ${e.theaterRewardMul} 倍 (1 日 ${MAX_DOUBLE} 回まで)。`;
+    case 'steel': return `戦闘で得る鋼材が ${pct(e.steelMul)} 増える。`;
+    case 'fuel': return `戦闘で得る燃料が ${pct(e.fuelMul)} 増える。`;
+    case 'ammo': return `戦闘で得る弾薬が ${pct(e.ammoMul)} 増える。`;
+    case 'bauxite': return `戦闘で得るボーキが ${pct(e.bauxiteMul)} 増える。`;
+    case 'training': return `艦の熟練度と艦長の経験値が ${pct(e.xpMul)} 増える。`;
+    case 'repair': return `入渠の時間と資源が ${pct(e.repairMul)} 減る。`;
+    case 'superweapon': return `1 つの戦域の主力艦隊に、その国の超兵器が加わる。撃沈するとゴールドが入る (夜 21:00〜6:00 は出ない)。`;
+  }
+}
+
 /** A battle reward with the event applied; `theater` is the campaign area's theater (none for exercises). */
 export function applyEventReward(reward: IResources, effects: IEventEffects, theater?: string): IResources {
   const mul = theater && theater === effects.theater ? effects.theaterRewardMul : 1;

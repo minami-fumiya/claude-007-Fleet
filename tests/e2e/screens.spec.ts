@@ -530,6 +530,38 @@ test.describe('screens', () => {
     await page.screenshot({ path: info.outputPath('help-formations.png') });
     expect(await overflowingTexts(page, 'HelpScene')).toEqual([]);
     expect(await overlappingTexts(page, 'HelpScene')).toEqual([]);
+    // The tabs added in 0.0.40 (#316): ranks, battle and events fit too.
+    for (const tab of ['ranks', 'battle', 'events']) {
+      await page.evaluate((t) => {
+        const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HelpScene') as unknown as { tab: string; refresh(): void };
+        s.tab = t;
+        s.refresh();
+      }, tab);
+      await page.waitForTimeout(200);
+      expect(await overflowingTexts(page, 'HelpScene'), tab).toEqual([]);
+      expect(await overlappingTexts(page, 'HelpScene'), tab).toEqual([]);
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('the name search opens the game\'s own box, suggests names and filters the list (#308)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, seenHelp: SCREENS });
+    await open(page, 'FleetBuilderScene');
+    // The box the list's 名前で検索 opens, with names to suggest.
+    await page.evaluate(() => {
+      void import('/src/ui/components/FilterBar.ts').then((m) => m.askShipName('', ['吹雪', '長門', '金剛']).then((q: string | null) => {
+        (window as unknown as { searched?: string | null }).searched = q;
+      }));
+    });
+    const box = page.locator('[data-role=text-input]');
+    await box.waitFor();
+    await box.fill('吹');
+    await expect(page.locator('#text-input-sheet button', { hasText: '吹雪' })).toBeVisible();
+    await page.screenshot({ path: info.outputPath('search-box.png') });
+    await page.locator('#text-input-sheet button', { hasText: '吹雪' }).click();
+    await page.waitForFunction(() => (window as unknown as { searched?: string | null }).searched !== undefined);
+    expect(await page.evaluate(() => (window as unknown as { searched?: string | null }).searched)).toBe('吹雪');
+    await expect(page.locator('#text-input-sheet')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 

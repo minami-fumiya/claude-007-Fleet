@@ -10,11 +10,13 @@ import { OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
 import { Objective } from '@/types/Campaign';
 import { FORMATION_ORDER, FORMATION_RULES } from '@/systems/FormationRules';
 import { RANKS } from '@/systems/RankSystem';
+import { A_HP_RATIO, B_HP_RATIO, HEAVY_DAMAGE, RANK_MERIT_MUL, RANK_REWARD_MUL, S_HP_RATIO, S_TIME_SHARE, SLOW_BATTLE_SEC } from '@/systems/BattleRank';
+import { EVENT_NAME, EventKind, eventHelp } from '@/systems/EventSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
 
-const P = IS_PORTRAIT ? { x: 16, y: 210, w: CANVAS_W - 32, h: CANVAS_H - 226 } : { x: 140, y: 150, w: 1000, h: 550 };
+const P = IS_PORTRAIT ? { x: 16, y: 240, w: CANVAS_W - 32, h: CANVAS_H - 256 } : { x: 140, y: 150, w: 1000, h: 550 };
 const TABS_Y = IS_PORTRAIT ? 166 : 118;
 
 const CLASS_HELP: Record<ShipClass, string> = {
@@ -46,8 +48,33 @@ function formationHelp(): Array<[string, string]> {
   });
 }
 
-type Tab = 'controls' | 'classes' | 'formations' | 'objectives';
-const TABS: Array<[Tab, string]> = [['controls', '操作'], ['classes', '艦種'], ['formations', '陣形'], ['objectives', '作戦目標']];
+/** 評価 S〜D (#295), from BattleRank's own numbers (#316). */
+function rankHelp(): Array<[string, string]> {
+  const pct = (v: number): string => `${Math.round(v * 100)}%`;
+  return [
+    ['S', `喪失なし・残り耐久 ${pct(S_HP_RATIO)} 以上・大破 (耐久 ${pct(HEAVY_DAMAGE)} 以下) なし・制限時間の ${Math.round(S_TIME_SHARE * 3)}/3 以内 (制限なしは ${SLOW_BATTLE_SEC} 秒)。初めての S で掃討が開き、報酬艦か艦長が入る`],
+    ['A', `喪失なし・残り耐久 ${pct(A_HP_RATIO)} 以上`],
+    ['B', `喪失 1 隻まで、または残り耐久 ${pct(B_HP_RATIO)} 以上`],
+    ['C', 'それ以外の勝利'],
+    ['D', '敗北'],
+    ['報酬', `資源 S +${Math.round((RANK_REWARD_MUL.S - 1) * 100)}%・A +${Math.round((RANK_REWARD_MUL.A - 1) * 100)}%、戦功 S +${Math.round((RANK_MERIT_MUL.S - 1) * 100)}%。結果の画面に「S まで: …」と足りない所が出る`],
+  ];
+}
+
+/** How a battle works beyond the controls (#316). */
+const BATTLE_HELP: Array<[string, string]> = [
+  ['弾種', '自動・徹甲弾・榴弾。徹甲弾は装甲の厚い艦に、榴弾は薄い艦と火災に強い。切り替えると装填し直す'],
+  ['火災・浸水', '榴弾は火災、魚雷は浸水を起こしやすい。燃えている間・浸水している間は耐久が減り続ける'],
+  ['大破', '耐久 25% 以下。全艦が大破すると、作戦は進撃できずに終わる。入渠で直す'],
+  ['飛行場', '対地攻撃の海域にある。攻撃隊を出してくるので、先に壊すと楽になる'],
+  ['超兵器', '超兵器出現のイベント中に、戦域の主力艦隊に現れる巨大艦。主砲・機関・艦橋を壊すと弱る'],
+  ['敵の陣形', '敵も陣形を組む。海域の詳細に、予想される陣形が出る'],
+];
+
+type Tab = 'controls' | 'classes' | 'formations' | 'objectives' | 'ranks' | 'battle' | 'events';
+const TABS: Array<[Tab, string]> = [
+  ['controls', '操作'], ['classes', '艦種'], ['formations', '陣形'], ['objectives', '作戦目標'], ['ranks', '評価'], ['battle', '戦闘'], ['events', 'イベント'],
+];
 
 /** ヘルプ: controls, ship classes and operation objectives at a glance. Every battle also ends with the flagship rule. */
 export class HelpScene extends Phaser.Scene {
@@ -81,13 +108,17 @@ export class HelpScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
-    const bw = (P.w - 16) / TABS.length;
+    // Seven tabs (#316): one row in landscape, two in portrait.
+    const perRow = IS_PORTRAIT ? 4 : TABS.length;
+    const bw = (P.w - 8 * (perRow - 1)) / perRow;
+    const th = IS_PORTRAIT ? 44 : 44;
     TABS.forEach(([id, label], i) => {
+      const row = Math.floor(i / perRow);
       this.dynamic.push(
-        new UIButton(this, P.x + i * (bw + 8) + bw / 2, TABS_Y, label, () => {
+        new UIButton(this, P.x + (i % perRow) * (bw + 8) + bw / 2, TABS_Y - (IS_PORTRAIT ? 26 : 0) + row * (th + 8), label, () => {
           this.tab = id;
           this.refresh();
-        }, { variant: id === this.tab ? 'primary' : 'secondary', width: bw, height: IS_PORTRAIT ? 56 : 44, fontSize: 15 }),
+        }, { variant: id === this.tab ? 'primary' : 'secondary', width: bw, height: th, fontSize: IS_PORTRAIT ? 15 : 14 }),
       );
     });
     const rows: Array<[string, string]> =
@@ -97,7 +128,13 @@ export class HelpScene extends Phaser.Scene {
           ? [...CLASS_ORDER.map((c): [string, string] => [CLASS_JA[c], CLASS_HELP[c]]), ['同型艦', SISTER_HELP]]
           : this.tab === 'formations'
             ? formationHelp()
-            : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];
+            : this.tab === 'ranks'
+              ? rankHelp()
+              : this.tab === 'battle'
+                ? BATTLE_HELP
+                : this.tab === 'events'
+                  ? [...(Object.keys(EVENT_NAME) as EventKind[]).map((k): [string, string] => [EVENT_NAME[k], eventHelp(k)]), ['予定', '3 時間ごとに 1 つ開催。鎮守府の上の「予定」で先の予定を見られる']]
+                  : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];
     const x = P.x + 28;
     const w = P.w - 56;
     const labelW = IS_PORTRAIT ? 0 : 150;

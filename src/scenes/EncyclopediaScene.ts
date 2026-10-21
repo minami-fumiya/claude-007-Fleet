@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
 import { filterShips, IListFilter, kindsOf, NO_FILTER } from '@/systems/ListFilter';
 import { FilterBar, loadFilter } from '@/ui/components/FilterBar';
+import { shipSearchNames } from '@/utils/SearchHistory';
 import { formatNo } from '@/systems/Numbering';
 import { HIDDEN_NAME, hiddenShipName } from '@/systems/RevealSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -291,6 +292,11 @@ export class EncyclopediaScene extends Phaser.Scene {
       const bar = new FilterBar(this, { x: x + PAD, y: y + PAD + (NATION_ROWS + 2) * (L.tabH + TAB_GAP), w: inner, h: L.tabH }, {
         key: 'encyclopedia', states: null,
         kinds: () => kindsOf(filterEntries(DataLoader.getRegistry(this).byNation(this.nation), this.shipClass)),
+        // Only owned ships are suggested, so unseen ones stay ？？？ (#245 #308).
+        names: () => {
+          const owned = loadSave().nations[this.nation]?.ships ?? [];
+          return shipSearchNames(DataLoader.getRegistry(this).byNation(this.nation).filter((s) => owned.includes(s.id)));
+        },
         onChange: (f) => {
           this.shipFilter = f;
           this.list.setOffset(0);

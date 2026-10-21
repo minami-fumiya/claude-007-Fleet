@@ -124,9 +124,8 @@ describe('data integrity (#253)', () => {
     const helpIds = new Set((screenHelp.screens as Array<{ id: string }>).map((h) => h.id));
     const problems: string[] = [];
     for (const id of helpIds) if (!scenes.has(id)) problems.push(`screen-help ${id}: no such screen`);
-    // Every screen the home menu opens explains itself on the first visit (the help and settings screens are their own
-    // explanation; a settings sheet is planned with the help tabs).
-    const selfExplained = new Set<string>([SceneKeys.HELP, SceneKeys.SETTINGS]);
+    // Every screen the home menu opens explains itself on the first visit (the help screen is its own explanation).
+    const selfExplained = new Set<string>([SceneKeys.HELP]);
     for (const tab of HOME_MENU) for (const item of tab.items) if (!helpIds.has(item.scene) && !selfExplained.has(item.scene)) problems.push(`home menu ${item.label}: no screen-help for ${item.scene}`);
     for (const i of items.items as Array<{ id: string; scene?: string }>) if (i.scene && !scenes.has(i.scene)) problems.push(`item ${i.id}: scene ${i.scene}`);
     for (const id of Object.keys(refits.ships)) if (!SHIP_IDS.has(id)) problems.push(`refit for unknown ship ${id}`);

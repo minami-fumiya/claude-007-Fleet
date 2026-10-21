@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -28,6 +29,8 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   create(data: IBattleResultData): void {
+    // The screen explains itself on the first visit (#316), once everything is drawn.
+    this.events.once(Phaser.Scenes.Events.CREATE, () => showScreenHelp(this));
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
     const victory = data?.victory ?? false;
