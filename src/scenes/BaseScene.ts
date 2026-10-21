@@ -177,8 +177,12 @@ export class BaseScene extends Phaser.Scene {
       this.track(new UIButton(this, d.x + d.w - 24 - workW / 2, d.y + 44, label, () => (state === 'building' ? this.rushWork() : this.startWork(base)), {
         variant: state === 'ready' ? 'gold' : 'secondary', width: workW, height: IS_PORTRAIT ? 60 : 40, fontSize: IS_PORTRAIT ? 12 : 12,
       })).setEnabled(enabled);
+      // The name never runs under the button (#297).
+      const room = w - workW - 12;
+      if (title.width > room) title.setScale(room / title.width);
     }
-    let y = title.y + title.height + 10;
+    // Below the button in portrait (it is taller than the name).
+    let y = Math.max(title.y + title.height + 10, !open && IS_PORTRAIT ? d.y + 80 : 0);
     // Where sorties go from here (#145), this base's bonus with its own facility (#146), and every open base together (#281).
     const bonus = baseBonusLines(boostedBase(base, facilities) ?? base).join('・');
     const all = baseOfProgress(progress);
@@ -187,8 +191,16 @@ export class BaseScene extends Phaser.Scene {
     const info = this.track(this.add.text(x, y, `出撃できる戦域: ${(base.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・')}\nこの軍港の特色: ${bonus}${uniqueStrength(facilities, base.id) > 1 ? ` (${uniqueName(base)}で強化)` : ''}${open ? '' : ' (開港すると加わる)'}\n全軍港の効果: ${total}`, textStyle(13, Css.muted, { lineSpacing: 4, wordWrap: { width: w, useAdvancedWrap: true } })));
     y = info.y + info.height + 12;
 
-    // Facilities: the base's own first, then the common ones.
-    const rowH = IS_PORTRAIT ? 70 : 44;
+    // The footer is laid out from the bottom up first, so nothing above runs into it (#297): regeneration with
+    // every base's facilities (#146), the holding cap (#221) above it, and the work line on top.
+    const { perTick: r, cap } = regenRules(facilities);
+    const hold = holdCap(facilities);
+    const footStyle = textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } });
+    const regenText = this.track(this.add.text(x, d.y + d.h - 14, `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}  ·  回復上限 燃${cap.fuel} 弾${cap.ammo} 鋼${cap.steel} ボ${cap.bauxite}`, footStyle).setOrigin(0, 1));
+    const holdText = this.track(this.add.text(x, regenText.y - regenText.height - 2, `保有上限 燃${hold.fuel} 弾${hold.ammo} 鋼${hold.steel} ボ${hold.bauxite}  (全軍港の施設で増える)`, footStyle).setOrigin(0, 1));
+    const footerTop = holdText.y - holdText.height - 24;
+    // Facilities: the base's own first, then the common ones. The rows shrink to leave the footer its room.
+    const rowH = Math.min(IS_PORTRAIT ? 70 : 44, Math.floor((footerTop - y - 20) / (1 + COMMON_FACILITIES.length)));
     // Several facilities can be raised at once (#216).
     const jobs = progress.facilityJobs.filter((j) => j.base === base.id);
     const rows: Array<{ id: FacilityId; name: string; effect: string }> = [
@@ -226,20 +238,12 @@ export class BaseScene extends Phaser.Scene {
       // The one finishing first gets the live countdown; the line also says how many slots are in use.
       const job = [...jobs].sort((a, b) => a.endsAt - b.endsAt)[0];
       const label = `${rows.find((r) => r.id === job.id)?.name ?? job.id} Lv${job.level}  (建設中 ${jobs.length} / ${facilitySlots(facilities, base.id)})`;
-      const t = this.track(this.add.text(x, y + 4, '', textStyle(13, Css.cyan)));
+      const t = this.track(this.add.text(x, footerTop, '', textStyle(13, Css.cyan)));
       this.timer = { text: t, endsAt: job.endsAt, label };
       t.setText(`建設中: ${label}  残り ${clock(job.endsAt - Date.now())}`);
-      y += 24;
     } else if (this.status) {
-      this.track(this.add.text(x, y + 4, this.status, textStyle(13, Css.success)));
-      y += 24;
+      this.track(this.add.text(x, footerTop, this.status, textStyle(13, Css.success)));
     }
-    // Regeneration with every base's facilities (#146).
-    const { perTick: r, cap } = regenRules(facilities);
-    // The holding cap (#221) above it: rewards stop there, the four resource facilities raise it.
-    const hold = holdCap(facilities);
-    this.track(this.add.text(x, d.y + d.h - 34, `保有上限 燃${hold.fuel} 弾${hold.ammo} 鋼${hold.steel} ボ${hold.bauxite}  (全軍港の施設で増える)`, textStyle(12, Css.muted)).setOrigin(0, 1));
-    this.track(this.add.text(x, d.y + d.h - 16, `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}  ·  回復上限 燃${cap.fuel} 弾${cap.ammo} 鋼${cap.steel} ボ${cap.bauxite}`, textStyle(12, Css.muted)).setOrigin(0, 1));
   }
 
   private startWork(base: IBase): void {

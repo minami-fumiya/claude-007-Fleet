@@ -191,7 +191,7 @@ test.describe('screens', () => {
     for (const key of SCREENS) {
       await open(page, key);
       expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
-      expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
+      expect(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
       expect(await badLineStarts(page, key), `${key} line breaks (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
@@ -209,7 +209,7 @@ test.describe('screens', () => {
         s.refresh();
       }, cls);
       expect(await overflowingTexts(page, 'ShipyardScene'), `${cls} (${layout})`).toEqual([]);
-      expect.soft(await overlappingTexts(page, 'ShipyardScene'), `${cls} overlaps (${layout})`).toEqual([]);
+      expect(await overlappingTexts(page, 'ShipyardScene'), `${cls} overlaps (${layout})`).toEqual([]);
     }
     await page.screenshot({ path: info.outputPath('shipyard-battleship.png') });
     expect(errors).toEqual([]);
@@ -235,7 +235,7 @@ test.describe('screens', () => {
     // Only the battles Japan fought in (#224).
     expect(listed).toBe(8);
     expect(await overflowingTexts(page, 'ScenarioScene'), `scenarios (${layout})`).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'ScenarioScene'), `scenarios overlaps (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'ScenarioScene'), `scenarios overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('scenarios.png') });
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as { scenarios: unknown[]; selected: number; start(sc: unknown): void };
@@ -298,7 +298,7 @@ test.describe('screens', () => {
     for (const key of SCREENS) {
       await open(page, key);
       expect.soft(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
-      expect.soft(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
+      expect(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
     }
     expect(errors).toEqual([]);
   });
@@ -326,7 +326,7 @@ test.describe('screens', () => {
     });
     await cap();
     expect(await overflowingTexts(page, 'CaptainScene'), `filtered (${layout})`).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'CaptainScene'), `filtered overlaps (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'CaptainScene'), `filtered overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('captain-filtered.png') });
     // The fleet builder: a sheet of the best fits instead of cycling through all 30.
     await open(page, 'FleetBuilderScene');
@@ -374,7 +374,7 @@ test.describe('screens', () => {
     const errors = await boot(page, layout, { ...SAVE, version: 16, seenHelp: ['CampaignMapScene'] });
     await open(page, 'CampaignMapScene');
     expect(await overflowingTexts(page, 'CampaignMapScene'), `pacific (${layout})`).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'CampaignMapScene'), `pacific overlaps (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'CampaignMapScene'), `pacific overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('map-training.png') });
     // A Soviet admiral with every base open: the Baltic and the Black Sea, then the seas of 0.0.35 (#250).
     const su = { ...SAVE, version: 16, current: 'SU', seenHelp: ['CampaignMapScene'], nations: { SU: { ...SAVE.nations.IJN, ships: ['gnevny'], campaign: ['b1'], basesOpen: ['su_light', 'su_cruiser', 'su_heavy'] } } };
@@ -467,7 +467,7 @@ test.describe('screens', () => {
     await open(page, 'EncyclopediaScene', { tab: 'ships', id: shipId });
     expect(await page.evaluate(() => ((window as unknown as G).game.scene.getScene('EncyclopediaScene') as unknown as { selectedId: string }).selectedId)).toBe(shipId);
     expect(await overflowingTexts(page, 'EncyclopediaScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'EncyclopediaScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'EncyclopediaScene')).toEqual([]);
     await page.screenshot({ path: info.outputPath('encyclopedia-ship.png') });
     const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
       const scene = (window as unknown as G).game.scene.getScene(k);
@@ -505,7 +505,7 @@ test.describe('screens', () => {
     const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, version: 7, seenHelp: ['HelpScene'] });
     expect(await overflowingTexts(page, 'MainMenuScene')).toEqual([]);
     // The title (#198): the sea moves, the main button names the nation and rank to go back to, nothing overlaps.
-    expect.soft(await overlappingTexts(page, 'MainMenuScene'), 'title overlaps').toEqual([]);
+    expect(await overlappingTexts(page, 'MainMenuScene'), 'title overlaps').toEqual([]);
     const title = await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('MainMenuScene');
       const texts: string[] = [];
@@ -529,7 +529,7 @@ test.describe('screens', () => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: info.outputPath('help-formations.png') });
     expect(await overflowingTexts(page, 'HelpScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'HelpScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'HelpScene')).toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -539,7 +539,7 @@ test.describe('screens', () => {
     await open(page, 'CaptainScene');
     await page.screenshot({ path: info.outputPath('captain-book.png') });
     expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'CaptainScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'CaptainScene')).toEqual([]);
     const r = await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as {
         selectedId: string; useBook(c: { id: string; name: string }): void; children: { list: Array<{ type: string; text?: string }> };
@@ -729,7 +729,7 @@ test.describe('screens', () => {
     expect((await stored()).baseWork?.base).toBe('ijn_light');
     await page.waitForTimeout(300);
     expect(await overflowingTexts(page, 'BaseScene'), `base work (${layout})`).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'BaseScene'), `base work overlaps (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'BaseScene'), `base work overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('base-work.png') });
     await press('BaseScene', '高速建造材で完成');
     expect((await stored()).basesOpen).toContain('ijn_light');
@@ -758,7 +758,7 @@ test.describe('screens', () => {
     for (const kind of ['hourly', 'daily', 'weekly', 'once', 'rank']) {
       await page.evaluate((k) => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openQuests(k: string): void }).openQuests(k), kind);
       expect(await overflowingTexts(page, 'HomeScene'), `${kind} (${layout})`).toEqual([]);
-      expect.soft(await overlappingTexts(page, 'HomeScene'), `${kind} overlaps (${layout})`).toEqual([]);
+      expect(await overlappingTexts(page, 'HomeScene'), `${kind} overlaps (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`quests-${kind}.png`) });
     }
     await page.screenshot({ path: info.outputPath('quests.png') });
@@ -773,6 +773,8 @@ test.describe('screens', () => {
     expect(swept.status).toContain('掃討完了');
     expect(swept.sweeps).toBe(1);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `sweep (${layout})`).toEqual([]);
+    // The result sits above the buttons and the briefing makes room (#297).
+    expect(await overlappingTexts(page, 'CampaignMapScene'), `sweep overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('sweep.png') });
     expect(errors).toEqual([]);
   });
@@ -813,12 +815,12 @@ test.describe('screens', () => {
     });
     expect(placed.chipBottom, `notices above the docks (${layout})`).toBeLessThan(placed.titleTop - 20);
     expect(await overflowingTexts(page, 'HomeScene'), `home (${layout})`).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'HomeScene'), `home overlaps (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'HomeScene'), `home overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('home-notices.png') });
     // まとめて受け取る (#180): the ten on the hourly tab in one press.
     await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openQuests(k: string): void }).openQuests('hourly'));
     expect(await overflowingTexts(page, 'HomeScene'), `quests (${layout})`).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'HomeScene'), `quests overlaps (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'HomeScene'), `quests overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('quests-claim-all.png') });
     const claimed = await page.evaluate(() => {
       const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
@@ -840,7 +842,7 @@ test.describe('screens', () => {
         s.buildStats(JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}').record);
       }, mode);
       expect(await overflowingTexts(page, 'RecordScene'), `record ${mode} (${layout})`).toEqual([]);
-      expect.soft(await overlappingTexts(page, 'RecordScene'), `record ${mode} overlaps (${layout})`).toEqual([]);
+      expect(await overlappingTexts(page, 'RecordScene'), `record ${mode} overlaps (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`record-${mode}.png`) });
     }
     expect(errors).toEqual([]);
@@ -852,7 +854,7 @@ test.describe('screens', () => {
     await open(page, 'CaptainScene', { id: 'ijn_sakai' });
     await page.screenshot({ path: info.outputPath('captain.png') });
     expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'CaptainScene'), 'overlaps').toEqual([]);
+    expect(await overlappingTexts(page, 'CaptainScene'), 'overlaps').toEqual([]);
     type Scene = { openPicker(c: unknown, slot: number): void; confirmLearn(c: unknown, slot: number, s: string): void; applyLearn(c: unknown, slot: number, s: string): void; owned(): Array<{ id: string }> };
     const call = (fn: string, slot: number, skill?: string) => page.evaluate(([f, i, k]) => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CaptainScene') as unknown as Scene & Record<string, (...a: unknown[]) => void>;
@@ -885,7 +887,7 @@ test.describe('screens', () => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: info.outputPath('customize-list.png') });
     expect(await overflowingTexts(page, 'CustomizationScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'CustomizationScene'), 'overlaps').toEqual([]);
+    expect(await overlappingTexts(page, 'CustomizationScene'), 'overlaps').toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -917,7 +919,7 @@ test.describe('screens', () => {
     await open(page, 'RecordScene', { view: 'ledger' });
     await page.screenshot({ path: info.outputPath('ledger.png') });
     expect(await overflowingTexts(page, 'RecordScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'RecordScene'), 'overlaps').toEqual([]);
+    expect(await overlappingTexts(page, 'RecordScene'), 'overlaps').toEqual([]);
     expect(errors).toEqual([]);
   });
 
@@ -1062,7 +1064,7 @@ test.describe('screens', () => {
     await open(page, 'CampaignMapScene');
     await page.screenshot({ path: info.outputPath('sortie-resume.png') });
     expect(await overflowingTexts(page, 'CampaignMapScene')).toEqual([]);
-    expect.soft(await overlappingTexts(page, 'CampaignMapScene'), 'overlaps').toEqual([]);
+    expect(await overlappingTexts(page, 'CampaignMapScene'), 'overlaps').toEqual([]);
     await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { resume(): void }).resume());
     await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
     const node = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown } }).battleData.sortie);
@@ -1139,12 +1141,19 @@ test('量が最大のセーブ: every screen fits with every ship, captain and r
     await open(page, key);
     expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
   }
-  // The damaged list (#275) and the captain's traits (#276) open as sheets that fit.
+  // Every dock and damaged ship on its own row of one scrolling list (#297), its end reachable; the captain's
+  // traits (#276) open as a sheet that fits.
   await open(page, 'HomeScene');
-  await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openDamaged(): void }).openDamaged());
+  const rows = await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { dockList: { content: Phaser.GameObjects.Container; setOffset(o: number): void } };
+    s.dockList.setOffset(1e6);
+    return s.dockList.content.list.length;
+  });
+  expect(rows, `one row a dock and a damaged ship (${layout})`).toBe(24);
   await page.waitForTimeout(300);
   await page.screenshot({ path: info.outputPath('max-damaged.png') });
   expect(await overflowingTexts(page, 'HomeScene')).toEqual([]);
+  expect(await overlappingTexts(page, 'HomeScene'), `docks overlaps (${layout})`).toEqual([]);
   await open(page, 'CaptainScene');
   await page.screenshot({ path: info.outputPath('max-captain.png') });
   expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);

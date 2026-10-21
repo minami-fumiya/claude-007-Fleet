@@ -24,6 +24,8 @@ export interface IRankInput {
 
 /** An S needs at least this much of the fleet's HP left (#295: 60% → 85%), no ship lost and none heavily damaged. */
 export const S_HP_RATIO = 0.85;
+/** A win with this much of the HP left and no loss counts as flawless (無傷の完勝章, #295). */
+export const FLAWLESS_HP = 0.95;
 /** A ship at or under this share of its HP is heavily damaged (大破): no S. */
 export const HEAVY_DAMAGE = 0.25;
 /** Without a time limit, an S must be won inside this (#295: 600 → 420 s); with one, inside S_TIME_SHARE of it. */

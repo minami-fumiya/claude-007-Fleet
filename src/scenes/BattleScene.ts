@@ -66,7 +66,7 @@ import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
-import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown, rankShortfall } from '@/systems/BattleRank';
+import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown, rankShortfall, FLAWLESS_HP } from '@/systems/BattleRank';
 import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, openSweeps, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -1836,6 +1836,8 @@ export class BattleScene extends Phaser.Scene {
       ['landKill', this.enemies.filter((e) => e.isLand && !e.isAlive).length],
       // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
       ['underdogWin', won(!!area && this.underdog())],
+      // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.
+      ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
       ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],

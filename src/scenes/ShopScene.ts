@@ -110,7 +110,7 @@ export class ShopScene extends Phaser.Scene {
     const r = sell(walletOf(p), kind, p.resources);
     if (!r) return;
     const ledger = recordLedger(p.ledger, 'shopSell', { [kind]: SELL.amount }, now);
-    saveProgress({ ...p, wallet: r.wallet, resources: r.resources, ledger });
+    saveProgress(withQuestEvents({ ...p, wallet: r.wallet, resources: r.resources, ledger }, [['shopSell', 1]], now));
     this.status = `${RESOURCE_LABEL[kind]} ${SELL.amount.toLocaleString('en-US')} を ${r.gold} G で売りました`;
     this.draw();
   }
