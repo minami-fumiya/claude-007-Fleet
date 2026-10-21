@@ -1781,6 +1781,8 @@ export class BattleScene extends Phaser.Scene {
       const force = this.scenarioSetup?.side.force;
       const firstWin = victory && force !== undefined && (before.record.scenarios?.[this.scenario.id]?.wins[force] ?? 0) === 0;
       if (firstWin) after = { ...after, wallet: addGold(walletOf(after), GOLD_SCENARIO_FIRST) };
+      // 任務 (#314): a historical win counts for the history quest, and only that (no other quest or reward).
+      if (victory) after = withQuestEvents(after, [['scenarioWin', 1]], Date.now());
       saveProgress(after);
       result.reward = undefined;
       result.cost = undefined;

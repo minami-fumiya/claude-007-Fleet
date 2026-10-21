@@ -834,7 +834,7 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const built = buildDock(fleetDockView(progress));
     if (!built) return;
-    saveProgress(mergeFleetDocks(progress, built), 'dock');
+    saveProgress(withQuestEvents(mergeFleetDocks(progress, built), [['dockBuilt', 1]], Date.now()), 'dock');
     this.refresh();
   }
 
@@ -853,7 +853,8 @@ export class HomeScene extends Phaser.Scene {
   private fastRepair(shipId: string): void {
     const progress = loadProgress();
     if (progress.items.fastRepair > 0) {
-      saveProgress({ ...progress, ...fastRepair(progress, shipId), items: { ...progress.items, fastRepair: progress.items.fastRepair - 1 } });
+      // 応急修理章 (#315) counts the items used.
+      saveProgress(withQuestEvents({ ...progress, ...fastRepair(progress, shipId), items: { ...progress.items, fastRepair: progress.items.fastRepair - 1 } }, [['fastRepairUse', 1]], Date.now()));
       this.refresh();
       return;
     }
