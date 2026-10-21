@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { battleRank, betterRank, isBattleRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown } from '@/systems/BattleRank';
+import { battleRank, betterRank, isBattleRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown, rankShortfall, sRankTime } from '@/systems/BattleRank';
 import { settleBattle } from '@/systems/ProgressionSystem';
 import { emptyProgress } from '@/utils/ProgressStore';
 import { runMigrations } from '@/utils/SaveMigration';
@@ -7,13 +7,31 @@ import { runMigrations } from '@/utils/SaveMigration';
 const win = { victory: true, fleetSize: 4, shipsLost: 0, hpRatio: 0.9, durationSec: 200 };
 
 describe('battle rank (#149)', () => {
-  it('S for a quick, clean win; A without losses; B up to half lost; C worse; D for a defeat', () => {
+  it('S for a quick, clean win; A without losses and 60% HP; B one loss or 40% HP; C worse; D for a defeat (#295)', () => {
     expect(battleRank(win)).toBe('S');
-    expect(battleRank({ ...win, hpRatio: 0.5 })).toBe('A');
-    expect(battleRank({ ...win, durationSec: 900 })).toBe('A');
-    expect(battleRank({ ...win, shipsLost: 2 })).toBe('B');
-    expect(battleRank({ ...win, shipsLost: 3 })).toBe('C');
+    expect(battleRank({ ...win, hpRatio: 0.84 })).toBe('A');
+    expect(battleRank({ ...win, minShipHp: 0.25 })).toBe('A');
+    expect(battleRank({ ...win, durationSec: 421 })).toBe('A');
+    expect(battleRank({ ...win, hpRatio: 0.59 })).toBe('B');
+    expect(battleRank({ ...win, shipsLost: 1, hpRatio: 0.3 })).toBe('B');
+    expect(battleRank({ ...win, shipsLost: 2, hpRatio: 0.4 })).toBe('B');
+    expect(battleRank({ ...win, shipsLost: 2, hpRatio: 0.39 })).toBe('C');
     expect(battleRank({ ...win, victory: false })).toBe('D');
+  });
+
+  it('an S is timed by the area: two thirds of its limit, none when holding out wins (#295)', () => {
+    expect(sRankTime({})).toBe(420);
+    expect(sRankTime({ timeLimitSec: 180 })).toBe(120);
+    expect(sRankTime({ timeLimitSec: 150, timeWins: true })).toBe(Infinity);
+    expect(battleRank({ ...win, durationSec: 150, timeLimitSec: 180 })).toBe('A');
+    expect(battleRank({ ...win, durationSec: 150, timeLimitSec: 150, timeWins: true })).toBe('S');
+  });
+
+  it('says what kept a win from S (#295)', () => {
+    expect(rankShortfall(win)).toBe('');
+    expect(rankShortfall({ ...win, victory: false })).toBe('');
+    expect(rankShortfall({ ...win, hpRatio: 0.78 })).toBe('S まで: 残り耐久 78% (85% 必要)');
+    expect(rankShortfall({ ...win, shipsLost: 1, minShipHp: 0.2, durationSec: 500 })).toBe('S まで: 喪失 1 隻 · 大破艦あり · 500 秒 (420 秒以内)');
   });
 
   it('scales the battle reward and merit; S pays more than C', () => {

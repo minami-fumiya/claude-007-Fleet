@@ -1,5 +1,5 @@
 {
-  "_comment": "The shop (#183): what gold buys, a day's limit of each, and the sell rate. No real money anywhere. tests/unit/Shop.test.ts keeps a day's buying under a day of battle income.",
+  "_comment": "The shop (#183): what gold buys, a day's limit of each, and the sell rate (selling has no limit since 0.0.39, #296). No real money anywhere. tests/unit/Shop.test.ts keeps a day's buying under a day of battle income.",
   "entries": [
     { "id": "fuel_s", "name": "燃料 (小)", "give": { "fuel": 500 }, "price": 150, "daily": 2 },
     { "id": "ammo_s", "name": "弾薬 (小)", "give": { "ammo": 500 }, "price": 150, "daily": 2 },
@@ -13,6 +13,6 @@
     { "id": "fast_build", "name": "高速建造材", "items": { "fastBuild": 1 }, "price": 400, "daily": 2 },
     { "id": "captain_book", "name": "艦長教本", "items": { "captainBook": 1 }, "price": 600, "daily": 1 }
   ],
-  "sell": { "amount": 1000, "rates": { "fuel": 120, "ammo": 120, "steel": 160, "bauxite": 300 }, "daily": 5 },
+  "sell": { "amount": 1000, "rates": { "fuel": 120, "ammo": 120, "steel": 160, "bauxite": 300 } },
   "dealDiscount": 0.3
 }

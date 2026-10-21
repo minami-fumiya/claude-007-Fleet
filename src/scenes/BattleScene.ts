@@ -66,7 +66,7 @@ import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
-import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown } from '@/systems/BattleRank';
+import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown, rankShortfall } from '@/systems/BattleRank';
 import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, openSweeps, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -1756,10 +1756,14 @@ export class BattleScene extends Phaser.Scene {
       shipsLost: fleet.filter((s) => !s.isAlive).length,
       hpRatio: maxHp > 0 ? fleet.reduce((sum, s) => sum + (s.isAlive ? Math.max(0, s.stats.currentHp) : 0), 0) / maxHp : 0,
       durationSec: this.elapsedSec(),
+      minShipHp: Math.min(1, ...fleet.filter((s) => s.isAlive && s.stats.maxHp > 0).map((s) => s.stats.currentHp / s.stats.maxHp)),
+      timeLimitSec: this.side?.timeLimitSec ?? 0,
+      timeWins: this.objective === Objective.Delay,
     };
     const rank = battleRank(rankInput);
     result.rank = rank;
     result.rankNote = rankBreakdown(rankInput);
+    result.rankShortfall = rankShortfall(rankInput);
     const settlement = settleBattle(loadProgress(), {
       victory,
       // Spoils still come from land targets too.

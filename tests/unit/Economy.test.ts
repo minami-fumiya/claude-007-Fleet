@@ -30,10 +30,16 @@ describe('economy (#222)', () => {
         expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(1);
       });
 
-      it('steel is not the resource that stops building (it was, at half of fuel, in 0.0.27)', () => {
-        // Builds per hour each resource's surplus pays for; steel must keep up with at least half of the others.
-        const builds = (k: 'fuel' | 'ammo'): number => (b.buildCost[k] > 0 ? b.net[k] / b.buildCost[k] : Infinity);
-        expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(0.5 * Math.min(builds('fuel'), builds('ammo')));
+      const builds = (k: 'fuel' | 'ammo' | 'steel'): number => (b.buildCost[k] > 0 ? b.net[k] / b.buildCost[k] : Infinity);
+
+      it('steel is not the resource that stops building (#296: it kept up with only half of fuel in 0.0.38)', () => {
+        // Builds per hour each resource's surplus pays for; steel must keep up with 80% of fuel and ammo.
+        expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(0.8 * Math.min(builds('fuel'), builds('ammo')));
+      });
+
+      it('no resource piles up past three times the scarcest one, in builds (#296)', () => {
+        const all = (['fuel', 'ammo', 'steel'] as const).map(builds);
+        expect(Math.max(...all), phase.id).toBeLessThanOrEqual(3 * Math.min(...all));
       });
     });
   }

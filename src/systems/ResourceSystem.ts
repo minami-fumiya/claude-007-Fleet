@@ -17,18 +17,18 @@ export const RESOURCE_LABEL: Record<keyof IResources, string> = {
   bauxite: 'ボーキ',
 };
 
-/** Fuel / ammo each class needs to sortie; carriers also need bauxite for their aircraft. */
+/** Fuel / ammo each class needs to sortie; carriers also need bauxite for their aircraft. Small ships a fifth more since 0.0.39 (#296). */
 const SORTIE_COST: Record<ShipClass, Partial<IResources>> = {
-  [ShipClass.Battleship]: { fuel: 60, ammo: 70 },
-  [ShipClass.Carrier]: { fuel: 50, ammo: 20, bauxite: 40 },
-  [ShipClass.Cruiser]: { fuel: 35, ammo: 40 },
-  [ShipClass.Destroyer]: { fuel: 15, ammo: 20 },
-  [ShipClass.Submarine]: { fuel: 10, ammo: 15 },
+  [ShipClass.Battleship]: { fuel: 60, ammo: 75 },
+  [ShipClass.Carrier]: { fuel: 50, ammo: 25, bauxite: 40 },
+  [ShipClass.Cruiser]: { fuel: 40, ammo: 50 },
+  [ShipClass.Destroyer]: { fuel: 18, ammo: 24 },
+  [ShipClass.Submarine]: { fuel: 12, ammo: 18 },
 };
 /** Light cruisers are cheap to run, heavy cruisers dear (#37); other subtypes pay their class's cost. */
 const SUBTYPE_SORTIE_COST: Partial<Record<ShipSubtype, Partial<IResources>>> = {
-  [ShipSubtype.HeavyCruiser]: { fuel: 40, ammo: 45 },
-  [ShipSubtype.LightCruiser]: { fuel: 25, ammo: 30 },
+  [ShipSubtype.HeavyCruiser]: { fuel: 50, ammo: 55 },
+  [ShipSubtype.LightCruiser]: { fuel: 30, ammo: 36 },
 };
 /** Bauxite to replace one aircraft lost in battle. */
 export const BAUXITE_PER_PLANE = 6;
@@ -127,7 +127,7 @@ export function sortieCost(ships: IShipData[]): IResources {
  */
 export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses: ShipClass[] = []): IResources {
   const perSunk = resources({ fuel: 80, ammo: 70, steel: 0, bauxite: 20 });
-  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 170, bauxite: 50 }) : resources();
+  const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 220, bauxite: 50 }) : resources();
   const scale = victory ? 1 : 0.5;
   const out = addResources(bonus, perSunk, Math.max(0, enemiesSunk) * scale);
   // Steel comes from the wrecks (#132): big ships give more. Sinks without a known class count as average.
@@ -158,10 +158,10 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
 // ---------------------------------------------------------------------------
 
 /**
- * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Fuel regenerates fastest (every sortie
- * and repair spends it), then ammo and steel (0.0.12: steel led after #35 and fuel became the bottleneck).
+ * Gained every REGEN_INTERVAL_MS of real time, also while the game is closed. Fuel and steel regenerate fastest (sorties
+ * and repairs spend fuel, builds steel: #296 brought steel up to fuel), then ammo.
  */
-export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 5, bauxite: 1 };
+export const REGEN_PER_TICK: IResources = { fuel: 6, ammo: 4, steel: 6, bauxite: 1 };
 export const REGEN_INTERVAL_MS = 60_000;
 /** Regeneration stops at this amount; rewards can still take a resource above it. */
 export const REGEN_CAP = 1500;

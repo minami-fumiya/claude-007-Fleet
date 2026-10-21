@@ -14,21 +14,64 @@ export interface IRankInput {
   /** The fleet's HP left as a share of its full HP (sunk ships count as 0) */
   hpRatio: number;
   durationSec: number;
+  /** The lowest HP share among the surviving ships (1 when all are untouched; omitted counts as 1) */
+  minShipHp?: number;
+  /** The area's time limit, 0 or omitted for none */
+  timeLimitSec?: number;
+  /** The objective is won by holding out until the time limit (遅滞): time never costs the S */
+  timeWins?: boolean;
 }
 
-/** An S needs at least this much of the fleet's HP left, and no ship lost. */
-export const S_HP_RATIO = 0.6;
-/** Won, but slower than this: no better than A. */
-export const SLOW_BATTLE_SEC = 600;
+/** An S needs at least this much of the fleet's HP left (#295: 60% → 85%), no ship lost and none heavily damaged. */
+export const S_HP_RATIO = 0.85;
+/** A ship at or under this share of its HP is heavily damaged (大破): no S. */
+export const HEAVY_DAMAGE = 0.25;
+/** Without a time limit, an S must be won inside this (#295: 600 → 420 s); with one, inside S_TIME_SHARE of it. */
+export const SLOW_BATTLE_SEC = 420;
+export const S_TIME_SHARE = 2 / 3;
+/** An A needs this much of the HP left (and no loss). */
+export const A_HP_RATIO = 0.6;
+/** A B allows one ship lost, or more while this much of the HP is left. */
+export const B_HP_RATIO = 0.4;
+
+/** The time an S must be won in: S_TIME_SHARE of the area's limit, else SLOW_BATTLE_SEC (Infinity when holding out wins). */
+export function sRankTime(i: Pick<IRankInput, 'timeLimitSec' | 'timeWins'>): number {
+  if (i.timeWins) return Infinity;
+  return i.timeLimitSec && i.timeLimitSec > 0 ? Math.round(i.timeLimitSec * S_TIME_SHARE) : SLOW_BATTLE_SEC;
+}
+
+/** What keeps the battle from each better rank (#295), best rank first; empty when nothing does. */
+function misses(i: IRankInput, rank: BattleRank): string[] {
+  const pct = (v: number): number => Math.round(v * 100);
+  const out: string[] = [];
+  if (rank === 'S' || rank === 'A') {
+    if (i.shipsLost > 0) out.push(`喪失 ${i.shipsLost} 隻`);
+    const need = rank === 'S' ? S_HP_RATIO : A_HP_RATIO;
+    if (i.hpRatio < need) out.push(`残り耐久 ${pct(i.hpRatio)}% (${pct(need)}% 必要)`);
+  }
+  if (rank === 'S') {
+    if ((i.minShipHp ?? 1) <= HEAVY_DAMAGE) out.push('大破艦あり');
+    const t = sRankTime(i);
+    if (i.durationSec > t) out.push(`${Math.ceil(i.durationSec)} 秒 (${t} 秒以内)`);
+  }
+  if (rank === 'B' && i.shipsLost > 1 && i.hpRatio < B_HP_RATIO) out.push(`喪失 ${i.shipsLost} 隻・残り耐久 ${pct(i.hpRatio)}%`);
+  return out;
+}
 
 /**
- * Defeat is D. A win is S without losses, with S_HP_RATIO of the HP left and inside SLOW_BATTLE_SEC; A without
- * losses; B losing at most half the fleet; C otherwise.
+ * Defeat is D. A win is S with no loss, S_HP_RATIO of the HP left, no ship heavily damaged and inside sRankTime; A
+ * with no loss and A_HP_RATIO of the HP; B with at most one ship lost or B_HP_RATIO of the HP; C otherwise (#295).
  */
 export function battleRank(i: IRankInput): BattleRank {
   if (!i.victory) return 'D';
-  if (i.shipsLost === 0) return i.hpRatio >= S_HP_RATIO && i.durationSec <= SLOW_BATTLE_SEC ? 'S' : 'A';
-  return i.shipsLost * 2 <= i.fleetSize ? 'B' : 'C';
+  return (['S', 'A', 'B'] as BattleRank[]).find((r) => misses(i, r).length === 0) ?? 'C';
+}
+
+/** "S まで: 残り耐久 78% (85% 必要)": what kept a win from S ('' for an S or a defeat). */
+export function rankShortfall(i: IRankInput): string {
+  if (!i.victory) return '';
+  const m = misses(i, 'S');
+  return m.length === 0 ? '' : `S まで: ${m.join(' · ')}`;
 }
 
 /** Battle reward by rank: S +20%, A +10%, C −15% (a defeat already pays little). */
