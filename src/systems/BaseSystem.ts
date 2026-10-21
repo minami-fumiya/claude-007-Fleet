@@ -3,13 +3,15 @@ import { ShipClass } from '@/types/ShipClass';
 import { CLASS_JA } from './EncyclopediaSystem';
 export { scaleCost } from './ResourceSystem';
 import { RANKS, rankOf, IRankProgress } from './RankSystem';
-import { boostedBase, Facilities } from './FacilitySystem';
+import { boostedBase, Facilities, facilityLevel } from './FacilitySystem';
 import { canAfford, pay } from './ResourceSystem';
 import { IResources } from '@/types/Progression';
+import { dockCount, IDockState, MAX_DOCKS, START_DOCKS } from './DockSystem';
 
 /**
- * 軍港 (#88, pure): each nation has four home ports. The admiral works from one at a time; each gives one or two
- * bonuses (cheaper building of some classes, cheaper research, faster repairs). More open on promotion; moving is free.
+ * 軍港 (#88, pure): each nation has five home ports, each with a bonus (cheaper building of some classes, cheaper
+ * research, faster repairs) and the seas its sorties reach. Since 0.0.38 (#281) the admiral no longer moves between
+ * them: every open base counts at once — their discounts add up (to a cap), their docks pool, their seas join.
  */
 
 export interface IBase {
@@ -20,6 +22,8 @@ export interface IBase {
   unlockRank: number;
   /** Building these classes costs `mul` times as much */
   build?: { classes: ShipClass[]; mul: number };
+  /** The open bases together (#281): the build multiplier of each class, their discounts summed */
+  buildByClass?: Partial<Record<ShipClass, number>>;
   /** Research costs this many times as much */
   research?: number;
   /** Repairs take this many times as long */
@@ -60,25 +64,61 @@ export function isBaseOpen(base: IBase, progress: IRankProgress & IBaseWorks): b
   return progress.basesOpen.includes(base.id);
 }
 
-/** The base in use: the stored one when it is this nation's and open, else the nation's first. */
+/** The base that was in use before #281 (the stored one when open, else the first): only old save steps read it. */
 export function currentBase(nation: string, progress: IRankProgress & { base?: string }): IBase | undefined {
   const list = nationBases(nation);
   const stored = list.find((b) => b.id === progress.base);
   return stored && isBaseOpen(stored, progress) ? stored : list[0];
 }
 
-/** The base of a progress view (its own nation), its bonus raised by its own facility and workshop (#146). */
-export function baseOfProgress(progress: IRankProgress & { nation: string; base?: string; facilities?: Facilities }): IBase | undefined {
-  return boostedBase(currentBase(progress.nation, progress), progress.facilities ?? {});
+/** The nation's bases open in this progress, the first one included. */
+export function openBases(progress: IRankProgress & IBaseWorks & { nation: string }): IBase[] {
+  return nationBases(progress.nation).filter((b) => isBaseOpen(b, progress));
 }
 
-/** Moves to `id` (null when it isn't this nation's or not open yet). */
-export function moveBase<T extends IRankProgress & { base?: string }>(nation: string, progress: T, id: string): T | null {
-  const base = nationBases(nation).find((b) => b.id === id);
-  return base && isBaseOpen(base, progress) ? { ...progress, base: id } : null;
+/** How far the summed discounts of the open bases may go (#281): building and research 40%, repairs and build time 50%. */
+export const DISCOUNT_CAP = { build: 0.4, research: 0.4, repair: 0.5, buildTime: 0.5 } as const;
+
+/**
+ * 全軍港の効果 (#281): the open bases as one, each raised by its own facilities (#146). Discounts add up to
+ * DISCOUNT_CAP; a sortie reaches the seas of any of them. It carries the nation's first base's id and name.
+ */
+export function combinedBase(progress: IRankProgress & IBaseWorks & { nation: string; facilities?: Facilities }): IBase | undefined {
+  const first = nationBases(progress.nation)[0];
+  if (!first) return undefined;
+  const open = openBases(progress).map((b) => boostedBase(b, progress.facilities ?? {})!);
+  const mul = (off: number, cap: number): number => Math.max(1 - cap, 1 - off);
+  const buildByClass: Partial<Record<ShipClass, number>> = {};
+  for (const c of Object.values(ShipClass)) {
+    const off = open.reduce((sum, b) => sum + (b.build?.classes.includes(c) ? 1 - b.build.mul : 0), 0);
+    if (off > 0) buildByClass[c] = mul(off, DISCOUNT_CAP.build);
+  }
+  const research = open.reduce((sum, b) => sum + (1 - (b.research ?? 1)), 0);
+  const repair = open.reduce((sum, b) => sum + (1 - (b.repairTime ?? 1)), 0);
+  const theaters = open.some((b) => !b.theaters) ? undefined : [...new Set(open.flatMap((b) => b.theaters ?? []))];
+  return {
+    ...first,
+    build: undefined,
+    buildByClass,
+    research: research > 0 ? mul(research, DISCOUNT_CAP.research) : undefined,
+    repairTime: repair > 0 ? mul(repair, DISCOUNT_CAP.repair) : undefined,
+    theaters,
+  };
+}
+
+/** The bases of a progress view as one (#281): what building, research, repairs and sorties use. */
+export function baseOfProgress(progress: IRankProgress & IBaseWorks & { nation: string; base?: string; facilities?: Facilities }): IBase | undefined {
+  return combinedBase(progress);
+}
+
+/** Build time from the workshops of every open base (#146 #281): 5% a level, summed, to DISCOUNT_CAP.buildTime. */
+export function fleetBuildTimeMul(progress: IRankProgress & IBaseWorks & { nation: string; facilities?: Facilities }): number {
+  const levels = openBases(progress).reduce((sum, b) => sum + facilityLevel(progress.facilities ?? {}, b.id, 'workshop'), 0);
+  return Math.max(1 - DISCOUNT_CAP.buildTime, 1 - 0.05 * levels);
 }
 
 export function buildMultiplier(base: IBase | undefined, shipClass: ShipClass): number {
+  if (base?.buildByClass) return base.buildByClass[shipClass] ?? 1;
   return base?.build?.classes.includes(shipClass) ? base.build.mul : 1;
 }
 
@@ -96,6 +136,10 @@ const pct = (mul: number): string => `${Math.round((1 - mul) * 100)}%`;
 export function baseBonusLines(base: IBase): string[] {
   const out: string[] = [];
   if (base.build) out.push(`${base.build.classes.map((c) => CLASS_JA[c]).join('・')}の建造 -${pct(base.build.mul)}`);
+  // The open bases together (#281): classes with the same discount on one line.
+  const byMul = new Map<number, ShipClass[]>();
+  for (const [c, mul] of Object.entries(base.buildByClass ?? {}) as Array<[ShipClass, number]>) byMul.set(mul, [...(byMul.get(mul) ?? []), c]);
+  for (const [mul, classes] of byMul) out.push(`${classes.map((c) => CLASS_JA[c]).join('・')}の建造 -${pct(mul)}`);
   if (base.research) out.push(`研究費 -${pct(base.research)}`);
   if (base.repairTime) out.push(`修理時間 -${pct(base.repairTime)}`);
   return out;
@@ -164,30 +208,20 @@ export function openBaseCount(nation: string, progress: IRankProgress & IBaseWor
 }
 
 // ---------------------------------------------------------------------------
-// Ships, docks and theaters by base (#145)
+// Ships, docks and theaters (#145; one pool since #281)
 // ---------------------------------------------------------------------------
 
-/** What a nation keeps per base. */
+/** What a nation keeps per base. Ships no longer belong to a base (#281); the map is kept but not read. */
 export interface IBaseHoldings {
-  /** Ship id → base id (ships without an entry are at the current base) */
   shipBases: Record<string, string>;
 }
 
-/** The current base's id ('' when the nation has none). */
-export function currentBaseId(progress: IRankProgress & { nation: string; base?: string }): string {
-  return baseOfProgress(progress)?.id ?? '';
+/** The nation's first base: where builds and new docks are recorded since the bases became one (#281). */
+export function currentBaseId(progress: { nation: string }): string {
+  return nationBases(progress.nation)[0]?.id ?? '';
 }
 
-/** Where a ship is based. */
-export function shipBaseOf(progress: IRankProgress & IBaseHoldings & { nation: string; base?: string }, shipId: string): string {
-  return progress.shipBases[shipId] ?? currentBaseId(progress);
-}
-
-export function isAtCurrentBase(progress: IRankProgress & IBaseHoldings & { nation: string; base?: string }, shipId: string): boolean {
-  return shipBaseOf(progress, shipId) === currentBaseId(progress);
-}
-
-/** Assigns ships to a base (new ships go to the base the admiral is at). */
+/** Assigns ships to a base (kept for old records; nothing reads it since #281). */
 export function assignShips<T extends IBaseHoldings>(progress: T, shipIds: readonly string[], baseId: string): T {
   if (!baseId || shipIds.length === 0) return progress;
   const shipBases = { ...progress.shipBases };
@@ -195,17 +229,30 @@ export function assignShips<T extends IBaseHoldings>(progress: T, shipIds: reado
   return { ...progress, shipBases };
 }
 
-/**
- * Brings ships over to `baseId` for free (#191): every listed ship the admiral owns that is at another base and not
- * busy (out on a sortie, or in a repair dock there). Returns the moved and the held-back ids.
- */
-export function recallShips<T extends IBaseHoldings & { ships: string[]; docks: ReadonlyArray<{ shipId: string }> }>(
-  progress: T, shipIds: readonly string[], baseId: string, busy: readonly string[] = [],
-): { progress: T; moved: string[]; held: string[] } {
-  const away = shipIds.filter((id) => progress.ships.includes(id) && (progress.shipBases[id] ?? baseId) !== baseId);
-  const blocked = (id: string): boolean => busy.includes(id) || progress.docks.some((d) => d.shipId === id);
-  const moved = away.filter((id) => !blocked(id));
-  return { progress: assignShips(progress, moved, baseId), moved, held: away.filter(blocked) };
+/** Docks a base has built (START_DOCKS when none recorded). */
+function docksAt(progress: { baseDocks?: Record<string, number> }, baseId: string): number {
+  return Math.max(START_DOCKS, progress.baseDocks?.[baseId] ?? START_DOCKS);
+}
+
+/** 全軍港のドック (#281): every open base's docks together, up to MAX_DOCKS. Opening a base adds its dock. */
+export function dockTotal(progress: IRankProgress & IBaseWorks & { nation: string; baseDocks?: Record<string, number> }): number {
+  return Math.min(MAX_DOCKS, openBases(progress).reduce((sum, b) => sum + docksAt(progress, b.id), 0));
+}
+
+/** The pooled docks as one dock state: every repair, whichever base it was started at, and the total. */
+export function fleetDockView<T extends IDockState & IRankProgress & IBaseWorks & { nation: string; baseDocks: Record<string, number> }>(progress: T): T {
+  return { ...progress, docksOwned: dockTotal(progress) };
+}
+
+/** Writes a pooled dock view back: its repairs, and a newly built dock on the first base. */
+export function mergeFleetDocks<T extends IDockState & IRankProgress & IBaseWorks & { nation: string; baseDocks: Record<string, number> }>(progress: T, view: T): T {
+  const added = Math.max(0, dockCount(view) - dockTotal(progress));
+  const home = currentBaseId(progress);
+  return {
+    ...view,
+    docksOwned: progress.docksOwned,
+    baseDocks: added > 0 ? { ...progress.baseDocks, [home]: docksAt(progress, home) + added } : progress.baseDocks,
+  };
 }
 
 /** Whether a sortie into `theater` can leave from `base`. */

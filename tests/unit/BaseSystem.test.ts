@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BASES, baseBonusLines, baseLockText, baseRankMet, baseState, baseWorkOf, buildMultiplier, finishBaseWork, openBaseCount, rushBaseWork, startBaseWork, currentBase, isBaseOpen, moveBase, nationBases, repairTimeMultiplier, researchMultiplier } from '@/systems/BaseSystem';
+import { BASES, baseBonusLines, baseLockText, baseRankMet, baseState, baseWorkOf, buildMultiplier, finishBaseWork, openBaseCount, rushBaseWork, startBaseWork, currentBase, isBaseOpen, nationBases, repairTimeMultiplier, researchMultiplier } from '@/systems/BaseSystem';
 import { scaleCost } from '@/systems/ResourceSystem';
 import { buildCost, buildCostAt, buildShip, buildState, isRewardOnly, shipGrade } from '@/systems/ShipyardSystem';
 import { canResearch, research } from '@/systems/ResearchSystem';
@@ -39,11 +39,8 @@ describe('bases (#88)', () => {
     expect(baseLockText(light)).toBe('少尉に昇進で着工');
     expect(currentBase(Nation.IJN, at(0, light.id))?.id).toBe(home.id);
     expect(currentBase(Nation.IJN, at(0, 'nope'))?.id).toBe(home.id);
-    expect(moveBase(Nation.IJN, at(0), light.id)).toBeNull();
-    expect(moveBase(Nation.IJN, at(100), 'usn_home')).toBeNull();
-    const moved = moveBase(Nation.IJN, at(100), light.id)!;
-    expect(moved.base).toBe(light.id);
-    expect(currentBase(Nation.IJN, moved)?.id).toBe(light.id);
+    // The stored base is still read by old save steps; moving between bases is gone (#281).
+    expect(currentBase(Nation.IJN, at(100, light.id))?.id).toBe(light.id);
   });
 
   it('a base is built once its rank is reached, and opens when the work ends (#217)', () => {
@@ -59,16 +56,14 @@ describe('bases (#88)', () => {
     const started = startBaseWork(p, light, T0)!;
     expect(started.resources.steel).toBe(rich.steel - 1000);
     expect(baseState(light, started)).toBe('building');
-    // One base at a time; nobody can move into one still being built.
+    // One base at a time.
     expect(baseState(cruiser, started)).toBe('busy');
     expect(startBaseWork(started, cruiser, T0)).toBeNull();
-    expect(moveBase(Nation.IJN, started, light.id)).toBeNull();
     expect(finishBaseWork(started, T0 + 19 * 60_000)).toBe(started);
     const done = finishBaseWork(started, T0 + 20 * 60_000);
     expect(isBaseOpen(light, done)).toBe(true);
     expect(done.baseWork).toBeNull();
     expect(openBaseCount(Nation.IJN, done)).toBe(2);
-    expect(moveBase(Nation.IJN, done, light.id)?.base).toBe(light.id);
     // 高速建造材 finishes it at once.
     const rushed = rushBaseWork(startBaseWork(done, cruiser, T0)!, T0)!;
     expect(isBaseOpen(cruiser, rushed)).toBe(true);

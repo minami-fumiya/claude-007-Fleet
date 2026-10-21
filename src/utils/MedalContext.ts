@@ -16,7 +16,7 @@ import { shipTypeCode } from '@/systems/Numbering';
 import { levelForXp } from '@/systems/CaptainSystem';
 import { rankOf } from '@/systems/RankSystem';
 import { holdCap } from '@/systems/FacilitySystem';
-import { openBaseCount } from '@/systems/BaseSystem';
+import { dockTotal, openBaseCount } from '@/systems/BaseSystem';
 import { atHoldCap } from '@/systems/ResourceSystem';
 import { awardMedals, IMedalContext, newMedals } from '@/systems/RecordSystem';
 import type { ISave } from './ProgressStore';
@@ -57,7 +57,8 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     const byBase: Record<string, number> = {};
     for (const j of np.facilityJobs ?? []) byBase[j.base] = (byBase[j.base] ?? 0) + 1;
     ctx.parallelFacilities = Math.max(ctx.parallelFacilities, ...Object.values(byBase), 0);
-    for (const n of Object.values(np.baseDocks ?? {})) ctx.maxDocks = Math.max(ctx.maxDocks, n ?? 0);
+    // The pooled docks of every open base (#281).
+    ctx.maxDocks = Math.max(ctx.maxDocks, dockTotal({ ...np, nation, baseDocks: np.baseDocks ?? {} }));
     // Holding cap (#221): the steel cap the mills reached, and whether every resource is full.
     const cap = holdCap(np.facilities ?? {});
     ctx.steelCap = Math.max(ctx.steelCap, cap.steel);

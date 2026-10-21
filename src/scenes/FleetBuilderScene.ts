@@ -22,7 +22,6 @@ import { askShipName } from '@/ui/components/FilterBar';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { formatResources } from '@/systems/ResourceSystem';
-import { currentBaseId, isAtCurrentBase, nationBases, recallShips, shipBaseOf } from '@/systems/BaseSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
@@ -42,7 +41,10 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { actionVariant, addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
-import { beginSortie, sortieShipIds } from '@/utils/SortieFlow';
+import { beginSortie } from '@/utils/SortieFlow';
+import { SELECTION_KEY } from '@/utils/FleetSelection';
+import { ownFleetPower } from '@/systems/FleetPower';
+import { fleetPower } from '@/systems/DifficultyCurve';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -211,7 +213,7 @@ function choiceLabel<T extends string>(c: Choice<T>, labels: Record<T, string>):
  * Fleet Builder setups by nation, kept in the game registry for the session: leaving the builder any way (sortie,
  * refit, back) and coming back restores the fleet, formation and settings (#77).
  */
-export const SELECTION_KEY = 'fleetBuilder.selections';
+export { SELECTION_KEY };
 export interface ISelection {
   nation: Nation;
   enemyNation: Choice<Nation>;
@@ -282,7 +284,6 @@ export class FleetBuilderScene extends Phaser.Scene {
   private shipRegistry!: ShipRegistry;
   private ships: IShipData[] = [];
   /** Owned ships based elsewhere (#145): offered after the base's own, brought over for fuel */
-  private awayShips: IShipData[] = [];
   private slots: (IShipData | null)[] = [null];
   /** Fleet slots the admiral's rank allows (#25 / #30) */
   private slotCount = 1;
@@ -544,32 +545,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     return filterEntries(availableShips(ownedShips(progress, this.shipRegistry.byNation(this.nation)), progress.research), null);
   }
 
-  /** The base's own ships first; ships at other bases (#145) are listed after them. */
+  /** Every owned ship is at hand: ships no longer belong to a base (#281). */
   private splitByBase(): void {
-    const progress = loadProgress();
-    const all = this.offeredShips();
-    this.ships = all.filter((s) => isAtCurrentBase(progress, s.id));
-    this.awayShips = all.filter((s) => !isAtCurrentBase(progress, s.id));
-  }
-
-  /** "呉鎮守府 · 配置換え (無料)" for a ship at another base. */
-  private awayTag(ship: IShipData): string {
-    const progress = loadProgress();
-    const base = nationBases(this.nation).find((b) => b.id === shipBaseOf(progress, ship.id));
-    return `${base?.name ?? '他の軍港'} · 配置換え (無料)`;
-  }
-
-  /** Brings a ship over from another base (#145), free since #191; false when it is busy there. */
-  private relocate(ship: IShipData): boolean {
-    const progress = loadProgress();
-    const r = recallShips(progress, [ship.id], currentBaseId(progress), sortieShipIds(progress));
-    if (r.moved.length === 0) {
-      this.summaryText.setText('⚠ 出撃中か入渠中のため呼び寄せられません').setColor(Css.danger);
-      return false;
-    }
-    saveProgress(r.progress);
-    this.splitByBase();
-    return true;
+    this.ships = this.offeredShips();
   }
 
   /** The row above the ship list: how many ships the nation owns and where more come from. */
@@ -754,15 +732,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       list.addItem(card, w, itemH, this.onTap(() => this.addShipToFleet(ship)));
       this.shipCards.push({ id: ship.id, card });
     });
-    // Ships at other bases (#145): tapping one brings it over, then adds it.
-    const away = filterAndSort(this.awayShips, this.kindFilter, this.sort);
-    away.forEach((ship, j) => {
-      const card = this.shipRow(ship, w, itemH, this.awayTag(ship)).setY((shown.length + j) * (itemH + ITEM_GAP)).setAlpha(0.7);
-      list.addItem(card, w, itemH, this.onTap(() => {
-        if (this.relocate(ship)) this.addShipToFleet(ship);
-      }));
-    });
-    list.setContentHeight(Math.max(0, (shown.length + away.length) * (itemH + ITEM_GAP) - ITEM_GAP));
+    list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
     this.shipCountText?.setText(shown.length === this.ships.length ? `${this.ships.length} 隻` : `${shown.length} / ${this.ships.length} 隻`);
     this.refreshShipCards();
   }
@@ -828,15 +798,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
       list.addItem(card, w, itemH, () => this.pickShip(ship));
     });
-    // Ships at other bases (#145): picking one brings it over first.
-    const away = filterAndSort(this.awayShips, this.kindFilter, this.sort);
-    away.forEach((ship, j) => {
-      const card = this.shipRow(ship, w, itemH, this.awayTag(ship)).setY((shown.length + j) * (itemH + ITEM_GAP)).setAlpha(0.7);
-      list.addItem(card, w, itemH, () => {
-        if (this.relocate(ship)) this.pickShip(ship);
-      });
-    });
-    list.setContentHeight(Math.max(0, (shown.length + away.length) * (itemH + ITEM_GAP) - ITEM_GAP));
+    list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
     list.setOffset(0);
     this.refreshListControls(this.pickerControls);
     this.refreshListControls(this.listControls);
@@ -1292,12 +1254,6 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
     const preset = progress.presets[index];
     if (!preset) return;
-    // The preset's ships at other bases come over with it, for free (#191).
-    const recalled = recallShips(progress, preset.slotIds.filter((id): id is string => !!id), currentBaseId(progress), sortieShipIds(progress));
-    if (recalled.moved.length > 0) {
-      saveProgress(recalled.progress);
-      this.splitByBase();
-    }
     const placed = applyPreset(preset, this.ships.map((s) => s.id), this.slotCount);
     const used = new Set<string>();
     this.slots = placed.slotIds.map((id) => {
@@ -1308,10 +1264,6 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.captainIds = placed.captainIds.map((id) => (id && progress.captains.includes(id) ? id : null));
     this.formation = usableFormation(preset.formation, this.rankIndex);
     this.refresh();
-    if (recalled.moved.length > 0 || recalled.held.length > 0) {
-      const held = recalled.held.length > 0 ? `  (出撃中・入渠中の ${recalled.held.length} 隻は残りました)` : '';
-      this.summaryText.setText(`編成の ${recalled.moved.length} 隻をこの軍港へ呼び寄せました${held}`).setColor(Css.success);
-    }
   }
 
   private buildFooter(): void {
@@ -1593,17 +1545,23 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.detail = [];
   }
 
+  /** 戦力 (#280): the fleet weighed like an area's enemy, and against the area's enemy when sortieing to one. */
+  private powerLabel(ships: IShipData[]): string {
+    const own = ownFleetPower(ships, loadProgress(), DataLoader.getUpgrades(this));
+    if (!this.area) return `戦力 ${own.toLocaleString('en-US')}`;
+    const enemy = fleetPower(enemyShips(this.area, this.shipRegistry, enemyNationFor(campaignData as ICampaignData, this.area, this.nation)));
+    return `戦力 ${own.toLocaleString('en-US')} (敵 ${enemy.toLocaleString('en-US')} ×${(own / Math.max(1, enemy)).toFixed(2)})`;
+  }
+
   private refreshFooter(): void {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
     this.countText.setText(`${ships.length} / ${this.slotCount} 隻`);
     if (ships.length === 0) {
       this.summaryText.setText(IS_PORTRAIT ? '艦を選ぶと出撃できます' : '艦を 1 隻以上選ぶと出撃できます');
     } else if (this.organizeOnly) {
-      const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const formation = FORMATION_RULES[this.formation].ja;
-      this.summaryText.setText(IS_PORTRAIT ? `${formation} · 総耐久 ${totalHp}` : `総耐久 ${totalHp}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n編成を終えたら、作戦か演習へ進みます`).setColor(Css.muted);
+      this.summaryText.setText(IS_PORTRAIT ? `${formation} · ${this.powerLabel(ships)}` : `${this.powerLabel(ships)}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n編成を終えたら、作戦か演習へ進みます`).setColor(Css.muted);
     } else {
-      const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const minSpeed = Math.min(...ships.map((s) => s.speed));
       const formation = FORMATION_RULES[this.formation].ja;
       const opts = this.sortieOptions();
@@ -1615,7 +1573,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .setText(
           IS_PORTRAIT
             ? blockers.length > 0 ? second : `${formation} · ${price}`
-            : `総耐久 ${totalHp}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
+            : `${this.powerLabel(ships)}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
         )
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
