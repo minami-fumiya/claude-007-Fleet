@@ -57,11 +57,14 @@ export function gradeAllowed(grade: number, rankIndex: number): boolean {
   return rankIndex >= GRADE_RANK[Math.min(GRADE_RANK.length - 1, Math.max(0, grade))];
 }
 
-/** Resources per point of HP, by class. Steel also pays for armour (5 HP-equivalents per point). */
+/**
+ * Resources per point of HP, by class. Steel also pays for armour (5 HP-equivalents per point). Small ships take less
+ * steel since 0.0.39 (#296: steel stopped early and middle-game building while fuel and ammo piled up).
+ */
 const COST_PER_HP: Record<ShipClass, IResources> = {
-  [ShipClass.Destroyer]: { fuel: 0.5, ammo: 0.5, steel: 0.8, bauxite: 0 },
-  [ShipClass.Submarine]: { fuel: 0.6, ammo: 0.6, steel: 0.8, bauxite: 0 },
-  [ShipClass.Cruiser]: { fuel: 0.8, ammo: 0.9, steel: 1.2, bauxite: 0.1 },
+  [ShipClass.Destroyer]: { fuel: 0.5, ammo: 0.5, steel: 0.6, bauxite: 0 },
+  [ShipClass.Submarine]: { fuel: 0.6, ammo: 0.6, steel: 0.6, bauxite: 0 },
+  [ShipClass.Cruiser]: { fuel: 0.8, ammo: 0.9, steel: 1.0, bauxite: 0.1 },
   [ShipClass.Carrier]: { fuel: 1, ammo: 0.5, steel: 1.2, bauxite: 1.2 },
   [ShipClass.Battleship]: { fuel: 1.2, ammo: 1.5, steel: 1.8, bauxite: 0.1 },
 };

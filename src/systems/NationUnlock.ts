@@ -6,7 +6,8 @@ import { theaterFinalArea } from './CampaignSystem';
 
 /**
  * Nations open one step at a time (#134, pure). A new admiral picks one of four; the others open once that first
- * nation has made 少佐 or taken a whole theater, and France, Italy and the Soviet Union follow later conquests.
+ * nation has made 少佐 or taken a whole theater, and France, Italy and the Soviet Union each follow the conquest of one
+ * of the theaters they fight in (#294: the Soviet Union no longer opens by rank).
  * Nothing is stored: it is worked out from the nations' progress each time, and a nation already started is never
  * locked again (saves from before #134 keep everything they play).
  */
@@ -14,7 +15,7 @@ import { theaterFinalArea } from './CampaignSystem';
 /** The four a new admiral chooses from. */
 export const STARTER_NATIONS: Nation[] = [Nation.IJN, Nation.USN, Nation.RN, Nation.KM];
 
-/** Rank the first nation needs before the other starters open (and the Soviet Union). */
+/** Rank the first nation needs before the other starters open. */
 export const UNLOCK_RANK = 6;
 
 type Progress = IRankProgress & { merit: number };
@@ -32,6 +33,28 @@ const THEATERS = campaignData.theaters.map((t) => t.id);
 /** A theater's final area (its last listed one, training areas aside: #241). */
 export function theaterFinal(theater: string): string | undefined {
   return theaterFinalArea(campaignData, theater);
+}
+
+/** The theaters whose conquest opens each later nation (#294): ones it fights in that the starters reach too. */
+export const LATER_NATION_THEATERS: Partial<Record<Nation, string[]>> = {
+  [Nation.FR]: ['atlantic', 'mediterranean'],
+  [Nation.RM]: ['mediterranean'],
+  [Nation.SU]: ['baltic', 'arctic', 'north_pacific'],
+};
+
+const theaterName = (id: string): string => campaignData.theaters.find((t) => t.id === id)?.name ?? id;
+
+/** "いま 北極海 3 / 9": the started nations' furthest progress in any of the theaters ('' with nothing cleared). */
+function theaterProgressText(all: { p: Progress }[], ids: string[]): string {
+  let best: { id: string; done: number; total: number } | undefined;
+  for (const id of ids) {
+    const areas = campaignData.areas.filter((a) => a.theater === id && !(a as { training?: boolean }).training).map((a) => a.id);
+    for (const { p } of all) {
+      const done = areas.filter((a) => p.campaign.includes(a)).length;
+      if (done > 0 && (!best || done / areas.length > best.done / best.total)) best = { id, done, total: areas.length };
+    }
+  }
+  return best ? `いま ${theaterName(best.id)} ${best.done} / ${best.total}` : '';
 }
 
 function clearedTheater(p: Progress, theater: string): boolean {
@@ -68,12 +91,9 @@ export function nationLocks(nations: Partial<Record<Nation, Progress>>): Record<
       // No nation yet: the four starters are open. After the first pick, the others wait for its progress.
       const firstName = first ? NATION_INFO[first].jaShort : '';
       out[n] = open(`${firstName}が${rankName}か戦域攻略で解放`, started.length === 0 || anyRank || anyTheater(THEATERS), rankProgress);
-    } else if (n === Nation.FR) {
-      out[n] = open('大西洋か地中海の攻略で解放', anyTheater(['atlantic', 'mediterranean']));
-    } else if (n === Nation.RM) {
-      out[n] = open('地中海の攻略で解放', anyTheater(['mediterranean']));
-    } else if (n === Nation.SU) {
-      out[n] = open(`${rankName}への昇進で解放`, anyRank, rankProgress);
+    } else if (LATER_NATION_THEATERS[n]) {
+      const ids = LATER_NATION_THEATERS[n]!;
+      out[n] = open(`${ids.length > 2 ? `${ids.map(theaterName).join('・')}のどれか` : ids.map(theaterName).join('か')}の攻略で解放`, anyTheater(ids), theaterProgressText(all, ids));
     } else {
       out[n] = open('', true);
     }

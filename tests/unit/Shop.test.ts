@@ -61,17 +61,18 @@ describe('shop (#183)', () => {
     expect(days.size).toBeGreaterThan(5);
   });
 
-  it('sells spare resources for about half their price, a few times a day', () => {
+  it('sells spare resources for about half their price, as often as there is enough (#296)', () => {
     let w = emptyWallet();
     let have = resources({ fuel: 20_000 });
-    for (let i = 0; i < SELL.daily; i++) {
-      const r = sell(w, 'fuel', have, NOW)!;
+    for (let i = 0; i < 20; i++) {
+      const r = sell(w, 'fuel', have)!;
       w = r.wallet;
       have = r.resources;
     }
-    expect(have.fuel).toBe(20_000 - SELL.daily * SELL.amount);
-    expect(sell(w, 'fuel', have, NOW)).toBeNull();
-    expect(sell(emptyWallet(), 'steel', resources(), NOW)).toBeNull();
+    expect(have.fuel).toBe(0);
+    expect(w.gold).toBe(20 * SELL.rates.fuel);
+    expect(sell(w, 'fuel', have)).toBeNull();
+    expect(sell(emptyWallet(), 'steel', resources())).toBeNull();
     // No profit from selling and buying back: every pack costs more per unit than selling pays.
     for (const e of SHOP_ENTRIES) for (const k of RESOURCE_KEYS) {
       const n = e.give?.[k];

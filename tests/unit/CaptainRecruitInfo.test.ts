@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CAPTAINS, CAPTAIN_DROP_CHANCE, CAPTAIN_SOURCES, captainsLeft, nationCaptains, nextCaptain, OUTSIDER_EVERY, recruitCaptains } from '@/systems/CaptainRoster';
 import { QUESTS } from '@/systems/QuestSystem';
 import { aptitudeFor, findCaptains } from '@/systems/CaptainSystem';
+import { captainPlaces } from '@/utils/FleetSelection';
 import { CaptainSkill } from '@/types/Captain';
 import { ShipClass } from '@/types/ShipClass';
 
@@ -92,5 +93,16 @@ describe('finding a captain among 30 (#209)', () => {
     expect(byLevel).toEqual([...byLevel].sort((a, b) => b - a));
     const bySkill = findCaptains(list, 'all', 'skill').map((c) => c.skill);
     expect(bySkill[0]).toBe(CaptainSkill.Gunnery);
+  });
+
+  it('finds the captains in the fleet and the ones not in it, with each one\'s ship (#299)', () => {
+    const list = nationCaptains('IJN').slice(0, 6).map((c, i) => ({ ...c, level: i + 1 }));
+    // An empty second slot: the third ship is the 2 番艦; a captain without a ship does not sail.
+    const places = captainPlaces(['nagato', null, 'fubuki', 'kongo'], [list[0].id, list[1].id, list[2].id, null]);
+    expect([...places.entries()]).toEqual([[list[0].id, '旗艦'], [list[2].id, '2 番艦']]);
+    const fleet = new Set(places.keys());
+    expect(findCaptains(list, 'fleet', 'join', fleet).map((c) => c.id)).toEqual([list[0].id, list[2].id]);
+    expect(findCaptains(list, 'free', 'join', fleet)).toHaveLength(4);
+    expect(findCaptains(list, 'fleet', 'join')).toEqual([]);
   });
 });

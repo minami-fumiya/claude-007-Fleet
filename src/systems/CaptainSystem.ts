@@ -459,17 +459,22 @@ export const SKILL_LABEL: Record<CaptainSkill, string> = {
 // Finding a captain among 30 (#209)
 // ---------------------------------------------------------------------------
 
-/** 'all', a speciality, or `apt:<class>` for captains suited (S) to that ship class. */
-export type CaptainFilter = 'all' | CaptainSkill | `apt:${ShipClass}`;
+/**
+ * 'all', a speciality, `apt:<class>` for captains suited (S) to that ship class, or the captains in the last fleet
+ * set up ('fleet') and the ones not in it ('free') (#299).
+ */
+export type CaptainFilter = 'all' | 'fleet' | 'free' | CaptainSkill | `apt:${ShipClass}`;
 export type CaptainSort = 'join' | 'level' | 'skill';
 
 export const CAPTAIN_SORT_LABEL: Record<CaptainSort, string> = { join: '加入順', level: 'Lv 順', skill: '専門順' };
 export const CAPTAIN_SORTS: CaptainSort[] = ['join', 'level', 'skill'];
 
-/** The captains matching `filter`, in `sort` order ('join' keeps the given order). */
-export function findCaptains<T extends ICaptainData & { level: number }>(list: readonly T[], filter: CaptainFilter, sort: CaptainSort): T[] {
+/** The captains matching `filter`, in `sort` order ('join' keeps the given order); `inFleet` holds the fleet's captains. */
+export function findCaptains<T extends ICaptainData & { level: number }>(list: readonly T[], filter: CaptainFilter, sort: CaptainSort, inFleet: ReadonlySet<string> = new Set()): T[] {
   const matches = list.filter((c) => {
     if (filter === 'all') return true;
+    if (filter === 'fleet') return inFleet.has(c.id);
+    if (filter === 'free') return !inFleet.has(c.id);
     if (filter.startsWith('apt:')) return aptitudeFor(c, filter.slice(4) as ShipClass) === 'S';
     return c.skill === filter;
   });

@@ -18,6 +18,7 @@ import { Aptitude, CaptainAbility, CaptainSkill, ICaptain } from '@/types/Captai
 import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { fleetCaptainPlaces } from '@/utils/FleetSelection';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { ABILITY_COLOR, SKILL_COLOR, TRAIT_COLOR } from '@/ui/SkillColors';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -40,6 +41,8 @@ const APTITUDE_CSS: Record<Aptitude, string> = { S: Css.gold, A: Css.cyan, B: Cs
 /** "全員" / "砲術" / "駆逐艦 S" for a list filter (#209). */
 function filterLabel(f: CaptainFilter): string {
   if (f === 'all') return '全員';
+  if (f === 'fleet') return '編成中';
+  if (f === 'free') return '未配属';
   if (f.startsWith('apt:')) return `${CLASS_JA[f.slice(4) as ShipClass]} S`;
   return SKILL_LABEL[f as CaptainSkill];
 }
@@ -99,6 +102,11 @@ export class CaptainScene extends Phaser.Scene {
     return nationCaptains(save.current).filter((c) => ids.includes(c.id)).map((c) => withProgress(c, np?.captainXp[c.id] ?? 0));
   }
 
+  /** The captains of the fleet last set up, and the ship each one commands (#299). */
+  private places(): Map<string, string> {
+    return fleetCaptainPlaces(this.registry, loadSave().current);
+  }
+
   private learnedOf(c: ICaptain): CaptainSkill[] {
     const save = loadSave();
     return validLearned(c, save.nations[save.current]?.captainSkills[c.id] ?? []);
@@ -108,10 +116,11 @@ export class CaptainScene extends Phaser.Scene {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
     const owned = this.owned();
-    const captains = findCaptains(owned, this.filter, this.sort);
+    const places = this.places();
+    const captains = findCaptains(owned, this.filter, this.sort, new Set(places.keys()));
     if (!owned.some((c) => c.id === this.selectedId)) this.selectedId = captains[0]?.id ?? owned[0]?.id ?? '';
     this.buildTools(captains.length, owned.length);
-    this.buildList(captains);
+    this.buildList(captains, places);
     const c = owned.find((x) => x.id === this.selectedId);
     if (c) this.buildDetail(c);
     else {
@@ -139,13 +148,13 @@ export class CaptainScene extends Phaser.Scene {
 
   /** The filter choices: everyone, a speciality, or the captains suited (S) to a ship class (#209). */
   openFilter(): void {
-    const options: CaptainFilter[] = ['all', ...Object.values(CaptainSkill), ...CLASS_ORDER.map((k) => `apt:${k}` as CaptainFilter)];
+    const options: CaptainFilter[] = ['all', 'fleet', 'free', ...Object.values(CaptainSkill), ...CLASS_ORDER.map((k) => `apt:${k}` as CaptainFilter)];
     const cols = IS_PORTRAIT ? 3 : 4;
     const bh = IS_PORTRAIT ? 52 : 40;
     const rows = Math.ceil(options.length / cols);
     const r = this.openSheet(110 + rows * (bh + 8) + 70);
     this.sheetAdd(this.add.text(r.x + 26, r.y + 22, '艦長の絞り込み', eyebrowStyle(11, Css.cyan)));
-    this.sheetAdd(this.add.text(r.x + 26, r.y + 44, '専門か、適性 S の艦種で選ぶ', displayStyle(20)));
+    this.sheetAdd(this.add.text(r.x + 26, r.y + 44, '編成・専門・適性 S の艦種で選ぶ', displayStyle(20)));
     const bw = (r.w - 52 - 8 * (cols - 1)) / cols;
     options.forEach((f, i) => {
       const bx = r.x + 26 + (i % cols) * (bw + 8) + bw / 2;
@@ -159,10 +168,14 @@ export class CaptainScene extends Phaser.Scene {
     this.sheetAdd(new UIButton(this, r.x + r.w / 2, r.y + r.h - 40, 'やめる', () => this.closeSheet(), { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15 }));
   }
 
-  private buildList(captains: ICaptain[]): void {
+  private buildList(captains: ICaptain[], places: Map<string, string>): void {
     this.list.clear();
     const cols = L.cols;
     const colW = (L.list.w - PAD * 2 - 12 - 8 * (cols - 1)) / cols;
+    if (captains.length === 0 && this.filter === 'fleet') {
+      // The fleet is the one last set up in this session (#299).
+      this.list.add(this.add.text(8, 8, '編成画面で艦長を配属すると、ここに出ます', textStyle(13, Css.dim, { wordWrap: { width: L.list.w - PAD * 2 - 24, useAdvancedWrap: true } })));
+    }
     captains.forEach((c, i) => {
       const on = c.id === this.selectedId;
       const frame = drawPanel(this.add.graphics(), 0, 0, colW, L.rowH, {
@@ -171,7 +184,9 @@ export class CaptainScene extends Phaser.Scene {
       const sc = SKILL_COLOR[c.skill];
       const dot = this.add.circle(18, L.rowH / 2, 6, sc.color);
       const name = this.add.text(32, L.rowH / 2, c.name, textStyle(IS_PORTRAIT ? 16 : 14, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
-      const sub = this.add.text(colW - 12, L.rowH / 2, `Lv${c.level}  ${SKILL_LABEL[c.skill]}`, eyebrowStyle(10, sc.css)).setOrigin(1, 0.5);
+      // ⚑ marks a captain in the fleet, with the ship's place (#299).
+      const place = places.get(c.id);
+      const sub = this.add.text(colW - 12, L.rowH / 2, `${place ? `⚑ ${place}  ` : ''}Lv${c.level}  ${SKILL_LABEL[c.skill]}`, eyebrowStyle(10, place ? Css.gold : sc.css)).setOrigin(1, 0.5);
       const room = colW - 32 - sub.width - 16;
       if (name.width > room) name.setScale(room / name.width);
       const card = this.add.container((i % cols) * (colW + 8), Math.floor(i / cols) * (L.rowH + ROW_GAP), [frame, dot, name, sub]);
