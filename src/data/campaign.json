@@ -51,7 +51,7 @@
       "x": 0.46, "y": 0.86, "requires": ["p3"],
       "enemy": { "nation": "USN", "ships": ["fletcher", "gearing", "sumner"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "ショートランド泊地" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "ショートランド泊地" }, "timeLimitSec": 180 },
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
     },
     {
@@ -59,7 +59,7 @@
       "x": 0.7, "y": 0.4, "requires": ["p5"],
       "enemy": { "nation": "USN", "ships": ["north_carolina", "baltimore", "fletcher", "gearing", "sumner", "buckley"] },
       "objective": "SinkTargets", "map": "archipelago", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 300 }, "rewardShip": "Cruiser"
     },
     {
@@ -110,7 +110,7 @@
       "x": 0.56, "y": 0.84, "requires": ["a2"],
       "enemy": { "nation": "KM", "ships": ["emden", "z1"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "大西洋" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "大西洋" }, "timeLimitSec": 180 },
       "reward": { "fuel": 600, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
     {
@@ -118,7 +118,7 @@
       "x": 0.78, "y": 0.42, "requires": ["a4"],
       "enemy": { "nation": "KM", "ships": ["bismarck", "z1", "z20", "z23", "u_boat_viic"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Storm", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 700, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
     },
     {
@@ -169,7 +169,7 @@
       "x": 0.5, "y": 0.86, "requires": ["m2"],
       "enemy": { "nation": "RN", "ships": ["dido", "javelin", "truant"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "敵泊地" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "敵泊地" }, "timeLimitSec": 180 },
       "reward": { "fuel": 600, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Destroyer"
     },
     {
@@ -177,7 +177,7 @@
       "x": 0.74, "y": 0.4, "requires": ["m4"],
       "enemy": { "nation": "RN", "ships": ["illustrious", "southampton", "javelin", "cossack", "belfast"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 500 }, "rewardShip": "Carrier"
     },
     {
@@ -228,7 +228,7 @@
       "x": 0.5, "y": 0.86, "requires": ["b2"],
       "enemy": { "nation": "KM", "ships": ["z1", "z23", "u_boat_viic"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "湾外" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "湾外" }, "timeLimitSec": 180 },
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
     },
     {
@@ -236,7 +236,7 @@
       "x": 0.76, "y": 0.34, "requires": ["b4"],
       "enemy": { "nation": "KM", "ships": ["admiral_hipper", "emden", "z1", "z20"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -280,7 +280,7 @@
       "x": 0.48, "y": 0.86, "requires": ["bs2"],
       "enemy": { "nation": "KM", "ships": ["z1", "z23", "u_boat_viic"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "アゾフ海" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "アゾフ海" }, "timeLimitSec": 180 },
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
     },
     {
@@ -295,7 +295,7 @@
       "x": 0.76, "y": 0.32, "requires": ["bs4"],
       "enemy": { "nation": "KM", "ships": ["nurnberg", "emden", "z1", "z20"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -374,7 +374,7 @@
       "x": 0.56, "y": 0.84, "requires": ["np2"],
       "enemy": { "nation": "USN", "ships": ["omaha", "farragut", "porter", "mahan"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "撤収地点" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "撤収地点" }, "timeLimitSec": 180 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -389,7 +389,7 @@
       "x": 0.78, "y": 0.42, "requires": ["np4"],
       "enemy": { "nation": "USN", "ships": ["enterprise", "atlanta", "fletcher", "benson", "sims"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
@@ -440,7 +440,7 @@
       "x": 0.56, "y": 0.84, "requires": ["sa2"],
       "enemy": { "nation": "KM", "ships": ["nurnberg", "z20", "z23"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Overcast", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "外洋" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "外洋" }, "timeLimitSec": 180 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -455,7 +455,7 @@
       "x": 0.78, "y": 0.42, "requires": ["sa4"],
       "enemy": { "nation": "KM", "ships": ["admiral_hipper", "emden", "z23", "u_boat_ixc"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
@@ -506,7 +506,7 @@
       "x": 0.56, "y": 0.84, "requires": ["io2"],
       "enemy": { "nation": "RN", "ships": ["belfast", "javelin", "cossack"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "インド洋" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "インド洋" }, "timeLimitSec": 180 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -521,7 +521,7 @@
       "x": 0.78, "y": 0.42, "requires": ["io4"],
       "enemy": { "nation": "RN", "ships": ["illustrious", "dido", "southampton", "javelin", "cossack"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
@@ -572,7 +572,7 @@
       "x": 0.56, "y": 0.84, "requires": ["ar2"],
       "enemy": { "nation": "KM", "ships": ["z1", "z20", "z23", "u_boat_viic"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Storm", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "フィヨルドの奥" }, "timeLimitSec": 300 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "フィヨルドの奥" }, "timeLimitSec": 180 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -587,7 +587,7 @@
       "x": 0.78, "y": 0.42, "requires": ["ar4"],
       "enemy": { "nation": "KM", "ships": ["scharnhorst", "z1", "z20", "z23", "u_boat_viic"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Storm", "time": "Night",
-      "side": { "targetLead": true, "timeLimitSec": 360 },
+      "side": { "targetLead": true, "timeLimitSec": 300 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {

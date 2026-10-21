@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { Nation } from '@/types/Nation';
 
 /**
- * Simplified naval ensigns for the title screen (#198), drawn with Graphics: the colours and the main shape of each
- * navy's flag, not a faithful copy.
+ * Simplified flags for the title screen (#198), drawn with Graphics: the colours and the main shape, not a faithful
+ * copy. Japan and Germany show their naval ensigns; the others their national flags (the Union Jack and the Soviet
+ * red flag since #283, whose ensigns looked unfamiliar).
  */
 export function drawFlag(g: Phaser.GameObjects.Graphics, nation: Nation, x: number, y: number, w: number, h: number): void {
   const rect = (c: number, rx: number, ry: number, rw: number, rh: number): void => {
@@ -47,14 +48,22 @@ export function drawFlag(g: Phaser.GameObjects.Graphics, nation: Nation, x: numb
       rect(0x000000, 0.46, 0.22, 0.08, 0.56);
       rect(0x000000, 0.34, 0.44, 0.32, 0.12);
       break;
-    case Nation.RN:
-      rect(0xffffff, 0, 0, 1, 1);
-      rect(0xc8102e, 0.45, 0, 0.1, 1);
+    case Nation.RN: {
+      // The Union Jack (#283): the white-ensign variant read as an unknown flag on the title.
+      rect(0x012169, 0, 0, 1, 1);
+      const band = (d: number, c: number): void => {
+        g.fillStyle(c, 1);
+        g.fillPoints([new Phaser.Math.Vector2(x, y), new Phaser.Math.Vector2(x + d, y), new Phaser.Math.Vector2(x + w, y + h - d), new Phaser.Math.Vector2(x + w, y + h), new Phaser.Math.Vector2(x + w - d, y + h), new Phaser.Math.Vector2(x, y + d)], true);
+        g.fillPoints([new Phaser.Math.Vector2(x + w, y), new Phaser.Math.Vector2(x + w, y + d), new Phaser.Math.Vector2(x + d, y + h), new Phaser.Math.Vector2(x, y + h), new Phaser.Math.Vector2(x, y + h - d), new Phaser.Math.Vector2(x + w - d, y)], true);
+      };
+      band(h * 0.2, 0xffffff);
+      band(h * 0.07, 0xc8102e);
+      rect(0xffffff, 0.42, 0, 0.16, 1);
+      rect(0xffffff, 0, 0.36, 1, 0.28);
+      rect(0xc8102e, 0.46, 0, 0.08, 1);
       rect(0xc8102e, 0, 0.42, 1, 0.16);
-      rect(0x012169, 0, 0, 0.42, 0.42);
-      rect(0xffffff, 0.17, 0, 0.08, 0.42);
-      rect(0xffffff, 0, 0.17, 0.42, 0.08);
       break;
+    }
     case Nation.FR:
       rect(0x0055a4, 0, 0, 1 / 3, 1);
       rect(0xffffff, 1 / 3, 0, 1 / 3, 1);
@@ -66,19 +75,30 @@ export function drawFlag(g: Phaser.GameObjects.Graphics, nation: Nation, x: numb
       rect(0xce2b37, 2 / 3, 0, 1 / 3, 1);
       break;
     case Nation.SU: {
-      rect(0xffffff, 0, 0, 1, 1);
-      rect(0x0039a6, 0, 0.82, 1, 0.18);
-      g.fillStyle(0xcc0000, 1);
-      const cx = x + w * 0.3;
-      const cy = y + h * 0.4;
-      const r = h * 0.2;
+      // The red flag with the gold star, hammer and sickle (#283), in place of the naval ensign.
+      rect(0xcc0000, 0, 0, 1, 1);
+      const gold = 0xffd700;
+      g.fillStyle(gold, 1);
+      const sx = x + w * 0.2;
+      const sy = y + h * 0.16;
+      const r = h * 0.09;
       const pts: Phaser.Math.Vector2[] = [];
       for (let i = 0; i < 10; i++) {
         const a = -Math.PI / 2 + (i * Math.PI) / 5;
         const rr = i % 2 === 0 ? r : r * 0.42;
-        pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr));
+        pts.push(new Phaser.Math.Vector2(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr));
       }
       g.fillPoints(pts, true);
+      // Sickle: an arc; hammer: a slanted handle with a head.
+      const hx = x + w * 0.2;
+      const hy = y + h * 0.42;
+      g.lineStyle(Math.max(1.5, h * 0.05), gold, 1);
+      g.beginPath();
+      g.arc(hx, hy, h * 0.13, Math.PI * 0.15, Math.PI * 1.25, false);
+      g.strokePath();
+      g.lineBetween(hx - h * 0.1, hy + h * 0.12, hx + h * 0.08, hy - h * 0.08);
+      g.lineStyle(Math.max(2, h * 0.07), gold, 1);
+      g.lineBetween(hx + h * 0.02, hy - h * 0.14, hx + h * 0.14, hy - h * 0.02);
       break;
     }
   }

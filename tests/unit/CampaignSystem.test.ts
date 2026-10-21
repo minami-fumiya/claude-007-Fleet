@@ -160,6 +160,9 @@ describe('more areas and branches (#40)', () => {
       const side = campaignSide(a)!;
       expect(side.objective).toBe(a.objective);
       expect(side.timeLimitSec, a.id).toBeGreaterThan(0);
+      // Shorter since #279: 突入 in 3 minutes, 撃沈 in 5 (the zone is a few hundred metres off at full speed).
+      if (a.objective === Objective.Breakthrough) expect(side.timeLimitSec, a.id).toBeLessThanOrEqual(200);
+      if (a.objective === Objective.SinkTargets) expect(side.timeLimitSec, a.id).toBeLessThanOrEqual(300);
       if (a.objective !== Objective.SinkTargets) expect(side.zone, a.id).toBeDefined();
       if (a.objective !== Objective.Breakthrough) expect(side.targetLead, a.id).toBe(true);
     }

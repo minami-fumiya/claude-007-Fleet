@@ -145,7 +145,9 @@ export class ResearchView {
       const tab = this.tabs[i];
       // A finished branch is not a call to action (#269): it stays plain and says so.
       tab.setVariant(b.id === lastBranch ? 'primary' : 'secondary');
-      tab.setCaption(p.done === p.total ? '完了' : `${p.done}/${p.total}`);
+      tab.setCaption(p.done === p.total ? '✓ 完了' : `${p.done}/${p.total}`);
+      // Finished branches read green at a glance (#283), apart from gold calls to action.
+      if (p.done === p.total) tab.setCaptionColor(Css.success);
     });
     this.summary.setText(this.summaryText(done));
     for (const c of this.cards) {
@@ -155,8 +157,9 @@ export class ResearchView {
       const medal = researchMedal(c.node.id);
       const medalOk = medalMet(c.node, medals);
       const met = prerequisitesMet(c.node, done) && medalOk;
-      const label = finished ? '研究済' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
-      c.state.setText(label).setColor(finished ? Css.gold : ready ? Css.cyan : met ? Css.muted : Css.danger);
+      const label = finished ? '✓ 研究済' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
+      // 研究済 is green (#283): gold stays for what can be done now.
+      c.state.setText(label).setColor(finished ? Css.success : ready ? Css.cyan : met ? Css.muted : Css.danger);
       c.requires.setText(medal && !finished ? `${this.requiresText(c.node)}・勲章「${medalName(medal)}」` : this.requiresText(c.node));
       c.requires.setColor(finished || met ? Css.dim : Css.danger);
       c.frame.clear();
@@ -164,11 +167,11 @@ export class ResearchView {
         radius: 16,
         fill: finished ? Colors.panelHi : Colors.panel,
         fillAlpha: finished ? 0.9 : ready ? 0.7 : 0.4,
-        rim: finished ? Colors.gold : Colors.cyan,
+        rim: finished ? Colors.success : Colors.cyan,
         rimAlpha: finished ? 0.7 : ready ? 0.6 : 0.15,
         glow: ready ? 0.6 : 0,
       });
-      c.frame.lineStyle(1, finished ? Colors.gold : Colors.cyan, 0.25);
+      c.frame.lineStyle(1, finished ? Colors.success : Colors.cyan, 0.25);
       c.frame.lineBetween(LEVEL_COL + 4, 14, LEVEL_COL + 4, c.h - 14);
     }
   }

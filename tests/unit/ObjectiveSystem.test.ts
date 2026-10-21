@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CONVOY_NEEDED, evaluateObjective, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
+import { battleBanner, CONVOY_NEEDED, evaluateObjective, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
 import { Objective } from '@/types/Campaign';
 
 const base = { flagshipAlive: true, enemiesAlive: 2, enemiesTotal: 3 };
@@ -92,5 +92,15 @@ describe('pause sheet (#189)', () => {
     const lines = pauseLines(Objective.Annihilate, '敵艦隊の殲滅', { ...base, elapsedSec: 5 }, { alive: 1, total: 1 });
     expect(lines).toHaveLength(4);
     expect(lines[1]).toBe('経過  0:05');
+  });
+});
+
+describe('the battle banner (#279)', () => {
+  it('names the fight and how it is won', () => {
+    expect(battleBanner({ areaName: 'サボ島沖', sortie: { node: 2, battles: 3, boss: false }, goal: '敵艦隊の全滅' })).toEqual(['サボ島沖  ·  第 2 / 3 戦  ·  前哨戦', '勝利条件: 敵艦隊の全滅']);
+    expect(battleBanner({ areaName: '海峡突破', sortie: { node: 3, battles: 3, boss: true }, goal: '泊地への突入', timeLimitSec: 180 })[1]).toBe('勝利条件: 泊地への突入  (制限 3分)');
+    expect(battleBanner({ areaName: 'p1', goal: 'x', timeLimitSec: 150 })).toEqual(['p1  ·  主力戦', '勝利条件: x  (制限 2分30秒)']);
+    expect(battleBanner({ exercise: true, goal: 'x' })[0]).toBe('演習');
+    expect(battleBanner({ scenarioName: 'ミッドウェー', goal: 'x' })[0]).toBe('史実: ミッドウェー');
   });
 });

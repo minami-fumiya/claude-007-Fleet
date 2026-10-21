@@ -71,6 +71,7 @@ export function fireAt(
     distance,
     targetSubmerged: target.submerged,
     shooterSubmerged: ship.submerged,
+    targetLand: target.ship.isLand,
     torpedoEagerness,
   });
   const vel = (target.ship.body as Phaser.Physics.Arcade.Body | null)?.velocity;

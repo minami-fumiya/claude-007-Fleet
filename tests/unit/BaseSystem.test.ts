@@ -84,7 +84,7 @@ describe('bases (#88)', () => {
     expect(researchMultiplier(home)).toBe(1);
     expect(repairTimeMultiplier(home)).toBe(0.8);
     expect(scaleCost({ fuel: 101, steel: 10 }, 0.5)).toEqual({ fuel: 51, steel: 5 });
-    expect(repairTimeMs(100, 0.5, 0.8)).toBe(repairTimeMs(100, 0.5) * 0.8);
+    expect(repairTimeMs(1000, 0.5, 0.8)).toBe(repairTimeMs(1000, 0.5) * 0.8);
     const docked = startRepair({ damage: { a: 0.5 }, docks: [], docksOwned: 1 }, 'a', 100, 0, 0.8)!;
     expect(docked.docks[0].endsAt).toBe(repairTimeMs(100, 0.5, 0.8));
   });

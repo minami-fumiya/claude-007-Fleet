@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { brokenParts, newlyBroken, SUPERWEAPONS, superweaponOf } from '@/systems/SuperweaponSystem';
-import { daySchedule, eventEffects, MAX_SUPERWEAPON } from '@/systems/EventSystem';
+import { daySchedule, eventEffects, MAX_SUPERWEAPON, NIGHT_WINDOWS } from '@/systems/EventSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { ShipClass } from '@/types/ShipClass';
 import ijn from '@/data/ships/ijn.json';
@@ -44,5 +44,13 @@ describe('超兵器 (#148)', () => {
       seen += giants.length;
     }
     expect(seen).toBeGreaterThan(10);
+  });
+
+  it('超兵器出現 never falls in the night windows, 21:00〜6:00 JST (#279)', () => {
+    for (let d = 20_000; d < 20_365; d++) {
+      daySchedule(d).forEach((e, i) => {
+        if (NIGHT_WINDOWS.includes(i)) expect(e.kind, `day ${d} window ${i}`).not.toBe('superweapon');
+      });
+    }
   });
 });

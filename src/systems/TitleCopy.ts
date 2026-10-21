@@ -20,7 +20,7 @@ export function titleTiles(portrait: boolean, seas?: { won: number; total: numbe
   ];
 }
 
-/** The title's main button (#198): "日本 · 少佐 で続ける" for a save in progress, "鎮守府へ" for a new one. */
+/** The title's main button (#198): "日本 · 少佐 で続ける" for a save in progress, "はじめる" for a new one (#283). */
 export function continueLabel(nation: string | null, rankName: string | null): string {
-  return nation && rankName ? `${nation} · ${rankName} で続ける` : '鎮守府へ  →';
+  return nation && rankName ? `${nation} · ${rankName} で続ける` : 'はじめる  →';
 }

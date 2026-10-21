@@ -1,11 +1,11 @@
 import { SceneKeys } from '@/config/SceneKeys';
 
 /**
- * 鎮守府 menu (#61, pure): the screens grouped under four tabs so the home port doesn't show every button at once.
+ * 鎮守府 menu (#61, pure): the screens grouped under five tabs so the home port doesn't show every button at once.
  * The tab last used is remembered for the session.
  */
 
-export type HomeTab = 'sortie' | 'fleet' | 'arsenal' | 'record';
+export type HomeTab = 'sortie' | 'fleet' | 'arsenal' | 'record' | 'other';
 
 export interface IHomeMenuItem {
   label: string;
@@ -57,6 +57,11 @@ export const HOME_MENU: IHomeMenuTab[] = [
       // 持っているアイテム (#184)
       { label: 'アイテム', caption: '所持品', scene: SceneKeys.ITEMS, variant: 'primary' },
       { label: '階級', caption: '昇進の条件', scene: SceneKeys.HOME, variant: 'primary', action: 'ranks' },
+    ],
+  },
+  {
+    // ヘルプと設定は記録から分けた (#283): six buttons under 記録 were cramped.
+    id: 'other', label: 'その他', items: [
       { label: 'ヘルプ', caption: '遊び方', scene: SceneKeys.HELP, variant: 'secondary' },
       { label: '設定', caption: '音・保存', scene: SceneKeys.SETTINGS, variant: 'secondary' },
     ],

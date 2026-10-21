@@ -19,14 +19,18 @@ export interface IPendingItem {
   count: number;
   /** Where a tap goes; 'quests' opens the sheet on the home screen */
   scene: string;
+  /** Passed to the scene: 掃討 opens the map on the area with the most charges (#283) */
+  data?: Record<string, unknown>;
 }
 
 export function pendingSummary(progress: IProgress, now: number, freeDocks: number): IPendingItem[] {
-  const sweeps = progress.perfect.filter((id) => progress.campaign.includes(id)).reduce((n, id) => n + sweepCharges(progress.sweepCharges[id], now), 0);
+  const charged = progress.perfect.filter((id) => progress.campaign.includes(id)).map((id) => ({ id, n: sweepCharges(progress.sweepCharges[id], now) }));
+  const sweeps = charged.reduce((n, a) => n + a.n, 0);
+  const topSweep = charged.reduce<{ id: string; n: number } | null>((best, a) => (a.n > (best?.n ?? 0) ? a : best), null);
   const basesReady = nationBases(progress.nation).filter((b) => baseState(b, progress) === 'ready').length;
   const items: IPendingItem[] = [
     { id: 'quests', label: '任務', count: claimableCount(progress.quests, now), scene: SceneKeys.HOME },
-    { id: 'sweeps', label: '掃討', count: sweeps, scene: SceneKeys.CAMPAIGN },
+    { id: 'sweeps', label: '掃討', count: sweeps, scene: SceneKeys.CAMPAIGN, data: topSweep ? { areaId: topSweep.id } : undefined },
     { id: 'docks', label: '空きドック', count: Math.max(0, freeDocks), scene: SceneKeys.SHIPYARD },
     { id: 'books', label: '艦長教本', count: progress.items.captainBook, scene: SceneKeys.CAPTAIN },
     { id: 'baseWork', label: '軍港の工事', count: basesReady, scene: SceneKeys.BASE },
