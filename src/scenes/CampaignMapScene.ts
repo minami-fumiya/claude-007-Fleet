@@ -316,12 +316,15 @@ export class CampaignMapScene extends Phaser.Scene {
     const title = add(this.add.text(x, d.y + 44, a.name, displayStyle(24)));
     const desc = add(this.add.text(x, title.y + title.height + 10, a.description, textStyle(13, Css.muted, wrap)));
     let y = desc.y + desc.height + 18;
+    const briefTop = y;
+    const brief: Phaser.GameObjects.Text[] = [];
     for (const [k, v] of lines) {
-      add(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));
+      brief.push(add(this.add.text(x, y, k, eyebrowStyle(10, Css.gold))));
       // Battleships, carriers or heavy cruisers in the enemy fleet show in gold.
       const strong = k === '敵' && hasCapitalShips(enemy);
       const compare = k === '戦力の比較' ? { danger: Css.danger, even: Css.gold, ahead: Css.success }[tone] : undefined;
       const t = add(this.add.text(x, y + 18, v, textStyle(13, compare ?? (strong ? Css.gold : Css.text), { ...wrap, lineSpacing: 4 })));
+      brief.push(t);
       y = t.y + t.height + 10;
     }
     // 掃討 (#57): an area won without losses can be swept, skipping the battle.
@@ -329,19 +332,30 @@ export class CampaignMapScene extends Phaser.Scene {
     const left = sweepsLeft(progress, a.id, Date.now());
     const wait = nextSweepMs(progress.sweepCharges[a.id], Date.now());
     const sweepNote = sweepable
-      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復まで ${clock(wait)}` : '満タン'}・1 時間に 1 回回復): ${formatResources(sweepCost(a, enemy)) || '無料'} で戦闘を省略、報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復 ${clock(wait)}` : '満タン'}・1 時間に 1 回)  ·  ${formatResources(sweepCost(a, enemy)) || '無料'}で戦闘を省略・報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
-    // Under the briefing, never over it (#141 follow-up: it overlapped the route and reward lines in portrait).
-    if (this.status || sweepNote) {
-      add(this.add.text(x, y, this.status ? `${this.status}\n${sweepNote}` : sweepNote, textStyle(12, this.status ? Css.success : Css.muted, { ...wrap, lineSpacing: 2 })));
-    }
     const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
-    // A sortie left unfinished here (#138): continue it or withdraw.
+    const buttonTop = by - (IS_PORTRAIT ? 76 : 60) / 2;
+    // The sweep's result and note sit right above the buttons; the briefing shrinks to fit above them, so the three
+    // never overlap however long the result runs (#297, and #141 before it).
+    // A sortie left unfinished here (#138) puts its own line right above the buttons.
     const pending = pendingSortie(this);
-    if (pending && pending.areaId === a.id) {
+    const pendingHere = pending?.areaId === a.id;
+    const noteBottom = buttonTop - 8 - (pendingHere ? (IS_PORTRAIT ? 26 : 22) : 0);
+    let noteTop = noteBottom;
+    if (this.status || sweepNote) {
+      const note = add(this.add.text(x, noteBottom, this.status ? `${this.status}\n${sweepNote}` : sweepNote, textStyle(12, this.status ? Css.success : Css.muted, { ...wrap, lineSpacing: 2 })).setOrigin(0, 1));
+      noteTop = note.y - note.height - 8;
+    }
+    if (y > noteTop && y > briefTop) {
+      const f = Math.max(0.6, (noteTop - briefTop) / (y - briefTop));
+      for (const t of brief) t.setScale(f).setY(briefTop + (t.y - briefTop) * f);
+    }
+    // A sortie left unfinished here (#138): continue it or withdraw.
+    if (pending && pendingHere) {
       const half = (d.w - 48 - 12) / 2;
       const bh = IS_PORTRAIT ? 76 : 60;
-      add(this.add.text(x, by - bh / 2 - (IS_PORTRAIT ? 34 : 26), pending.advance ? `出撃中: 前の戦闘は終了。進撃すると ${pending.node} / ${pending.battles} 戦目` : `出撃中: ${pending.node} / ${pending.battles} 戦目の途中で中断 (戦い直し)`, textStyle(12, Css.cyan)));
+      add(this.add.text(x, buttonTop - 8 - (IS_PORTRAIT ? 22 : 18), pending.advance ? `出撃中: 前の戦闘は終了。進撃すると ${pending.node} / ${pending.battles} 戦目` : `出撃中: ${pending.node} / ${pending.battles} 戦目の途中で中断 (戦い直し)`, textStyle(12, Css.cyan)));
       add(new UIButton(this, d.x + 24 + half / 2, by, pending.advance ? '進撃して続ける  ›' : '続きから  ›', () => this.resume(), {
         variant: 'gold', width: half, height: bh, fontSize: IS_PORTRAIT ? 18 : 17,
       }));

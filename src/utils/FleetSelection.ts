@@ -12,3 +12,26 @@ export function selectedShipIds(registry: Phaser.Data.DataManager, nation: Natio
   const all = registry.get(SELECTION_KEY) as Partial<Record<Nation, { slotIds: (string | null)[] }>> | undefined;
   return (all?.[nation]?.slotIds ?? []).filter((id): id is string => !!id);
 }
+
+/**
+ * Where each captain of a fleet serves (#299): captain id → "旗艦" for the first ship, "2 番艦", "3 番艦" … for the
+ * rest, in line order. Slots without a ship are skipped (their captain does not sail).
+ */
+export function captainPlaces(slotIds: readonly (string | null)[], captainIds: readonly (string | null)[]): Map<string, string> {
+  const out = new Map<string, string>();
+  let place = 0;
+  slotIds.forEach((ship, i) => {
+    if (!ship) return;
+    place += 1;
+    const id = captainIds[i];
+    if (id) out.set(id, place === 1 ? '旗艦' : `${place} 番艦`);
+  });
+  return out;
+}
+
+/** The captains of `nation`'s last fleet and their places (#299). */
+export function fleetCaptainPlaces(registry: Phaser.Data.DataManager, nation: Nation): Map<string, string> {
+  const all = registry.get(SELECTION_KEY) as Partial<Record<Nation, { slotIds: (string | null)[]; captainIds?: (string | null)[] }>> | undefined;
+  const sel = all?.[nation];
+  return sel ? captainPlaces(sel.slotIds, sel.captainIds ?? []) : new Map();
+}

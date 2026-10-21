@@ -35,6 +35,8 @@ export type QuestEvent =
   | 'specialBranch' | 'landKill'
   // 0.0.38: campaign wins against a stronger enemy (#280)
   | 'underdogWin'
+  // 0.0.39: wins with 95% of the fleet's HP left (#295), resources sold in the shop (#296)
+  | 'flawlessWin' | 'shopSell'
   // the Black Sea theater and training areas (#202)
   | 'winBlackSea' | 'trainingWin'
   // The seas added in 0.0.35 (#250)

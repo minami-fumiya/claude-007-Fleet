@@ -51,6 +51,8 @@ export interface IBattleResultData {
   /** Battle rank S〜D (#149) and what it came from */
   rank?: string;
   rankNote?: string;
+  /** What kept a win from S (#295): "S まで: 残り耐久 78% (85% 必要)" */
+  rankShortfall?: string;
   /** Resources gained / spent replacing aircraft, already formatted */
   reward?: string;
   /** The event that changed this battle's reward (#89), shown on its own line */

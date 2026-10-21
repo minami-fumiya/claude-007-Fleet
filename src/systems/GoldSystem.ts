@@ -30,8 +30,6 @@ interface IShopData {
 const SHOP = shopData as unknown as IShopData;
 export const SHOP_ENTRIES = SHOP.entries;
 export const SELL = SHOP.sell;
-/** Pseudo-entry counting the day's sales against SELL.daily */
-export const SELL_ID = 'sell';
 
 /** Gold for a won campaign battle by rank (#183); a defeat pays nothing. */
 export const GOLD_FOR_RANK: Record<BattleRank, number> = { S: 60, A: 40, B: 25, C: 10, D: 0 };
@@ -93,13 +91,12 @@ export function buy(w: IWallet, entry: IShopEntry, have: IResources, cap: IResou
   return { wallet: { ...w, gold: w.gold - priceOf(entry, now), shop: counted(w, entry.id, now) }, give: resources(entry.give ?? {}), items: entry.items ?? {} };
 }
 
-/** Sells SELL.amount of one resource for its rate (#183); null when short of it or past the day's limit. */
-export function sell(w: IWallet, kind: keyof IResources, have: IResources, now: number): { wallet: IWallet; resources: IResources; gold: number } | null {
-  if (boughtToday(w, SELL_ID, now) >= SELL.daily) return null;
+/** Sells SELL.amount of one resource for its rate (#183); null when short of it. No daily limit since #296. */
+export function sell(w: IWallet, kind: keyof IResources, have: IResources): { wallet: IWallet; resources: IResources; gold: number } | null {
   const left = pay(have, { [kind]: SELL.amount });
   if (!left) return null;
   const gold = SELL.rates[kind];
-  return { wallet: { ...addGold(w, gold), shop: counted(w, SELL_ID, now) }, resources: left, gold };
+  return { wallet: addGold(w, gold), resources: left, gold };
 }
 
 /** Gold for a battle's result (#183): campaign wins only (free exercises and scenarios would farm it). */

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { boughtToday, buy, canBuy, dailyDeal, priceOf, sell, SELL, SELL_ID, SHOP_ENTRIES, ShopRefusal } from '@/systems/GoldSystem';
+import { boughtToday, buy, canBuy, dailyDeal, priceOf, sell, SELL, SHOP_ENTRIES, ShopRefusal } from '@/systems/GoldSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources, gainResources, RESOURCE_KEYS, RESOURCE_LABEL } from '@/systems/ResourceSystem';
 import { recordLedger } from '@/systems/LedgerSystem';
@@ -78,15 +78,14 @@ export class ShopScene extends Phaser.Scene {
         variant: refusal ? 'secondary' : 'gold', width: CARD_W - 28, height: IS_PORTRAIT ? 36 : 28, fontSize: 13,
       })).setEnabled(refusal === null);
     });
-    // 売る: spare resources back to gold, a day's limit in all.
-    const left = SELL.daily - boughtToday(w, SELL_ID, now);
-    this.track(this.add.text(L.left, L.sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・本日あと ${left} 回)`, eyebrowStyle(11, Css.gold)));
+    // 売る: spare resources back to gold, as often as there is enough (#296).
+    this.track(this.add.text(L.left, L.sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・回数の制限なし)`, eyebrowStyle(11, Css.gold)));
     const bw = (CANVAS_W - L.left * 2 - L.gap * 3) / 4;
     RESOURCE_KEYS.forEach((k, i) => {
       const enough = p.resources[k] >= SELL.amount;
       this.track(new UIButton(this, L.left + i * (bw + L.gap) + bw / 2, L.sellY + 20, `${RESOURCE_LABEL[k]} → ${SELL.rates[k]} G`, () => this.sell(k), {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 48 : 40, fontSize: 13,
-      })).setEnabled(enough && left > 0);
+      })).setEnabled(enough);
     });
   }
 
@@ -108,10 +107,10 @@ export class ShopScene extends Phaser.Scene {
   private sell(kind: keyof IResources): void {
     const now = Date.now();
     const p = loadProgress();
-    const r = sell(walletOf(p), kind, p.resources, now);
+    const r = sell(walletOf(p), kind, p.resources);
     if (!r) return;
     const ledger = recordLedger(p.ledger, 'shopSell', { [kind]: SELL.amount }, now);
-    saveProgress({ ...p, wallet: r.wallet, resources: r.resources, ledger });
+    saveProgress(withQuestEvents({ ...p, wallet: r.wallet, resources: r.resources, ledger }, [['shopSell', 1]], now));
     this.status = `${RESOURCE_LABEL[kind]} ${SELL.amount.toLocaleString('en-US')} を ${r.gold} G で売りました`;
     this.draw();
   }

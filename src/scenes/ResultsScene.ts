@@ -42,7 +42,8 @@ export class ResultsScene extends Phaser.Scene {
     const reports = data?.captainReports ?? [];
     // The campaign line ("海域攻略: … 初回報酬 …") is split at its reward so neither half runs off the card (#69).
     const campaignLines = (data?.campaign ?? '').split(/\s{2,}(?=初回報酬)/);
-    const rewardLines = [data?.route ?? '', ...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.event ?? '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? '', data?.recruits ?? '', data?.advanceNote ?? ''].filter((l) => l);
+    // Why a win missed an S (#295) leads the report, in muted grey.
+    const rewardLines = [data?.rankShortfall ?? '', data?.route ?? '', ...campaignLines, data?.reward ? `獲得  ${data.reward}` : '', data?.event ?? '', data?.cost ? `艦載機補充  −${data.cost}` : '', data?.medals?.length ? `勲章授与  ${data.medals.join('・')}` : '', data?.merit ?? '', data?.recruits ?? '', data?.advanceNote ?? ''].filter((l) => l);
     // Long lines wrap inside the card; their measured heights size the report area.
     const rewardTexts = rewardLines.map((line) =>
       this.add.text(CANVAS_W / 2, 0, line, textStyle(14, Css.cyan, { fontStyle: 'bold', align: 'center', wordWrap: { width: CARD_W - 56, useAdvancedWrap: true } })).setOrigin(0.5, 0),
@@ -50,6 +51,7 @@ export class ResultsScene extends Phaser.Scene {
     // A new captain stands out (#179).
     rewardTexts.forEach((t, i) => {
       if (data?.recruits && rewardLines[i] === data.recruits) t.setColor(Css.gold);
+      if (data?.rankShortfall && rewardLines[i] === data.rankShortfall) t.setColor(Css.muted).setFontSize(12);
     });
     const rewardH = rewardTexts.reduce((sum, t) => sum + Math.max(REPORT_LINE_H, t.height + 6), 0);
     const reportCols = !IS_PORTRAIT && reports.length >= REPORT_COLS_FROM ? 2 : 1;

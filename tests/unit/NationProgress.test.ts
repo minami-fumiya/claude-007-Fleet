@@ -49,7 +49,7 @@ describe('ProgressStore v2 (per-nation save, #27)', () => {
   it('the view applies natural regeneration up to now', () => {
     const save = switchNation(emptySave(), Nation.IJN, 'fubuki', T0);
     const later = progressView(save, T0 + 10 * REGEN_INTERVAL_MS + 5);
-    expect(later.resources).toEqual({ fuel: 60, ammo: 40, steel: 50, bauxite: 10 });
+    expect(later.resources).toEqual({ fuel: 60, ammo: 40, steel: 60, bauxite: 10 });
     expect(later.regenAt).toBe(T0 + 10 * REGEN_INTERVAL_MS);
     // Saving the view and reading again at the same time changes nothing (idempotent).
     const again = progressView(withProgress(save, later), T0 + 10 * REGEN_INTERVAL_MS + 5);

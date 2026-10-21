@@ -52,7 +52,6 @@ const L = IS_PORTRAIT
       /** お知らせ (#243): its own strip between the menu and the docks */
       notice: { x: 16, y: 582, w: CANVAS_W - 32, h: 48 } as IRect,
       dock: { x: 16, y: 640, w: CANVAS_W - 32, h: CANVAS_H - 656 } as IRect,
-      rowH: 92,
     }
   : {
       resources: { x: 444, y: 96, w: 812 } as { x: number; y: number; w: number },
@@ -62,16 +61,12 @@ const L = IS_PORTRAIT
       menuCols: 1,
       notice: { x: 444, y: 214, w: 812, h: 34 } as IRect,
       dock: { x: 444, y: 256, w: 812, h: 440 } as IRect,
-      rowH: 62,
     };
 
 /** Registry key: the menu tab last opened (#61), kept while the game runs. */
 const HOME_TAB_KEY = 'home.tab';
 /** Registry key: builds finished since the shipyard was opened (#264), for the notice strip */
 export const BUILT_KEY = 'home.built';
-const MAX_DAMAGED_ROWS = IS_PORTRAIT ? 5 : 4;
-/** Progress bar offset below a dock row's ship name; portrait text is taller, so the bar sits lower. */
-const DOCK_METER_Y = IS_PORTRAIT ? 36 : 18;
 /** Overlay (nation picker) draws above everything else on the screen. */
 const OVERLAY_DEPTH = 200;
 
@@ -107,11 +102,13 @@ export class HomeScene extends Phaser.Scene {
   private bar!: ResourceBar;
   /** Dynamic dock / damage list objects, rebuilt on every change */
   private dynamic: Phaser.GameObjects.GameObject[] = [];
-  private dockMeters: Array<{ g: Phaser.GameObjects.Graphics; t: Phaser.GameObjects.Text; x: number; y: number; w: number; ship: IShipData; total: number; endsAt: number }> = [];
+  private dockMeters: Array<{ g: Phaser.GameObjects.Graphics; t: Phaser.GameObjects.Text; x: number; y: number; w: number; total: number; endsAt: number }> = [];
   private regenText!: Phaser.GameObjects.Text;
   private overlay: Phaser.GameObjects.GameObject[] = [];
   /** The scrolling list of an overlay sheet (all damaged ships, #275) */
   private overlayList?: ScrollList;
+  /** Every dock, build and damaged ship (#297) */
+  private dockList?: ScrollList;
   private menuObjs: Phaser.GameObjects.GameObject[] = [];
   private questTab: QuestTab = 'daily';
   /** A quest whose reward overflows the holding cap, pressed once: the next press takes it anyway (#221). */
@@ -708,6 +705,10 @@ export class HomeScene extends Phaser.Scene {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
     this.dockMeters = [];
+    // The list is rebuilt after every dock, build or repair; it keeps its place.
+    const dockOffset = this.dockList?.offset ?? 0;
+    this.dockList?.destroy();
+    this.dockList = undefined;
     const all = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
     // Every open base's docks together, and every damaged ship (#281).
     const progress = fleetDockView(all);
@@ -725,180 +726,103 @@ export class HomeScene extends Phaser.Scene {
     // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
     const event = activeEffects();
     const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
-    // Docks (#38), shared by repairs and builds since #211: a summary line, then a row per repair.
+    // Docks (#38), shared by repairs and builds since #211: a summary line, the next dock, then one scrolling list
+    // with every ship in a dock, every build and every damaged ship, each on its own row (#297: no more "ほか n 隻").
     const docks = dockCount(progress);
-    const building = buildsHere(all).length;
-    const used = progress.docks.length + building;
+    const builds = buildsHere(all);
+    const used = progress.docks.length + builds.length;
     this.drawPending(all, add);
     add(this.add.text(d.x + pad, y, 'ドック', eyebrowStyle(10, Css.gold)));
-    add(this.add.text(d.x + pad + 110, y - 2, `使用中 ${used} / ${docks}  ·  入渠 ${progress.docks.length}・建造 ${building}  ·  空き ${Math.max(0, docks - used)}`, textStyle(13, used >= docks ? Css.gold : Css.muted)));
-    y += IS_PORTRAIT ? 48 : 36;
-    // Up to eight docks (#211): only so many repair rows fit above the damaged list; the rest are counted.
-    const repairRows = Math.min(progress.docks.length, IS_PORTRAIT ? 3 : 4);
-    for (let i = 0; i < repairRows; i++) {
-      const job = progress.docks[i];
-      add(this.add.text(d.x + pad, y, `入渠 ${i + 1}`, eyebrowStyle(10, Css.gold)));
-      const ship = this.registryShips.byId(job.shipId);
-      if (ship) {
-        add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-        const total = repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass);
-        const meterX = d.x + pad + 110;
-        const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
-        const g = add(this.add.graphics());
-        // Portrait: the 高速修理 button takes the right end of the row, so the remaining time
-        // goes on its own line under the progress bar (#22). Landscape keeps it right of the bar.
-        const t = add(
-          IS_PORTRAIT
-            ? this.add.text(meterX, y + DOCK_METER_Y + 14, '', textStyle(12, Css.muted))
-            : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
-        );
-        this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
-        // A 高速修理材 (#143) is used first; without one the repair is paid in resources.
-        const items = progress.items.fastRepair;
-        const affordable = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
-        const btn = add(
-          new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速修理材 (${items})` : '高速修理', () => this.fastRepair(ship.id), {
-            variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
-          }),
-        );
-        btn.setEnabled(affordable);
-      }
-      y += IS_PORTRAIT ? 100 : 52;
-    }
-    if (progress.docks.length > repairRows) {
-      add(this.add.text(d.x + pad + 110, y, `ほか ${progress.docks.length - repairRows} 隻入渠中`, textStyle(12, Css.muted)));
-      y += IS_PORTRAIT ? 36 : 26;
-    }
-    // Builds in the docks (#264): the ship, a bar and the time left; a 高速建造材 finishes one at once.
-    const builds = buildsHere(all);
-    const buildRows = Math.min(builds.length, 2);
-    for (let i = 0; i < buildRows; i++) {
-      const job = builds[i];
-      const ship = this.registryShips.byId(job.shipId);
-      if (!ship) continue;
-      add(this.add.text(d.x + pad, y, `建造 ${i + 1}`, eyebrowStyle(10, Css.cyan)));
-      add(this.add.text(d.x + pad + 110, y - 2, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-      const meterX = d.x + pad + 110;
-      const meterW = d.w - pad * 2 - 110 - (IS_PORTRAIT ? 200 : 260);
-      const g = add(this.add.graphics());
-      const t = add(
-        IS_PORTRAIT
-          ? this.add.text(meterX, y + DOCK_METER_Y + 14, '', textStyle(12, Css.muted))
-          : this.add.text(meterX + meterW + 12, y + 22, '', textStyle(12, Css.muted)).setOrigin(0, 0.5),
-      );
-      const total = buildTimeMs(ship, fleetBuildTimeMul(all));
-      this.dockMeters.push({ g, t, x: meterX, y: y + DOCK_METER_Y, w: meterW, ship, total, endsAt: job.endsAt });
-      const items = all.items.fastBuild;
-      add(new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 34 : 10), items > 0 ? `高速建造材 (${items})` : '工廠へ', () => this.finishBuild(ship.id), {
-        variant: items > 0 ? 'primary' : 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 34, fontSize: 13,
-      }));
-      y += IS_PORTRAIT ? 100 : 52;
-    }
-    if (builds.length > buildRows) {
-      add(this.add.text(d.x + pad + 110, y, `ほか ${builds.length - buildRows} 隻建造中`, textStyle(12, Css.muted)));
-      y += IS_PORTRAIT ? 36 : 26;
-    }
+    add(this.add.text(d.x + pad + 110, y - 2, `使用中 ${used} / ${docks}  ·  入渠 ${progress.docks.length}・建造 ${builds.length}  ·  空き ${Math.max(0, docks - used)}`, textStyle(13, used >= docks ? Css.gold : Css.muted)));
+    y += IS_PORTRAIT ? 30 : 24;
     const next = nextDock(progress);
     if (next) {
       const label = `第${docks + 1}ドック増設  ${formatResources(next.cost)}`;
       add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 14 : 8), next.state === 'rank' ? `第${docks + 1}ドック: ${next.rankName}に昇進すると増設できます` : label, textStyle(12, next.state === 'rank' ? Css.dim : Css.muted)).setOrigin(0, 0.5));
       if (next.state !== 'rank') {
         add(new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 14 : 8), '増設', () => this.buildDock(), {
-          variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 48 : 30, fontSize: 13,
+          variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 40 : 28, fontSize: 13,
         })).setEnabled(next.state === 'ready');
       }
-      y += IS_PORTRAIT ? 48 : 30;
+      y += IS_PORTRAIT ? 40 : 28;
     }
-    add(this.add.text(d.x + pad, y, `高速修理: 高速修理材 1 個 (所持 ${progress.items.fastRepair})、なければ ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim)));
-    y += IS_PORTRAIT ? 40 : 28;
-
-    // Damaged ships waiting for a dock
-    const damagedAll = Object.keys(progress.damage)
+    const damaged = Object.keys(progress.damage)
       .map((id) => this.registryShips.byId(id))
       .filter((s): s is IShipData => s !== undefined && !isDocked(all, s.id));
-    const damaged = damagedAll;
-    add(this.add.text(d.x + pad, y, damaged.length > 0 ? `損傷艦 ${damaged.length} 隻` : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
-    const headY = y;
-    y += IS_PORTRAIT ? 36 : 26;
-    const dockFree = used < docks;
-    // Only as many rows as fit above the panel's bottom edge (#286: full docks left no room in landscape either); the
-    // rest are in the sheet opened from the header.
-    const maxRows = Math.max(0, Math.min(MAX_DAMAGED_ROWS, damaged.length, Math.floor((d.y + d.h - y) / L.rowH)));
-    for (const ship of damaged.slice(0, maxRows)) {
-      const f = hpFraction(progress, ship.id);
-      const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
-      add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-      const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${repairTimeText(time, clock)}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
-      const btn = add(
-        new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 14, time <= 0 ? '即時修理' : '入渠', () => this.dock(ship), {
-          variant: 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 52 : 34, fontSize: 14,
-        }),
-      );
-      // A ship out on an unfinished sortie (#138) can't be docked until it comes home.
-      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
-      if (away) btn.setLabel('出撃中');
-      btn.setEnabled(!away && dockFree && canAfford(progress.resources, cost));
-      y += L.rowH;
-    }
-    if (damaged.length > maxRows) {
-      // Every damaged ship, in a scrolling sheet (#275), from the header: more docks used to push the rest off the panel.
-      const bw = IS_PORTRAIT ? 220 : 220;
-      add(new UIButton(this, d.x + d.w - pad - bw / 2, headY + 6, `すべて表示 (他 ${damaged.length - maxRows} 隻)`, () => this.openDamaged(), {
-        variant: 'secondary', width: bw, height: IS_PORTRAIT ? 36 : 26, fontSize: 12,
-      }));
-    }
-  }
+    const note = add(this.add.text(d.x + pad, y, `${damaged.length > 0 ? `損傷艦 ${damaged.length} 隻 (タップで入渠)` : '損傷艦はありません'}  ·  高速修理: 高速修理材 1 個 (所持 ${progress.items.fastRepair})、なければ ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
+    y += note.height + 8;
 
-  /** All damaged ships of this base, scrolling; a tap docks one (#275). */
-  private openDamaged(): void {
-    this.closeNationPicker();
-    const progress = loadProgress();
-    const all = progress;
-    const event = activeEffects();
-    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
-    const docks = dockCount(fleetDockView(progress));
-    const used = progress.docks.length + buildsHere(progress).length;
-    const ships = Object.keys(progress.damage)
-      .map((id) => this.registryShips.byId(id))
-      .filter((s): s is IShipData => s !== undefined && !isDocked(all, s.id));
-    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
-      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
-      this.overlay.push(o);
-      return o;
+    const list = new ScrollList(this, { x: d.x + pad - 4, y, w: d.w - pad * 2 + 8, h: d.y + d.h - 12 - y });
+    this.dockList = list;
+    const rowW = d.w - pad * 2 - 8;
+    const rowH = IS_PORTRAIT ? 70 : 50;
+    // Portrait: the tag over the name on the left, the action and the time left on the right, the meter along the
+    // bottom. Landscape: tag, name over the meter (time to its right) or the damage line, the action on the right.
+    const meterX = IS_PORTRAIT ? 12 : 110;
+    const meterW = IS_PORTRAIT ? rowW - 24 : rowW - meterX - 300;
+    let row = 0;
+    const addRow = (o: { tag: string; tagCss: string; name: string; sub?: string; meter?: { total: number; endsAt: number }; action: string; can: boolean; onTap: () => void }): void => {
+      const top = row * (rowH + 6);
+      row += 1;
+      const parts: Phaser.GameObjects.GameObject[] = [
+        drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 10, fill: Colors.panel, fillAlpha: o.can ? 0.55 : 0.3, rimAlpha: o.can ? 0.35 : 0.12 }),
+        IS_PORTRAIT ? this.add.text(12, 8, o.tag, eyebrowStyle(10, o.tagCss)) : this.add.text(12, rowH / 2, o.tag, eyebrowStyle(10, o.tagCss)).setOrigin(0, 0.5),
+        this.add.text(IS_PORTRAIT ? 12 : meterX, IS_PORTRAIT ? 26 : 6, o.name, textStyle(14, o.can ? Css.text : Css.muted, { fontStyle: 'bold' })),
+        IS_PORTRAIT ? this.add.text(rowW - 14, 18, o.action, eyebrowStyle(11, o.can ? Css.cyan : Css.dim)).setOrigin(1, 0.5) : this.add.text(rowW - 14, rowH / 2, o.action, eyebrowStyle(11, o.can ? Css.cyan : Css.dim)).setOrigin(1, 0.5),
+      ];
+      if (o.meter) {
+        // The meter and the time left update every frame (see update()).
+        const my = IS_PORTRAIT ? rowH - 14 : 34;
+        const g = this.add.graphics();
+        const t = IS_PORTRAIT ? this.add.text(rowW - 14, 40, '', textStyle(11, Css.muted)).setOrigin(1, 0.5) : this.add.text(meterX + meterW + 12, my + 4, '', textStyle(11, Css.muted)).setOrigin(0, 0.5);
+        parts.push(g, t);
+        this.dockMeters.push({ g, t, x: meterX, y: my, w: meterW, total: o.meter.total, endsAt: o.meter.endsAt });
+      } else if (o.sub) {
+        parts.push(this.add.text(IS_PORTRAIT ? 12 : meterX, rowH - 6, o.sub, textStyle(11, Css.muted)).setOrigin(0, 1));
+      }
+      list.addItem(this.add.container(0, top, parts), rowW, rowH, () => {
+        if (o.can) o.onTap();
+      });
     };
-    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
-    const r = IS_PORTRAIT ? { x: 24, y: 150, w: CANVAS_W - 48, h: CANVAS_H - 300 } : { x: 240, y: 60, w: 800, h: 600 };
-    add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
-    add(this.add.text(r.x + 24, r.y + 20, `損傷艦 ${ships.length} 隻  ·  ドック ${used} / ${docks}`, eyebrowStyle(11, Css.danger)));
-    add(this.add.text(r.x + 24, r.y + 44, 'タップで入渠します', textStyle(12, Css.muted)));
-    const top = r.y + 76;
-    const bottom = r.y + r.h - (IS_PORTRAIT ? 90 : 70);
-    const list = new ScrollList(this, { x: r.x + 20, y: top, w: r.w - 36, h: bottom - top });
-    list.setDepth(OVERLAY_DEPTH + 1);
-    this.overlayList = list;
-    const rowH = IS_PORTRAIT ? 72 : 56;
-    const rowW = r.w - 52;
-    ships.forEach((ship, row) => {
-      const f = hpFraction(progress, ship.id);
-      const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
-      const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
-      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
-      const can = !away && used < docks && canAfford(progress.resources, cost);
-      const frame = drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 12, fill: Colors.panel, fillAlpha: can ? 0.6 : 0.3, rimAlpha: can ? 0.4 : 0.15 });
-      const name = this.add.text(16, 10, ship.name, textStyle(14, can ? Css.text : Css.muted, { fontStyle: 'bold' }));
-      const sub = this.add.text(16, rowH - 10, `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${repairTimeText(time, clock)}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)).setOrigin(0, 1);
-      const state = this.add.text(rowW - 14, rowH / 2, away ? '出撃中' : used >= docks ? 'ドック満杯' : !canAfford(progress.resources, cost) ? '資源不足' : time <= 0 ? '即時修理' : '入渠', eyebrowStyle(11, can ? Css.cyan : Css.dim)).setOrigin(1, 0.5);
-      list.addItem(this.add.container(0, row * (rowH + 6), [frame, name, sub, state]), rowW, rowH, () => {
-        if (!can) return;
-        this.closeNationPicker();
-        this.dock(ship);
+    // Repairs: a 高速修理材 (#143) is used first; without one the repair is paid in resources.
+    const items = progress.items.fastRepair;
+    const canRush = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
+    progress.docks.forEach((job, i) => {
+      const ship = this.registryShips.byId(job.shipId);
+      if (!ship) return;
+      addRow({
+        tag: `入渠 ${i + 1}`, tagCss: Css.gold, name: ship.name,
+        meter: { total: repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass), endsAt: job.endsAt },
+        action: items > 0 ? `高速修理材 (${items})` : canRush ? '高速修理' : '資源不足', can: canRush, onTap: () => this.fastRepair(ship.id),
       });
     });
-    list.setContentHeight(Math.max(0, ships.length * (rowH + 6) - 6));
-    add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeNationPicker(), {
-      variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15,
-    }));
+    // Builds (#264): a 高速建造材 finishes one at once.
+    builds.forEach((job, i) => {
+      const ship = this.registryShips.byId(job.shipId);
+      if (!ship) return;
+      const fast = all.items.fastBuild;
+      addRow({
+        tag: `建造 ${i + 1}`, tagCss: Css.cyan, name: ship.name,
+        meter: { total: buildTimeMs(ship, fleetBuildTimeMul(all)), endsAt: job.endsAt },
+        action: fast > 0 ? `高速建造材 (${fast})` : '工廠へ', can: true, onTap: () => this.finishBuild(ship.id),
+      });
+    });
+    // Damaged ships waiting for a dock; one out on an unfinished sortie (#138) can't be docked until it comes home.
+    const dockFree = used < docks;
+    for (const ship of damaged) {
+      const f = hpFraction(progress, ship.id);
+      const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
+      const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
+      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
+      const afford = canAfford(progress.resources, cost);
+      addRow({
+        tag: '損傷', tagCss: Css.danger, name: ship.name,
+        sub: `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${repairTimeText(time, clock)}  ·  ${formatResources(cost)}`,
+        action: away ? '出撃中' : !dockFree ? 'ドック満杯' : !afford ? '資源不足' : time <= 0 ? '即時修理' : '入渠',
+        can: !away && dockFree && afford, onTap: () => this.dock(ship),
+      });
+    }
+    list.setContentHeight(Math.max(0, row * (rowH + 6) - 6)).setOffset(dockOffset);
   }
 
   private buildDock(): void {

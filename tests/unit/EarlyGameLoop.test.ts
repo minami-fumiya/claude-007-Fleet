@@ -27,9 +27,9 @@ const T0 = 1_700_000_000_000;
 const MIN = REGEN_INTERVAL_MS;
 
 describe('natural regeneration (#28)', () => {
-  it('+6 fuel, +4 ammo, +5 steel and +1 bauxite per minute', () => {
+  it('+6 fuel, +4 ammo, +6 steel and +1 bauxite per minute', () => {
     const r = regenerate(resources(), T0, T0 + 5 * MIN + 30_000);
-    expect(r.resources).toEqual({ fuel: 30, ammo: 20, steel: 25, bauxite: 5 });
+    expect(r.resources).toEqual({ fuel: 30, ammo: 20, steel: 30, bauxite: 5 });
     // The partial minute carries over.
     expect(r.regenAt).toBe(T0 + 5 * MIN);
     expect(nextRegenMs(r.regenAt, T0 + 5 * MIN + 30_000)).toBe(30_000);
@@ -198,16 +198,16 @@ describe('fuel, ammo and steel stay in balance (#35 / 0.0.12)', () => {
       const raw = (k: keyof IResources): number => reward[k] - sortie[k] - repair[k];
       for (const k of ['fuel', 'ammo', 'steel'] as const) expect(raw(k), `${fleet.map((s) => s.id)} ${k}`).toBeGreaterThan(0);
       // No resource lags far behind another (fuel was short in 0.0.12, steel in 0.0.16 and 0.0.27, #132 #222).
-      // Builds take about twice as much steel as fuel, so steel may lead by up to 2.5×.
-      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') * 0.4);
-      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') * 0.4);
+      // Builds take two to three times as much steel as fuel (armour), so steel may lead by up to 3× (#296).
+      expect(raw('fuel')).toBeGreaterThanOrEqual(raw('steel') / 3);
+      expect(raw('ammo')).toBeGreaterThanOrEqual(raw('steel') / 3);
       expect(raw('steel')).toBeGreaterThanOrEqual(Math.max(raw('fuel'), raw('ammo')) * 0.6);
       expect(net.fuel).toBeGreaterThanOrEqual(0);
     }
   });
 
-  it('fuel regenerates fastest, then steel (builds burn it, #222) and ammo', () => {
-    expect(REGEN_PER_TICK.fuel).toBeGreaterThan(REGEN_PER_TICK.steel);
+  it('fuel and steel regenerate fastest (builds burn steel, #222 #296), then ammo', () => {
+    expect(REGEN_PER_TICK.fuel).toBe(REGEN_PER_TICK.steel);
     expect(REGEN_PER_TICK.steel).toBeGreaterThanOrEqual(REGEN_PER_TICK.ammo);
   });
 
