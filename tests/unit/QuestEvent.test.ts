@@ -199,7 +199,7 @@ describe('sweep (#57)', () => {
     const p = { ...base(), perfect: [area.id] };
     const r = sweepArea(p, area, enemy, MONDAY_5AM)!;
     const cost = sweepCost(area, enemy);
-    const won = battleReward(true, enemy.length);
+    const won = battleReward(true, enemy.length, enemy.map((s) => s.shipClass));
     expect(r.reward.fuel).toBe(Math.round(won.fuel * SWEEP_REWARD_SCALE));
     expect(r.progress.resources.fuel).toBe(p.resources.fuel - cost.fuel + r.reward.fuel);
     expect(r.merit).toBeGreaterThan(0);

@@ -156,9 +156,9 @@
       ],
       "spriteKey": "aquila",
       "airWing": {
-        "fighters": 4,
-        "diveBombers": 3,
-        "torpedoBombers": 2
+        "fighters": 5,
+        "diveBombers": 5,
+        "torpedoBombers": 4
       },
       "fictional": true,
       "description": "客船ローマを改造したイタリア初の航空母艦。ほぼ完成したが、就役することなく終戦を迎えた (架空艦)。",

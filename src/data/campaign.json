@@ -42,7 +42,7 @@
     {
       "id": "p5", "theater": "pacific", "name": "機動部隊決戦", "description": "敵空母機動部隊を捕捉、撃滅せよ。",
       "x": 0.58, "y": 0.62, "requires": [], "requiresAny": ["p4", "p7"],
-      "enemy": { "nation": "USN", "ships": ["essex", "enterprise", "baltimore", "des_moines", "fletcher", "gearing"] },
+      "enemy": { "nation": "USN", "ships": ["essex", "enterprise", "baltimore", "fletcher", "gearing"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 600, "ammo": 500, "steel": 600, "bauxite": 500 }, "rewardShip": "Carrier"
     },
@@ -73,7 +73,7 @@
     {
       "id": "p6", "theater": "pacific", "name": "環礁要塞攻略", "description": "環礁の砲台と港湾、飛行場を艦砲射撃で破壊せよ。",
       "x": 0.9, "y": 0.36, "requires": ["p9"],
-      "enemy": { "nation": "USN", "ships": ["iowa", "baltimore", "des_moines", "fletcher", "gearing", "sumner", "buckley"] },
+      "enemy": { "nation": "USN", "ships": ["iowa", "south_dakota", "baltimore", "des_moines", "fletcher", "gearing", "sumner", "buckley"] },
       "objective": "Bombard", "map": "atoll", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 800, "ammo": 800, "steel": 1000, "bauxite": 400 }, "rewardShip": "Battleship"
     },

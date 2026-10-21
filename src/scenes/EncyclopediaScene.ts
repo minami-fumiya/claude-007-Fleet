@@ -66,7 +66,7 @@ const GROUND: IGroundEntry[] = [
   { ...specialData.convoy, description: '作戦「船団護衛」で守る、または沈める輸送船。武装は無い。' },
   ...specialData.landTargets.map((t) => ({
     ...t,
-    description: t.id === 'land_battery' ? '海岸に据えた砲台。近づく艦を砲撃してくる。' : t.id === 'land_harbor' ? '港湾施設。作戦「対地攻撃」の目標。' : '飛行場。作戦「対地攻撃」の目標。今後、航空機を出撃させる (#83)。',
+    description: t.id === 'land_battery' ? '海岸に据えた砲台。近づく艦を砲撃してくる。' : t.id === 'land_harbor' ? '港湾施設。作戦「対地攻撃」の目標。' : '飛行場。作戦「対地攻撃」の目標。航空隊を持ち、攻撃隊を出してくる。耐久が減ると発進が遅れ、破壊すると止まる。',
   })),
 ];
 
