@@ -16,7 +16,7 @@ describe('お知らせ (#192)', () => {
     expect(pendingSummary(base(), NOW, 1)).toEqual([{ id: 'docks', label: '空きドック', count: 1, scene: SceneKeys.SHIPYARD }]);
   });
 
-  it('counts rewards to take, sweeps banked and captain books, each pointing at its screen', () => {
+  it('counts rewards to take and sweeps banked, each pointing at its screen; captain books stay off the strip (#303)', () => {
     const q = activeQuests('hourly', NOW)[0];
     const p: IProgress = {
       ...base(),
@@ -28,7 +28,7 @@ describe('お知らせ (#192)', () => {
     };
     const s = pendingSummary(p, NOW, 0);
     expect(claimableCount(p.quests, NOW)).toBeGreaterThan(0);
-    expect(s.map((i) => [i.id, i.count])).toEqual([['quests', claimableCount(p.quests, NOW)], ['sweeps', 2], ['books', 2]]);
+    expect(s.map((i) => [i.id, i.count])).toEqual([['quests', claimableCount(p.quests, NOW)], ['sweeps', 2]]);
     expect(s.find((i) => i.id === 'sweeps')?.scene).toBe(SceneKeys.CAMPAIGN);
     // The notice opens the map on the area with the most charges (#283).
     expect(s.find((i) => i.id === 'sweeps')?.data).toEqual({ areaId: 'p1' });

@@ -1286,7 +1286,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .setInteractive();
       const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted)).setOrigin(1, 0);
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0);
       this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 46, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 76 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn], 60);
       return;
@@ -1295,7 +1295,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
     this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6 }));
+    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } }));
     this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
   }
 
@@ -1311,7 +1311,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const bar = this.add.rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
       const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted)).setOrigin(1, 0);
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0);
       const bw = (f.w - 32 - 12) / 2;
       this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 46, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 76, fontSize: 22 });
       const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 46, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 76, fontSize: 22 });
@@ -1321,7 +1321,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
     this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6 }));
+    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } }));
     this.startBtn = new UIButton(this, f.x + f.w - 172 - 300 - 16, f.y + f.h / 2, '作戦へ  ›', toCampaign, { variant: 'gold', width: 300, height: 60, fontSize: 22 });
     new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '演習へ  ›', toExercise, { variant: 'primary', width: 300, height: 60, fontSize: 22 });
   }

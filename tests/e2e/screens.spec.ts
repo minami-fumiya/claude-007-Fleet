@@ -800,16 +800,16 @@ test.describe('screens', () => {
       return out;
     });
     // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full; shown on the 作戦
-    // button, no longer in the strip), the captain book.
+    // button, no longer in the strip); the captain book stays off it (#303).
     const labels = await texts();
     expect(labels.some((t) => /^任務 \d+$/.test(t)), `quest notice (${layout})`).toBe(true);
     expect(labels.some((t) => t === '掃討 3'), `sweep notice (${layout})`).toBe(true);
-    expect(labels.some((t) => t === '艦長教本 1'), `book notice (${layout})`).toBe(true);
+    expect(labels.some((t) => t.startsWith('艦長教本')), `no book notice (${layout})`).toBe(false);
     // #243: the notices have a strip of their own, above the dock panel (its title row is the panel's top).
     const placed = await page.evaluate(() => {
       const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
       const textOf = (o: Phaser.GameObjects.GameObject): string | undefined => (o.type === 'Text' ? (o as Phaser.GameObjects.Text).text : undefined);
-      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => textOf(x) === '艦長教本 1')) as Phaser.GameObjects.Container | undefined;
+      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => /^任務 \d+$/.test(textOf(x) ?? ''))) as Phaser.GameObjects.Container | undefined;
       const title = scene.children.list.find((o) => textOf(o) === '入渠 — 損傷艦の修理') as Phaser.GameObjects.Text | undefined;
       return { chipBottom: chip ? chip.y + chip.height / 2 : NaN, titleTop: title ? title.y : NaN };
     });
