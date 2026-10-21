@@ -18,6 +18,9 @@ import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepC
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { areaDepth, curveText, fleetPower } from '@/systems/DifficultyCurve';
+import { IShipData } from '@/types/Ship';
+import { ownFleetPower, powerCompareText, powerTone } from '@/systems/FleetPower';
+import { selectedShipIds } from '@/utils/FleetSelection';
 import { prerequisitesOf, areasOf, firstSReward, lockText, sevenSeasText, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
 import { captainsLeft } from '@/systems/CaptainRoster';
@@ -123,11 +126,20 @@ export class CampaignMapScene extends Phaser.Scene {
     // 七つの海 (#250): how many of the seven this admiral has taken, any navy's conquests counted.
     // Portrait: in the row of the back button, where the title leaves room; landscape: under the title.
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? back.y : 86, sevenSeasText(DATA, loadSave().nations), textStyle(12, Css.gold)).setOrigin(0.5);
-    this.theaters = theatersFor(DATA, loadProgress().nation);
-    if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
-    // A sortie left unfinished (#138) opens on its area.
+    // Only the seas the open bases reach are on the map (#282); the rest wait for a base to open.
     const pending = pendingSortie(this);
     const pendingArea = pending ? DATA.areas.find((a) => a.id === pending.areaId) : undefined;
+    const reachable = baseOfProgress(loadProgress());
+    const all = theatersFor(DATA, loadProgress().nation);
+    this.theaters = all.filter((t) => baseReaches(reachable, t.id) || t.id === pendingArea?.theater);
+    const hidden = all.filter((t) => !this.theaters.includes(t));
+    if (hidden.length > 0) {
+      const names = IS_PORTRAIT ? '' : ` (${hidden.map((t) => t.name).join('・')})`;
+      const note = this.add.text(L.map.x + 18, L.map.y + L.map.h - 14, `ほか ${hidden.length} 戦域${names}は、軍港を開くと出撃できます`, textStyle(12, Css.dim)).setOrigin(0, 1).setDepth(2);
+      if (note.width > L.map.w - 36) note.setScale((L.map.w - 36) / note.width);
+    }
+    if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
+    // A sortie left unfinished (#138) opens on its area.
     if (pendingArea && this.theaters.some((t) => t.id === pendingArea.theater)) this.theater = pendingArea.theater;
     const focus = !pendingArea && this.focusArea ? DATA.areas.find((a) => a.id === this.focusArea) : undefined;
     if (focus && this.theaters.some((t) => t.id === focus.theater)) this.theater = focus.theater;
@@ -150,9 +162,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const base = baseOfProgress(loadProgress());
     this.theaters.forEach((t, i) => {
       const pct = Math.round(theaterProgress(DATA, t.id, cleared) * 100);
-      // A theater out of the current base's reach (#145) is marked; its map can still be read.
       // Up to six theaters a navy (#250): portrait puts the percentage under the name. 内海 marks the Baltic and the
-      // Black Sea where the tab has room (landscape).
+      // Black Sea where the tab has room (landscape). A sea no open base reaches only shows for a sortie left there.
       const away = baseReaches(base, t.id) ? '' : ' 他港';
       const name = `${t.name}${t.inland && !IS_PORTRAIT ? '(内海)' : ''}`;
       this.tabs[i].setLabel(IS_PORTRAIT ? `${name}\n${pct}%${away}` : `${name} ${pct}%${away}`).setVariant(t.id === id ? 'primary' : 'secondary');
@@ -270,6 +281,11 @@ export class CampaignMapScene extends Phaser.Scene {
     const sReward = firstSReward(a, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), a.id), perfect: progress.perfect, captainsLeft: captainsLeft(progress.nation, progress.captains) });
     const reward = formatResources(a.reward) + (sReward?.kind === 'ship' ? `  /  S 評価の報酬: ${sReward.ship.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(sReward.ship)})` : '');
     const captain = sReward?.kind === 'captain' ? 'S 評価の報酬: 艦長 +1' : '';
+    // 自艦隊の戦力 (#280): the fleet last set up in the builder, against this area's enemy.
+    const enemyPower = fleetPower(enemy);
+    const ownShips = selectedShipIds(this.registry, progress.nation).map((id) => roster.find((s) => s.id === id)).filter((s): s is IShipData => s !== undefined);
+    const ownPower = ownShips.length > 0 ? ownFleetPower(ownShips, progress, DataLoader.getUpgrades(this)) : 0;
+    const tone = powerTone(ownPower, enemyPower);
     const giantEvent = activeEvent();
     const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [
@@ -284,8 +300,10 @@ export class CampaignMapScene extends Phaser.Scene {
       // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.
       // Portrait shares the route's row, so the briefing stays clear of the buttons.
       ...(IS_PORTRAIT
-        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(fleetPower(enemy), areaDepth(DATA, a))}`] as [string, string]]
-        : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(fleetPower(enemy), areaDepth(DATA, a))]] as Array<[string, string]>),
+        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(enemyPower, areaDepth(DATA, a))}${ownPower > 0 ? `  ·  自艦隊 ×${(ownPower / enemyPower).toFixed(2)}` : ''}`] as [string, string]]
+        : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(enemyPower, areaDepth(DATA, a))],
+          // The fleet last set up, weighed the same way (#280).
+          ...(ownPower > 0 ? [['戦力の比較', powerCompareText(ownPower, enemyPower)] as [string, string]] : [])] as Array<[string, string]>),
       ...(open ? [] : [['解放の条件', lockText(DATA, a, cleared)] as [string, string]]),
       ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];
@@ -302,7 +320,8 @@ export class CampaignMapScene extends Phaser.Scene {
       add(this.add.text(x, y, k, eyebrowStyle(10, Css.gold)));
       // Battleships, carriers or heavy cruisers in the enemy fleet show in gold.
       const strong = k === '敵' && hasCapitalShips(enemy);
-      const t = add(this.add.text(x, y + 18, v, textStyle(13, strong ? Css.gold : Css.text, { ...wrap, lineSpacing: 4 })));
+      const compare = k === '戦力の比較' ? { danger: Css.danger, even: Css.gold, ahead: Css.success }[tone] : undefined;
+      const t = add(this.add.text(x, y + 18, v, textStyle(13, compare ?? (strong ? Css.gold : Css.text), { ...wrap, lineSpacing: 4 })));
       y = t.y + t.height + 10;
     }
     // 掃討 (#57): an area won without losses can be swept, skipping the battle.
@@ -337,7 +356,7 @@ export class CampaignMapScene extends Phaser.Scene {
     // Sorties leave from a base that reaches the theater (#145).
     const reach = baseReaches(baseOfProgress(progress), a.theater);
     const from = basesFor(progress.nation, a.theater).map((b) => b.name).join('・');
-    const label = !open ? '前の海域を攻略してください' : reach ? '出撃準備  ›' : `${from}から出撃 (軍港を移す)`;
+    const label = !open ? '前の海域を攻略してください' : reach ? '出撃準備  ›' : `${from}を開港すると出撃可`;
     const btn = add(
       new UIButton(this, d.x + 24 + bw / 2, by, label, () => this.prepare(a), {
         variant: open && reach ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open && reach ? 20 : 14,

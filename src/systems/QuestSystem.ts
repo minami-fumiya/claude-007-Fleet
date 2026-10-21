@@ -33,6 +33,8 @@ export type QuestEvent =
   | 'refitRebranch' | 'buildDone' | 'listSearch'
   // 0.0.37: a direction on a special refit (#277), land targets destroyed (#278)
   | 'specialBranch' | 'landKill'
+  // 0.0.38: campaign wins against a stronger enemy (#280)
+  | 'underdogWin'
   // the Black Sea theater and training areas (#202)
   | 'winBlackSea' | 'trainingWin'
   // The seas added in 0.0.35 (#250)

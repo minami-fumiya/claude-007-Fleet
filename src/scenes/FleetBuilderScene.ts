@@ -42,6 +42,9 @@ import { actionVariant, addBackdrop, addChip, addPanel, drawMeter, drawPanel, ma
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
+import { SELECTION_KEY } from '@/utils/FleetSelection';
+import { ownFleetPower } from '@/systems/FleetPower';
+import { fleetPower } from '@/systems/DifficultyCurve';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -210,7 +213,7 @@ function choiceLabel<T extends string>(c: Choice<T>, labels: Record<T, string>):
  * Fleet Builder setups by nation, kept in the game registry for the session: leaving the builder any way (sortie,
  * refit, back) and coming back restores the fleet, formation and settings (#77).
  */
-export const SELECTION_KEY = 'fleetBuilder.selections';
+export { SELECTION_KEY };
 export interface ISelection {
   nation: Nation;
   enemyNation: Choice<Nation>;
@@ -1542,17 +1545,23 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.detail = [];
   }
 
+  /** 戦力 (#280): the fleet weighed like an area's enemy, and against the area's enemy when sortieing to one. */
+  private powerLabel(ships: IShipData[]): string {
+    const own = ownFleetPower(ships, loadProgress(), DataLoader.getUpgrades(this));
+    if (!this.area) return `戦力 ${own.toLocaleString('en-US')}`;
+    const enemy = fleetPower(enemyShips(this.area, this.shipRegistry, enemyNationFor(campaignData as ICampaignData, this.area, this.nation)));
+    return `戦力 ${own.toLocaleString('en-US')} (敵 ${enemy.toLocaleString('en-US')} ×${(own / Math.max(1, enemy)).toFixed(2)})`;
+  }
+
   private refreshFooter(): void {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
     this.countText.setText(`${ships.length} / ${this.slotCount} 隻`);
     if (ships.length === 0) {
       this.summaryText.setText(IS_PORTRAIT ? '艦を選ぶと出撃できます' : '艦を 1 隻以上選ぶと出撃できます');
     } else if (this.organizeOnly) {
-      const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const formation = FORMATION_RULES[this.formation].ja;
-      this.summaryText.setText(IS_PORTRAIT ? `${formation} · 総耐久 ${totalHp}` : `総耐久 ${totalHp}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n編成を終えたら、作戦か演習へ進みます`).setColor(Css.muted);
+      this.summaryText.setText(IS_PORTRAIT ? `${formation} · ${this.powerLabel(ships)}` : `${this.powerLabel(ships)}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n編成を終えたら、作戦か演習へ進みます`).setColor(Css.muted);
     } else {
-      const totalHp = ships.reduce((sum, s) => sum + s.hp, 0);
       const minSpeed = Math.min(...ships.map((s) => s.speed));
       const formation = FORMATION_RULES[this.formation].ja;
       const opts = this.sortieOptions();
@@ -1564,7 +1573,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .setText(
           IS_PORTRAIT
             ? blockers.length > 0 ? second : `${formation} · ${price}`
-            : `総耐久 ${totalHp}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
+            : `${this.powerLabel(ships)}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
         )
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
