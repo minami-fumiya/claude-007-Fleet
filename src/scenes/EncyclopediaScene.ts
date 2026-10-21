@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
 import { filterShips, IListFilter, kindsOf, NO_FILTER } from '@/systems/ListFilter';
 import { FilterBar, loadFilter } from '@/ui/components/FilterBar';
+import { shipSearchNames } from '@/utils/SearchHistory';
 import { formatNo } from '@/systems/Numbering';
 import { HIDDEN_NAME, hiddenShipName } from '@/systems/RevealSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -28,6 +29,7 @@ import { ScrollList } from '@/ui/components/ScrollList';
 import campaignData from '@/data/campaign.json';
 import aircraftData from '@/data/aircraft.json';
 import specialData from '@/data/special.json';
+import superweaponData from '@/data/superweapons.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
@@ -61,12 +63,17 @@ const AIRCRAFT_ROLE: Record<AircraftType, string> = {
   [AircraftType.TorpedoBomber]: '低空から魚雷を放つ。大型艦に大きな損害を与える。',
   [AircraftType.Recon]: '戦艦・巡洋艦から飛び、敵を見つけて触接する (#98)。',
 };
-interface IGroundEntry { id: string; no?: number; name: string; spriteKey: string; hp: number; armor: number; description: string }
+interface IGroundEntry { id: string; no?: number; name: string; spriteKey: string; hp: number; armor: number; description: string; kind?: string; scale?: number }
 const GROUND: IGroundEntry[] = [
   { ...specialData.convoy, description: '作戦「船団護衛」で守る、または沈める輸送船。武装は無い。' },
   ...specialData.landTargets.map((t) => ({
     ...t,
-    description: t.id === 'land_battery' ? '海岸に据えた砲台。近づく艦を砲撃してくる。' : t.id === 'land_harbor' ? '港湾施設。作戦「対地攻撃」の目標。' : '飛行場。作戦「対地攻撃」の目標。今後、航空機を出撃させる (#83)。',
+    description: t.id === 'land_battery' ? '海岸に据えた砲台。近づく艦を砲撃してくる。' : t.id === 'land_harbor' ? '港湾施設。作戦「対地攻撃」の目標。' : '飛行場。作戦「対地攻撃」の目標。航空隊を持ち、攻撃隊を出してくる。耐久が減ると発進が遅れ、破壊すると止まる。',
+  })),
+  // 超兵器 (#148, in the book since #315): each navy's giant, met in the 超兵器出現 event.
+  ...superweaponData.superweapons.map((w) => ({
+    id: w.id, no: w.no, name: w.name, spriteKey: w.spriteKey, hp: w.hp, armor: w.armor, kind: '超兵器', scale: 0.8,
+    description: `${w.description} 超兵器出現のイベント中、${NATION_INFO[w.nation as Nation].ja}の戦域の主力艦隊に加わる。部位 (主砲・機関・艦橋) を壊すと弱る。`,
   })),
 ];
 
@@ -201,8 +208,14 @@ export class EncyclopediaScene extends Phaser.Scene {
         return AIRCRAFT.filter((a) => a.nation === this.nation).map((a) => ({
           id: a.id, name: this.aircraftKnown(a.type) ? a.name : HIDDEN_NAME, sub: AIRCRAFT_TYPE_JA[a.type], icon: AIRCRAFT_TEXTURE[a.type], owned: this.aircraftKnown(a.type),
         }));
-      case 'ground':
-        return GROUND.map((g) => ({ id: g.id, name: g.name, sub: g.id === 'convoy_ship' ? '支援' : '地上', icon: g.spriteKey, owned: true }));
+      case 'ground': {
+        // A superweapon stays ？？？ until one has been sunk (#315, like unseen ships #245).
+        const seen = this.giantsSunk();
+        return GROUND.map((g) => {
+          const hidden = g.kind === '超兵器' && !seen;
+          return { id: g.id, name: hidden ? HIDDEN_NAME : g.name, sub: g.kind ?? (g.id === 'convoy_ship' ? '支援' : '地上'), icon: hidden ? '' : g.spriteKey, owned: !hidden };
+        });
+      }
     }
   }
 
@@ -279,6 +292,11 @@ export class EncyclopediaScene extends Phaser.Scene {
       const bar = new FilterBar(this, { x: x + PAD, y: y + PAD + (NATION_ROWS + 2) * (L.tabH + TAB_GAP), w: inner, h: L.tabH }, {
         key: 'encyclopedia', states: null,
         kinds: () => kindsOf(filterEntries(DataLoader.getRegistry(this).byNation(this.nation), this.shipClass)),
+        // Only owned ships are suggested, so unseen ones stay ？？？ (#245 #308).
+        names: () => {
+          const owned = loadSave().nations[this.nation]?.ships ?? [];
+          return shipSearchNames(DataLoader.getRegistry(this).byNation(this.nation).filter((s) => owned.includes(s.id)));
+        },
         onChange: (f) => {
           this.shipFilter = f;
           this.list.setOffset(0);
@@ -464,10 +482,20 @@ export class EncyclopediaScene extends Phaser.Scene {
     if (owned) this.section(y, '解説', a.description, Css.muted);
   }
 
+  /** Whether any nation has sunk a superweapon (#315). */
+  private giantsSunk(): boolean {
+    return Object.values(loadSave().nations).some((np) => (np?.quests.totals.superweaponSunk ?? 0) > 0);
+  }
+
   private buildGroundDetail(g: IGroundEntry): void {
-    let y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.id === 'convoy_ship' ? '支援' : '地上目標'}`, g.name);
+    if (g.kind === '超兵器' && !this.giantsSunk()) {
+      const y = this.detailHeader(`${formatNo(g.no)}  ·  超兵器`, HIDDEN_NAME);
+      this.section(y, '解説', '超兵器出現のイベント中、戦域の主力艦隊に現れる。1 隻沈めると、すべての超兵器がここに載る。', Css.muted);
+      return;
+    }
+    let y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.kind ?? (g.id === 'convoy_ship' ? '支援' : '地上目標')}`, g.name);
     const d = L.detail;
-    this.track(this.add.image(d.x + d.w - 60, d.y + 60, g.spriteKey).setScale(2));
+    this.track(this.add.image(d.x + d.w - 60, d.y + 60, g.spriteKey).setScale(g.scale ?? 2));
     y = this.section(y, '性能', `耐久 ${g.hp}  装甲 ${g.armor}`);
     this.section(y, '解説', g.description, Css.muted);
   }

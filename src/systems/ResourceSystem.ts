@@ -126,14 +126,17 @@ export function sortieCost(ships: IShipData[]): IResources {
  * research, building and docks all burn it. Steel used to pay double (#35) and piled up while fuel ran out (0.0.12).
  */
 export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses: ShipClass[] = []): IResources {
-  const perSunk = resources({ fuel: 80, ammo: 70, steel: 0, bauxite: 20 });
+  // Fuel and steel come by class (0.0.39 review: late-game fleets burn far more fuel than early ones, and a flat 80 a
+  // sink left the late game short of it); ammo and bauxite stay flat.
+  const perSunk = resources({ fuel: 0, ammo: 70, steel: 0, bauxite: 20 });
   const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 220, bauxite: 50 }) : resources();
   const scale = victory ? 1 : 0.5;
   const out = addResources(bonus, perSunk, Math.max(0, enemiesSunk) * scale);
   // Steel comes from the wrecks (#132): big ships give more. Sinks without a known class count as average.
   const known = sunkClasses.slice(0, Math.max(0, enemiesSunk));
   const steel = known.reduce((sum, c) => sum + (SINK_STEEL[c] ?? SINK_STEEL_DEFAULT), 0) + (Math.max(0, enemiesSunk) - known.length) * SINK_STEEL_DEFAULT;
-  return { ...out, steel: Math.round(out.steel + steel * scale) };
+  const fuel = known.reduce((sum, c) => sum + (SINK_FUEL[c] ?? SINK_FUEL_DEFAULT), 0) + (Math.max(0, enemiesSunk) - known.length) * SINK_FUEL_DEFAULT;
+  return { ...out, fuel: Math.round(out.fuel + fuel * scale), steel: Math.round(out.steel + steel * scale) };
 }
 
 /** Steel salvaged per enemy sunk, by class (#132); a quarter more since 0.0.28 (#222): builds burn steel fastest. */
@@ -145,6 +148,16 @@ export const SINK_STEEL: Partial<Record<ShipClass, number>> = {
   [ShipClass.Submarine]: 45,
 };
 const SINK_STEEL_DEFAULT = 75;
+
+/** Fuel salvaged per enemy sunk, by class (0.0.39 review); a sink of unknown class pays the old flat 80. */
+export const SINK_FUEL: Partial<Record<ShipClass, number>> = {
+  [ShipClass.Battleship]: 130,
+  [ShipClass.Carrier]: 110,
+  [ShipClass.Cruiser]: 90,
+  [ShipClass.Destroyer]: 70,
+  [ShipClass.Submarine]: 60,
+};
+const SINK_FUEL_DEFAULT = 80;
 
 export function formatResources(r: Partial<IResources>, onlyNonZero = true): string {
   const x = resources(r);

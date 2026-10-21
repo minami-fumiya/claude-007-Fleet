@@ -87,9 +87,9 @@ describe('quests (#52)', () => {
   it('progress, claim once, daily reset keeps one-time quests', () => {
     let s = refreshQuests(emptyQuestState(), MONDAY_5AM);
     const weekly = activeQuests('weekly', MONDAY_5AM)[0];
-    s = recordQuestEvent(s, 'sortie', MONDAY_5AM, 25);
+    s = recordQuestEvent(s, 'sortie', MONDAY_5AM, 45);
     s = recordQuestEvent(s, weekly.event, MONDAY_5AM, 1);
-    expect(s.progress.d_sortie).toBe(20);
+    expect(s.progress.d_sortie).toBe(40);
     expect(s.progress[weekly.id]).toBeGreaterThanOrEqual(1);
     s = recordQuestEvent(s, 'build', MONDAY_5AM);
     expect(isClaimable(s, QUESTS.find((q) => q.id === 'a_build')!)).toBe(true);
@@ -141,12 +141,12 @@ describe('quests: the board (#158)', () => {
     expect(nextReset('hourly', now)).toBe(MONDAY_5AM + HOUR);
   });
 
-  it('a full hourly board pays about 600 fuel and ammo; dailies bring 3〜4 time-saving items a day (#180)', () => {
+  it('a full hourly board pays about 900 fuel and ammo (harder since 0.0.40, #323); dailies bring 3〜4 time-saving items a day (#180)', () => {
     const hourly = QUESTS.filter((q) => q.kind === 'hourly');
     for (const k of ['fuel', 'ammo'] as const) {
       const perHour = (hourly.reduce((s, q) => s + (q.reward[k] ?? 0), 0) / hourly.length) * QUESTS_SHOWN.hourly;
-      expect(perHour, k).toBeGreaterThanOrEqual(500);
-      expect(perHour, k).toBeLessThanOrEqual(700);
+      expect(perHour, k).toBeGreaterThanOrEqual(750);
+      expect(perHour, k).toBeLessThanOrEqual(1050);
     }
     // Expected items over many days: the four core dailies always, the rest drawn.
     const days = Array.from({ length: 60 }, (_, i) => activeQuests('daily', MONDAY_5AM + i * 24 * HOUR));
@@ -199,7 +199,7 @@ describe('sweep (#57)', () => {
     const p = { ...base(), perfect: [area.id] };
     const r = sweepArea(p, area, enemy, MONDAY_5AM)!;
     const cost = sweepCost(area, enemy);
-    const won = battleReward(true, enemy.length);
+    const won = battleReward(true, enemy.length, enemy.map((s) => s.shipClass));
     expect(r.reward.fuel).toBe(Math.round(won.fuel * SWEEP_REWARD_SCALE));
     expect(r.progress.resources.fuel).toBe(p.resources.fuel - cost.fuel + r.reward.fuel);
     expect(r.merit).toBeGreaterThan(0);

@@ -9,7 +9,7 @@
 
 import { ALL_CAPTAINS, nationCaptains } from '@/systems/CaptainRoster';
 import { CaptainSkill } from '@/types/Captain';
-import { rankOf } from '@/systems/RankSystem';
+import { finalAreas, RANKS, rankOf } from '@/systems/RankSystem';
 import { currentBase, nationBases } from '@/systems/BaseSystem';
 
 export type RawSave = Record<string, unknown>;
@@ -224,6 +224,16 @@ export const MIGRATIONS: MigrationStep[] = [
     const bases = new Set([...Object.keys(before), ...open, ...(home ? [home] : [])]);
     const baseDocks = Object.fromEntries([...bases].map((b) => [b, Math.min(8, Math.max(2, num(before[b])))]));
     return { ...nation, baseDocks };
+  }),
+  // v20 → v21 (0.0.40, #304): 元帥 needs every area of the nation's theaters, no longer only their finals. An admiral
+  // who made 元帥 the old way (the merit and every final) keeps the rank: it becomes their floor.
+  (data) => mapNations(data, (nation, key) => {
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const campaign = Array.isArray(nation.campaign) ? (nation.campaign as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+    const finals = finalAreas(key);
+    const marshal = RANKS[RANKS.length - 1];
+    const wasMarshal = num(nation.merit) >= marshal.minMerit && finals.length > 0 && finals.every((id) => campaign.includes(id));
+    return wasMarshal ? { ...nation, rankFloor: Math.max(num(nation.rankFloor), marshal.index) } : nation;
   }),
 ];
 

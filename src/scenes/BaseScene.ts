@@ -260,7 +260,8 @@ export class BaseScene extends Phaser.Scene {
     const name = nationBases(progress.nation).find((b) => b.id === progress.baseWork?.base)?.name ?? '軍港';
     const next = rushBaseWork(progress, Date.now());
     if (!next) return;
-    saveProgress(next);
+    // The item and the base opened count for their medal and quest (#314 #315).
+    saveProgress(withQuestEvents(next, [['fastBuildUse', 1], ['baseOpened', 1]], Date.now()));
     this.status = `${name}が開港しました`;
     this.refresh();
   }

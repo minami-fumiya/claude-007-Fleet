@@ -3,6 +3,7 @@ import { UIButton } from './UIKit';
 import { IListFilter, LIST_STATE_LABEL, ListState, nextIn, NO_FILTER } from '@/systems/ListFilter';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { askText } from './TextInputSheet';
 
 /** The rectangle the bar fills. */
 interface IBarRect { x: number; y: number; w: number; h: number }
@@ -18,6 +19,8 @@ interface IFilterBarOptions {
   /** The filter on a first visit */
   initial?: Partial<IListFilter>;
   fontSize?: number;
+  /** Names the search suggests (#308): the list's ships */
+  names?: () => string[];
 }
 
 const STORE = 'ww2fleet.filter.';
@@ -34,13 +37,18 @@ export function loadFilter(key: string, fallback: IListFilter = NO_FILTER): ILis
   }
 }
 
-/** Asks for a ship name (#263): the answer trimmed, or null when cancelled. A search counts toward 捜索章. */
-export function askShipName(current: string): string | null {
-  const answer = window.prompt('艦名・級の名前で検索 (空欄で解除)', current);
+/** Recent name searches (#308), shared by every list. */
+const RECENT_KEY = 'ww2fleet.searchRecent';
+
+/**
+ * Asks for a ship name (#263) in the game's own text box (#308), suggesting `names` as the player types: the answer
+ * trimmed ('' clears the search), or null when cancelled. A search counts toward 捜索章.
+ */
+export async function askShipName(current: string, names: readonly string[] = []): Promise<string | null> {
+  const answer = await askText({ title: '名前で検索', hint: '艦名・級の名前の一部 (例: 金剛・Kongo)。空欄か「解除」で全部に戻します', value: current, placeholder: '艦名を入力', names, recentKey: RECENT_KEY });
   if (answer === null) return null;
-  const query = answer.trim();
-  if (query) saveProgress(withQuestEvents(loadProgress(), [['listSearch', 1]], Date.now()));
-  return query;
+  if (answer) saveProgress(withQuestEvents(loadProgress(), [['listSearch', 1]], Date.now()));
+  return answer;
 }
 
 function save(key: string, filter: IListFilter): void {
@@ -103,8 +111,9 @@ export class FilterBar {
   }
 
   private ask(): void {
-    const query = askShipName(this.filterValue.query);
-    if (query !== null) this.set({ query });
+    void askShipName(this.filterValue.query, this.opts.names?.() ?? []).then((query) => {
+      if (query !== null) this.set({ query });
+    });
   }
 
   private set(change: Partial<IListFilter>): void {

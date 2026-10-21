@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { askText } from '@/ui/components/TextInputSheet';
 import { DIFFICULTIES, nextDifficulty } from '@/systems/DifficultySystem';
 import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -45,6 +47,8 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The screen explains itself on the first visit (#316), once everything is drawn.
+    this.events.once(Phaser.Scenes.Events.CREATE, () => showScreenHelp(this));
     audio.music('menu');
     this.dynamic = [];
     this.resetArmed = false;
@@ -134,7 +138,7 @@ export class SettingsScene extends Phaser.Scene {
     y += IS_PORTRAIT ? 48 : 30;
     const buttons: Array<[string, () => void, 'primary' | 'secondary' | 'danger']> = [
       ['セーブコードをコピー', () => this.exportSave(), 'primary'],
-      ['セーブコードを読み込む', () => this.importSave(), 'secondary'],
+      ['セーブコードを読み込む', () => void this.importSave(), 'secondary'],
       // First-visit help (#61) shows again on every screen.
       ['画面の説明をもう一度表示', () => this.resetHelp(), 'secondary'],
       // The resource ledger as text (#137), for bug reports and balance work.
@@ -215,8 +219,9 @@ export class SettingsScene extends Phaser.Scene {
   private exportSave(): void {
     this.resetArmed = false;
     const code = encodeSave(loadSave());
+    // Without the clipboard, the code is shown in the game's own box to copy by hand (#308).
     const fallback = (): void => {
-      window.prompt('このセーブコードをコピーしてください', code);
+      void askText({ title: 'セーブコード', hint: '全部を選んでコピーし、別の端末の「セーブコードを読み込む」に貼り付けます', value: code, multiline: true, readonly: true });
       this.say('セーブコードを表示しました');
     };
     if (!navigator.clipboard) return fallback();
@@ -227,16 +232,16 @@ export class SettingsScene extends Phaser.Scene {
     this.resetArmed = false;
     const text = ledgerText(loadProgress().ledger, Date.now());
     const fallback = (): void => {
-      window.prompt('収支をコピーしてください', text);
+      void askText({ title: '資源の収支 (直近 24 時間)', hint: '全部を選んでコピーします', value: text, multiline: true, readonly: true });
       this.say('収支を表示しました');
     };
     if (!navigator.clipboard) return fallback();
     navigator.clipboard.writeText(text).then(() => this.say('資源の収支 (直近 24 時間) をコピーしました'), fallback);
   }
 
-  private importSave(): void {
+  private async importSave(): Promise<void> {
     this.resetArmed = false;
-    const text = window.prompt('セーブコードを貼り付けてください');
+    const text = await askText({ title: 'セーブコードを読み込む', hint: '別の端末でコピーしたセーブコードを貼り付けます。今のデータはバックアップに残ります', multiline: true, confirmLabel: '読み込む', placeholder: 'セーブコード' });
     if (!text) return;
     const save = decodeSave(text);
     if (!save) return this.say('セーブコードが正しくありません。読み込みを中止しました。', Css.danger);

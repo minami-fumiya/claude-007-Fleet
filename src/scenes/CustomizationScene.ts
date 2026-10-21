@@ -11,6 +11,7 @@ import { selectionFor } from '@/scenes/FleetBuilderScene';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { askShipName } from '@/ui/components/FilterBar';
+import { shipSearchNames } from '@/utils/SearchHistory';
 import { applyToStats, applyToWeapons, combineModifiers, customizeShips, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { IShipData, IShipStats } from '@/types/Ship';
@@ -249,10 +250,11 @@ export class CustomizationScene extends Phaser.Scene {
     add(this.add.text(r.x + 24, bottom + 8, '⚑ = 艦隊の艦', textStyle(11, Css.dim)));
     const sw = IS_PORTRAIT ? 240 : 200;
     add(new UIButton(this, r.x + r.w - 24 - sw / 2, bottom + (IS_PORTRAIT ? 20 : 16), this.query ? `検索: ${this.query}` : '名前で検索', () => {
-      const query = askShipName(this.query);
-      if (query === null) return;
-      this.query = query;
-      this.openShipList(filter);
+      void askShipName(this.query, shipSearchNames(this.ships)).then((query) => {
+        if (query === null) return;
+        this.query = query;
+        this.openShipList(filter);
+      });
     }, { variant: this.query ? 'primary' : 'secondary', width: sw, height: IS_PORTRAIT ? 40 : 30, fontSize: 13 }));
     add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeShipList(), {
       variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15,

@@ -244,7 +244,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('special_branch', '匠の改装章', 'growth', [1, 5], (g) => `専用の改装を持つ艦 (大和・長門 …) で改三の方向を ${g} 隻選ぶ`, (_r, c) => total(c, 'specialBranch')),
   ...ladder('refit_rebranch', '改装の匠章', 'growth', [1, 3, 10], (g) => `改造を終えた艦の方向を ${g} 回変える`, (_r, c) => total(c, 'refitRebranch')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
-  ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
+  ...ladder('promotion', '昇進章', 'growth', [6, 8, 11, 13], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将', 13: '元帥' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
   // 軍港・工廠
   ...ladder('shipwright', '造船章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻建造する`, (_r, c) => total(c, 'build')),
   ...ladder('list_search', '捜索章', 'special', [1, 30], (g) => `一覧で艦を名前で ${g} 回検索する`, (_r, c) => total(c, 'listSearch')),
@@ -275,6 +275,10 @@ export const MEDALS: IMedalRule[] = [
     id: `history_${t}`, name: `${name}戦史章`, description: `${name}の史実のシナリオすべてに勝利する`, category: 'special', value: (r) => theaterWins(r, t), goal: 1,
   })),
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
+  // Items used (#315): books on captains, 高速修理材 and 高速建造材.
+  ...ladder('books_used', '教本章', 'growth', [1, 10, 30], (g) => `艦長教本を ${g} 冊使う`, (_r, c) => total(c, 'bookUse')),
+  ...ladder('fast_repair', '応急修理章', 'base', [10, 50, 200], (g) => `高速修理材を ${g} 個使う`, (_r, c) => total(c, 'fastRepairUse')),
+  ...ladder('fast_build', '突貫建造章', 'base', [10, 50, 200], (g) => `高速建造材を ${g} 個使う (建造・軍港の工事)`, (_r, c) => total(c, 'fastBuildUse')),
   ...ladder('merchant', '資源商人章', 'base', [5, 50, 200], (g) => `ショップで資源を ${g} 回売る`, (_r, c) => total(c, 'shopSell')),
   ...ladder('shopper', '御用達章', 'base', [5, 30, 100], (g) => `ショップで ${g} 回買い物をする`, (_r, c) => total(c, 'shopBuy')),
   ...ladder('treasury', '蓄財章', 'special', [5000, 50000, 200000], (g) => `ゴールドを累計 ${g.toLocaleString()} 手に入れる`, (_r, c) => c.goldEarned ?? 0),

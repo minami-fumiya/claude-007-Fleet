@@ -530,6 +530,38 @@ test.describe('screens', () => {
     await page.screenshot({ path: info.outputPath('help-formations.png') });
     expect(await overflowingTexts(page, 'HelpScene')).toEqual([]);
     expect(await overlappingTexts(page, 'HelpScene')).toEqual([]);
+    // The tabs added in 0.0.40 (#316): ranks, battle and events fit too.
+    for (const tab of ['ranks', 'battle', 'events']) {
+      await page.evaluate((t) => {
+        const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HelpScene') as unknown as { tab: string; refresh(): void };
+        s.tab = t;
+        s.refresh();
+      }, tab);
+      await page.waitForTimeout(200);
+      expect(await overflowingTexts(page, 'HelpScene'), tab).toEqual([]);
+      expect(await overlappingTexts(page, 'HelpScene'), tab).toEqual([]);
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('the name search opens the game\'s own box, suggests names and filters the list (#308)', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string, { ...SAVE, seenHelp: SCREENS });
+    await open(page, 'FleetBuilderScene');
+    // The box the list's 名前で検索 opens, with names to suggest.
+    await page.evaluate(() => {
+      void import('/src/ui/components/FilterBar.ts').then((m) => m.askShipName('', ['吹雪', '長門', '金剛']).then((q: string | null) => {
+        (window as unknown as { searched?: string | null }).searched = q;
+      }));
+    });
+    const box = page.locator('[data-role=text-input]');
+    await box.waitFor();
+    await box.fill('吹');
+    await expect(page.locator('#text-input-sheet button', { hasText: '吹雪' })).toBeVisible();
+    await page.screenshot({ path: info.outputPath('search-box.png') });
+    await page.locator('#text-input-sheet button', { hasText: '吹雪' }).click();
+    await page.waitForFunction(() => (window as unknown as { searched?: string | null }).searched !== undefined);
+    expect(await page.evaluate(() => (window as unknown as { searched?: string | null }).searched)).toBe('吹雪');
+    await expect(page.locator('#text-input-sheet')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 
@@ -550,7 +582,7 @@ test.describe('screens', () => {
       s.useBook({ id: s.selectedId, name: '' });
       return { gained: xp() - before, books: JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.items.captainBook, traits };
     });
-    expect(r).toEqual({ gained: 300, books: 0, traits: true });
+    expect(r).toEqual({ gained: 1000, books: 0, traits: true });
     expect(errors).toEqual([]);
   });
 
@@ -800,16 +832,16 @@ test.describe('screens', () => {
       return out;
     });
     // お知らせ (#192): rewards to take, sweeps banked (an area open before 0.0.31 starts full; shown on the 作戦
-    // button, no longer in the strip), the captain book.
+    // button, no longer in the strip); the captain book stays off it (#303).
     const labels = await texts();
     expect(labels.some((t) => /^任務 \d+$/.test(t)), `quest notice (${layout})`).toBe(true);
     expect(labels.some((t) => t === '掃討 3'), `sweep notice (${layout})`).toBe(true);
-    expect(labels.some((t) => t === '艦長教本 1'), `book notice (${layout})`).toBe(true);
+    expect(labels.some((t) => t.startsWith('艦長教本')), `no book notice (${layout})`).toBe(false);
     // #243: the notices have a strip of their own, above the dock panel (its title row is the panel's top).
     const placed = await page.evaluate(() => {
       const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
       const textOf = (o: Phaser.GameObjects.GameObject): string | undefined => (o.type === 'Text' ? (o as Phaser.GameObjects.Text).text : undefined);
-      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => textOf(x) === '艦長教本 1')) as Phaser.GameObjects.Container | undefined;
+      const chip = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).list.some((x) => /^任務 \d+$/.test(textOf(x) ?? ''))) as Phaser.GameObjects.Container | undefined;
       const title = scene.children.list.find((o) => textOf(o) === '入渠 — 損傷艦の修理') as Phaser.GameObjects.Text | undefined;
       return { chipBottom: chip ? chip.y + chip.height / 2 : NaN, titleTop: title ? title.y : NaN };
     });

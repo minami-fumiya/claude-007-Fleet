@@ -126,7 +126,10 @@ export function ownsCaptain(owned: readonly string[], id: string | null | undefi
  * XP of a 艦長教本 (#131 #199): once a nation has every captain, a recruit becomes a book the player uses on a captain
  * of their choice (it used to train a random captain, so unused ones levelled up).
  */
-export const DUPLICATE_CAPTAIN_XP = 300;
+export const DUPLICATE_CAPTAIN_XP = 1000;
+
+/** Captains (or books, once everyone has joined) one battle brings at most (#303). */
+export const MAX_RECRUITS_PER_BATTLE = 1;
 
 /** Uses one 艦長教本 on `captainId`; null when there is none or the captain isn't owned. */
 export function useCaptainBook<T extends { items: IItems; captains: string[]; captainXp: Record<string, number> }>(progress: T, captainId: string): T | null {

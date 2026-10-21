@@ -251,7 +251,8 @@ export function fastBuild(progress: IProgress, roster: IShipData[], shipId: stri
   const items = progress.items ?? { fastRepair: 0, fastBuild: 0, captainBook: 0 };
   if (items.fastBuild <= 0 || !(progress.builds ?? []).some((b) => b.shipId === shipId)) return null;
   const sped = { ...progress, items: { ...items, fastBuild: items.fastBuild - 1 }, builds: progress.builds.map((b) => (b.shipId === shipId ? { ...b, endsAt: now } : b)) };
-  return completeBuilds(sped, roster, now).progress;
+  // 突貫建造章 (#315) counts the items used.
+  return withQuestEvents(completeBuilds(sped, roster, now).progress, [['fastBuildUse', 1]], now);
 }
 
 /** Pays for and adds the ship. Returns null when it can't be built now. */

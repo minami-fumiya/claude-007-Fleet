@@ -16,6 +16,7 @@ import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { shipOrder, hullNumber } from '@/systems/ShipOrder';
 import { filterShips, kindsOf } from '@/systems/ListFilter';
+import { shipSearchNames } from '@/utils/SearchHistory';
 import { FilterBar } from '@/ui/components/FilterBar';
 import { BUILT_KEY } from './HomeScene';
 import { formatNo } from '@/systems/Numbering';
@@ -105,6 +106,13 @@ export class ShipyardScene extends Phaser.Scene {
     this.filterBar = new FilterBar(this, L.filter, {
       key: 'shipyard', states: ['buildable', 'all', 'owned', 'unowned'], initial: { state: 'buildable' },
       kinds: () => kindsOf(this.classRoster()),
+      // Suggestions come from the ships owned, so unseen ships stay hidden (#245 #308).
+      names: () => {
+        const progress = loadProgress();
+        const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+        const owned = ownedIds(progress, roster);
+        return shipSearchNames(roster.filter((s) => owned.includes(s.id)));
+      },
       onChange: () => {
         this.page = 0;
         this.refresh();
@@ -227,7 +235,14 @@ export class ShipyardScene extends Phaser.Scene {
       };
       add(this.card(ship, r));
     });
-    if (ships.length === 0) add(this.add.text(CANVAS_W / 2, L.top + 60, this.classRoster().length > 0 ? 'この条件の艦はありません (上の絞り込みを変えてください)' : 'この艦種の艦はありません', textStyle(15, Css.dim)).setOrigin(0.5));
+    if (ships.length === 0) {
+      // Every dock busy empties the 建造できる list: say why rather than blame the filter (0.0.39 review).
+      const progress = loadProgress();
+      const full = docksInUse(progress) >= buildDockCount(progress);
+      const why = this.classRoster().length === 0 ? 'この艦種の艦はありません'
+        : full ? 'ドックが空いていません (入渠か建造が終わると、また建造できます)' : 'この条件の艦はありません (上の絞り込みを変えてください)';
+      add(this.add.text(CANVAS_W / 2, L.top + 60, why, textStyle(15, Css.dim)).setOrigin(0.5));
+    }
     if (pages > 1) {
       const y = L.top + (ROWS - 1) * (L.cardH + L.gap) + L.cardH / 2;
       const bh = IS_PORTRAIT ? 56 : 36;

@@ -22,6 +22,14 @@ import shop from '@/data/shop.json';
 import rewardShips from '@/data/reward-ships.json';
 import superweapons from '@/data/superweapons.json';
 import bases from '@/data/bases.json';
+import screenHelp from '@/data/screen-help.json';
+import refits from '@/data/refits.json';
+import { SceneKeys } from '@/config/SceneKeys';
+import { HOME_MENU } from '@/systems/HomeMenu';
+import { QUEST_EVENTS } from '@/systems/QuestSystem';
+import { EVENT_NAME } from '@/systems/EventSystem';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 /**
  * Data integrity (#253): ids are unique, everything the data points at exists, and the rules several systems read
@@ -108,6 +116,33 @@ describe('data integrity (#253)', () => {
     }
     for (const e of shop.entries as Array<{ id: string; items?: Record<string, number> }>) for (const i of Object.keys(e.items ?? {})) if (!ITEM_IDS.has(i)) problems.push(`shop ${e.id}: item ${i}`);
     for (const b of bases.bases) for (const t of b.theaters) if (!campaign.theaters.some((x) => x.id === t)) problems.push(`base ${b.id}: theater ${t}`);
+    expect(problems).toEqual([]);
+  });
+
+  it('help, items and refits point at screens and ships that exist (0.0.39 review)', () => {
+    const scenes = new Set<string>(Object.values(SceneKeys));
+    const helpIds = new Set((screenHelp.screens as Array<{ id: string }>).map((h) => h.id));
+    const problems: string[] = [];
+    for (const id of helpIds) if (!scenes.has(id)) problems.push(`screen-help ${id}: no such screen`);
+    // Every screen the home menu opens explains itself on the first visit (the help screen is its own explanation).
+    const selfExplained = new Set<string>([SceneKeys.HELP]);
+    for (const tab of HOME_MENU) for (const item of tab.items) if (!helpIds.has(item.scene) && !selfExplained.has(item.scene)) problems.push(`home menu ${item.label}: no screen-help for ${item.scene}`);
+    for (const i of items.items as Array<{ id: string; scene?: string }>) if (i.scene && !scenes.has(i.scene)) problems.push(`item ${i.id}: scene ${i.scene}`);
+    for (const id of Object.keys(refits.ships)) if (!SHIP_IDS.has(id)) problems.push(`refit for unknown ship ${id}`);
+    expect(problems).toEqual([]);
+  });
+
+  it('quest events (#318): quests name real events, every event is used, every event kind has its win', () => {
+    const events = new Set<string>(QUEST_EVENTS);
+    const problems: string[] = [];
+    for (const q of quests.quests as Array<{ id: string; event: string }>) if (!events.has(q.event)) problems.push(`quest ${q.id}: no event ${q.event}`);
+    // Medals count events by name in RecordSystem; anything neither a quest nor a medal reads is dead.
+    const medalSource = readFileSync(join(process.cwd(), 'src', 'systems', 'RecordSystem.ts'), 'utf8');
+    const quested = new Set((quests.quests as Array<{ event: string }>).map((q) => q.event));
+    // The event kinds' wins are counted together by one medal ladder (`event_${kind}`).
+    const byKind = (e: string): boolean => e.startsWith('event_') && medalSource.includes('`event_${');
+    for (const e of QUEST_EVENTS) if (!quested.has(e) && !medalSource.includes(`'${e}'`) && !byKind(e)) problems.push(`event ${e}: no quest or medal uses it`);
+    for (const kind of Object.keys(EVENT_NAME)) if (!events.has(`event_${kind}`)) problems.push(`event kind ${kind}: no event_${kind}`);
     expect(problems).toEqual([]);
   });
 });

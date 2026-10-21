@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { runMigrations } from '@/utils/SaveMigration';
 import {
-  addMerit, addRankStats, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examPassed, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
+  addMerit, addRankStats, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examAreas, examPassed, examProgress, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
   MERIT_FIRST_CLEAR, maxBuildGrade, meritFor, nextRank, nextSlotRank, promotionText, RANKS, rankOf, START_RANK, TUTORIAL_RANK,
 } from '@/systems/RankSystem';
 import campaign from '@/data/campaign.json';
@@ -46,14 +47,21 @@ describe('RankSystem (#30 / #36)', () => {
     expect(addMerit(at(0), 100).promotedTo?.name).toBe('少尉');
   });
 
-  it('准将 and 元帥 need their exams (theater final areas)', () => {
+  it('准将 needs a theater final; 元帥 every area of the nation\'s theaters (#304)', () => {
     const lots = 100_000;
     expect(rankOf(at(lots, { nation: 'IJN' })).name).toBe('大佐');
     const ijnFinals = finalAreas('IJN');
     expect(ijnFinals).toEqual(['p6', 'm5']);
     expect(rankOf(at(lots, { nation: 'IJN', campaign: ['p6'] })).name).toBe('大将');
-    expect(rankOf(at(lots, { nation: 'IJN', campaign: ijnFinals })).name).toBe('元帥');
-    expect(examPassed(RANKS[13], at(lots, { nation: 'SU', campaign: ['b5'] }))).toBe(true);
+    // Only the finals is no longer enough (#304).
+    expect(rankOf(at(lots, { nation: 'IJN', campaign: ijnFinals })).name).toBe('大将');
+    const all = examAreas('IJN');
+    expect(all.length).toBeGreaterThan(ijnFinals.length);
+    expect(all).toEqual(expect.arrayContaining(ijnFinals));
+    expect(examProgress('allAreas', { nation: 'IJN', campaign: ijnFinals })).toEqual([2, all.length]);
+    expect(rankOf(at(lots, { nation: 'IJN', campaign: all })).name).toBe('元帥');
+    expect(rankOf(at(lots, { nation: 'IJN', campaign: all.slice(1) })).name).toBe('大将');
+    expect(examPassed(RANKS[13], at(lots, { nation: 'SU', campaign: examAreas('SU') }))).toBe(true);
   });
 
   it('describes the next promotion and the next extra slot', () => {
@@ -61,7 +69,8 @@ describe('RankSystem (#30 / #36)', () => {
     expect(nextSlotRank(at(0))?.rank.name).toBe('少尉');
     expect(nextRank(at(900, { nation: 'IJN' }))?.exam).toBe('theaterFinal');
     expect(promotionText(at(0))).toContain('少尉');
-    expect(promotionText(at(100_000, { nation: 'IJN', campaign: finalAreas('IJN') }))).toBe('最高位に到達');
+    expect(promotionText(at(100_000, { nation: 'IJN', campaign: finalAreas('IJN') }))).toBe(`次の昇進: 元帥 (全戦域の全海域を攻略 (2 / ${examAreas('IJN').length}))`);
+    expect(promotionText(at(100_000, { nation: 'IJN', campaign: examAreas('IJN') }))).toBe('最高位に到達');
   });
 
   it('counts each area once', () => {
@@ -134,5 +143,13 @@ describe('promotion missions and old saves (#142)', () => {
     expect(out.nations.IJN.rankStats).toEqual({});
     expect(RANKS[out.nations.IJN.rankFloor].name).toBe('大佐');
     expect(rankOf({ campaign: [], merit: 900, rankFloor: out.nations.IJN.rankFloor }).name).toBe('大佐');
+  });
+
+  it('an admiral who made 元帥 by the finals alone keeps the rank after #304 (save v21)', () => {
+    const out = runMigrations({ version: 20, current: 'IJN', nations: { IJN: { merit: 2600, campaign: finalAreas('IJN'), rankFloor: 0 }, USN: { merit: 2600, campaign: [], rankFloor: 0 } } }) as {
+      nations: Record<string, { rankFloor: number }>;
+    };
+    expect(out.nations.IJN.rankFloor).toBe(13);
+    expect(out.nations.USN.rankFloor).toBe(0);
   });
 });

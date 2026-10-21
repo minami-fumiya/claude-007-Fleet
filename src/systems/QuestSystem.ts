@@ -12,43 +12,57 @@ import { IItems, IResources } from '@/types/Progression';
  */
 
 export type QuestKind = 'hourly' | 'daily' | 'weekly' | 'once';
-export type QuestEvent =
-  | 'sortie' | 'win' | 'nightWin' | 'dayWin' | 'winS' | 'winA' | 'perfectWin' | 'campaignWin' | 'objectiveWin' | 'exerciseWin' | 'ddFlagWin'
-  | 'winPacific' | 'winAtlantic' | 'winMediterranean' | 'winBaltic'
-  | 'sink' | 'sinkDestroyer' | 'sinkCruiser' | 'sinkCarrier' | 'sinkSubmarine' | 'sinkBattleship'
-  | 'repair' | 'build' | 'research' | 'refit' | 'sweep' | 'facility' | 'captainLevel'
+/**
+ * Every quest event (#318): a list the data checks can read at run time, so a misspelt `event` in quests.json (a
+ * quest that never moves) or an event nothing uses is caught by the tests. The type is made from it.
+ */
+export const QUEST_EVENTS = [
+  'sortie', 'win', 'nightWin', 'dayWin', 'winS', 'winA', 'perfectWin', 'campaignWin', 'objectiveWin', 'exerciseWin', 'ddFlagWin',
+  'winPacific', 'winAtlantic', 'winMediterranean', 'winBaltic',
+  'sink', 'sinkDestroyer', 'sinkCruiser', 'sinkCarrier', 'sinkSubmarine', 'sinkBattleship',
+  'repair', 'build', 'research', 'refit', 'sweep', 'facility', 'captainLevel',
   // 0.0.25: convoy escorts won (#186), skills taught to captains (#187)
-  | 'convoyWin' | 'learnSkill'
+  'convoyWin', 'learnSkill',
   // 0.0.26: new versions met on the title screen (#205)
-  | 'versionUpdate'
+  'versionUpdate',
   // 0.0.27: captains joining from S ranks and promotions (#215)
-  | 'captainJoin'
+  'captainJoin',
   // wins under each kind of event (#218)
-  | `event_${EventKind}`
+  'event_double', 'event_steel', 'event_training', 'event_repair', 'event_fuel', 'event_ammo', 'event_bauxite', 'event_superweapon',
   // 0.0.29: enemy planes shot down (#185)
-  | 'planesDown'
+  'planesDown',
   // 0.0.30: remodels finished in a chosen direction (#86)
-  | 'refitBranch'
+  'refitBranch',
   // 0.0.36: finished ships moved to another direction (#265), builds finished, list searches (#263)
-  | 'refitRebranch' | 'buildDone' | 'listSearch'
+  'refitRebranch', 'buildDone', 'listSearch',
   // 0.0.37: a direction on a special refit (#277), land targets destroyed (#278)
-  | 'specialBranch' | 'landKill'
+  'specialBranch', 'landKill',
   // 0.0.38: campaign wins against a stronger enemy (#280)
-  | 'underdogWin'
+  'underdogWin',
   // 0.0.39: wins with 95% of the fleet's HP left (#295), resources sold in the shop (#296)
-  | 'flawlessWin' | 'shopSell'
+  'flawlessWin', 'shopSell',
   // the Black Sea theater and training areas (#202)
-  | 'winBlackSea' | 'trainingWin'
+  'winBlackSea', 'trainingWin',
   // The seas added in 0.0.35 (#250)
-  | 'winNorthPacific' | 'winSouthAtlantic' | 'winIndian' | 'winArctic'
+  'winNorthPacific', 'winSouthAtlantic', 'winIndian', 'winArctic',
   // 0.0.31: quests claimed (#180)
-  | 'questClaim'
+  'questClaim',
   // 0.0.32: shop purchases (#183)
-  | 'shopBuy'
+  'shopBuy',
   // 0.0.33: wins on 難しい (#100), fires and floods started on enemy ships (#48)
-  | 'hardWin' | 'fireSet'
+  'hardWin', 'fireSet',
   // airfields destroyed (#83), superweapons sunk (#148)
-  | 'airfieldDown' | 'superweaponSunk';
+  'airfieldDown', 'superweaponSunk',
+  // 0.0.40: historical wins (#314), bases opened and docks built (#314), items used (#315)
+  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse',
+] as const;
+
+export type QuestEvent = (typeof QUEST_EVENTS)[number];
+
+/** Each event kind's own win event (#218); the data checks keep it in step with EventSystem's kinds. */
+export function eventWin(kind: EventKind): QuestEvent {
+  return `event_${kind}` as QuestEvent;
+}
 
 export interface IQuest {
   id: string;

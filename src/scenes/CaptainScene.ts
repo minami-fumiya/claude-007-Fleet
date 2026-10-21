@@ -5,7 +5,7 @@ import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { CLASS_JA, CLASS_ORDER, modifierBreakdown, modifierLines } from '@/systems/EncyclopediaSystem';
 import {
-  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, CAPTAIN_SORT_LABEL, CAPTAIN_SORTS, CaptainFilter, CaptainSort, findCaptains, GROWTH_LABEL, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
+  ABILITY_LABEL, ABILITY_MAX, aptitudeFor, levelForXp, CAPTAIN_SORT_LABEL, CAPTAIN_SORTS, CaptainFilter, CaptainSort, findCaptains, GROWTH_LABEL, recommendedShips, captainAbilities, captainModifiers, captainSources, earnedTraits, ICaptainSource, inherentLabel,
   LEARN_SLOT_LEVELS, LEARNED_SKILL_SCALE, learnPlan, MAX_LEVEL, NO_STATS, openLearnSlots, nextInherentTier, RETRAIN_COST, SKILL_LABEL, skillModifiers, TRAITS,
   validLearned, withProgress, xpForLevel,
 } from '@/systems/CaptainSystem';
@@ -215,8 +215,11 @@ export class CaptainScene extends Phaser.Scene {
   useBook(c: ICaptain): void {
     const save = loadSave();
     const np = save.nations[save.current];
-    const next = np ? useCaptainBook(np, c.id) : null;
-    if (!next) return;
+    const used = np ? useCaptainBook(np, c.id) : null;
+    if (!used) return;
+    // 教本章 (#315), and the levels a book brings count like levels from battle (#314).
+    const levels = levelForXp(used.captainXp[c.id] ?? 0) - levelForXp(np?.captainXp[c.id] ?? 0);
+    const next = withQuestEvents(used, [['bookUse', 1], ['captainLevel', Math.max(0, levels)]], Date.now());
     saveSave({ ...save, nations: { ...save.nations, [save.current]: next } });
     this.status = `艦長教本で ${c.name} の経験値 +${DUPLICATE_CAPTAIN_XP}`;
     this.statusCss = Css.success;

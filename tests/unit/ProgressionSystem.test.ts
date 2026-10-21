@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { paySortie, settleBattle, sortieBlockers, startingHp } from '@/systems/ProgressionSystem';
 import { SUNK_HP_FRACTION } from '@/systems/DockSystem';
-import { resources } from '@/systems/ResourceSystem';
+import { resources, sortieCost } from '@/systems/ResourceSystem';
 import { emptyProgress } from '@/utils/ProgressStore';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
@@ -23,7 +23,9 @@ describe('ProgressionSystem', () => {
     const docked = { ...p, damage: { bb: 0.5 }, docks: [{ shipId: 'bb', endsAt: 1000 }] };
     expect(sortieBlockers(docked, [bb], 0)).toEqual(['戦艦 は入渠中']);
     expect(sortieBlockers(docked, [bb], 1000)).toEqual([]);
-    expect(sortieBlockers({ ...p, resources: resources() }, [bb], 0)).toEqual(['資源が不足しています']);
+    // What is short and by how much (#303).
+    const cost = sortieCost([bb]);
+    expect(sortieBlockers({ ...p, resources: resources({ fuel: 10 }) }, [bb], 0)).toEqual([`資源が不足: 燃料 10 / ${cost.fuel} (${cost.fuel - 10} 不足)・弾薬 0 / ${cost.ammo} (${cost.ammo} 不足)`]);
   });
 
   it('settles rewards, aircraft losses and damage', () => {
