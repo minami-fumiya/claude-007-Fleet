@@ -538,7 +538,7 @@ test.describe('screens', () => {
         selectedId: string; useBook(c: { id: string; name: string }): void; children: { list: Array<{ type: string; text?: string }> };
       };
       const xp = (): number => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.captainXp[s.selectedId] ?? 0;
-      const traits = s.children.list.some((o) => o.type === 'Text' && /夜戦で 3 隻撃沈 — \d+ \/ 3/.test(o.text ?? ''));
+      const traits = s.children.list.some((o) => o.type === 'Text' && /夜戦巧者\s+\d+ \/ 3/.test(o.text ?? ''));
       const before = xp();
       s.useBook({ id: s.selectedId, name: '' });
       return { gained: xp() - before, books: JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.items.captainBook, traits };

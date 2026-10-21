@@ -47,7 +47,7 @@ import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { addChip, addOceanWorld, addPanel, UIButton } from '@/ui/components/UIKit';
 import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
-import { Colors, Css, displayStyle, textStyle } from '@/ui/theme';
+import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
@@ -1664,15 +1664,20 @@ export class BattleScene extends Phaser.Scene {
     // The objective and how the battle stands (#189).
     const fleet = this.friendlies();
     const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
+    // Which battle this is (#279), under the title; the objective lines follow as before.
     const [kind] = battleBanner({ areaName: area?.name, sortie: area ? this.battleData?.sortie : undefined, exercise: this.exercise && !area, scenarioName: this.scenario?.name, goal: '' });
-    const lines = [kind, ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length })];
-    add(this.add.text(x + 32, y + 84, lines.join('\n'), textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { lineSpacing: 8, wordWrap: { width: w - 64, useAdvancedWrap: true } })));
+    const kindText = add(this.add.text(CANVAS_W / 2, y + 72, kind, eyebrowStyle(11, Css.gold)).setOrigin(0.5, 0));
+    if (kindText.width > w - 64) kindText.setScale((w - 64) / kindText.width);
+    const campaign = this.battleData?.areaId !== undefined && !this.scenario;
+    const lines = [
+      ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length }),
+      ...(campaign ? ['撤退すると、この出撃は終わります (それまでの報酬は残ります)'] : []),
+    ];
+    add(this.add.text(x + 32, y + 96, lines.join('\n'), textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { lineSpacing: 8, wordWrap: { width: w - 64, useAdvancedWrap: true } })));
     const bh = IS_PORTRAIT ? 72 : 56;
     const retreatH = bh - 8;
     const retreatY = y + h - retreatH / 2 - 28;
     add(new UIButton(this, CANVAS_W / 2, retreatY - retreatH / 2 - 16 - bh / 2, '再開  ▶', () => this.setPaused(false), { variant: 'gold', width: w - 64, height: bh, fontSize: 20 }));
-    const campaign = this.battleData?.areaId !== undefined && !this.scenario;
-    if (campaign) add(this.add.text(CANVAS_W / 2, retreatY - retreatH / 2 - 8, '撤退すると、この出撃は終わります (それまでの戦いの報酬は残ります)', textStyle(12, Css.muted)).setOrigin(0.5, 1));
     add(new UIButton(this, CANVAS_W / 2, retreatY, '撤退する', () => this.retreat(), { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
   }
 
