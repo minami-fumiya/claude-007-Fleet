@@ -1085,3 +1085,61 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 });
+
+/**
+ * 量が最大のセーブ (#286): every Japanese ship, captain and research, eight docks full, a long damaged list, every
+ * area cleared. Layout bugs that only show with a lot of data (the damaged list #275, captain traits #276) are caught
+ * here on every screen, in both orientations.
+ */
+function maxSave(): object {
+  const read = (...p: string[]): { [k: string]: unknown } => JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', ...p), 'utf8'));
+  const ships = (read('ships', 'ijn.json').ships as Array<{ id: string }>).map((s) => s.id);
+  const captains = (read('captains.json').captains as Array<{ id: string; nation: string }>).filter((c) => c.nation === 'IJN').map((c) => c.id);
+  const tech = (read('tech-tree.json').tech as Array<{ id: string }>).map((n) => n.id);
+  const areas = (read('campaign.json').areas as Array<{ id: string }>).map((a) => a.id);
+  const bases = (read('bases.json').bases as Array<{ id: string; nation: string }>).filter((b) => b.nation === 'IJN').map((b) => b.id);
+  const later = Date.now() + 3_600_000;
+  const damaged = ships.slice(0, 24);
+  return {
+    ...SAVE,
+    nations: {
+      IJN: {
+        ...SAVE.nations.IJN,
+        resources: { fuel: 99000, ammo: 99000, steel: 99000, bauxite: 99000 },
+        ships,
+        research: tech,
+        campaign: areas,
+        perfect: areas,
+        merit: 999_999,
+        captains,
+        captainStats: { [captains[0]]: { nightSinks: 9, subSinks: 9, sinks: 99, heavySurvivals: 9 } },
+        damage: Object.fromEntries(damaged.map((id) => [id, 0.3])),
+        docks: damaged.slice(0, 6).map((shipId) => ({ shipId, endsAt: later })),
+        builds: [],
+        docksOwned: 8,
+        basesOpen: bases,
+        items: { fastRepair: 99, fastBuild: 99, captainBook: 99 },
+      },
+    },
+  };
+}
+
+test('量が最大のセーブ: every screen fits with every ship, captain and research (#286)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...maxSave(), seenHelp: SCREENS });
+  for (const key of SCREENS) {
+    await open(page, key);
+    expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
+  }
+  // The damaged list (#275) and the captain's traits (#276) open as sheets that fit.
+  await open(page, 'HomeScene');
+  await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openDamaged(): void }).openDamaged());
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: info.outputPath('max-damaged.png') });
+  expect(await overflowingTexts(page, 'HomeScene')).toEqual([]);
+  await open(page, 'CaptainScene');
+  await page.screenshot({ path: info.outputPath('max-captain.png') });
+  expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+  expect(errors).toEqual([]);
+});

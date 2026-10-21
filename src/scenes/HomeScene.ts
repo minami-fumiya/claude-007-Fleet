@@ -820,11 +820,12 @@ export class HomeScene extends Phaser.Scene {
     const damaged = damagedAll.filter((s) => isAtCurrentBase(all, s.id));
     const elsewhere = damagedAll.length - damaged.length;
     add(this.add.text(d.x + pad, y, damaged.length > 0 ? `損傷艦 ${damaged.length} 隻` : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
+    const headY = y;
     y += IS_PORTRAIT ? 36 : 26;
     const dockFree = used < docks;
-    // Portrait: only as many rows as fit above the panel's bottom edge, leaving room for 他 n 隻.
-    const fit = (reserve: number): number => Math.max(1, Math.min(MAX_DAMAGED_ROWS, Math.floor((d.y + d.h - y - reserve) / L.rowH)));
-    const maxRows = !IS_PORTRAIT ? MAX_DAMAGED_ROWS : damaged.length <= fit(0) ? fit(0) : fit(40);
+    // Only as many rows as fit above the panel's bottom edge (#286: full docks left no room in landscape either); the
+    // rest are in the sheet opened from the header.
+    const maxRows = Math.max(0, Math.min(MAX_DAMAGED_ROWS, damaged.length, Math.floor((d.y + d.h - y) / L.rowH)));
     for (const ship of damaged.slice(0, maxRows)) {
       const f = hpFraction(progress, ship.id);
       const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
@@ -843,14 +844,14 @@ export class HomeScene extends Phaser.Scene {
       y += L.rowH;
     }
     if (damaged.length > maxRows) {
-      // Every damaged ship, in a scrolling sheet (#275): more docks used to push the rest off the panel.
-      const bw = IS_PORTRAIT ? 300 : 260;
-      add(new UIButton(this, d.x + pad + bw / 2, y + (IS_PORTRAIT ? 20 : 14), `すべての損傷艦 (他 ${damaged.length - maxRows} 隻)`, () => this.openDamaged(), {
-        variant: 'secondary', width: bw, height: IS_PORTRAIT ? 40 : 28, fontSize: 12,
+      // Every damaged ship, in a scrolling sheet (#275), from the header: more docks used to push the rest off the panel.
+      const bw = IS_PORTRAIT ? 220 : 220;
+      add(new UIButton(this, d.x + d.w - pad - bw / 2, headY + 6, `すべて表示 (他 ${damaged.length - maxRows} 隻)`, () => this.openDamaged(), {
+        variant: 'secondary', width: bw, height: IS_PORTRAIT ? 36 : 26, fontSize: 12,
       }));
     }
-    if (elsewhere > 0) {
-      add(this.add.text(d.x + d.w - pad, y + (IS_PORTRAIT ? 20 : 14), `他の軍港の損傷艦 ${elsewhere} 隻 (その軍港で入渠)`, textStyle(12, Css.dim)).setOrigin(1, 0.5));
+    if (elsewhere > 0 && y + 20 <= d.y + d.h) {
+      add(this.add.text(d.x + d.w - pad, y + 10, `他の軍港の損傷艦 ${elsewhere} 隻 (その軍港で入渠)`, textStyle(12, Css.dim)).setOrigin(1, 0.5));
     }
   }
 
