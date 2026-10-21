@@ -25,7 +25,7 @@ import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { actionVariant, addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
-import { withQuestEvents } from '@/systems/QuestSystem';
+import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -409,7 +409,10 @@ export class CustomizationScene extends Phaser.Scene {
     } else {
       const r = refit(this.refitTable, ship, stage, progress.proficiency[ship.id] ?? 0, progress.resources);
       if (!r) return;
-      saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage }, refitBranches: branches }, [['refit', 1], ['refitBranch', 1]], Date.now()), 'refit');
+      // A direction on a special refit (大和・長門 …, #277) counts toward 匠の改装章.
+      const special = stagesFor(this.refitTable, ship)[maxStage(this.refitTable, ship) - 1]?.special === true && id !== 'standard';
+      const events: Array<[QuestEvent, number]> = [['refit', 1], ['refitBranch', 1], ...(special ? [['specialBranch', 1] as [QuestEvent, number]] : [])];
+      saveProgress(withQuestEvents({ ...progress, resources: r.resources, refits: { ...progress.refits, [ship.id]: r.stage }, refitBranches: branches }, events, Date.now()), 'refit');
     }
     this.closeShipList();
     this.refresh();

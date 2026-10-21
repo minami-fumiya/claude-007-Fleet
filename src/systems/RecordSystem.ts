@@ -238,6 +238,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('s_recruiter', '完勝の将章', 'growth', [5, 15], (g) => `S 評価と昇進で艦長を ${g} 名迎える`, (_r, c) => total(c, 'captainJoin')),
   ...ladder('instructor', '教官章', 'growth', [1, 10, 30], (g) => `艦長にスキルを ${g} 回習得させる`, (_r, c) => total(c, 'learnSkill')),
   ...ladder('refit_branch', '改造方向章', 'growth', [1, 5, 15], (g) => `改三の方向 (甲・乙・丙) を選んで ${g} 隻改造する`, (_r, c) => total(c, 'refitBranch')),
+  ...ladder('special_branch', '匠の改装章', 'growth', [1, 5], (g) => `専用の改装を持つ艦 (大和・長門 …) で改三の方向を ${g} 隻選ぶ`, (_r, c) => total(c, 'specialBranch')),
   ...ladder('refit_rebranch', '改装の匠章', 'growth', [1, 3, 10], (g) => `改造を終えた艦の方向を ${g} 回変える`, (_r, c) => total(c, 'refitRebranch')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
   ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),

@@ -5,7 +5,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
+import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, completeBuilds, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
 import { buildTimeMul, holdCap } from '@/systems/FacilitySystem';
 import { currentBaseId } from '@/systems/BaseSystem';
@@ -118,12 +118,22 @@ export class ShipyardScene extends Phaser.Scene {
     // Natural regeneration keeps running while the player browses; finished builds join the fleet (#143).
     const progress = loadProgress();
     this.bar.refresh(progress.resources, holdCap(progress.facilities));
+    const now = Date.now();
+    // A build that reaches 0:00 while the yard is open is finished here too (#275), not only on the home screen.
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    const built = completeBuilds(progress, roster, now);
+    if (built.done.length > 0) {
+      saveProgress(built.progress);
+      const names = built.done.map((id) => roster.find((s) => s.id === id)?.name ?? id).map((n) => n.replace(/\s*\(.*\)\s*$/, ''));
+      this.status = `${names.join('・')} が竣工しました`;
+      this.refresh();
+      return;
+    }
     if (progress.builds.length < this.building) {
       this.status = '建造が完了しました';
       this.refresh();
       return;
     }
-    const now = Date.now();
     for (const t of this.timers) t.text.setText(this.buildingLine(t.endsAt - now, t.items));
   }
 

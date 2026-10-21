@@ -1,4 +1,4 @@
-import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
+import { ADDITIVE_MODIFIERS, IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { IResources } from '@/types/Progression';
 import { IShipData } from '@/types/Ship';
 import { IAirWing } from '@/types/Aircraft';
@@ -65,11 +65,43 @@ export type RefitShip = Pick<IShipData, 'id' | 'shipClass'>;
 /** The game's remodel table (src/data/refits.json). */
 export const REFIT_TABLE = refitsData as RefitTable;
 
-/** The branches open to the ship's last stage (none when a special refit takes it, #86). */
+/**
+ * The branches open to the ship's last stage (#86). Ships whose last stage is a special refit get them too (#277):
+ * the branch then shifts the special refit's effects by what it changes on the class's standard stage.
+ */
 export function branchesFor(table: RefitTable, ship: RefitShip): IRefitBranch[] {
-  const last = (table.classes[ship.shipClass] ?? []).length;
-  if (last === 0 || (table.ships?.[ship.id] ?? []).some((o) => o.stage === last)) return [];
+  if ((table.classes[ship.shipClass] ?? []).length === 0) return [];
   return table.branches?.[ship.shipClass] ?? [];
+}
+
+/**
+ * A special refit shifted by a direction (#277): what the direction gives up is taken off the special refit; what it
+ * strengthens takes the stronger of the two rather than stacking (Yamato's anti-air refit plus 対空 would pass the caps).
+ */
+function shiftSpecial(special: Partial<IShipModifiers>, standard: Partial<IShipModifiers>, branch: Partial<IShipModifiers>): IShipModifiers {
+  const shifted = combineModifiers(special, branchDelta(standard, branch));
+  const lowerBetter = new Set<keyof IShipModifiers>(['gunReloadMul', 'rearmMul', 'nightAimMul']);
+  for (const k of Object.keys(shifted) as Array<keyof IShipModifiers>) {
+    const sp = special[k] ?? NO_MODIFIERS[k];
+    const br = branch[k] ?? NO_MODIFIERS[k];
+    const st = standard[k] ?? NO_MODIFIERS[k];
+    const better = (a: number, b: number): boolean => (lowerBetter.has(k) ? a < b : a > b);
+    // The direction strengthens this stat: the stronger of the special refit and the direction, not both.
+    if (better(br, st)) shifted[k] = better(br, sp) ? br : sp;
+  }
+  return shifted;
+}
+
+/** What a branch changes against the standard stage: ratios for multipliers, differences for the added stats. */
+function branchDelta(standard: Partial<IShipModifiers>, branch: Partial<IShipModifiers>): Partial<IShipModifiers> {
+  const out: Partial<IShipModifiers> = {};
+  const keys = new Set([...Object.keys(standard), ...Object.keys(branch)] as Array<keyof IShipModifiers>);
+  for (const k of keys) {
+    const base = standard[k] ?? NO_MODIFIERS[k];
+    const v = branch[k] ?? NO_MODIFIERS[k];
+    out[k] = ADDITIVE_MODIFIERS.includes(k) ? v - base : base === 0 ? v : v / base;
+  }
+  return out;
 }
 
 /**
@@ -82,14 +114,18 @@ export function stagesFor(table: RefitTable, ship: RefitShip, branch?: string): 
   const chosen = branch ? branchesFor(table, ship).find((b) => b.id === branch) : undefined;
   return base.map((s, i) => {
     const o = overrides.find((x) => x.stage === i + 1);
-    if (!o) return chosen && i === base.length - 1 ? { ...s, suffix: chosen.suffix, label: chosen.label, effects: chosen.effects } : s;
+    const last = i === base.length - 1;
+    if (!o) return chosen && last ? { ...s, suffix: chosen.suffix, label: chosen.label, effects: chosen.effects } : s;
+    // A special last stage with a direction (#277): the special refit stays, shifted by the direction.
+    const branched = chosen && last;
+    const effects = o.effects ?? s.effects;
     return {
       ...s,
-      suffix: o.suffix ?? s.suffix,
+      suffix: branched ? `${o.suffix ?? s.suffix}${chosen.suffix.slice(s.suffix.length)}` : o.suffix ?? s.suffix,
       cost: o.cost ?? s.cost,
       minProficiency: o.minProficiency ?? s.minProficiency,
-      effects: o.effects ?? s.effects,
-      label: o.label,
+      effects: branched ? shiftSpecial(effects, s.effects, chosen.effects) : effects,
+      label: branched ? `${o.label ?? ''}${o.label ? ' · ' : ''}${chosen.label}` : o.label,
       swap: o.swap,
       airWing: o.airWing,
       special: true,

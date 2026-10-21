@@ -42,6 +42,8 @@ export const MS_PER_HP_BY_CLASS: Record<ShipClass, number> = {
 };
 /** At or above this HP the repair needs no wait (#212): light damage is patched up at once (it is still paid for). */
 export const INSTANT_REPAIR_FRACTION = 0.75;
+/** Below that, a repair takes at least this long (#275): a destroyer's few seconds read as "finished at once". */
+export const MIN_REPAIR_MS = 30_000;
 /** A ship sunk in battle comes home heavily damaged (大破) rather than being lost. */
 export const SUNK_HP_FRACTION = 0.1;
 export const FAST_REPAIR_COST: IResources = { fuel: 40, ammo: 0, steel: 80, bauxite: 0 };
@@ -102,7 +104,12 @@ export function repairCost(maxHp: number, fraction: number): IResources {
 export function repairTimeMs(maxHp: number, fraction: number, timeMul = 1, shipClass?: ShipClass): number {
   if (fraction >= INSTANT_REPAIR_FRACTION) return 0;
   const perHp = shipClass ? MS_PER_HP_BY_CLASS[shipClass] : MS_PER_HP;
-  return Math.round(missingHp(maxHp, fraction) * perHp * timeMul);
+  return Math.max(MIN_REPAIR_MS, Math.round(missingHp(maxHp, fraction) * perHp * timeMul));
+}
+
+/** "即時" for a light repair that needs no wait (#275), otherwise the clock. */
+export function repairTimeText(ms: number, clock: (ms: number) => string): string {
+  return ms <= 0 ? '即時' : clock(ms);
 }
 
 /** Records a ship's state after a battle (1 = undamaged clears the entry). */

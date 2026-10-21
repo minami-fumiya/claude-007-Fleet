@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ShipClass } from '@/types/ShipClass';
 import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
-import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
+import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MIN_REPAIR_MS, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
 
 const empty = (): IDockState => ({ damage: {}, docks: [] });
 
@@ -23,14 +23,16 @@ describe('DockSystem', () => {
     // 75% HP or more needs no wait (#212).
     expect(repairTimeMs(210, 0.8, 1, ShipClass.Destroyer)).toBe(0);
     expect(repairTimeMs(800, 0.75, 1, ShipClass.Battleship)).toBe(0);
-    expect(repairTimeMs(210, 0.5, 1, ShipClass.Destroyer) / 1000).toBeLessThan(15);
+    // Below that, at least half a minute (#275): a destroyer's few seconds looked like an instant finish.
+    expect(repairTimeMs(210, 0.74, 1, ShipClass.Destroyer)).toBe(MIN_REPAIR_MS);
+    expect(repairTimeMs(210, 0.5, 1, ShipClass.Destroyer) / 1000).toBeLessThanOrEqual(30);
     const bb = repairTimeMs(800, 0.1, 1, ShipClass.Battleship) / 60_000;
     expect(bb).toBeGreaterThanOrEqual(3);
     expect(bb).toBeLessThanOrEqual(4);
     // Bigger classes take longer for the same damage.
     const order = [ShipClass.Destroyer, ShipClass.Cruiser, ShipClass.Carrier, ShipClass.Battleship].map((c) => repairTimeMs(500, 0.3, 1, c));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(repairTimeMs(500, 0.5, 0.5, ShipClass.Cruiser)).toBe(repairTimeMs(500, 0.5, 1, ShipClass.Cruiser) / 2);
+    expect(repairTimeMs(2000, 0.5, 0.5, ShipClass.Cruiser)).toBe(repairTimeMs(2000, 0.5, 1, ShipClass.Cruiser) / 2);
   });
 
   it('fills at most the owned docks with damaged ships (#38)', () => {

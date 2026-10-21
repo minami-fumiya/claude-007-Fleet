@@ -18,12 +18,13 @@ import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, buildTimeMs, completeBuilds, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
-import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, startRepair, fastRepair } from '@/systems/DockSystem';
+import { baseDockView, mergeBaseDocks, buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
+import { ScrollList } from '@/ui/components/ScrollList';
 import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IShipData } from '@/types/Ship';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -109,6 +110,8 @@ export class HomeScene extends Phaser.Scene {
   private dockMeters: Array<{ g: Phaser.GameObjects.Graphics; t: Phaser.GameObjects.Text; x: number; y: number; w: number; ship: IShipData; total: number; endsAt: number }> = [];
   private regenText!: Phaser.GameObjects.Text;
   private overlay: Phaser.GameObjects.GameObject[] = [];
+  /** The scrolling list of an overlay sheet (all damaged ships, #275) */
+  private overlayList?: ScrollList;
   private menuObjs: Phaser.GameObjects.GameObject[] = [];
   private questTab: QuestTab = 'daily';
   /** A quest whose reward overflows the holding cap, pressed once: the next press takes it anyway (#221). */
@@ -554,6 +557,8 @@ export class HomeScene extends Phaser.Scene {
   private closeNationPicker(): void {
     for (const o of this.overlay) o.destroy();
     this.overlay = [];
+    this.overlayList?.destroy();
+    this.overlayList = undefined;
   }
 
   private selectNation(nation: Nation): void {
@@ -813,7 +818,7 @@ export class HomeScene extends Phaser.Scene {
       .filter((s): s is IShipData => s !== undefined && !isDocked(all, s.id));
     const damaged = damagedAll.filter((s) => isAtCurrentBase(all, s.id));
     const elsewhere = damagedAll.length - damaged.length;
-    add(this.add.text(d.x + pad, y, damaged.length > 0 ? '損傷艦' : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
+    add(this.add.text(d.x + pad, y, damaged.length > 0 ? `損傷艦 ${damaged.length} 隻` : '損傷艦はありません', eyebrowStyle(10, damaged.length > 0 ? Css.danger : Css.muted)));
     y += IS_PORTRAIT ? 36 : 26;
     const dockFree = used < docks;
     // Portrait: only as many rows as fit above the panel's bottom edge, leaving room for 他 n 隻.
@@ -823,9 +828,10 @@ export class HomeScene extends Phaser.Scene {
       const f = hpFraction(progress, ship.id);
       const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
       add(this.add.text(d.x + pad, y, ship.name, textStyle(14, Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${clock(repairTimeMs(ship.hp, f, repairMul, ship.shipClass))}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
+      const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 30 : 22), `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${repairTimeText(time, clock)}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)));
       const btn = add(
-        new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 14, '入渠', () => this.dock(ship), {
+        new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + 14, time <= 0 ? '即時修理' : '入渠', () => this.dock(ship), {
           variant: 'secondary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 52 : 34, fontSize: 14,
         }),
       );
@@ -835,10 +841,68 @@ export class HomeScene extends Phaser.Scene {
       btn.setEnabled(!away && dockFree && canAfford(progress.resources, cost));
       y += L.rowH;
     }
-    if (damaged.length > maxRows || elsewhere > 0) {
-      const more = [damaged.length > maxRows ? `他 ${damaged.length - maxRows} 隻` : '', elsewhere > 0 ? `他の軍港の損傷艦 ${elsewhere} 隻 (その軍港で入渠)` : ''].filter((t) => t);
-      add(this.add.text(d.x + pad, y, more.join('  ·  '), textStyle(12, Css.dim)));
+    if (damaged.length > maxRows) {
+      // Every damaged ship, in a scrolling sheet (#275): more docks used to push the rest off the panel.
+      const bw = IS_PORTRAIT ? 300 : 260;
+      add(new UIButton(this, d.x + pad + bw / 2, y + (IS_PORTRAIT ? 20 : 14), `すべての損傷艦 (他 ${damaged.length - maxRows} 隻)`, () => this.openDamaged(), {
+        variant: 'secondary', width: bw, height: IS_PORTRAIT ? 40 : 28, fontSize: 12,
+      }));
     }
+    if (elsewhere > 0) {
+      add(this.add.text(d.x + d.w - pad, y + (IS_PORTRAIT ? 20 : 14), `他の軍港の損傷艦 ${elsewhere} 隻 (その軍港で入渠)`, textStyle(12, Css.dim)).setOrigin(1, 0.5));
+    }
+  }
+
+  /** All damaged ships of this base, scrolling; a tap docks one (#275). */
+  private openDamaged(): void {
+    this.closeNationPicker();
+    const progress = loadProgress();
+    const all = progress;
+    const event = activeEffects();
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
+    const here = currentBaseId(progress);
+    const docks = dockCount(baseDockView(progress, here));
+    const used = baseDockView(progress, here).docks.length + buildsHere(progress).length;
+    const ships = Object.keys(progress.damage)
+      .map((id) => this.registryShips.byId(id))
+      .filter((s): s is IShipData => s !== undefined && !isDocked(all, s.id) && isAtCurrentBase(all, s.id));
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
+      this.overlay.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const r = IS_PORTRAIT ? { x: 24, y: 150, w: CANVAS_W - 48, h: CANVAS_H - 300 } : { x: 240, y: 60, w: 800, h: 600 };
+    add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(r.x + 24, r.y + 20, `損傷艦 ${ships.length} 隻  ·  ドック ${used} / ${docks}`, eyebrowStyle(11, Css.danger)));
+    add(this.add.text(r.x + 24, r.y + 44, 'タップで入渠します', textStyle(12, Css.muted)));
+    const top = r.y + 76;
+    const bottom = r.y + r.h - (IS_PORTRAIT ? 90 : 70);
+    const list = new ScrollList(this, { x: r.x + 20, y: top, w: r.w - 36, h: bottom - top });
+    list.setDepth(OVERLAY_DEPTH + 1);
+    this.overlayList = list;
+    const rowH = IS_PORTRAIT ? 72 : 56;
+    const rowW = r.w - 52;
+    ships.forEach((ship, row) => {
+      const f = hpFraction(progress, ship.id);
+      const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
+      const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
+      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
+      const can = !away && used < docks && canAfford(progress.resources, cost);
+      const frame = drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 12, fill: Colors.panel, fillAlpha: can ? 0.6 : 0.3, rimAlpha: can ? 0.4 : 0.15 });
+      const name = this.add.text(16, 10, ship.name, textStyle(14, can ? Css.text : Css.muted, { fontStyle: 'bold' }));
+      const sub = this.add.text(16, rowH - 10, `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${repairTimeText(time, clock)}  ·  ${formatResources(cost)}`, textStyle(11, Css.muted)).setOrigin(0, 1);
+      const state = this.add.text(rowW - 14, rowH / 2, away ? '出撃中' : used >= docks ? 'ドック満杯' : !canAfford(progress.resources, cost) ? '資源不足' : time <= 0 ? '即時修理' : '入渠', eyebrowStyle(11, can ? Css.cyan : Css.dim)).setOrigin(1, 0.5);
+      list.addItem(this.add.container(0, row * (rowH + 6), [frame, name, sub, state]), rowW, rowH, () => {
+        if (!can) return;
+        this.closeNationPicker();
+        this.dock(ship);
+      });
+    });
+    list.setContentHeight(Math.max(0, ships.length * (rowH + 6) - 6));
+    add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 40 : 32), '閉じる', () => this.closeNationPicker(), {
+      variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15,
+    }));
   }
 
   private buildDock(): void {
