@@ -437,6 +437,12 @@ export class UIButton extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Colours the caption line apart from the label (a finished research branch reads green, #283). */
+  setCaptionColor(css: string): this {
+    this.caption?.setColor(css);
+    return this;
+  }
+
   /** Swaps the fill style, e.g. to show a toggle's on/off state. */
   setVariant(variant: ButtonVariant): this {
     this.bg.setTexture(buttonTexture(this.scene, variant, this.btnW, this.btnH));

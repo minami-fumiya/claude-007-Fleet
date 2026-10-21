@@ -17,7 +17,7 @@ describe('title copy (#197)', () => {
 describe('the title button (#198)', () => {
   it('names the nation and rank to go back to, or the home port for a new save', () => {
     expect(continueLabel('日本', '少佐')).toBe('日本 · 少佐 で続ける');
-    expect(continueLabel(null, null)).toBe('鎮守府へ  →');
+    expect(continueLabel(null, null)).toBe('はじめる  →');
   });
 });
 

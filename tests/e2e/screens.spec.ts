@@ -673,7 +673,7 @@ test.describe('screens', () => {
       return s.children.list.some((o) => (o as Phaser.GameObjects.Text).text === 'はじめての画面');
     })).toBe(true);
     await page.screenshot({ path: info.outputPath('home-help.png') });
-    for (const tab of ['sortie', 'fleet', 'arsenal', 'record']) {
+    for (const tab of ['sortie', 'fleet', 'arsenal', 'record', 'other']) {
       await page.evaluate((t) => {
         const g = (window as unknown as { game: Phaser.Game }).game;
         g.registry.set('home.tab', t);

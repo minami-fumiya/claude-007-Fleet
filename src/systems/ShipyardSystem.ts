@@ -1,4 +1,4 @@
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
@@ -86,11 +86,17 @@ export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campa
   return scaleCost(buildCost(ship), buildMultiplier(currentBase(progress.nation, progress), ship.shipClass));
 }
 
-/** The ship a new nation starts with: its first-listed historical destroyer (else its cheapest ship). */
+/**
+ * The ship a new nation starts with (#284): its oldest historical fleet destroyer — the lead of the earliest class
+ * (Japan: 睦月) — not an escort or a reward ship; else its cheapest ship.
+ */
 export function starterShip(roster: IShipData[]): IShipData | undefined {
   const historical = roster.filter((s) => !s.fictional);
-  const destroyer = historical.find((s) => s.shipClass === ShipClass.Destroyer);
-  if (destroyer) return destroyer;
+  const destroyers = historical
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.shipClass === ShipClass.Destroyer && s.subtype !== ShipSubtype.Escort && !isRewardOnly(s))
+    .sort((a, b) => (a.s.year ?? 9999) - (b.s.year ?? 9999) || Number(a.s.classOf !== undefined) - Number(b.s.classOf !== undefined) || a.i - b.i);
+  if (destroyers.length > 0) return destroyers[0].s;
   const total = (s: IShipData): number => RESOURCE_KEYS.reduce((sum, key) => sum + buildCost(s)[key], 0);
   return [...historical].sort((a, b) => total(a) - total(b))[0];
 }

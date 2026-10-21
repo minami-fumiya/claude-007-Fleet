@@ -42,11 +42,11 @@ describe('ShipyardSystem (#18 / #29)', () => {
       expect(s.shipClass).toBe(ShipClass.Destroyer);
       expect(s.fictional).toBeFalsy();
     }
-    expect(starterShip(IJN)!.id).toBe('fubuki');
+    expect(starterShip(IJN)!.id).toBe('mutsuki') // the oldest fleet destroyer class (#284);
   });
 
   it('an empty ship list falls back to the starter', () => {
-    expect(ownedIds({ ships: [] }, IJN)).toEqual(['fubuki']);
+    expect(ownedIds({ ships: [] }, IJN)).toEqual(['mutsuki']);
     expect(ownedShips({ ships: ['yamato', 'fubuki'] }, IJN).map((s) => s.id)).toEqual(['yamato', 'fubuki']);
   });
 

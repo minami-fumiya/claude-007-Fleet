@@ -637,7 +637,7 @@ export class HomeScene extends Phaser.Scene {
       const ready = item.action === 'quests' && claimable > 0;
       const waiting = item.action ? undefined : pending.find((p) => p.scene === item.scene);
       // Gold marks a screen with something to do now (#269): rewards to claim, a sweep, a book, finished work.
-      add(new UIButton(this, x + cw / 2, y + ch / 2, item.label, () => this.openMenuItem(item), {
+      add(new UIButton(this, x + cw / 2, y + ch / 2, item.label, () => this.openMenuItem(item, waiting?.data), {
         variant: ready || waiting ? 'gold' : item.variant, width: cw, height: ch, fontSize: IS_PORTRAIT ? 22 : 26,
         caption: ready ? `達成 ${claimable}` : waiting ? `${waiting.label} ${waiting.count}` : item.caption,
       }));
@@ -689,7 +689,8 @@ export class HomeScene extends Phaser.Scene {
     this.refresh();
   }
 
-  private openMenuItem(item: IHomeMenuItem): void {
+  /** `extra` is what a waiting notice adds: 掃討 opens the map on its area (#283). */
+  private openMenuItem(item: IHomeMenuItem, extra?: Record<string, unknown>): void {
     if (item.action === 'quests') {
       this.openQuests();
       return;
@@ -700,7 +701,7 @@ export class HomeScene extends Phaser.Scene {
     }
     // Free battles are not campaign sorties.
     if (item.scene === SceneKeys.FLEET_BUILDER) this.registry.remove(CAMPAIGN_AREA_KEY);
-    this.scene.start(item.scene, { returnTo: SceneKeys.HOME, ...item.data });
+    this.scene.start(item.scene, { returnTo: SceneKeys.HOME, ...item.data, ...extra });
   }
 
   private refresh(): void {
