@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, recruitCaptains } from '@/systems/CaptainRoster';
+import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, MAX_RECRUITS_PER_BATTLE, recruitCaptains } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
@@ -1781,6 +1781,8 @@ export class BattleScene extends Phaser.Scene {
       const force = this.scenarioSetup?.side.force;
       const firstWin = victory && force !== undefined && (before.record.scenarios?.[this.scenario.id]?.wins[force] ?? 0) === 0;
       if (firstWin) after = { ...after, wallet: addGold(walletOf(after), GOLD_SCENARIO_FIRST) };
+      // 任務 (#314): a historical win counts for the history quest, and only that (no other quest or reward).
+      if (victory) after = withQuestEvents(after, [['scenarioWin', 1]], Date.now());
       saveProgress(after);
       result.reward = undefined;
       result.cost = undefined;
@@ -1907,7 +1909,8 @@ export class BattleScene extends Phaser.Scene {
     if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
     // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
     const sWin = victory && rank === 'S';
-    const recruits = [firstS, promoted.promotedTo !== null, sWin && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length;
+    // At most one a battle (#303: an area's first S that also promoted brought two, three with the random one).
+    const recruits = Math.min(MAX_RECRUITS_PER_BATTLE, [firstS, promoted.promotedTo !== null, sWin && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length);
     // Captains go to the classes the fleet is shortest of (#159 #210): one class entry per owned ship. Once everyone
     // has joined (#131), a recruit becomes a 艦長教本 the player uses on a captain of their choice (#199).
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);

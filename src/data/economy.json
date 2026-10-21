@@ -3,8 +3,8 @@
   "playHoursPerDay": 2,
   "playHoursPerWeek": 10,
   "rankRewardMul": 1.1,
-  "_questCompletion": "Share of the board's quests a player finishes (#180): some need a theater, a convoy or a kind of event they don't have. Since 0.0.36 (#266) dailies ask about 10x an hourly and weeklies about 100x, so far fewer get done.",
-  "questCompletion": { "hourly": 0.6, "daily": 0.2, "weekly": 0.1 },
+  "_questCompletion": "Share of the board's quests a player finishes (#180): some need a theater, a convoy or a kind of event they don't have. Since 0.0.36 (#266) dailies ask about 10x an hourly and weeklies about 100x, so far fewer get done. 0.0.40 (#323) doubled every goal (rewards x1.5): about half as many again.",
+  "questCompletion": { "hourly": 0.5, "daily": 0.1, "weekly": 0.05 },
   "phases": [
     {
       "id": "early",

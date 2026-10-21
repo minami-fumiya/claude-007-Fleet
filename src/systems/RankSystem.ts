@@ -9,7 +9,7 @@ import { theaterFinalArea } from './CampaignSystem';
  * (#38). Saves from before the merit system keep their old slots through `rankFloor` (see SaveMigration v4 → v5).
  */
 
-export type RankExam = 'theaterFinal' | 'allTheaterFinals';
+export type RankExam = 'theaterFinal' | 'allAreas';
 
 export interface IRank {
   /** 0 = lowest */
@@ -38,7 +38,7 @@ export const RANKS: IRank[] = [
   { index: 10, name: '少将', en: 'REAR ADMIRAL', minMerit: 1300, slots: 6 },
   { index: 11, name: '中将', en: 'VICE ADMIRAL', minMerit: 1650, slots: 6 },
   { index: 12, name: '大将', en: 'ADMIRAL', minMerit: 2050, slots: 7 },
-  { index: 13, name: '元帥', en: 'FLEET ADMIRAL', minMerit: 2500, slots: 8, exam: 'allTheaterFinals' },
+  { index: 13, name: '元帥', en: 'FLEET ADMIRAL', minMerit: 2500, slots: 8, exam: 'allAreas' },
 ];
 
 export const MAX_FLEET_SLOTS = RANKS[RANKS.length - 1].slots;
@@ -151,17 +151,31 @@ export function finalAreas(nation?: string): string[] {
     .filter((id): id is string => id !== undefined);
 }
 
+/** Every campaign area of the nation's examined theaters, training areas aside (元帥's exam since #304). */
+export function examAreas(nation?: string): string[] {
+  const data = campaignData as unknown as { theaters: ITheaterAreas[]; areas: Array<{ id: string; theater: string; training?: boolean }> };
+  const theaters = new Set(data.theaters.filter((t) => t.exam !== false && (!nation || t.opponents[nation] !== undefined)).map((t) => t.id));
+  return data.areas.filter((a) => theaters.has(a.theater) && !a.training).map((a) => a.id);
+}
+
+/** How far the exam is: [areas cleared, areas needed] (one final for 准将, every area for 元帥). */
+export function examProgress(exam: RankExam, progress: Pick<IRankProgress, 'campaign' | 'nation'>): [number, number] {
+  const cleared = new Set(progress.campaign);
+  if (exam === 'theaterFinal') return [Math.min(1, finalAreas(progress.nation).filter((id) => cleared.has(id)).length), 1];
+  const all = examAreas(progress.nation);
+  return [all.filter((id) => cleared.has(id)).length, all.length];
+}
+
 /** Whether `progress` has passed the rank's promotion exam (ranks without one always pass). */
 export function examPassed(rank: IRank, progress: IRankProgress): boolean {
   if (!rank.exam) return true;
-  const finals = finalAreas(progress.nation);
-  const cleared = new Set(progress.campaign);
-  return rank.exam === 'theaterFinal' ? finals.some((id) => cleared.has(id)) : finals.length > 0 && finals.every((id) => cleared.has(id));
+  const [done, need] = examProgress(rank.exam, progress);
+  return need > 0 && done >= need;
 }
 
 /** "准将: 戦域の最終海域を 1 つ攻略" — what an exam asks for. */
 export function examText(exam: RankExam): string {
-  return exam === 'theaterFinal' ? '戦域の最終海域を 1 つ攻略' : '全戦域の最終海域を攻略';
+  return exam === 'theaterFinal' ? '戦域の最終海域を 1 つ攻略' : '全戦域の全海域を攻略';
 }
 
 export function rankOf(progress: IRankProgress, missions = true): IRank {
@@ -217,7 +231,11 @@ export function nextSlotRank(progress: IRankProgress): INextRank | null {
 export function needText(next: INextRank, progress?: IRankProgress): string {
   const parts: string[] = [];
   if (next.meritNeeded > 0) parts.push(`戦功 あと ${next.meritNeeded}`);
-  if (next.exam) parts.push(examText(next.exam));
+  if (next.exam) {
+    // 元帥's exam shows how far it is (#304): "全戦域の全海域を攻略 (52 / 60)".
+    const [done, need] = progress ? examProgress(next.exam, progress) : [0, 0];
+    parts.push(progress && need > 1 ? `${examText(next.exam)} (${done} / ${need})` : examText(next.exam));
+  }
   for (const m of next.missions) parts.push(progress ? missionText(m, progress) : m.text);
   return parts.join(' + ');
 }

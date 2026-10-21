@@ -17,8 +17,9 @@ import { captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
-import { buildsHere, buildTimeMs, completeBuilds, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
-import { buildDock, completeRepairs, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
+import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
+import { timerKey } from '@/systems/TimerSystem';
+import { buildDock, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -104,6 +105,10 @@ export class HomeScene extends Phaser.Scene {
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private dockMeters: Array<{ g: Phaser.GameObjects.Graphics; t: Phaser.GameObjects.Text; x: number; y: number; w: number; total: number; endsAt: number }> = [];
   private regenText!: Phaser.GameObjects.Text;
+  private regenRoom = Infinity;
+  /** The timers the dock panel was drawn with (#310), and the ships then being built */
+  private drawnTimers = '';
+  private drawnBuilds: string[] = [];
   private overlay: Phaser.GameObjects.GameObject[] = [];
   /** The scrolling list of an overlay sheet (all damaged ships, #275) */
   private overlayList?: ScrollList;
@@ -188,6 +193,8 @@ export class HomeScene extends Phaser.Scene {
       this.add.text(x, a.y + 2, `${rankLine}  ·  ${promotionText(progress)}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
     }
     this.regenText = this.add.text(x, a.y + a.h - 2, '', textStyle(11, Css.muted)).setOrigin(0, 1);
+    // The line grows with the facilities' caps and the countdown; it shrinks to the row rather than run off (#303).
+    this.regenRoom = a.x + a.w - x - 8;
     // ゴールド (#183) beside the resources; a tap opens the items (#184). Portrait: the admiral row's top right;
     // landscape: right of the event line, above the resources.
     const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook;
@@ -210,6 +217,8 @@ export class HomeScene extends Phaser.Scene {
       ? `自然回復/分 燃${r.fuel} 弾${r.ammo} 鋼${r.steel} ボ${r.bauxite}・上限 ${caps}`
       : `自然回復/分 燃料 +${r.fuel} 弾薬 +${r.ammo} 鋼材 +${r.steel} ボーキ +${r.bauxite}・上限 ${caps}`;
     this.regenText.setText(regenFull(progress.resources, cap) ? `${rate}  ·  上限に到達` : `${rate}  ·  次 ${clock(nextRegenMs(progress.regenAt, now))}`);
+    this.regenText.setScale(1);
+    if (this.regenText.width > this.regenRoom) this.regenText.setScale(this.regenRoom / this.regenText.width);
   }
 
   private refreshEvent(now: number): void {
@@ -289,7 +298,7 @@ export class HomeScene extends Phaser.Scene {
       const np = save.nations[n];
       const lock = locks[n];
       const label = np
-        ? `${NATION_INFO[n].jaShort}   ${rankOf(np).name} · 攻略 ${clearCount(np)} · 保有艦 ${ownedIds(np, this.registryShips.byNation(n)).length}`
+        ? `${NATION_INFO[n].jaShort}   ${rankOf({ ...np, nation: n }).name} · 攻略 ${clearCount(np)} · 保有艦 ${ownedIds(np, this.registryShips.byNation(n)).length}`
         : lock.unlocked ? `${NATION_INFO[n].jaShort}   新規着任` : `${NATION_INFO[n].jaShort}   未解放`;
       add(new UIButton(this, x + w / 2, ry + rowH / 2, label, () => this.selectNation(n), {
         variant: n === save.current && np ? 'gold' : np ? 'primary' : 'secondary', width: w - 56, height: rowH, fontSize: 16,
@@ -574,18 +583,12 @@ export class HomeScene extends Phaser.Scene {
     if (!isStarted(save, save.current)) return;
     this.refreshRegen(now);
     this.refreshEvent(now);
+    // Loading finishes every timer that ran out (#310); when the docks or builds no longer match what was drawn, the
+    // panel is redrawn (#303: a build used to sit at 残り 0:00 here), and finished builds go to the notice strip.
     const progress = loadProgress();
-    const done = completeRepairs(progress, now);
-    if (done !== progress) {
-      saveProgress({ ...progress, ...done });
-      this.refresh();
-      return;
-    }
-    // A build finished while the admiral watches (#264): it joins the fleet, and the notice strip says so.
-    const built = completeBuilds(progress, this.registryShips.byNation(progress.nation), now);
-    if (built.done.length > 0) {
-      saveProgress(built.progress);
-      this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + built.done.length);
+    if (timerKey(progress) !== this.drawnTimers) {
+      const built = this.drawnBuilds.filter((id) => !progress.builds.some((b) => b.shipId === id) && progress.ships.includes(id)).length;
+      if (built > 0) this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + built);
       this.refresh();
       return;
     }
@@ -709,7 +712,9 @@ export class HomeScene extends Phaser.Scene {
     const dockOffset = this.dockList?.offset ?? 0;
     this.dockList?.destroy();
     this.dockList = undefined;
-    const all = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
+    const all = loadProgress();
+    this.drawnTimers = timerKey(all);
+    this.drawnBuilds = all.builds.map((b) => b.shipId);
     // Every open base's docks together, and every damaged ship (#281).
     const progress = fleetDockView(all);
     this.bar.refresh(progress.resources, holdCap(progress.facilities));
@@ -829,7 +834,7 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     const built = buildDock(fleetDockView(progress));
     if (!built) return;
-    saveProgress(mergeFleetDocks(progress, built), 'dock');
+    saveProgress(withQuestEvents(mergeFleetDocks(progress, built), [['dockBuilt', 1]], Date.now()), 'dock');
     this.refresh();
   }
 
@@ -848,7 +853,8 @@ export class HomeScene extends Phaser.Scene {
   private fastRepair(shipId: string): void {
     const progress = loadProgress();
     if (progress.items.fastRepair > 0) {
-      saveProgress({ ...progress, ...fastRepair(progress, shipId), items: { ...progress.items, fastRepair: progress.items.fastRepair - 1 } });
+      // 応急修理章 (#315) counts the items used.
+      saveProgress(withQuestEvents({ ...progress, ...fastRepair(progress, shipId), items: { ...progress.items, fastRepair: progress.items.fastRepair - 1 } }, [['fastRepairUse', 1]], Date.now()));
       this.refresh();
       return;
     }

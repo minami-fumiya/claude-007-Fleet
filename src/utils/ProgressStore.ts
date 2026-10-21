@@ -14,8 +14,9 @@ import { BattleRank, isBattleRank } from '@/systems/BattleRank';
 import type { RankStat } from '@/systems/RankSystem';
 import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
-import { finishBaseWork, IBaseWork, nationBases } from '@/systems/BaseSystem';
-import { Facilities, FacilityId, finishFacilities, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
+import { IBaseWork, nationBases } from '@/systems/BaseSystem';
+import { completeTimers, finishBuilds } from '@/systems/TimerSystem';
+import { Facilities, FacilityId, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
 import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
@@ -190,26 +191,19 @@ export function progressView(save: ISave, now?: number): IProgress {
   const np = currentNation(save);
   const view: IProgress = { ...np, nation: save.current, record: save.record, wallet: save.wallet };
   if (now === undefined) return view;
-  // Facilities finished meanwhile count from now on; they set the regeneration rates and caps (#146).
-  // So does a base whose construction ended (#217).
-  const built = finishBaseWork(finishFacilities(view, now), now);
+  // Every timer that ran out meanwhile (#310): repairs, builds, facilities (they set the regeneration rates and caps,
+  // #146) and a base whose construction ended (#217).
+  const built = completeTimers(view, now).progress;
   const r = regenerate(built.resources, built.regenAt, now, regenRules(built.facilities));
   // Natural regeneration goes into the ledger (#137).
   const regen = r.resources === built.resources && r.regenAt === built.regenAt
     ? built
     : { ...built, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(built.ledger, 'regen', resourceDelta(built.resources, r.resources).gained, now) };
-  return finishBuilds(regen, now);
+  return regen;
 }
 
-/** Ships whose construction has finished join the fleet (#143), even if the game was closed meanwhile. */
-export function finishBuilds<T extends Pick<INationProgress, 'builds' | 'ships'> & { shipBases?: Record<string, string> }>(np: T, now: number): T {
-  const done = np.builds.filter((b) => b.endsAt <= now);
-  if (done.length === 0) return np;
-  // Each joins the base it was laid down at (#145).
-  const shipBases = { ...(np.shipBases ?? {}) };
-  for (const b of done) if (b.base && !np.ships.includes(b.shipId)) shipBases[b.shipId] = b.base;
-  return { ...np, builds: np.builds.filter((b) => b.endsAt > now), ships: [...new Set([...np.ships, ...done.map((b) => b.shipId)])], ...(np.shipBases ? { shipBases } : {}) };
-}
+/** Kept here for callers of the store; the timers live in TimerSystem (#310). */
+export { finishBuilds };
 
 /** Writes a view back into its nation's slot (and the shared record). */
 export function withProgress(save: ISave, progress: IProgress): ISave {
@@ -590,7 +584,7 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs || view.baseWork !== np.baseWork)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.docks !== np.docks || view.quests !== np.quests || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs || view.baseWork !== np.baseWork)) saveSave(withProgress(save, view));
   return view;
 }
 

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CONTROLS } from '@/config/Controls';
@@ -52,6 +53,8 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    // The screen explains itself on the first visit (#316), once everything is drawn.
+    this.events.once(Phaser.Scenes.Events.CREATE, () => showScreenHelp(this));
     audio.music('menu');
     this.howToLayer = null;
     addBackdrop(this, 'menu').setDepth(-40);

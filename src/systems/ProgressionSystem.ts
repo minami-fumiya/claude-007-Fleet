@@ -2,7 +2,7 @@ import { IShipData } from '@/types/Ship';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { ICampaignArea } from '@/types/Campaign';
-import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, gainResources, pay, resources, sortieCost } from './ResourceSystem';
+import { addResources, BAUXITE_PER_PLANE, battleReward, canAfford, gainResources, pay, RESOURCE_KEYS, RESOURCE_LABEL, resources, shortfall, sortieCost } from './ResourceSystem';
 import { holdCap } from './FacilitySystem';
 import { completeRepairs, hpFraction, isDocked, setDamage, SUNK_HP_FRACTION } from './DockSystem';
 import { isFreeArea } from './CampaignSystem';
@@ -85,7 +85,14 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
       if (isDocked(state, s.id)) reasons.push(`${s.name} は入渠中`);
     }
   }
-  if (!canAfford(progress.resources, sortieCostFor(ships, opts))) reasons.push('資源が不足しています');
+  // What is short and by how much (#303): "資源が不足: 燃料 120 / 180 (60 不足)".
+  const cost = sortieCostFor(ships, opts);
+  if (!canAfford(progress.resources, cost)) {
+    const lack = shortfall(progress.resources, cost);
+    const have = resources(progress.resources);
+    const parts = RESOURCE_KEYS.filter((k) => lack[k] > 0).map((k) => `${RESOURCE_LABEL[k]} ${have[k]} / ${cost[k]} (${lack[k]} 不足)`);
+    reasons.push(`資源が不足: ${parts.join('・')}`);
+  }
   return reasons;
 }
 
