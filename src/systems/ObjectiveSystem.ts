@@ -126,3 +126,28 @@ export function goalThrottle(distance: number, speed: number, arrivalSec?: numbe
   if (!arrivalSec || speed <= 0) return 1;
   return Math.min(1, Math.max(0.1, distance / (arrivalSec * speed)));
 }
+
+export interface IBattleBannerInput {
+  areaName?: string;
+  /** The sortie's node: battle n of m, and whether it is the main fleet */
+  sortie?: { node: number; battles: number; boss: boolean };
+  exercise?: boolean;
+  scenarioName?: string;
+  /** What wins the battle, in the map's words */
+  goal: string;
+  timeLimitSec?: number;
+}
+
+/**
+ * The two lines shown as a battle opens (#279): which fight this is — "サボ島沖  ·  第 2 / 3 戦  ·  前哨戦" — and how
+ * it is won, with the time limit when there is one.
+ */
+export function battleBanner(b: IBattleBannerInput): [string, string] {
+  const kind = b.scenarioName
+    ? `史実: ${b.scenarioName}`
+    : b.exercise
+      ? '演習'
+      : [b.areaName, b.sortie && b.sortie.battles > 1 ? `第 ${b.sortie.node} / ${b.sortie.battles} 戦` : '', b.sortie ? (b.sortie.boss ? '主力戦' : '前哨戦') : '主力戦'].filter((t) => t).join('  ·  ');
+  const limit = b.timeLimitSec ? `  (制限 ${Math.floor(b.timeLimitSec / 60)}分${b.timeLimitSec % 60 ? `${b.timeLimitSec % 60}秒` : ''})` : '';
+  return [kind, `勝利条件: ${b.goal}${limit}`];
+}

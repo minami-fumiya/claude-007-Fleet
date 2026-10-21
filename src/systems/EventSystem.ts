@@ -48,6 +48,8 @@ const OTHER_KINDS: EventKind[] = KINDS.filter((k) => k !== 'double' && k !== 'su
 export const MAX_DOUBLE = 2;
 /** 超兵器出現 (#148) at most once a day */
 export const MAX_SUPERWEAPON = 1;
+/** Windows of the day (from 0:00 JST, 3 hours each) when no superweapon appears (#279): 21:00〜6:00. */
+export const NIGHT_WINDOWS: readonly number[] = [0, 1, 7];
 export const THEATERS = (campaignData as { theaters: Array<{ id: string; name: string }> }).theaters;
 
 export const EVENT_NAME: Record<EventKind, string> = {
@@ -83,7 +85,7 @@ export function daySchedule(day: number): IGameEvent[] {
     const w = day * WINDOWS_PER_DAY + i;
     const h = hash(w);
     let kind = KINDS[h % KINDS.length];
-    if ((kind === 'double' && doubles >= MAX_DOUBLE) || (kind === 'superweapon' && giants >= MAX_SUPERWEAPON)) kind = OTHER_KINDS[(h >>> 4) % OTHER_KINDS.length];
+    if ((kind === 'double' && doubles >= MAX_DOUBLE) || (kind === 'superweapon' && (giants >= MAX_SUPERWEAPON || NIGHT_WINDOWS.includes(i)))) kind = OTHER_KINDS[(h >>> 4) % OTHER_KINDS.length];
     if (kind === 'double') doubles++;
     if (kind === 'superweapon') giants++;
     const startsAt = DAY_START_UTC + w * EVENT_WINDOW_MS;

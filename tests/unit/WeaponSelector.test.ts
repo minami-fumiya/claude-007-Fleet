@@ -37,6 +37,10 @@ describe('WeaponSelector', () => {
     expect(canEngage(torp, { ...surface, distance: 290, torpedoEagerness: 1 })).toBe(true);
   });
 
+  it('torpedoes and depth charges are not aimed at land targets (#278)', () => {
+    expect(selectWeapons([gun, he, torp, dc], { ...surface, distance: 50, targetLand: true })).toEqual([gun, he]);
+  });
+
   it('only depth charges reach a submerged target', () => {
     const ctx = { targetSubmerged: true, shooterSubmerged: false };
     expect(selectWeapons([gun, torp, dc], { ...ctx, distance: 50 })).toEqual([dc]);

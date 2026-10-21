@@ -77,7 +77,7 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
-import { evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
+import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
@@ -90,7 +90,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
-import { markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
+import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
 
 
 
@@ -396,6 +396,7 @@ export class BattleScene extends Phaser.Scene {
     this.buildOverlayUi();
     this.setupClickFire();
     this.setupOverlaps();
+    this.showBattleBanner();
     // First-play tutorial (#90): the battle waits while its explanation is open (not in historical scenarios).
     if (!this.scenario) {
       new TutorialGuide(this, { chip: false, onOpen: () => this.setPaused(true, false), onClose: () => this.setPaused(false) });
@@ -1108,6 +1109,8 @@ export class BattleScene extends Phaser.Scene {
     const torpedoes = this.flagship.loadout.filter((w) => weaponKind(w) === WeaponKind.Torpedo);
     if (torpedoes.length === 0 || this.gameOver) return;
     const target = this.isTouch || this.autoMode ? this.currentTarget() : null;
+    // Torpedoes run on the water (#278): a land target is no aim for them.
+    if (target?.isLand) return;
     const angle = target ? angleBetween(this.flagship.x, this.flagship.y, target.x, target.y) : this.aimAngle;
     for (const w of torpedoes) this.playerWeapons.fireWeapon(this.flagship, w, angle, this.battleNow());
   }
@@ -1399,7 +1402,8 @@ export class BattleScene extends Phaser.Scene {
     new UIButton(this, px, b.y, this.isTouch ? '一時停止' : '一時停止 [P]', () => this.setPaused(true), {
       variant: 'secondary', width: pw, height: b.h, fontSize: IS_PORTRAIT ? 15 : 13,
     }).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
-    new UIButton(this, 20 + b.w / 2, b.y, '‹  撤退', () => this.scene.start(SceneKeys.FLEET_BUILDER), {
+    // 撤退 asks first (#279): it ends the whole sortie, so it goes through the pause sheet.
+    new UIButton(this, 20 + b.w / 2, b.y, '‹  撤退', () => this.setPaused(true), {
       variant: 'secondary',
       width: b.w,
       height: b.h,
@@ -1659,16 +1663,41 @@ export class BattleScene extends Phaser.Scene {
     add(this.add.text(CANVAS_W / 2, y + 44, '一時停止中', displayStyle(IS_PORTRAIT ? 30 : 26)).setOrigin(0.5));
     // The objective and how the battle stands (#189).
     const fleet = this.friendlies();
-    const lines = pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length });
+    const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
+    const [kind] = battleBanner({ areaName: area?.name, sortie: area ? this.battleData?.sortie : undefined, exercise: this.exercise && !area, scenarioName: this.scenario?.name, goal: '' });
+    const lines = [kind, ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length })];
     add(this.add.text(x + 32, y + 84, lines.join('\n'), textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { lineSpacing: 8, wordWrap: { width: w - 64, useAdvancedWrap: true } })));
     const bh = IS_PORTRAIT ? 72 : 56;
     const retreatH = bh - 8;
     const retreatY = y + h - retreatH / 2 - 28;
     add(new UIButton(this, CANVAS_W / 2, retreatY - retreatH / 2 - 16 - bh / 2, '再開  ▶', () => this.setPaused(false), { variant: 'gold', width: w - 64, height: bh, fontSize: 20 }));
-    add(new UIButton(this, CANVAS_W / 2, retreatY, '撤退する', () => {
-      this.setPaused(false);
-      this.scene.start(SceneKeys.FLEET_BUILDER);
-    }, { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
+    const campaign = this.battleData?.areaId !== undefined && !this.scenario;
+    if (campaign) add(this.add.text(CANVAS_W / 2, retreatY - retreatH / 2 - 8, '撤退すると、この出撃は終わります (それまでの戦いの報酬は残ります)', textStyle(12, Css.muted)).setOrigin(0.5, 1));
+    add(new UIButton(this, CANVAS_W / 2, retreatY, '撤退する', () => this.retreat(), { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
+  }
+
+  /** Which battle this is and how it is won, for a few seconds as it opens (#279). */
+  private showBattleBanner(): void {
+    const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
+    const [kind, goal] = battleBanner({
+      areaName: area?.name, sortie: area ? this.battleData?.sortie : undefined, exercise: this.exercise && !area,
+      scenarioName: this.scenario?.name, goal: this.goalText(), timeLimitSec: this.side?.timeLimitSec,
+    });
+    const y = IS_PORTRAIT ? CANVAS_H * 0.32 : CANVAS_H * 0.28;
+    const w = Math.min(CANVAS_W - 32, 760);
+    const band = this.add.rectangle(CANVAS_W / 2, y, w, IS_PORTRAIT ? 110 : 92, Colors.bgDeep, 0.78).setScrollFactor(0).setDepth(DEPTH_HUD + 6);
+    const t1 = this.add.text(CANVAS_W / 2, y - (IS_PORTRAIT ? 22 : 18), kind, textStyle(IS_PORTRAIT ? 20 : 20, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
+    const t2 = this.add.text(CANVAS_W / 2, y + (IS_PORTRAIT ? 22 : 18), goal, textStyle(IS_PORTRAIT ? 14 : 15, Css.text, { align: 'center', wordWrap: { width: w - 32, useAdvancedWrap: true } })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
+    for (const t of [t1, t2]) if (t.width > w - 24) t.setScale((w - 24) / t.width);
+    this.time.delayedCall(3000, () => this.tweens.add({ targets: [band, t1, t2], alpha: 0, duration: 500, onComplete: () => [band, t1, t2].forEach((o) => o.destroy()) }));
+  }
+
+  /** 撤退 (#279): a full withdrawal. The saved sortie ends (no 続きから), the fleet comes home and can be docked. */
+  private retreat(): void {
+    this.setPaused(false);
+    const campaign = this.battleData?.areaId !== undefined && !this.scenario;
+    endSortie(this);
+    this.scene.start(campaign ? SceneKeys.CAMPAIGN : SceneKeys.FLEET_BUILDER);
   }
 
   /** The objective in the map's words (#189): the area's, a scenario side's with its brief, or a plain fight's. */
@@ -1683,7 +1712,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.gameOver) return;
     this.gameOver = true;
     const fleet = this.friendlies();
-    const enemiesSunk = this.enemies.filter((e) => !e.isAlive).length;
+    // Ships and land targets are counted apart (#278): 撃沈, 全滅 and 「6 隻以上に S」 count ships only.
+    const enemyShips = this.enemies.filter((e) => !e.isLand);
+    const enemiesSunk = enemyShips.filter((e) => !e.isAlive).length;
+    const landKills = this.enemies.filter((e) => e.isLand && !e.isAlive).length;
     const areaId = this.battleData?.areaId;
     const area = areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === areaId) : undefined;
     // The event running as the battle ends (#89).
@@ -1694,11 +1726,13 @@ export class BattleScene extends Phaser.Scene {
       score: 0,
       turnsElapsed: 0,
       enemiesSunk,
-      enemiesTotal: this.enemies.length,
+      enemiesTotal: enemyShips.length,
+      landKills,
+      landTotal: this.enemies.length - enemyShips.length,
       survivors: fleet.filter((s) => s.isAlive).length,
       fleetSize: fleet.length,
       durationSec: this.elapsedSec(),
-      captainReports: this.awardCaptains(victory, enemiesSunk),
+      captainReports: this.awardCaptains(victory, enemiesSunk + landKills),
     };
     // Battle rank (#149): losses, damage taken and time.
     const maxHp = fleet.reduce((sum, s) => sum + s.stats.maxHp, 0);
@@ -1714,7 +1748,8 @@ export class BattleScene extends Phaser.Scene {
     result.rankNote = rankBreakdown(rankInput);
     const settlement = settleBattle(loadProgress(), {
       victory,
-      enemiesSunk,
+      // Spoils still come from land targets too.
+      enemiesSunk: enemiesSunk + landKills,
       planesLost: this.playerAir.totalLost(),
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
@@ -1749,7 +1784,7 @@ export class BattleScene extends Phaser.Scene {
     const proficiency = { ...progress.proficiency };
     for (const s of fleet) {
       const current = proficiency[s.dataId] ?? 0;
-      proficiency[s.dataId] = addProficiency(current, Math.round(proficiencyGain({ victory, enemiesSunk, survived: s.isAlive, current }) * this.battleEvent.xpMul * (area?.training ? TRAINING_SCALE : 1)));
+      proficiency[s.dataId] = addProficiency(current, Math.round(proficiencyGain({ victory, enemiesSunk: enemiesSunk + landKills, survived: s.isAlive, current }) * this.battleEvent.xpMul * (area?.training ? TRAINING_SCALE : 1)));
     }
     progress = { ...progress, proficiency };
     let firstClear = false;
@@ -1780,6 +1815,7 @@ export class BattleScene extends Phaser.Scene {
     const theaterEvent = area ? theaterWin[area.theater] : undefined;
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
+      ['landKill', this.enemies.filter((e) => e.isLand && !e.isAlive).length],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
       ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
@@ -1834,10 +1870,10 @@ export class BattleScene extends Phaser.Scene {
       progress = addRankStats(progress, {
         campaignWin: victory ? 1 : 0, sink: sunk.length, nightWin: victory && this.conditions.time === TimeOfDay.Night ? 1 : 0,
         sinkCarrier: sunkOf(ShipClass.Carrier), sinkSubmarine: sunkOf(ShipClass.Submarine), sinkBattleship: sunkOf(ShipClass.Battleship),
-        objectiveWin: victory && campaignSide(area) ? 1 : 0, bigS: rank === 'S' && this.enemies.length >= 6 ? 1 : 0,
+        objectiveWin: victory && campaignSide(area) ? 1 : 0, bigS: rank === 'S' && this.enemies.filter((e) => !e.isLand).length >= 6 ? 1 : 0,
       });
     }
-    const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
+    const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk: enemiesSunk + landKills }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
     progress = addMerit(progress, merit).progress;
     // ゴールド (#183): campaign wins by rank, more on a first clear.
     // Sinking a superweapon (#148) pays extra gold.

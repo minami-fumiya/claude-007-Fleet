@@ -38,8 +38,11 @@ export interface IBattleResultData {
   victory: boolean;
   score: number;
   turnsElapsed: number;
+  /** Enemy ships sunk and in the battle; land targets are counted apart (#278) */
   enemiesSunk: number;
   enemiesTotal: number;
+  landKills?: number;
+  landTotal?: number;
   /** Player ships still afloat at the end of the battle */
   survivors: number;
   fleetSize: number;

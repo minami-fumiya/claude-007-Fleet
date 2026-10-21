@@ -92,7 +92,9 @@ export class ResultsScene extends Phaser.Scene {
     const cardW = STAT.w;
     const gap = STAT.gap;
     const startX = CANVAS_W / 2 - (cardW * 3 + gap * 2) / 2;
-    addStatCard(this, startX, y + 300, cardW, STAT.h, '撃沈', `${sunk} / ${total}`, Css.gold);
+    // Land targets show beside the ships, not in their count (#278).
+    const land = data?.landTotal ? `  陸 ${data.landKills ?? 0}/${data.landTotal}` : '';
+    addStatCard(this, startX, y + 300, cardW, STAT.h, '撃沈', `${sunk} / ${total}${land}`, Css.gold);
     addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存', `${survivors} / ${fleetSize}`, Css.success);
     addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間', time, Css.cyan);
 
