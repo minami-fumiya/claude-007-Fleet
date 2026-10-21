@@ -120,6 +120,7 @@
     {"id": "a_med20", "kind": "once", "name": "地中海の覇者", "text": "地中海の海域で 20 回勝利する", "event": "winMediterranean", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},
     {"id": "a_baltic20", "kind": "once", "name": "バルト海の覇者", "text": "バルト海の海域で 20 回勝利する", "event": "winBaltic", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},
     {"id": "a_np20", "kind": "once", "name": "北太平洋の覇者", "text": "北太平洋の海域で 20 回勝利する", "event": "winNorthPacific", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},
+    {"id": "a_blacksea20", "kind": "once", "name": "黒海の覇者", "text": "黒海の海域で 20 回勝利する", "event": "winBlackSea", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},
     {"id": "a_sa20", "kind": "once", "name": "南大西洋の覇者", "text": "南大西洋の海域で 20 回勝利する", "event": "winSouthAtlantic", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},
     {"id": "a_io20", "kind": "once", "name": "インド洋の覇者", "text": "インド洋の海域で 20 回勝利する", "event": "winIndian", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},
     {"id": "a_ar20", "kind": "once", "name": "北極海の覇者", "text": "北極海の海域で 20 回勝利する", "event": "winArctic", "goal": 20, "gold": 300, "reward": {"fuel": 1500, "ammo": 1000, "steel": 1000}},

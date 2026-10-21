@@ -140,9 +140,9 @@
       ],
       "spriteKey": "project71",
       "airWing": {
-        "fighters": 3,
-        "diveBombers": 2,
-        "torpedoBombers": 2
+        "fighters": 4,
+        "diveBombers": 3,
+        "torpedoBombers": 3
       },
       "fictional": true,
       "description": "1930年代末に計画されたソ連初の空母。巡洋艦の船体を使う設計だったが、起工されなかった (架空艦)。",

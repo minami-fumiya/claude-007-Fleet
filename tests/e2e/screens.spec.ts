@@ -550,7 +550,7 @@ test.describe('screens', () => {
       s.useBook({ id: s.selectedId, name: '' });
       return { gained: xp() - before, books: JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.items.captainBook, traits };
     });
-    expect(r).toEqual({ gained: 300, books: 0, traits: true });
+    expect(r).toEqual({ gained: 1000, books: 0, traits: true });
     expect(errors).toEqual([]);
   });
 

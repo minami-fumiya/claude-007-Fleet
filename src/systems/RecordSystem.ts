@@ -244,7 +244,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('special_branch', '匠の改装章', 'growth', [1, 5], (g) => `専用の改装を持つ艦 (大和・長門 …) で改三の方向を ${g} 隻選ぶ`, (_r, c) => total(c, 'specialBranch')),
   ...ladder('refit_rebranch', '改装の匠章', 'growth', [1, 3, 10], (g) => `改造を終えた艦の方向を ${g} 回変える`, (_r, c) => total(c, 'refitRebranch')),
   ...ladder('refitter', '改造章', 'growth', [1, 10, 30], (g) => `艦を ${g} 回改造する`, (_r, c) => total(c, 'refit')),
-  ...ladder('promotion', '昇進章', 'growth', [6, 8, 11], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
+  ...ladder('promotion', '昇進章', 'growth', [6, 8, 11, 13], (g) => `階級を ${({ 6: '少佐', 8: '大佐', 11: '中将', 13: '元帥' } as Record<number, string>)[g]}まで上げる`, (_r, c) => c.rankIndex ?? 0),
   // 軍港・工廠
   ...ladder('shipwright', '造船章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻建造する`, (_r, c) => total(c, 'build')),
   ...ladder('list_search', '捜索章', 'special', [1, 30], (g) => `一覧で艦を名前で ${g} 回検索する`, (_r, c) => total(c, 'listSearch')),
