@@ -395,7 +395,7 @@
     {
       "id": "np8", "theater": "north_pacific", "name": "本土沖遅滞戦", "description": "港へ迫る敵戦艦を、時間いっぱい食い止めよ。",
       "x": 0.84, "y": 0.7, "requires": ["np7"],
-      "enemy": { "nation": "USN", "ships": ["south_dakota", "baltimore", "cleveland", "fletcher", "gearing"] },
+      "enemy": { "nation": "USN", "ships": ["south_dakota", "baltimore", "cleveland", "fletcher", "gearing", "benson"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
       "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "本土の港" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 900, "ammo": 900, "steel": 1100, "bauxite": 350 }, "rewardShip": "Battleship"
