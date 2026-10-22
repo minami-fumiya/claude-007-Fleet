@@ -27,7 +27,7 @@ historically grounded officers for the five new specialities, and all eight for 
 | 2 | 100 |
 | 3 | 300 |
 | 4 | 600 |
-| n | 100 × n(n−1)/2 (max 10) |
+| n | 35 × n(n−1) (#322, max 100) |
 
 ## Battle XP
 `40 + 30 × enemies sunk (by the fleet) + 60 if victorious`, ×1.2 for the flagship's captain, ×0.5 if their ship sank.

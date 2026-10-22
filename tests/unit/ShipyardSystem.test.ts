@@ -3,7 +3,7 @@ import {
   BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
   REWARD_SHIPS, rewardShipFor, shipGrade, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, docksInUse, fastBuild,
 } from '@/systems/ShipyardSystem';
-import { ALL_MISSIONS_DONE, RANKS } from '@/systems/RankSystem';
+import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE, RANKS } from '@/systems/RankSystem';
 import { currentBaseId } from '@/systems/BaseSystem';
 import { emptyProgress, finishBuilds, IProgress } from '@/utils/ProgressStore';
 import { resources } from '@/systems/ResourceSystem';
@@ -32,7 +32,10 @@ const byId = (id: string): IShipData => IJN.find((s) => s.id === id)!;
 const rich = resources({ fuel: 20000, ammo: 20000, steel: 20000, bauxite: 20000 });
 const withClears = (n: number): string[] => Array.from({ length: n }, (_, i) => `x${i}`);
 // Promotion missions (#142) done: merit alone sets the rank here.
-const player = (patch: Partial<IProgress> = {}): IProgress => ({ ...emptyProgress(), ships: ['fubuki'], rankStats: ALL_MISSIONS_DONE, ...patch });
+const player = (patch: Partial<IProgress> = {}): IProgress => {
+  const p = emptyProgress();
+  return { ...p, ships: ['fubuki'], rankStats: ALL_MISSIONS_DONE, record: { ...p.record, medals: ALL_MISSION_MEDALS }, ...patch };
+};
 
 describe('ShipyardSystem (#18 / #29)', () => {
   it('every nation starts with one of its own destroyers', () => {

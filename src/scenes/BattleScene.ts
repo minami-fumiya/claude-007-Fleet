@@ -1905,7 +1905,7 @@ export class BattleScene extends Phaser.Scene {
       progress = addRankStats(progress, {
         campaignWin: victory ? 1 : 0, sink: sunk.length, nightWin: victory && this.conditions.time === TimeOfDay.Night ? 1 : 0,
         sinkCarrier: sunkOf(ShipClass.Carrier), sinkSubmarine: sunkOf(ShipClass.Submarine), sinkBattleship: sunkOf(ShipClass.Battleship),
-        objectiveWin: victory && campaignSide(area) ? 1 : 0, bigS: rank === 'S' && this.enemies.filter((e) => !e.isLand).length >= 6 ? 1 : 0,
+        objectiveWin: victory && campaignSide(area) ? 1 : 0, areaClear: firstClear ? 1 : 0, bigS: rank === 'S' && this.enemies.filter((e) => !e.isLand).length >= 6 ? 1 : 0,
       });
     }
     const merit = Math.round(meritFor({ victory, campaign: area !== undefined, firstClear, enemiesSunk: enemiesSunk + landKills }) * RANK_MERIT_MUL[rank] * (area?.training ? TRAINING_SCALE : 1));
@@ -1940,9 +1940,9 @@ export class BattleScene extends Phaser.Scene {
     // The sortie's battle is settled (#138): reopening the game offers the advance, not this battle again.
     if (area) progress = markSortieFought(progress);
     // Nations opened by this battle (#134) are announced with the recruits.
-    const locksBefore = nationLocks(loadSave().nations);
+    const locksBefore = nationLocks(loadSave().nations, loadSave().record);
     saveProgress(progress);
-    const opened = newlyUnlocked(locksBefore, nationLocks(loadSave().nations));
+    const opened = newlyUnlocked(locksBefore, nationLocks(loadSave().nations, loadSave().record));
     if (opened.length > 0) {
       const line = `新しい国が着任可能: ${opened.map((n) => NATION_INFO[n].jaShort).join('・')}`;
       result.recruits = result.recruits ? `${result.recruits}\n${line}` : line;

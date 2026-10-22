@@ -118,7 +118,8 @@ describe('captain skills learned before #187 moved the slot levels', () => {
     const { save } = parseSaveChecked(readFileSync(join(DIR, 'save-0.0.25.json'), 'utf8'));
     const np = save.nations.IJN!;
     const murase = withProgress(nationCaptains('IJN').find((c) => c.id === 'ijn_murase')!, np.captainXp.ijn_murase);
-    expect(murase.level).toBeLessThan(5);
+    // The XP of a Lv4 captain then; the gentler curve of #322 makes it Lv5 now, and the skill stays either way.
+    expect(murase.level).toBeLessThanOrEqual(5);
     expect(validLearned(murase, np.captainSkills.ijn_murase)).toEqual(['ASW']);
   });
 });

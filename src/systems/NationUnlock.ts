@@ -73,14 +73,14 @@ export function firstNation(nations: Partial<Record<Nation, Progress>>): Nation 
 }
 
 /** Each playable nation's lock, from the started nations' progress. */
-export function nationLocks(nations: Partial<Record<Nation, Progress>>): Record<Nation, INationLock> {
+export function nationLocks(nations: Partial<Record<Nation, Progress>>, record?: { medals: readonly string[] }): Record<Nation, INationLock> {
   const started = PLAYABLE_NATIONS.filter((n) => nations[n] !== undefined);
   const all = started.map((n) => ({ n, p: nations[n]! }));
   const first = firstNation(nations);
   const rankName = RANKS[UNLOCK_RANK].name;
-  const anyRank = all.some(({ p }) => rankOf({ ...p, nation: undefined }).index >= UNLOCK_RANK);
+  const anyRank = all.some(({ p }) => rankOf({ ...p, nation: undefined, record }).index >= UNLOCK_RANK);
   const anyTheater = (ids: string[]): boolean => all.some(({ p }) => ids.some((t) => clearedTheater(p, t)));
-  const bestRank = all.map(({ n, p }) => ({ n, r: rankOf({ ...p, nation: undefined }) })).sort((a, b) => b.r.index - a.r.index)[0];
+  const bestRank = all.map(({ n, p }) => ({ n, r: rankOf({ ...p, nation: undefined, record }) })).sort((a, b) => b.r.index - a.r.index)[0];
   const rankProgress = bestRank ? `いま ${NATION_INFO[bestRank.n].jaShort} ${bestRank.r.name}` : '';
   const out = {} as Record<Nation, INationLock>;
   for (const n of PLAYABLE_NATIONS) {

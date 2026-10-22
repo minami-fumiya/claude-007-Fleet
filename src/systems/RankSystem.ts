@@ -1,4 +1,5 @@
 import campaignData from '@/data/campaign.json';
+import { MEDALS } from './RecordSystem';
 import { theaterFinalArea } from './CampaignSystem';
 
 /**
@@ -35,10 +36,10 @@ export const RANKS: IRank[] = [
   { index: 7, name: '中佐', en: 'COMMANDER', minMerit: 650, slots: 4 },
   { index: 8, name: '大佐', en: 'CAPTAIN', minMerit: 850, slots: 5 },
   { index: 9, name: '准将', en: 'COMMODORE', minMerit: 1000, slots: 5, exam: 'theaterFinal' },
-  { index: 10, name: '少将', en: 'REAR ADMIRAL', minMerit: 1300, slots: 6 },
-  { index: 11, name: '中将', en: 'VICE ADMIRAL', minMerit: 1650, slots: 6 },
-  { index: 12, name: '大将', en: 'ADMIRAL', minMerit: 2050, slots: 7 },
-  { index: 13, name: '元帥', en: 'FLEET ADMIRAL', minMerit: 2500, slots: 8, exam: 'allAreas' },
+  { index: 10, name: '少将', en: 'REAR ADMIRAL', minMerit: 1700, slots: 6 },
+  { index: 11, name: '中将', en: 'VICE ADMIRAL', minMerit: 2150, slots: 6 },
+  { index: 12, name: '大将', en: 'ADMIRAL', minMerit: 2650, slots: 7 },
+  { index: 13, name: '元帥', en: 'FLEET ADMIRAL', minMerit: 3300, slots: 8, exam: 'allAreas' },
 ];
 
 export const MAX_FLEET_SLOTS = RANKS[RANKS.length - 1].slots;
@@ -63,6 +64,8 @@ export interface IRankProgress {
   nation?: string;
   /** What the promotion missions count (#142) */
   rankStats?: Partial<Record<RankStat, number>>;
+  /** The shared service record, for the medal mission of each rank (#261); without it a medal counts as missing */
+  record?: { medals: readonly string[] };
 }
 
 // ---------------------------------------------------------------------------
@@ -71,46 +74,82 @@ export interface IRankProgress {
 
 /** What promotion missions count, per nation, in campaign battles (and sweeps). */
 export type RankStat =
-  | 'campaignWin' | 'sink' | 'nightWin' | 'sinkCarrier' | 'objectiveWin' | 'bigS' | 'sinkSubmarine' | 'sinkBattleship' | 'sweep';
+  | 'campaignWin' | 'sink' | 'nightWin' | 'sinkCarrier' | 'objectiveWin' | 'bigS' | 'sinkSubmarine' | 'sinkBattleship' | 'sweep'
+  // First clears of campaign areas (#261)
+  | 'areaClear';
 
 export interface IRankMission {
-  stat: RankStat;
+  /** The counter it reads, or `medal` for a medal mission (#261) */
+  stat: RankStat | 'medal';
   goal: number;
+  /** The medal a medal mission asks for */
+  medal?: string;
   /** "作戦で 1 回勝利" */
   text: string;
 }
 
-/** Missions a rank needs on top of its merit (and exam); every one must be done. */
+const win = (goal: number): IRankMission => ({ stat: 'campaignWin', goal, text: `作戦で ${goal} 回勝利` });
+const sink = (goal: number): IRankMission => ({ stat: 'sink', goal, text: `作戦で敵艦を ${goal} 隻撃沈` });
+const night = (goal: number): IRankMission => ({ stat: 'nightWin', goal, text: goal > 1 ? `作戦の夜戦で ${goal} 回勝利` : '作戦の夜戦で勝利' });
+const carrier = (goal: number): IRankMission => ({ stat: 'sinkCarrier', goal, text: goal > 1 ? `作戦で空母を ${goal} 隻撃沈` : '作戦で空母を撃沈' });
+const objective = (goal: number): IRankMission => ({ stat: 'objectiveWin', goal, text: `目的のある海域 (遅滞・突入・護衛など) で ${goal} 回勝利` });
+const bigS = (goal: number): IRankMission => ({ stat: 'bigS', goal, text: `6 隻以上の敵艦隊に S 評価で ${goal} 回勝利` });
+const sub = (goal: number): IRankMission => ({ stat: 'sinkSubmarine', goal, text: `作戦で潜水艦を ${goal} 隻撃沈` });
+const battleship = (goal: number): IRankMission => ({ stat: 'sinkBattleship', goal, text: `作戦で戦艦を ${goal} 隻撃沈` });
+const areas = (goal: number): IRankMission => ({ stat: 'areaClear', goal, text: `作戦の海域を ${goal} か所攻略` });
+const sweep = (goal: number): IRankMission => ({ stat: 'sweep', goal, text: `掃討を ${goal} 回` });
+const medal = (id: string): IRankMission => ({ stat: 'medal', goal: 1, medal: id, text: `勲章「${MEDALS.find((m) => m.id === id)?.name ?? id}」を得る` });
+
+/**
+ * Missions a rank needs on top of its merit (and exam); every one must be done. From 少尉 on, four per rank (#261):
+ * three battle counters (per nation, counted from the start, so the goals rise) and one medal (shared by the navies).
+ */
 export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
-  2: [{ stat: 'campaignWin', goal: 1, text: '作戦で 1 回勝利' }],
-  3: [{ stat: 'sink', goal: 20, text: '作戦で敵艦を 20 隻撃沈' }],
-  4: [{ stat: 'nightWin', goal: 1, text: '作戦の夜戦で勝利' }],
-  6: [{ stat: 'sinkCarrier', goal: 1, text: '作戦で空母を撃沈' }],
-  7: [{ stat: 'objectiveWin', goal: 1, text: '目的のある海域 (遅滞・突入・護衛など) で勝利' }],
-  8: [{ stat: 'bigS', goal: 1, text: '6 隻以上の敵艦隊に S 評価で勝利' }],
-  10: [{ stat: 'sinkSubmarine', goal: 10, text: '作戦で潜水艦を 10 隻撃沈' }],
-  11: [{ stat: 'sinkBattleship', goal: 5, text: '作戦で戦艦を 5 隻撃沈' }],
-  12: [{ stat: 'sweep', goal: 20, text: '掃討を 20 回' }],
+  2: [win(1), sink(1), areas(1), medal('first_victory')],
+  3: [win(5), sink(20), night(1), medal('victor')],
+  4: [areas(5), sink(40), objective(1), medal('veteran')],
+  5: [win(15), carrier(1), sweep(5), medal('perfect')],
+  6: [carrier(3), objective(3), night(3), medal('fleet_2')],
+  7: [bigS(1), sink(100), sub(3), medal('operations')],
+  8: [bigS(3), battleship(2), win(40), medal('flawless')],
+  9: [sub(10), battleship(5), sweep(15), medal('science_3')],
+  10: [sink(250), areas(25), night(10), medal('victor_2')],
+  11: [battleship(10), bigS(8), carrier(10), medal('s_rank_2')],
+  12: [sweep(30), sub(25), win(120), medal('explorer_3')],
+  13: [sink(600), bigS(15), battleship(20), medal('research_peak')],
 };
 
 /** Every mission's counter at its goal (a granted promotion, tests). */
 export const ALL_MISSIONS_DONE: Record<RankStat, number> = Object.values(RANK_MISSIONS).flat().reduce(
-  (out, m) => (m ? { ...out, [m.stat]: Math.max(out[m.stat] ?? 0, m.goal) } : out),
+  (out, m) => (m && m.stat !== 'medal' ? { ...out, [m.stat]: Math.max(out[m.stat] ?? 0, m.goal) } : out),
   {} as Record<RankStat, number>,
 );
+
+/** Every medal the promotion missions ask for (a granted promotion, tests). */
+export const ALL_MISSION_MEDALS: string[] = Object.values(RANK_MISSIONS).flat().flatMap((m) => (m?.medal ? [m.medal] : []));
 
 export function missionCount(progress: IRankProgress, stat: RankStat): number {
   return progress.rankStats?.[stat] ?? 0;
 }
 
+/** How far a mission is: its counter, or 1 / 0 for a medal held or not. */
+export function missionValue(progress: IRankProgress, m: IRankMission): number {
+  if (m.stat === 'medal') return m.medal && progress.record?.medals.includes(m.medal) ? 1 : 0;
+  return missionCount(progress, m.stat);
+}
+
+export function missionDone(progress: IRankProgress, m: IRankMission): boolean {
+  return missionValue(progress, m) >= m.goal;
+}
+
 /** The rank's missions not done yet. */
 export function openMissions(rank: IRank, progress: IRankProgress): IRankMission[] {
-  return (RANK_MISSIONS[rank.index] ?? []).filter((m) => missionCount(progress, m.stat) < m.goal);
+  return (RANK_MISSIONS[rank.index] ?? []).filter((m) => !missionDone(progress, m));
 }
 
 /** "作戦で敵艦を 20 隻撃沈 (12 / 20)" */
 export function missionText(m: IRankMission, progress: IRankProgress): string {
-  return m.goal > 1 ? `${m.text} (${Math.min(m.goal, missionCount(progress, m.stat))} / ${m.goal})` : m.text;
+  return m.goal > 1 ? `${m.text} (${Math.min(m.goal, missionValue(progress, m))} / ${m.goal})` : m.text;
 }
 
 /** Adds to the mission counters (zeros are skipped). */
@@ -287,8 +326,9 @@ export function grantRankMerit<T extends IRankProgress>(progress: T, rankIndex: 
   const index = Math.min(RANKS.length - 1, Math.max(0, rankIndex));
   const need = RANKS[index].minMerit;
   const stats = { ...(progress.rankStats ?? {}) };
-  for (let i = 0; i <= index; i++) for (const m of RANK_MISSIONS[i] ?? []) stats[m.stat] = Math.max(stats[m.stat] ?? 0, m.goal);
-  return { ...progress, merit: Math.max(progress.merit ?? 0, need), rankStats: stats };
+  for (let i = 0; i <= index; i++) for (const m of RANK_MISSIONS[i] ?? []) if (m.stat !== 'medal') stats[m.stat] = Math.max(stats[m.stat] ?? 0, m.goal);
+  // A medal can't be granted: the rank itself is held as the floor.
+  return { ...progress, merit: Math.max(progress.merit ?? 0, need), rankStats: stats, rankFloor: Math.max(progress.rankFloor ?? 0, index) };
 }
 
 // ---------------------------------------------------------------------------

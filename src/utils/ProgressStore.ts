@@ -11,7 +11,7 @@
 
 import { IDockJob, IItems, IResources, IWallet } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
-import type { RankStat } from '@/systems/RankSystem';
+import { rankOf, type RankStat } from '@/systems/RankSystem';
 import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
 import { IBaseWork, nationBases } from '@/systems/BaseSystem';
@@ -208,7 +208,10 @@ export { finishBuilds };
 /** Writes a view back into its nation's slot (and the shared record). */
 export function withProgress(save: ISave, progress: IProgress): ISave {
   const { nation, record, wallet, ...np } = progress;
-  return { ...save, nations: { ...save.nations, [nation]: np }, record, wallet: wallet ?? save.wallet };
+  // A rank reached is kept (#261): its medal mission is read from the shared record, which a nation's own slot lacks.
+  const held = rankOf(progress).index;
+  const floor = held > (np.rankFloor ?? 0) ? { rankFloor: held } : {};
+  return { ...save, nations: { ...save.nations, [nation]: { ...np, ...floor } }, record, wallet: wallet ?? save.wallet };
 }
 
 /**

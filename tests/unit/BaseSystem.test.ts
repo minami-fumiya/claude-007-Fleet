@@ -10,7 +10,7 @@ import { IShipData } from '@/types/Ship';
 import { ITechNode } from '@/types/Progression';
 import { emptyNationProgress, IProgress } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
-import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
+import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import shipsIjn from '@/data/ships/ijn.json';
 
 const T0 = 1_700_000_000_000;
@@ -18,8 +18,8 @@ const T0 = 1_700_000_000_000;
 /** An admiral of `merit` with every base the rank allows already built (#217). */
 const at = (merit: number, base = '', built = true): IProgress => ({
   ...emptyNationProgress(), nation: Nation.IJN, merit, base, rankStats: ALL_MISSIONS_DONE,
-  basesOpen: built ? nationBases(Nation.IJN).filter((b) => baseRankMet(b, { ...emptyNationProgress(), nation: Nation.IJN, merit, rankStats: ALL_MISSIONS_DONE })).map((b) => b.id) : [],
-  record: { sorties: 0, victories: 0, perfectVictories: 0, sunk: {}, damageDealt: 0, bestDamage: 0, shipsLost: 0, medals: [] },
+  basesOpen: built ? nationBases(Nation.IJN).filter((b) => baseRankMet(b, { ...emptyNationProgress(), nation: Nation.IJN, merit, rankStats: ALL_MISSIONS_DONE, record: { medals: ALL_MISSION_MEDALS } })).map((b) => b.id) : [],
+  record: { sorties: 0, victories: 0, perfectVictories: 0, sunk: {}, damageDealt: 0, bestDamage: 0, shipsLost: 0, medals: ALL_MISSION_MEDALS },
 });
 
 describe('bases (#88)', () => {

@@ -18,23 +18,26 @@ const data = (skill: CaptainSkill): ICaptainData => ({ id: 'c', name: 'c', natio
 describe('CaptainSystem levels', () => {
   it('uses triangular XP thresholds', () => {
     expect(xpForLevel(1)).toBe(0);
-    expect(xpForLevel(2)).toBe(100);
-    expect(xpForLevel(3)).toBe(300);
-    expect(xpForLevel(4)).toBe(600);
+    expect(xpForLevel(2)).toBe(70);
+    expect(xpForLevel(3)).toBe(210);
+    expect(xpForLevel(4)).toBe(420);
+    // #322: Lv40 and Lv70 (learn slots 4 and 5) at 35·n(n−1).
+    expect(xpForLevel(40)).toBe(54_600);
+    expect(xpForLevel(70)).toBe(169_050);
   });
 
   it('derives the level from XP, capped', () => {
     expect(levelForXp(0)).toBe(1);
-    expect(levelForXp(99)).toBe(1);
-    expect(levelForXp(100)).toBe(2);
-    expect(levelForXp(299)).toBe(2);
+    expect(levelForXp(69)).toBe(1);
+    expect(levelForXp(70)).toBe(2);
+    expect(levelForXp(209)).toBe(2);
     expect(levelForXp(1e9)).toBe(MAX_LEVEL);
   });
 
   it('awards XP and reports level-ups', () => {
-    const c = withProgress(data(CaptainSkill.Gunnery), 90);
+    const c = withProgress(data(CaptainSkill.Gunnery), 60);
     const a = awardXp(c, 20);
-    expect(a.captain.xp).toBe(110);
+    expect(a.captain.xp).toBe(80);
     expect(a.captain.level).toBe(2);
     expect(a.leveledUp).toBe(true);
     expect(awardXp(a.captain, 10).leveledUp).toBe(false);
@@ -128,8 +131,8 @@ describe('captainModifiers', () => {
 describe('growth to Lv100 (#131)', () => {
   it('keeps the early curve and reaches Lv100', () => {
     expect(MAX_LEVEL).toBe(100);
-    expect(xpForLevel(10)).toBe(4500);
-    expect(levelForXp(4500)).toBe(10);
+    expect(xpForLevel(10)).toBe(3150);
+    expect(levelForXp(3150)).toBe(10);
     expect(levelForXp(xpForLevel(100))).toBe(100);
     expect(levelForXp(xpForLevel(100) - 1)).toBe(99);
   });
