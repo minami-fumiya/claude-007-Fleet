@@ -104,5 +104,5 @@
   ],
   "winRate": 0.85,
   "_rankShare": "Share of the won battles at each rank, for the gold (#321). 0.0.41: from the battle simulator (#320, docs/balance/0.0.41.md).",
-  "rankShare": { "S": 0.2, "A": 0.3, "B": 0.35, "C": 0.15 }
+  "rankShare": { "S": 0.16, "A": 0.36, "B": 0.34, "C": 0.15 }
 }
