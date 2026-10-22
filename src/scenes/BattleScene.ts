@@ -51,6 +51,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
 import { IShipData, IShipStats } from '@/types/Ship';
+import { midModifiers } from '@/systems/ShipKind';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { IFleet } from '@/types/Fleet';
 import { Nation } from '@/types/Nation';
@@ -598,7 +599,9 @@ export class BattleScene extends Phaser.Scene {
     return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
   }
 
-  private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {
+  private spawnShip(shipData: IShipData, wantX: number, wantY: number, given: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {
+    // What the 中分類 is good at (#260): escorts hunt submarines, the AA kinds shoot down planes.
+    const mods = combineModifiers(given, midModifiers(shipData));
     const { x, y } = avoidLand ? clearSpawn(this.map, wantX, wantY, 60, this.spawnedAt, SPAWN_GAP) : { x: wantX, y: wantY };
     if (avoidLand) this.spawnedAt.push({ x, y });
     const loadout = applyToWeapons(this.loadoutOf(shipData), mods);

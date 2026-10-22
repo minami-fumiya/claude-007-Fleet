@@ -52,16 +52,20 @@ export type TechBranch =
   | 'asw'
   | 'night'
   | 'logistics'
-  | 'shipbuilding';
+  | 'shipbuilding'
+  /** 建造 (空母・潜水艦), split off the surface ships in 0.0.42 (#298): ten levels each */
+  | 'shipbuilding_air';
 
 /** One research project (src/data/tech-tree.json). */
 export interface ITechNode {
   id: string;
   name: string;
   description: string;
-  /** Branch the project belongs to, and its level (1 = I … 5 = V) within the branch */
+  /** Branch the project belongs to, and its level (1 = I … 10 = X, one project a level: #298) within the branch */
   branch: TechBranch;
   level: number;
+  /** Rank index the project needs (#298): 准尉 for the first levels up to 中将 for level 10 */
+  rank?: number;
   cost: Partial<IResources>;
   /** Research ids that must be finished first */
   requires: string[];

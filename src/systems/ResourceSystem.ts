@@ -25,10 +25,15 @@ const SORTIE_COST: Record<ShipClass, Partial<IResources>> = {
   [ShipClass.Destroyer]: { fuel: 18, ammo: 24 },
   [ShipClass.Submarine]: { fuel: 12, ammo: 18 },
 };
-/** Light cruisers are cheap to run, heavy cruisers dear (#37); other subtypes pay their class's cost. */
+/**
+ * Light cruisers are cheap to run, heavy cruisers dear (#37); 海防艦 run on 6 tenths of a destroyer (#260); other
+ * subtypes pay their class's cost.
+ */
 const SUBTYPE_SORTIE_COST: Partial<Record<ShipSubtype, Partial<IResources>>> = {
   [ShipSubtype.HeavyCruiser]: { fuel: 50, ammo: 55 },
   [ShipSubtype.LightCruiser]: { fuel: 30, ammo: 36 },
+  [ShipSubtype.AACruiser]: { fuel: 30, ammo: 36 },
+  [ShipSubtype.Escort]: { fuel: 11, ammo: 14 },
 };
 /** Bauxite to replace one aircraft lost in battle. */
 export const BAUXITE_PER_PLANE = 6;

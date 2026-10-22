@@ -31,12 +31,13 @@ describe('medals as prerequisites (#169)', () => {
   });
 
   it('research waits for the medal; finished research stays', () => {
-    const node = TECH_TREE.find((n) => n.id === 'gunnery_4')!;
-    const done = ['gunnery_1', 'gunnery_2', 'gunnery_3'];
+    // Level 5 of a branch asks the medal of its field (#298).
+    const node = TECH_TREE.find((n) => n.id === 'gunnery_5')!;
+    const done = ['gunnery_1', 'gunnery_2', 'gunnery_3', 'gunnery_4', 'fire_control'];
     expect(canResearch(node, done, rich, 1, [])).toBe(false);
     expect(research(node, done, rich, 1, [])).toBeNull();
-    expect(canResearch(node, done, rich, 1, ['battleship_slayer'])).toBe(true);
-    expect(canResearch(node, [...done, 'gunnery_4'], rich, 1, [])).toBe(false);
+    expect(canResearch(node, done, rich, 1, ['big_gun'])).toBe(true);
+    expect(canResearch(node, [...done, 'gunnery_5'], rich, 1, [])).toBe(false);
   });
 
   it('a facility level that needs a medal reads medal, then opens', () => {
@@ -53,7 +54,7 @@ describe('medals as prerequisites (#169)', () => {
     expect(medalNeedText('battleship_slayer', r, { clearedTheaters: [] })).toBe('要勲章: 戦艦撃沈章 三等 (戦艦を 5 隻撃沈する — 3 / 5)');
     expect(hasMedal(r, undefined)).toBe(true);
     expect(hasMedal(r, 'battleship_slayer')).toBe(false);
-    expect(unlocksOf('battleship_slayer').research).toContain('gunnery_4');
+    expect(unlocksOf('battleship_slayer').research).toContain('build_fast_battleship');
     expect(unlocksOf('battleship_slayer').other.length).toBeGreaterThan(0);
   });
 });

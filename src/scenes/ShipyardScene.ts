@@ -5,13 +5,14 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO } from '@/config/NationInfo';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { BUILD_TECH, HEAVY_CRUISER_TECH, buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, completeBuilds, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
+import { buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, completeBuilds, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
 import { holdCap } from '@/systems/FacilitySystem';
-import { availableShips, canResearch, medalMet, prerequisitesMet, research } from '@/systems/ResearchSystem';
+import { availableShips, canResearch, medalMet, MID_BUILD_TECH, prerequisitesMet, rankMet, research } from '@/systems/ResearchSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
 import { formatResources, shortfall } from '@/systems/ResourceSystem';
-import { maxBuildGrade, rankOf } from '@/systems/RankSystem';
+import { maxBuildGrade, RANKS, rankOf } from '@/systems/RankSystem';
+import { MID_CLASSES } from '@/systems/ShipKind';
 import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
 import { IShipData } from '@/types/Ship';
 import { shipOrder, hullNumber } from '@/systems/ShipOrder';
@@ -191,9 +192,9 @@ export class ShipyardScene extends Phaser.Scene {
     const info = L.info;
     add(drawPanel(this.add.graphics(), info.x, info.y, info.w, info.h, { radius: 16, fillAlpha: 0.55 }));
     const rank = rankOf(progress);
-    // Cruisers: light first, then heavy (#37) — show whichever is still missing.
-    const techs = this.shipClass === ShipClass.Cruiser ? [BUILD_TECH[ShipClass.Cruiser], HEAVY_CRUISER_TECH] : [BUILD_TECH[this.shipClass]];
-    const techId = techs.find((t) => t && !progress.research.includes(t)) ?? techs[techs.length - 1];
+    // The tab's 中分類 in research order (#260 #298): show the first one still missing.
+    const techs = TREE.filter((n) => MID_CLASSES[this.shipClass].some((m) => MID_BUILD_TECH[m] === n.id)).sort((a, b) => a.level - b.level).map((n) => n.id);
+    const techId = techs.find((t) => !progress.research.includes(t)) ?? techs[techs.length - 1];
     const node = techId ? TREE.find((n) => n.id === techId) : undefined;
     // Builds share the base's docks with repairs (#211).
     const rankLine = `階級 ${rank.name}: 格 ${maxBuildGrade(rank.index)} の艦まで  ·  ドック ${docksInUse(progress)} / ${buildDockCount(progress)} (建造 ${buildsHere(progress).length})`;
@@ -207,11 +208,12 @@ export class ShipyardScene extends Phaser.Scene {
     const buttonH = IS_PORTRAIT ? 52 : info.h - 12;
     if (node && !progress.research.includes(node.id)) {
       const costMul = researchMultiplier(baseOfProgress(progress));
-      const ready = canResearch(node, progress.research, progress.resources, costMul, progress.record.medals);
+      const ready = canResearch(node, progress.research, progress.resources, costMul, progress.record.medals, rank.index);
       const pre = prerequisitesMet(node, progress.research);
       // A medal the build research needs (#169) shows instead of the cost until it is earned.
       const medal = medalMet(node, progress.record.medals) ? undefined : researchMedal(node.id);
       const label = !pre ? `${node.name}: 前提 ${node.requires.map((r) => TECH_NAMES[r] ?? r).join('・')}`
+        : !rankMet(node, rank.index) ? `${node.name}: 要階級 ${RANKS[node.rank ?? 0].name}`
         : medal ? `${node.name}: 要勲章「${medalName(medal)}」`
           : `${node.name}を研究  ${formatResources(scaleCost(node.cost, costMul))}`;
       add(new UIButton(this, info.x + info.w - 16 - bw / 2, buttonY, label, () => this.research(node), {
@@ -356,7 +358,7 @@ export class ShipyardScene extends Phaser.Scene {
 
   private research(node: ITechNode): void {
     const progress = loadProgress();
-    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)), progress.record.medals);
+    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)), progress.record.medals, rankOf(progress).index);
     if (!result) return;
     saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();

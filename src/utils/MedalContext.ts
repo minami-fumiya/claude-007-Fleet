@@ -13,6 +13,8 @@ import { IMedal } from '@/types/Record';
 import { theaterProgress } from '@/systems/CampaignSystem';
 import { shipClasses } from '@/systems/ShipOrder';
 import { shipTypeCode } from '@/systems/Numbering';
+import { midClass } from '@/systems/ShipKind';
+import { TECH_LEVELS, TECH_TREE } from '@/systems/ResearchSystem';
 import { levelForXp } from '@/systems/CaptainSystem';
 import { rankOf } from '@/systems/RankSystem';
 import { theaterStep } from '@/systems/DifficultyCurve';
@@ -30,10 +32,20 @@ const CAMPAIGN = campaignData as ICampaignData;
 const CLASSES: Record<string, string[][]> = {};
 /** Ship id → its 通し番号 type (#249), for the 艦種章 */
 const SHIP_TYPE = new Map<string, number>();
+/** Ship id → its 中分類 (#260), for the 艦種分類章 */
+const SHIP_MID = new Map<string, string>();
+/** Escorts (海防艦・護衛駆逐艦), for the 海防艦隊章 (#260) */
+const ESCORTS = new Set<string>();
+/** The last level of every research branch (#298), for the 研究の極み章 */
+const TOP_RESEARCH = TECH_TREE.filter((n) => n.level === TECH_LEVELS).map((n) => n.id);
 for (const d of [ijn, usn, km, rn, fr, su, rm]) {
   const ships = d.ships as IShipData[];
   for (const g of shipClasses(ships).filter((c) => c.ships.length > 1)) (CLASSES[ships[0].nation] ??= []).push(g.ships.map((s) => s.id));
-  for (const s of ships) SHIP_TYPE.set(s.id, shipTypeCode(s));
+  for (const s of ships) {
+    SHIP_TYPE.set(s.id, shipTypeCode(s));
+    SHIP_MID.set(s.id, midClass(s));
+    if (s.subtype === 'Escort' || s.subtype === 'EscortDestroyer') ESCORTS.add(s.id);
+  }
 }
 const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships as IShipData[]).filter((s) => s.shipClass === ShipClass.Carrier).map((s) => s.id)));
 
@@ -46,7 +58,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, shipTypes: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, shipTypes: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -74,6 +86,9 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     ctx.basesOpen = Math.max(ctx.basesOpen, openBaseCount(nation, { ...np, nation }));
     ctx.classesComplete = Math.max(ctx.classesComplete, (CLASSES[nation] ?? []).filter((ids) => ids.every((id) => np.ships.includes(id))).length);
     ctx.shipTypes = Math.max(ctx.shipTypes, new Set(np.ships.map((id) => SHIP_TYPE.get(id)).filter((t) => t !== undefined)).size);
+    ctx.midClasses = Math.max(ctx.midClasses, new Set(np.ships.map((id) => SHIP_MID.get(id)).filter((t) => t !== undefined)).size);
+    ctx.escortsOwned = Math.max(ctx.escortsOwned, np.ships.filter((id) => ESCORTS.has(id)).length);
+    ctx.researchTop = Math.max(ctx.researchTop, TOP_RESEARCH.filter((id) => np.research.includes(id)).length);
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);

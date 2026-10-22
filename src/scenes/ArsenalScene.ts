@@ -3,6 +3,7 @@ import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { rankOf } from '@/systems/RankSystem';
 import { research, TECH_TREE } from '@/systems/ResearchSystem';
 import { ITechNode } from '@/types/Progression';
 import { displayStyle } from '@/ui/theme';
@@ -51,7 +52,7 @@ export class ArsenalScene extends Phaser.Scene {
       TECH_TREE,
       () => {
         const p = loadProgress();
-        return { done: p.research, resources: p.resources, costMul: researchMultiplier(baseOfProgress(p)), medals: p.record.medals };
+        return { done: p.research, resources: p.resources, costMul: researchMultiplier(baseOfProgress(p)), medals: p.record.medals, rankIndex: rankOf(p).index };
       },
       (node) => this.research(node),
     );
@@ -61,7 +62,7 @@ export class ArsenalScene extends Phaser.Scene {
 
   private research(node: ITechNode): void {
     const progress = loadProgress();
-    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)), progress.record.medals);
+    const result = research(node, progress.research, progress.resources, researchMultiplier(baseOfProgress(progress)), progress.record.medals, rankOf(progress).index);
     if (!result) return;
     saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();

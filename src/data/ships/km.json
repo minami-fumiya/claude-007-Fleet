@@ -78,6 +78,7 @@
       "name": "H級 (H-39)",
       "nation": "KM",
       "shipClass": "Battleship",
+      "subtype": "FastBattleship",
       "hp": 830,
       "armor": 64,
       "speed": 150,

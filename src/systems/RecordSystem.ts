@@ -145,6 +145,12 @@ export interface IMedalContext {
   classesComplete?: number;
   /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
   shipTypes?: number;
+  /** Kinds of ship by 中分類 (#260: 高速戦艦・防空駆逐艦 …) one nation owns, best nation */
+  midClasses?: number;
+  /** Escorts (海防艦・護衛駆逐艦, #260) one nation owns, best nation */
+  escortsOwned?: number;
+  /** Research branches finished to their last level (#298), best nation */
+  researchTop?: number;
   /** Lowest level among the four resource facilities (all bases summed), best nation (#190) */
   supplyLevel?: number;
   /** Most carriers one nation owns (#204) */
@@ -232,9 +238,14 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('task_force', '機動部隊編成章', 'growth', [2, 4, 6], (g) => `空母を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.carriersOwned ?? 0),
   // The 図鑑 numbers ships by type (#249): owning many kinds of ship.
   ...ladder('ship_types', '艦種章', 'growth', [3, 6, 9], (g) => `1 か国で ${g} 種類の艦種 (図鑑の No. の種別) の艦を保有する`, (_r, c) => c.shipTypes ?? 0),
+  // 中分類 (#260): 高速戦艦・防空駆逐艦・装甲空母 … every kind of ship in its own right.
+  ...ladder('mid_classes', '艦種分類章', 'growth', [6, 12, 18], (g) => `1 か国で ${g} 種類の中分類 (高速戦艦・防空駆逐艦など) の艦を保有する`, (_r, c) => c.midClasses ?? 0),
+  ...ladder('escort_fleet', '海上護衛章', 'growth', [3, 8, 15], (g) => `海防艦・護衛駆逐艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.escortsOwned ?? 0),
   ...ladder('class_set', '同型艦章', 'growth', [1, 3, 10], (g) => `1 か国で ${g} つの級の艦をすべてそろえる (例: 金剛型 4 隻)`, (_r, c) => c.classesComplete ?? 0),
   ...ladder('fleet', '艦隊章', 'growth', [5, 15, 30, 60, 100], (g) => `艦を ${g} 隻保有する (どれか 1 か国)`, (_r, c) => c.shipsOwned ?? 0),
-  ...ladder('science', '技術章', 'growth', [5, 15, 30], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
+  ...ladder('science', '技術章', 'growth', [5, 15, 30, 60, 100], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
+  // Lv10 of a branch (#298): one branch, then most, then all of them.
+  ...ladder('research_peak', '研究の極み章', 'growth', [1, 6, 13], (g) => (g === 13 ? '1 か国で全部門の研究を Lv10 まで終える' : `1 か国で ${g} 部門の研究を Lv10 まで終える`), (_r, c) => c.researchTop ?? 0),
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9, 20, 30], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
   ...ladder('underdog', '寡兵の勝利章', 'battle', [1, 5, 20], (g) => `作戦の海域で、敵の 0.6 倍以下の戦力で ${g} 回勝利する`, (_r, c) => total(c, 'underdogWin')),
   ...ladder('spotless', '無傷の完勝章', 'battle', [1, 10, 50], (g) => `喪失なし・残り耐久 95% 以上で ${g} 回勝利する`, (_r, c) => total(c, 'flawlessWin')),

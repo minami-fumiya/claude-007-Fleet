@@ -3,10 +3,10 @@ import { ShipClass } from '@/types/ShipClass';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
-import { FICTIONAL_TECH } from './ResearchSystem';
+import { FICTIONAL_TECH, MID_BUILD_TECH } from './ResearchSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
 import { assignShips, baseOfProgress, buildMultiplier, currentBaseId, dockTotal, scaleCost } from './BaseSystem';
-import { isHeavyCruiser, isLightCruiser } from './ShipKind';
+import { ESCORT_COST_MUL, ESCORT_TIME_MUL, isLightCruiser, midClass } from './ShipKind';
 import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
 import { withQuestEvents } from './QuestSystem';
@@ -17,7 +17,7 @@ import { withQuestEvents } from './QuestSystem';
  * construction research and by the admiral's rank against the ship's grade, or granted as first-clear rewards.
  */
 
-/** Research that allows building each class; destroyers need none. */
+/** Research that allows building each class's plain kind; destroyers need none (the 中分類 have their own, #260). */
 export const BUILD_TECH: Partial<Record<ShipClass, string>> = {
   [ShipClass.Cruiser]: 'build_cruiser',
   [ShipClass.Battleship]: 'build_battleship',
@@ -28,13 +28,13 @@ export const BUILD_TECH: Partial<Record<ShipClass, string>> = {
 /** Heavy cruisers need their own research on top of the (light) cruiser one (#37). */
 export const HEAVY_CRUISER_TECH = 'build_heavy_cruiser';
 
-/** Research that allows building this ship (undefined = none needed). */
+/** Research that allows building this ship (undefined = none needed): its 中分類's (#260 #298). */
 export function buildTechFor(ship: Pick<IShipData, 'shipClass' | 'subtype'>): string | undefined {
-  return isHeavyCruiser(ship) ? HEAVY_CRUISER_TECH : BUILD_TECH[ship.shipClass];
+  return MID_BUILD_TECH[midClass(ship)];
 }
 
 export function isBuildTech(id: string): boolean {
-  return id === HEAVY_CRUISER_TECH || Object.values(BUILD_TECH).includes(id);
+  return Object.values(MID_BUILD_TECH).includes(id);
 }
 
 /** A ship's grade is how many of these HP marks it exceeds (0..5); each grade needs a rank (RankSystem.GRADE_RANK). */
@@ -76,7 +76,7 @@ const LIGHT_CRUISER_COST_MUL = 0.85;
 /** Build cost from the ship's class, HP and armour (rounded to tens). */
 export function buildCost(ship: IShipData): IResources {
   const k = COST_PER_HP[ship.shipClass] ?? COST_PER_HP[ShipClass.Cruiser];
-  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1);
+  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_COST_MUL : 1);
   const size = { fuel: ship.hp, ammo: ship.hp, steel: ship.hp + ship.armor * ARMOR_HP, bauxite: ship.hp };
   const out = resources();
   for (const key of RESOURCE_KEYS) out[key] = Math.round((k[key] * size[key] * mul) / 10) * 10;
@@ -204,7 +204,7 @@ export const GRADE_MINUTES = 0.5;
 
 export function buildTimeMs(ship: IShipData, timeMul = 1): number {
   const base = isLightCruiser(ship) ? LIGHT_CRUISER_MINUTES : BUILD_MINUTES[ship.shipClass];
-  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.fictional ? 1.5 : 1);
+  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.fictional ? 1.5 : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_TIME_MUL : 1);
   return Math.round(minutes * 60_000 * timeMul);
 }
 

@@ -91,9 +91,24 @@ export const WEAPON_TYPE_CODE: Record<WeaponType, number> = {
 
 export const ITEM_TYPE_CODE = 1;
 
+/**
+ * The 中分類 added in 0.0.42 (#260) number with the kind they were filed under before, so no ship's number changes:
+ * the type digits stay the twelve kinds of #249.
+ */
+const NUMBERED_AS: Partial<Record<ShipSubtype, keyof typeof SHIP_TYPE_CODE>> = {
+  [ShipSubtype.FastBattleship]: 'Battleship',
+  [ShipSubtype.AACruiser]: ShipSubtype.LightCruiser,
+  [ShipSubtype.LeaderDestroyer]: 'Destroyer',
+  [ShipSubtype.AADestroyer]: 'Destroyer',
+  [ShipSubtype.EscortDestroyer]: 'Destroyer',
+  [ShipSubtype.ArmoredCarrier]: 'Carrier',
+  [ShipSubtype.LargeSubmarine]: 'Submarine',
+  [ShipSubtype.SubmarineCarrier]: 'Submarine',
+};
+
 /** The type code of a ship. */
 export function shipTypeCode(ship: Pick<IShipData, 'shipClass' | 'subtype'>): number {
-  if (ship.subtype) return SHIP_TYPE_CODE[ship.subtype];
+  if (ship.subtype) return SHIP_TYPE_CODE[NUMBERED_AS[ship.subtype] ?? (ship.subtype as keyof typeof SHIP_TYPE_CODE)];
   const byClass: Record<ShipClass, number> = {
     [ShipClass.Battleship]: SHIP_TYPE_CODE.Battleship,
     [ShipClass.Cruiser]: SHIP_TYPE_CODE.Cruiser,

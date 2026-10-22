@@ -79,7 +79,7 @@ describe('ships, docks and builds by base (#145)', () => {
   });
 
   it('builds share the pooled docks wherever they were laid down', () => {
-    const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('etorofu'), T0)!;
+    const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('mutsuki'), T0)!;
     expect(buildsHere(p)).toHaveLength(1);
     expect(buildsHere({ ...p, builds: [...p.builds, { shipId: 'kongo', endsAt: T0, base: 'ijn_light' }] })).toHaveLength(2);
   });

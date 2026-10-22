@@ -13,6 +13,8 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import {
   CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
 } from '@/systems/EncyclopediaSystem';
+import { combineModifiers } from '@/systems/CustomizationSystem';
+import { midClass, midLabel, midModifiers } from '@/systems/ShipKind';
 import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
 import { SKILL_COLOR } from '@/ui/SkillColors';
 import { nationCaptains } from '@/systems/CaptainRoster';
@@ -425,6 +427,9 @@ export class EncyclopediaScene extends Phaser.Scene {
       lines.push(`艦載機  戦闘機 ${a.fighters} / 艦爆 ${a.diveBombers} / 艦攻 ${a.torpedoBombers}`);
     }
     y = this.section(y, '兵装', lines.join('\n') || '—');
+    // 中分類の特性 (#260): escorts hunt submarines, AA ships shoot planes.
+    const kindMods = modifierLines(combineModifiers(midModifiers(ship)));
+    if (kindMods.length > 0) y = this.section(y, `艦種の特性 — ${midLabel(midClass(ship))}`, kindMods.join('・'), Css.cyan);
     // The class's other ships (#85): same performance, other names.
     // The class, its hull number (#246) and the other ships of it, by name once owned (#245).
     if (hull.of > 1) {
