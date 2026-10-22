@@ -29,7 +29,7 @@ import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
-import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart, BATTLE_SPEED_MUL } from '@/systems/BattleLayout';
+import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
@@ -766,7 +766,7 @@ export class BattleScene extends Phaser.Scene {
       maxHp: shipData.hp,
       currentHp: shipData.hp,
       armor: shipData.armor,
-      speed: Math.round(shipData.speed * BATTLE_SPEED_MUL),
+      speed: shipData.speed,
       firePower: weapon?.firePower ?? 30,
       shipClass: shipData.shipClass,
       subtype: shipData.subtype,

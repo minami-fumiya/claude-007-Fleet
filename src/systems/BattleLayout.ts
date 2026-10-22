@@ -24,12 +24,9 @@ export const MAX_FLEET_SIZE = 8;
 /**
  * Fleets start this far apart (flagship to enemy line, px) instead of at the map edges, so the first
  * contact comes after a few seconds of sailing; the rest of the sea is room to manoeuvre (#307: 1300 → 1200, the
- * archipelago keeps the player off its southern island; with the faster ships the approach is about 40% shorter).
+ * archipelago keeps the player off its southern island). Only the time is cut: ships and shells keep their speed.
  */
 export const START_GAP = 1200;
-
-/** Ships sail this much faster in battle than their data speed (#307: shorter battles). */
-export const BATTLE_SPEED_MUL = 1.25;
 
 /** Gap between neighbouring enemy ships at the start (px): wider than any hull, so they never overlap. */
 export const ENEMY_SPACING = 200;

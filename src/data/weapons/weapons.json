@@ -8,7 +8,7 @@
       "firePower": 120,
       "range": 600,
       "reloadTime": 1500,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "20cm_twin_gun",
@@ -18,7 +18,7 @@
       "firePower": 65,
       "range": 500,
       "reloadTime": 1200,
-      "projectileSpeed": 690
+      "projectileSpeed": 550
     },
     {
       "id": "12cm_gun",
@@ -28,7 +28,7 @@
       "firePower": 35,
       "range": 400,
       "reloadTime": 800,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "torpedo_type93",
@@ -68,7 +68,7 @@
       "firePower": 115,
       "range": 650,
       "reloadTime": 1500,
-      "projectileSpeed": 780
+      "projectileSpeed": 620
     },
     {
       "id": "16in_mk6",
@@ -78,7 +78,7 @@
       "firePower": 105,
       "range": 620,
       "reloadTime": 1600,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "8in_mk12",
@@ -88,7 +88,7 @@
       "firePower": 62,
       "range": 520,
       "reloadTime": 1150,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "5in_38",
@@ -98,7 +98,7 @@
       "firePower": 32,
       "range": 420,
       "reloadTime": 700,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "mk15_torpedo",
@@ -128,7 +128,7 @@
       "firePower": 108,
       "range": 600,
       "reloadTime": 1400,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "20cm_skc34",
@@ -138,7 +138,7 @@
       "firePower": 64,
       "range": 520,
       "reloadTime": 1150,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "15cm_skc28",
@@ -148,7 +148,7 @@
       "firePower": 45,
       "range": 450,
       "reloadTime": 1000,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "12cm_skc34",
@@ -158,7 +158,7 @@
       "firePower": 34,
       "range": 400,
       "reloadTime": 800,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "g7a_torpedo",
@@ -188,7 +188,7 @@
       "firePower": 110,
       "range": 580,
       "reloadTime": 1550,
-      "projectileSpeed": 740
+      "projectileSpeed": 590
     },
     {
       "id": "36cm_main_gun",
@@ -198,7 +198,7 @@
       "firePower": 95,
       "range": 560,
       "reloadTime": 1400,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "8in_mk16",
@@ -208,7 +208,7 @@
       "firePower": 66,
       "range": 530,
       "reloadTime": 800,
-      "projectileSpeed": 710
+      "projectileSpeed": 570
     },
     {
       "id": "28cm_skc34",
@@ -218,7 +218,7 @@
       "firePower": 85,
       "range": 540,
       "reloadTime": 1100,
-      "projectileSpeed": 800
+      "projectileSpeed": 640
     },
     {
       "id": "15in_mk1",
@@ -228,7 +228,7 @@
       "firePower": 100,
       "range": 590,
       "reloadTime": 1500,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "14in_mk7",
@@ -238,7 +238,7 @@
       "firePower": 98,
       "range": 580,
       "reloadTime": 1300,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "16in_mk1",
@@ -248,7 +248,7 @@
       "firePower": 110,
       "range": 600,
       "reloadTime": 1650,
-      "projectileSpeed": 720
+      "projectileSpeed": 580
     },
     {
       "id": "6in_mk23",
@@ -258,7 +258,7 @@
       "firePower": 48,
       "range": 480,
       "reloadTime": 850,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "4_7in_mk12",
@@ -268,7 +268,7 @@
       "firePower": 33,
       "range": 410,
       "reloadTime": 750,
-      "projectileSpeed": 660
+      "projectileSpeed": 530
     },
     {
       "id": "4_5in_mk1",
@@ -278,7 +278,7 @@
       "firePower": 30,
       "range": 420,
       "reloadTime": 700,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "mk8_torpedo",
@@ -328,7 +328,7 @@
       "firePower": 46,
       "range": 460,
       "reloadTime": 950,
-      "projectileSpeed": 690
+      "projectileSpeed": 550
     },
     {
       "id": "shore_battery",
@@ -338,7 +338,7 @@
       "firePower": 60,
       "range": 540,
       "reloadTime": 1700,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "51cm_main_gun",
@@ -348,7 +348,7 @@
       "firePower": 135,
       "range": 640,
       "reloadTime": 1750,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "16in_mk7_quad",
@@ -358,7 +358,7 @@
       "firePower": 115,
       "range": 650,
       "reloadTime": 1300,
-      "projectileSpeed": 780
+      "projectileSpeed": 620
     },
     {
       "id": "40_6cm_skc34",
@@ -368,7 +368,7 @@
       "firePower": 120,
       "range": 630,
       "reloadTime": 1450,
-      "projectileSpeed": 760
+      "projectileSpeed": 610
     },
     {
       "id": "16in_mk2",
@@ -378,7 +378,7 @@
       "firePower": 116,
       "range": 630,
       "reloadTime": 1450,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "14cm_gun",
@@ -388,7 +388,7 @@
       "firePower": 40,
       "range": 430,
       "reloadTime": 850,
-      "projectileSpeed": 660
+      "projectileSpeed": 530
     },
     {
       "id": "12cm_kaibokan",
@@ -398,7 +398,7 @@
       "firePower": 34,
       "range": 390,
       "reloadTime": 700,
-      "projectileSpeed": 640
+      "projectileSpeed": 510
     },
     {
       "id": "6in_47",
@@ -408,7 +408,7 @@
       "firePower": 47,
       "range": 470,
       "reloadTime": 800,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "5in_38_twin",
@@ -418,7 +418,7 @@
       "firePower": 33,
       "range": 420,
       "reloadTime": 550,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "3in_50",
@@ -428,7 +428,7 @@
       "firePower": 26,
       "range": 380,
       "reloadTime": 600,
-      "projectileSpeed": 620
+      "projectileSpeed": 500
     },
     {
       "id": "28cm_skc28",
@@ -438,7 +438,7 @@
       "firePower": 80,
       "range": 530,
       "reloadTime": 1250,
-      "projectileSpeed": 760
+      "projectileSpeed": 610
     },
     {
       "id": "15cm_skc25",
@@ -448,7 +448,7 @@
       "firePower": 46,
       "range": 460,
       "reloadTime": 900,
-      "projectileSpeed": 690
+      "projectileSpeed": 550
     },
     {
       "id": "15cm_skc16",
@@ -458,7 +458,7 @@
       "firePower": 44,
       "range": 450,
       "reloadTime": 950,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "15cm_tbk_c36",
@@ -468,7 +468,7 @@
       "firePower": 44,
       "range": 440,
       "reloadTime": 1050,
-      "projectileSpeed": 660
+      "projectileSpeed": 530
     },
     {
       "id": "8in_mk8",
@@ -478,7 +478,7 @@
       "firePower": 62,
       "range": 520,
       "reloadTime": 1200,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "5_25in_mk1",
@@ -488,7 +488,7 @@
       "firePower": 38,
       "range": 440,
       "reloadTime": 700,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "5_5in_mk1",
@@ -498,7 +498,7 @@
       "firePower": 40,
       "range": 430,
       "reloadTime": 900,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "4in_mk16",
@@ -508,7 +508,7 @@
       "firePower": 28,
       "range": 400,
       "reloadTime": 550,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "380mm_m1935",
@@ -518,7 +518,7 @@
       "firePower": 110,
       "range": 620,
       "reloadTime": 1450,
-      "projectileSpeed": 760
+      "projectileSpeed": 610
     },
     {
       "id": "330mm_m1931",
@@ -528,7 +528,7 @@
       "firePower": 88,
       "range": 560,
       "reloadTime": 1150,
-      "projectileSpeed": 780
+      "projectileSpeed": 620
     },
     {
       "id": "152mm_m1930",
@@ -538,7 +538,7 @@
       "firePower": 46,
       "range": 460,
       "reloadTime": 900,
-      "projectileSpeed": 690
+      "projectileSpeed": 550
     },
     {
       "id": "130mm_m1932",
@@ -548,7 +548,7 @@
       "firePower": 36,
       "range": 420,
       "reloadTime": 800,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "203mm_m1924",
@@ -558,7 +558,7 @@
       "firePower": 63,
       "range": 510,
       "reloadTime": 1200,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "138mm_m1929",
@@ -568,7 +568,7 @@
       "firePower": 40,
       "range": 420,
       "reloadTime": 950,
-      "projectileSpeed": 660
+      "projectileSpeed": 530
     },
     {
       "id": "155mm_m1920",
@@ -578,7 +578,7 @@
       "firePower": 45,
       "range": 440,
       "reloadTime": 1000,
-      "projectileSpeed": 680
+      "projectileSpeed": 540
     },
     {
       "id": "550mm_torpedo",
@@ -608,7 +608,7 @@
       "firePower": 94,
       "range": 570,
       "reloadTime": 1050,
-      "projectileSpeed": 760
+      "projectileSpeed": 610
     },
     {
       "id": "120mm_vickers",
@@ -618,7 +618,7 @@
       "firePower": 34,
       "range": 400,
       "reloadTime": 800,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "406mm_b37",
@@ -628,7 +628,7 @@
       "firePower": 120,
       "range": 640,
       "reloadTime": 1450,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "152mm_b38",
@@ -638,7 +638,7 @@
       "firePower": 46,
       "range": 460,
       "reloadTime": 950,
-      "projectileSpeed": 690
+      "projectileSpeed": 550
     },
     {
       "id": "180mm_b1p",
@@ -648,7 +648,7 @@
       "firePower": 58,
       "range": 530,
       "reloadTime": 1000,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "130mm_b13",
@@ -658,7 +658,7 @@
       "firePower": 38,
       "range": 420,
       "reloadTime": 900,
-      "projectileSpeed": 660
+      "projectileSpeed": 530
     },
     {
       "id": "100mm_b34",
@@ -668,7 +668,7 @@
       "firePower": 30,
       "range": 410,
       "reloadTime": 700,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "53_38_torpedo",
@@ -698,7 +698,7 @@
       "firePower": 112,
       "range": 620,
       "reloadTime": 1500,
-      "projectileSpeed": 780
+      "projectileSpeed": 620
     },
     {
       "id": "320mm_m1936",
@@ -708,7 +708,7 @@
       "firePower": 90,
       "range": 560,
       "reloadTime": 1300,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "152mm_m1934",
@@ -718,7 +718,7 @@
       "firePower": 46,
       "range": 470,
       "reloadTime": 900,
-      "projectileSpeed": 690
+      "projectileSpeed": 550
     },
     {
       "id": "120mm_m1926",
@@ -728,7 +728,7 @@
       "firePower": 35,
       "range": 410,
       "reloadTime": 800,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "203mm_ansaldo",
@@ -738,7 +738,7 @@
       "firePower": 64,
       "range": 520,
       "reloadTime": 1200,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     },
     {
       "id": "100mm_m1928",
@@ -748,7 +748,7 @@
       "firePower": 30,
       "range": 400,
       "reloadTime": 700,
-      "projectileSpeed": 650
+      "projectileSpeed": 520
     },
     {
       "id": "135mm_m1938",
@@ -758,7 +758,7 @@
       "firePower": 38,
       "range": 430,
       "reloadTime": 850,
-      "projectileSpeed": 660
+      "projectileSpeed": 530
     },
     {
       "id": "533mm_si270",
@@ -788,7 +788,7 @@
       "firePower": 96,
       "range": 560,
       "reloadTime": 1450,
-      "projectileSpeed": 720
+      "projectileSpeed": 580
     },
     {
       "id": "14in_50",
@@ -798,7 +798,7 @@
       "firePower": 98,
       "range": 575,
       "reloadTime": 1450,
-      "projectileSpeed": 750
+      "projectileSpeed": 600
     },
     {
       "id": "16in_45_mk5",
@@ -808,7 +808,7 @@
       "firePower": 108,
       "range": 590,
       "reloadTime": 1600,
-      "projectileSpeed": 720
+      "projectileSpeed": 580
     },
     {
       "id": "10cm_type98",
@@ -818,7 +818,7 @@
       "firePower": 30,
       "range": 430,
       "reloadTime": 500,
-      "projectileSpeed": 700
+      "projectileSpeed": 560
     }
   ]
 }
