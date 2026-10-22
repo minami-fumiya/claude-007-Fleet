@@ -301,7 +301,7 @@
     {
       "id": "bs8", "theater": "blacksea", "name": "セヴァストポリ防衛", "description": "港へ迫る敵艦隊を、時間いっぱい食い止めよ。",
       "x": 0.8, "y": 0.7, "requires": ["bs7"],
-      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "nurnberg", "z1", "z23"] },
+      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "nurnberg", "emden", "z1", "z23"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
       "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "セヴァストポリ" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
@@ -309,7 +309,7 @@
     {
       "id": "bs5", "theater": "blacksea", "name": "黒海決戦", "description": "敵主力艦隊を捕捉し、黒海の制海権を握れ。",
       "x": 0.92, "y": 0.58, "requires": ["bs8"],
-      "enemy": { "nation": "KM", "ships": ["deutschland", "admiral_hipper", "nurnberg", "z1", "z23", "z20", "u_boat_viic"] },
+      "enemy": { "nation": "KM", "ships": ["deutschland", "admiral_hipper", "nurnberg", "emden", "z1", "z23", "z20", "u_boat_viic"] },
       "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }, "rewardShip": "Battleship"
     },
@@ -387,7 +387,7 @@
     {
       "id": "np7", "theater": "north_pacific", "name": "空母を沈めよ", "description": "本土空襲に向かう敵空母を、発艦の前に撃沈せよ。",
       "x": 0.78, "y": 0.42, "requires": ["np4"],
-      "enemy": { "nation": "USN", "ships": ["enterprise", "atlanta", "fletcher", "benson", "sims"] },
+      "enemy": { "nation": "USN", "ships": ["enterprise", "cleveland", "atlanta", "fletcher", "benson", "sims"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
       "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
@@ -446,14 +446,14 @@
     {
       "id": "sa4", "theater": "south_atlantic", "name": "フリータウン砲撃", "description": "敵の補給港の砲台と港湾施設を破壊せよ。",
       "x": 0.64, "y": 0.62, "requires": [], "requiresAny": ["sa3", "sa6"],
-      "enemy": { "nation": "KM", "ships": ["deutschland", "z1", "z20", "u_boat_ixc"] },
+      "enemy": { "nation": "KM", "ships": ["deutschland", "z1", "z20", "z23", "u_boat_ixc"] },
       "objective": "Bombard", "map": "atoll", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Carrier"
     },
     {
       "id": "sa7", "theater": "south_atlantic", "name": "仮装巡洋艦を追え", "description": "商船を沈め続ける巡洋艦を、逃げられる前に撃沈せよ。",
       "x": 0.78, "y": 0.42, "requires": ["sa4"],
-      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "emden", "z23", "u_boat_ixc"] },
+      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "deutschland", "z23", "z20", "u_boat_ixc"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
       "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
