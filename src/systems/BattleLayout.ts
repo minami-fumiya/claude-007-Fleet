@@ -23,9 +23,10 @@ export const MAX_FLEET_SIZE = 8;
 
 /**
  * Fleets start this far apart (flagship to enemy line, px) instead of at the map edges, so the first
- * contact comes after ~15 s of sailing; the rest of the sea is room to manoeuvre.
+ * contact comes after a few seconds of sailing; the rest of the sea is room to manoeuvre (#307: 1300 → 1200, the
+ * archipelago keeps the player off its southern island). Only the time is cut: ships and shells keep their speed.
  */
-export const START_GAP = 1300;
+export const START_GAP = 1200;
 
 /** Gap between neighbouring enemy ships at the start (px): wider than any hull, so they never overlap. */
 export const ENEMY_SPACING = 200;

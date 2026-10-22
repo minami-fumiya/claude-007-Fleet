@@ -3,7 +3,7 @@
  * Economy by stage (#222) and build / repair times by ship. The targets themselves are unit tests.
  */
 import ijn from '@/data/ships/ijn.json';
-import { ECONOMY, hourBudget, steelBuildsPerHour } from '@/systems/EconomyModel';
+import { bauxiteCarriersPerHour, ECONOMY, hourBudget, steelBuildsPerHour, steelToFuel } from '@/systems/EconomyModel';
 import { RESOURCE_KEYS, RESOURCE_LABEL } from '@/systems/ResourceSystem';
 import { buildCost, buildTimeMs, shipGrade } from '@/systems/ShipyardSystem';
 import { repairCost, repairTimeMs, SUNK_HP_FRACTION } from '@/systems/DockSystem';
@@ -24,8 +24,12 @@ for (const p of ECONOMY.phases) {
   out.push(`| **収入** | ${fmt(b.totalIn)} |`, `| **支出** | ${fmt(b.totalOut)} |`, `| **差し引き** | ${fmt(b.net)} |`, '');
   const ratio = RESOURCE_KEYS.map((k) => `${RESOURCE_LABEL[k]} ${b.totalOut[k] > 0 ? (b.totalIn[k] / b.totalOut[k]).toFixed(2) : '—'}`).join('・');
   const builds = RESOURCE_KEYS.filter((k) => b.buildCost[k] > 0).map((k) => `${RESOURCE_LABEL[k]} ${(b.net[k] / b.buildCost[k]).toFixed(1)}`).join('・');
-  out.push(`- 収入 ÷ 支出: ${ratio}`, `- 余りで建造できる ${p.build} (資源ごと): ${builds} (鋼材 ${steelBuildsPerHour(b).toFixed(1)} 隻)`, '');
+  out.push(`- 収入 ÷ 支出: ${ratio}`, `- 余りで建造できる ${p.build} (資源ごと): ${builds} (鋼材 ${steelBuildsPerHour(b).toFixed(1)} 隻)`);
+  if (p.carrier) out.push(`- 余りのボーキで建造できる ${p.carrier}: ${bauxiteCarriersPerHour(b).toFixed(1)} 隻`);
+  if (p.baseBuildMul) out.push(`- 軍港の割引: 建造費 ×${p.baseBuildMul}`);
+  out.push(`- ゴールド: ${b.gold} G`, '');
 }
+out.push(`ショップの交換: 余った鋼材 1,000 を売ると、燃料 (大) の値段で燃料 ${steelToFuel()} になる。`, '');
 
 out.push('## 建造と入渠 (日本艦)', '', '| 艦 | 格 | 建造 (分) | 建造費 燃/弾/鋼/ボ | 大破からの入渠 (分) | 入渠の鋼材 |', '|---|---|---|---|---|---|');
 for (const s of (ijn.ships as IShipData[]).filter((x) => !x.fictional && !x.sisterOf)) {

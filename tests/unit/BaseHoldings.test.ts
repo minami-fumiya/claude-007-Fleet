@@ -84,14 +84,18 @@ describe('ships, docks and builds by base (#145)', () => {
     expect(buildsHere({ ...p, builds: [...p.builds, { shipId: 'kongo', endsAt: T0, base: 'ijn_light' }] })).toHaveLength(2);
   });
 
-  it('every nation reaches its first theater from its first base and every theater by 少尉', () => {
+  it('each base opens one theater of its navy, none twice, every theater by some base (#293)', () => {
     for (const nation of PLAYABLE_NATIONS) {
       const theaters = campaign.theaters.filter((t) => (t.opponents as Record<string, string | undefined>)[nation]).map((t) => t.id);
       const bases = nationBases(nation);
-      expect(bases[0].theaters?.length, nation).toBeGreaterThan(0);
-      for (const t of theaters) expect(bases.filter((b) => b.unlockRank <= 2).some((b) => baseReaches(b, t)), `${nation} ${t}`).toBe(true);
+      for (const b of bases) expect(b.theaters, b.id).toHaveLength(1);
+      const opened = bases.map((b) => b.theaters![0]);
+      expect(new Set(opened).size, nation).toBe(opened.length);
+      expect([...opened].sort(), nation).toEqual([...theaters].sort());
+      // The same rank for the same place in every navy's order.
+      expect(bases.map((b) => b.unlockRank), nation).toEqual([0, 2, 6, 8, 10, 11].slice(0, bases.length));
     }
-    expect(basesFor('IJN', 'mediterranean').map((b) => b.id)).toContain('ijn_light');
+    expect(basesFor('IJN', 'mediterranean').map((b) => b.id)).toEqual(['ijn_heavy']);
     expect(BASES.every((b) => b.theaters?.length)).toBe(true);
   });
 

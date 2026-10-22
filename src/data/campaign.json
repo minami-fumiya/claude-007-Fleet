@@ -1,7 +1,7 @@
 {
   "theaters": [
     { "id": "pacific", "name": "南太平洋", "en": "SOUTH PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN"} },
-    { "id": "atlantic", "name": "北大西洋", "en": "NORTH ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM"} },
+    { "id": "atlantic", "name": "北大西洋", "en": "NORTH ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM", "RM": "RN"} },
     { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN", "opponents": {"IJN": "RN", "RN": "RM", "RM": "RN", "FR": "RM", "KM": "RN"} },
     { "id": "baltic", "name": "バルト海", "en": "BALTIC", "opponents": {"SU": "KM", "KM": "SU"}, "inland": true },
     { "id": "blacksea", "name": "黒海", "en": "BLACK SEA", "opponents": {"SU": "KM"}, "exam": false, "inland": true },
@@ -51,7 +51,7 @@
       "x": 0.46, "y": 0.86, "requires": ["p3"],
       "enemy": { "nation": "USN", "ships": ["fletcher", "gearing", "sumner"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "ショートランド泊地" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "ショートランド泊地" }, "timeLimitSec": 120 },
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
     },
     {
@@ -59,7 +59,7 @@
       "x": 0.7, "y": 0.4, "requires": ["p5"],
       "enemy": { "nation": "USN", "ships": ["north_carolina", "baltimore", "fletcher", "gearing", "sumner", "buckley"] },
       "objective": "SinkTargets", "map": "archipelago", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 300 }, "rewardShip": "Cruiser"
     },
     {
@@ -67,7 +67,7 @@
       "x": 0.8, "y": 0.68, "requires": ["p8"],
       "enemy": { "nation": "USN", "ships": ["essex", "baltimore", "fletcher", "gearing", "sumner", "buckley"] },
       "objective": "Delay", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方泊地" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方泊地" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 700, "ammo": 600, "steel": 800, "bauxite": 500 }, "rewardShip": "Carrier"
     },
     {
@@ -110,7 +110,7 @@
       "x": 0.56, "y": 0.84, "requires": ["a2"],
       "enemy": { "nation": "KM", "ships": ["emden", "z1"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "大西洋" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "大西洋" }, "timeLimitSec": 120 },
       "reward": { "fuel": 600, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
     {
@@ -118,7 +118,7 @@
       "x": 0.78, "y": 0.42, "requires": ["a4"],
       "enemy": { "nation": "KM", "ships": ["bismarck", "z1", "z20", "z23", "u_boat_viic"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Storm", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 700, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
     },
     {
@@ -126,7 +126,7 @@
       "x": 0.84, "y": 0.7, "requires": ["a7"],
       "enemy": { "nation": "KM", "ships": ["gneisenau", "admiral_hipper", "z23", "z20", "z1"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 800, "ammo": 800, "steel": 1000, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
@@ -169,7 +169,7 @@
       "x": 0.5, "y": 0.86, "requires": ["m2"],
       "enemy": { "nation": "RN", "ships": ["dido", "javelin", "truant"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "敵泊地" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "敵泊地" }, "timeLimitSec": 120 },
       "reward": { "fuel": 600, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Destroyer"
     },
     {
@@ -177,7 +177,7 @@
       "x": 0.74, "y": 0.4, "requires": ["m4"],
       "enemy": { "nation": "RN", "ships": ["illustrious", "southampton", "javelin", "cossack", "belfast"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 500 }, "rewardShip": "Carrier"
     },
     {
@@ -185,7 +185,7 @@
       "x": 0.8, "y": 0.7, "requires": ["m7"],
       "enemy": { "nation": "RN", "ships": ["warspite", "belfast", "cossack", "javelin", "southampton"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方の港" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "味方の港" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
@@ -228,7 +228,7 @@
       "x": 0.5, "y": 0.86, "requires": ["b2"],
       "enemy": { "nation": "KM", "ships": ["z1", "z23", "u_boat_viic"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "湾外" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "湾外" }, "timeLimitSec": 120 },
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
     },
     {
@@ -236,7 +236,7 @@
       "x": 0.76, "y": 0.34, "requires": ["b4"],
       "enemy": { "nation": "KM", "ships": ["admiral_hipper", "emden", "z1", "z20"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -244,7 +244,7 @@
       "x": 0.8, "y": 0.7, "requires": ["b7"],
       "enemy": { "nation": "KM", "ships": ["scharnhorst", "prinz_eugen", "z1", "z23"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "レニングラード" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "レニングラード" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
@@ -280,7 +280,7 @@
       "x": 0.48, "y": 0.86, "requires": ["bs2"],
       "enemy": { "nation": "KM", "ships": ["z1", "z23", "u_boat_viic"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "アゾフ海" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "アゾフ海" }, "timeLimitSec": 120 },
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
     },
     {
@@ -295,21 +295,21 @@
       "x": 0.76, "y": 0.32, "requires": ["bs4"],
       "enemy": { "nation": "KM", "ships": ["nurnberg", "emden", "z1", "z20"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Clear", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 800, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
       "id": "bs8", "theater": "blacksea", "name": "セヴァストポリ防衛", "description": "港へ迫る敵艦隊を、時間いっぱい食い止めよ。",
       "x": 0.8, "y": 0.7, "requires": ["bs7"],
-      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "nurnberg", "z1", "z23"] },
+      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "nurnberg", "emden", "z1", "z23"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "セヴァストポリ" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "セヴァストポリ" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1100, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
       "id": "bs5", "theater": "blacksea", "name": "黒海決戦", "description": "敵主力艦隊を捕捉し、黒海の制海権を握れ。",
       "x": 0.92, "y": 0.58, "requires": ["bs8"],
-      "enemy": { "nation": "KM", "ships": ["deutschland", "admiral_hipper", "nurnberg", "z1", "z23", "z20", "u_boat_viic"] },
+      "enemy": { "nation": "KM", "ships": ["deutschland", "admiral_hipper", "nurnberg", "emden", "z1", "z23", "z20", "u_boat_viic"] },
       "objective": "Annihilate", "map": "archipelago", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 900, "ammo": 1000, "steel": 1300, "bauxite": 400 }, "rewardShip": "Battleship"
     },
@@ -350,7 +350,7 @@
     },
     {
       "id": "np1", "theater": "north_pacific", "name": "アリューシャン哨戒", "description": "霧のアリューシャン列島で、敵の駆逐艦を追い払え。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "USN", "ships": ["fletcher", "sims"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Fog", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -374,7 +374,7 @@
       "x": 0.56, "y": 0.84, "requires": ["np2"],
       "enemy": { "nation": "USN", "ships": ["omaha", "farragut", "porter", "mahan"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Fog", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "撤収地点" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "撤収地点" }, "timeLimitSec": 120 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -387,17 +387,17 @@
     {
       "id": "np7", "theater": "north_pacific", "name": "空母を沈めよ", "description": "本土空襲に向かう敵空母を、発艦の前に撃沈せよ。",
       "x": 0.78, "y": 0.42, "requires": ["np4"],
-      "enemy": { "nation": "USN", "ships": ["enterprise", "atlanta", "fletcher", "benson", "sims"] },
+      "enemy": { "nation": "USN", "ships": ["enterprise", "cleveland", "atlanta", "fletcher", "benson", "sims"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
       "id": "np8", "theater": "north_pacific", "name": "本土沖遅滞戦", "description": "港へ迫る敵戦艦を、時間いっぱい食い止めよ。",
       "x": 0.84, "y": 0.7, "requires": ["np7"],
-      "enemy": { "nation": "USN", "ships": ["south_dakota", "baltimore", "cleveland", "fletcher", "gearing"] },
+      "enemy": { "nation": "USN", "ships": ["south_dakota", "baltimore", "cleveland", "fletcher", "gearing", "benson"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "本土の港" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "本土の港" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 900, "ammo": 900, "steel": 1100, "bauxite": 350 }, "rewardShip": "Battleship"
     },
     {
@@ -416,7 +416,7 @@
     },
     {
       "id": "sa1", "theater": "south_atlantic", "name": "通商破壊艦の影", "description": "南の航路に潜む U ボートを掃討せよ。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "KM", "ships": ["u_boat_ixc", "u_boat_viic"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -440,22 +440,22 @@
       "x": 0.56, "y": 0.84, "requires": ["sa2"],
       "enemy": { "nation": "KM", "ships": ["nurnberg", "z20", "z23"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Overcast", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "外洋" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "外洋" }, "timeLimitSec": 120 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
       "id": "sa4", "theater": "south_atlantic", "name": "フリータウン砲撃", "description": "敵の補給港の砲台と港湾施設を破壊せよ。",
       "x": 0.64, "y": 0.62, "requires": [], "requiresAny": ["sa3", "sa6"],
-      "enemy": { "nation": "KM", "ships": ["deutschland", "z1", "z20", "u_boat_ixc"] },
+      "enemy": { "nation": "KM", "ships": ["deutschland", "z1", "z20", "z23", "u_boat_ixc"] },
       "objective": "Bombard", "map": "atoll", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Carrier"
     },
     {
       "id": "sa7", "theater": "south_atlantic", "name": "仮装巡洋艦を追え", "description": "商船を沈め続ける巡洋艦を、逃げられる前に撃沈せよ。",
       "x": 0.78, "y": 0.42, "requires": ["sa4"],
-      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "emden", "z23", "u_boat_ixc"] },
+      "enemy": { "nation": "KM", "ships": ["admiral_hipper", "deutschland", "z23", "z20", "u_boat_ixc"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
@@ -463,7 +463,7 @@
       "x": 0.84, "y": 0.7, "requires": ["sa7"],
       "enemy": { "nation": "KM", "ships": ["scharnhorst", "admiral_hipper", "nurnberg", "z1", "z20"] },
       "objective": "Delay", "map": "archipelago", "weather": "Storm", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 900, "ammo": 900, "steel": 1100, "bauxite": 350 }, "rewardShip": "Battleship"
     },
     {
@@ -482,7 +482,7 @@
     },
     {
       "id": "io1", "theater": "indian", "name": "アンダマン海哨戒", "description": "島々の間に潜む敵の駆逐艦と護衛艦を追い払え。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "RN", "ships": ["javelin", "black_swan"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -506,7 +506,7 @@
       "x": 0.56, "y": 0.84, "requires": ["io2"],
       "enemy": { "nation": "RN", "ships": ["belfast", "javelin", "cossack"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Clear", "time": "Night",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "インド洋" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "インド洋" }, "timeLimitSec": 120 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -521,7 +521,7 @@
       "x": 0.78, "y": 0.42, "requires": ["io4"],
       "enemy": { "nation": "RN", "ships": ["illustrious", "dido", "southampton", "javelin", "cossack"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Overcast", "time": "Day",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
@@ -529,7 +529,7 @@
       "x": 0.84, "y": 0.7, "requires": ["io7"],
       "enemy": { "nation": "RN", "ships": ["warspite", "renown", "dorsetshire", "cossack", "javelin"] },
       "objective": "Delay", "map": "archipelago", "weather": "Storm", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "港" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "港" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 900, "ammo": 900, "steel": 1100, "bauxite": 350 }, "rewardShip": "Battleship"
     },
     {
@@ -548,7 +548,7 @@
     },
     {
       "id": "ar1", "theater": "arctic", "name": "バレンツ海哨戒", "description": "凍える海で、敵の駆逐艦と U ボートを追い払え。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "KM", "ships": ["z1", "u_boat_viic"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Fog", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -572,7 +572,7 @@
       "x": 0.56, "y": 0.84, "requires": ["ar2"],
       "enemy": { "nation": "KM", "ships": ["z1", "z20", "z23", "u_boat_viic"] },
       "objective": "Breakthrough", "map": "strait", "weather": "Storm", "time": "Day",
-      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "フィヨルドの奥" }, "timeLimitSec": 180 },
+      "side": { "zone": { "x": 0.5, "y": 0.1, "r": 0.05, "label": "フィヨルドの奥" }, "timeLimitSec": 120 },
       "reward": { "fuel": 700, "ammo": 700, "steel": 700, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
     {
@@ -587,7 +587,7 @@
       "x": 0.78, "y": 0.42, "requires": ["ar4"],
       "enemy": { "nation": "KM", "ships": ["scharnhorst", "z1", "z20", "z23", "u_boat_viic"] },
       "objective": "SinkTargets", "map": "open-sea", "weather": "Storm", "time": "Night",
-      "side": { "targetLead": true, "timeLimitSec": 300 },
+      "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 800, "ammo": 900, "steel": 1000, "bauxite": 350 }, "rewardShip": "Cruiser"
     },
     {
@@ -595,7 +595,7 @@
       "x": 0.84, "y": 0.7, "requires": ["ar7"],
       "enemy": { "nation": "KM", "ships": ["gneisenau", "admiral_hipper", "prinz_eugen", "z1", "z23"] },
       "objective": "Delay", "map": "archipelago", "weather": "Overcast", "time": "Night",
-      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 150, "arrivalSec": 90 },
+      "side": { "targetLead": true, "enemyGoesForZone": true, "zone": { "x": 0.5, "y": 0.92, "r": 0.05, "label": "船団の泊地" }, "timeLimitSec": 100, "arrivalSec": 60 },
       "reward": { "fuel": 900, "ammo": 900, "steel": 1100, "bauxite": 350 }, "rewardShip": "Battleship"
     },
     {

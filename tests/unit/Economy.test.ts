@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ECONOMY, hourBudget, steelBuildsPerHour } from '@/systems/EconomyModel';
+import { bauxiteCarriersPerHour, ECONOMY, hourBudget, steelBuildsPerHour, steelToFuel } from '@/systems/EconomyModel';
 import { RESOURCE_KEYS } from '@/systems/ResourceSystem';
 
 /**
@@ -37,6 +37,15 @@ describe('economy (#222)', () => {
         expect(steelBuildsPerHour(b), phase.id).toBeGreaterThanOrEqual(0.8 * Math.min(builds('fuel'), builds('ammo')));
       });
 
+      it('earns about 250 gold an hour (#321: 200〜350; it had fallen to about 190)', () => {
+        expect(b.gold, phase.id).toBeGreaterThanOrEqual(200);
+        expect(b.gold, phase.id).toBeLessThanOrEqual(350);
+      });
+
+      it('bauxite builds a carrier an hour where the stage builds one (#321: 0.49 in 0.0.39)', () => {
+        expect(bauxiteCarriersPerHour(b), phase.id).toBeGreaterThanOrEqual(1);
+      });
+
       it('no resource piles up past three times the scarcest one, in builds (#296)', () => {
         const all = (['fuel', 'ammo', 'steel'] as const).map(builds);
         expect(Math.max(...all), phase.id).toBeLessThanOrEqual(3 * Math.min(...all));
@@ -44,7 +53,12 @@ describe('economy (#222)', () => {
     });
   }
 
-  it('covers the early, middle and late game', () => {
+  it('covers the early, middle and late game; the late game builds a carrier, and the bases discount building (#321)', () => {
     expect(ECONOMY.phases.map((p) => p.id)).toEqual(['early', 'mid', 'late']);
+    expect(ECONOMY.phases[2].carrier).toBeDefined();
+    expect(ECONOMY.phases[2].baseBuildMul).toBeLessThan(1);
+    // The shop turns surplus steel into fuel at a loss (it is a way out, not a mill).
+    expect(steelToFuel()).toBeGreaterThan(0);
+    expect(steelToFuel()).toBeLessThan(1000);
   });
 });

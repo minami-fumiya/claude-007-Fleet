@@ -139,6 +139,8 @@ export interface IMedalContext {
   steelCap?: number;
   /** Most bases one nation has open (built, #217) */
   basesOpen?: number;
+  /** Furthest place in its navy's order (#293: 1 for the first sea) of a theater some nation has won all of */
+  farthestSea?: number;
   /** Classes (lead + sisters, #85) one nation owns every ship of, best nation */
   classesComplete?: number;
   /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
@@ -222,6 +224,8 @@ export const MEDALS: IMedalRule[] = [
     { id: t, name: `${name}制覇章`, description: `${name}の全海域を攻略する`, category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes(t) ? 1 : 0), goal: 1 },
     ...ladder(`${t}_war`, `${name}従軍章`, 'campaign', [10, 50], (g) => `${name}で ${g} 回勝利する`, (_r, c) => total(c, event)),
   ]),
+  // 遠洋章 (#293): the seas further along a navy's order are the hardest.
+  ...ladder('far_seas', '遠洋章', 'campaign', [3, 4, 5], (g) => `1 か国で ${g} 番目に開く戦域の全海域を攻略する`, (_r, c) => c.farthestSea ?? 0),
   ...ladder('seas', '七つの海章', 'campaign', [1, 3, 7], (g) => (g === 7 ? '七つの海すべての全海域を攻略する' : `七つの海のうち ${g} つの全海域を攻略する`), (_r, c) => c.clearedTheaters.filter((t) => SEVEN_SEAS.includes(t)).length),
   ...ladder('baltic_war', 'バルト海従軍章', 'campaign', [10, 50], (g) => `バルト海で ${g} 回勝利する`, (_r, c) => total(c, 'winBaltic')),
   // 育成
@@ -255,7 +259,7 @@ export const MEDALS: IMedalRule[] = [
   { id: 'second_dock', name: '第二船渠章', description: 'ドックを 2 本にする (全軍港の合計)', category: 'base', value: (_r, c) => c.maxDocks ?? 0, goal: 2 },
   { id: 'stockpile', name: '大備蓄章', description: '4 つの資源をすべて保有上限まで貯める', category: 'base', value: (_r, c) => c.fullStock ?? 0, goal: 1 },
   ...ladder('warehouse', '備蓄拡張章', 'base', [20000, 40000], (g) => `製鋼所で鋼材の保有上限を ${g.toLocaleString()} にする`, (_r, c) => c.steelCap ?? 0),
-  ...ladder('harbor_works', '築港章', 'base', [2, 4], (g) => `1 か国で軍港を ${g} つ開く (工事で開港)`, (_r, c) => c.basesOpen ?? 0),
+  ...ladder('harbor_works', '築港章', 'base', [2, 4, 5, 6], (g) => `1 か国で軍港を ${g} つ開く (工事で開港)`, (_r, c) => c.basesOpen ?? 0),
   ...ladder('supply_depot', '補給基地章', 'base', [3, 5], (g) => `燃料タンク・弾薬庫・製鋼所・航空基地をすべて Lv${g} 以上にする`, (_r, c) => c.supplyLevel ?? 0),
   ...ladder('dockyard', '船渠章', 'base', [10, 100, 300], (g) => `損傷艦を ${g} 隻入渠させる`, (_r, c) => total(c, 'repair')),
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allowedAtDepth, areaDepth, curveText, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve } from '@/systems/DifficultyCurve';
+import { allowedAtDepth, areaDepth, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve } from '@/systems/DifficultyCurve';
 import { enemyShips, lockText, sevenSeasText, theatersFor } from '@/systems/CampaignSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { SEVEN_SEAS } from '@/systems/RecordSystem';
@@ -25,10 +25,13 @@ describe('the difficulty curve (#254)', () => {
     expect(targetPower(2)).toBe(375);
     expect(targetPower(9)).toBe(Math.round(250 * 1.5 ** 8));
     expect(recommendedRank(1).name).toBe('准尉');
-    expect(recommendedRank(3).name).toBe('少尉');
-    expect(recommendedRank(7).name).toBe('少佐');
+    expect(recommendedRank(2).name).toBe('少尉');
+    // Two ranks above the step from the third on (#293).
+    expect(recommendedRank(3).name).toBe('大尉');
+    expect(recommendedRank(7).name).toBe('大佐');
+    expect(recommendedRank(20).name).toBe('元帥');
     expect(fleetPower([{ hp: 100, armor: 50 }, { hp: 200, armor: 0 }])).toBe(350);
-    expect(curveText(1560, 4)).toBe('1,560 (目安 844)  ·  推奨 中尉');
+    expect(curveText(1560, 4)).toBe('1,560 (目安 844)  ·  推奨 准佐');
   });
 
   it('depth: the chain inside the theater; the seas of 0.0.35 start a step in (#250)', () => {
@@ -52,6 +55,41 @@ describe('the difficulty curve (#254)', () => {
       for (const n of new Set(Object.values(theater.opponents))) {
         const p = fleetPower(enemyShips(a, registry, n!));
         if (p < targetPower(depth) * 0.2 || p > targetPower(depth) * 5) out.push(`${a.id} as ${n}: ${p}`);
+      }
+    }
+    expect(out).toEqual([]);
+  });
+});
+
+describe('the further the sea, the harder (#293)', () => {
+  it('a theater\'s step is its place in the navy\'s order; for Japan the Mediterranean is the deepest', () => {
+    expect(['pacific', 'north_pacific', 'indian', 'mediterranean'].map((t) => theaterStep('IJN', t))).toEqual([0, 1, 2, 3]);
+    expect(theaterStep('IJN', 'arctic')).toBeUndefined();
+    const last = (t: string) => data.areas.filter((a) => a.theater === t && !a.training).pop()!;
+    const depths = ['pacific', 'north_pacific', 'indian', 'mediterranean'].map((t) => areaDepth(data, area(data.areas.find((a) => a.theater === t)!.id), 'IJN'));
+    expect(depths).toEqual([1, 2, 3, 4]);
+    expect(areaDepth(data, last('mediterranean'), 'IJN')).toBeGreaterThan(areaDepth(data, last('pacific'), 'IJN'));
+    // Italy and France meet the Mediterranean first: as written.
+    expect(areaDepth(data, area('m1'), 'RM')).toBe(areaDepth(data, area('m1')));
+  });
+
+  it('the enemy grows by the curve for each step further than written; hit points and firepower share it', () => {
+    expect(enemyScale(data, area('m1'), 'RM')).toBe(1);
+    expect(enemyScale(data, area('m1'), 'IJN')).toBeCloseTo(1.5 ** 3);
+    expect(enemyScale(data, area('m1'))).toBe(1);
+    const k = scaleModifiers(enemyScale(data, area('m1'), 'IJN'));
+    expect(k.hpMul! * k.gunPowerMul!).toBeCloseTo(1.5 ** 3);
+    expect(k.airPowerMul).toBeUndefined();
+    expect(scaleModifiers(1)).toEqual({});
+    // Every navy meets a sea no easier than written, and every area stays inside the band at its depth for that navy.
+    const out: string[] = [];
+    for (const a of data.areas.filter((x) => !x.training)) {
+      const theater = data.theaters.find((t) => t.id === a.theater)!;
+      for (const n of Object.keys(theater.opponents)) {
+        const scale = enemyScale(data, a, n);
+        if (scale < 1) out.push(`${a.id} ${n}: ${scale}`);
+        const power = fleetPower(enemyShips(a, registry)) * scale;
+        if (!withinCurve(power, areaDepth(data, a, n)) && withinCurve(fleetPower(enemyShips(a, registry)), areaDepth(data, a))) out.push(`${a.id} ${n}: ${Math.round(power)}`);
       }
     }
     expect(out).toEqual([]);
@@ -100,8 +138,7 @@ describe('七つの海 (#250)', () => {
     expect(lockText(data, area('p1'), [])).toBe('');
     expect(lockText(data, area('p2'), [])).toBe('「南洋前哨」を攻略すると開きます');
     expect(lockText(data, area('p5'), ['p1', 'p2', 'p3'])).toBe('「海峡夜戦」か「ソロモン鼠輸送」を攻略すると開きます');
-    expect(lockText(data, area('np1'), [])).toBe('最初の戦域で 3 つ目の海域を攻略すると開きます');
-    expect(lockText(data, area('np1'), ['a1', 'a2', 'a3'])).toBe('');
+    expect(lockText(data, area('np1'), [])).toBe('');
   });
 });
 

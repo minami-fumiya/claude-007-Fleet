@@ -14,25 +14,28 @@ describe('sortie routes (#53)', () => {
     expect(sortieRoute(area('p2'), [ship('a', 400), ship('b', 200)]).map((n) => n.kind)).toEqual(['boss']);
   });
 
-  it('larger fleets: the lighter escorts first, then the whole fleet as the boss', () => {
+  it('larger fleets: one node on the way, the escorts on some areas, then the whole fleet as the boss (#307)', () => {
     const enemy = [ship('bb', 700), ship('ca', 400), ship('dd1', 200), ship('dd2', 210)];
-    const route = sortieRoute(area('p4'), enemy);
-    expect(route[0]).toEqual({ kind: 'battle', ships: ['dd1', 'dd2'] });
-    expect(route[route.length - 1]).toEqual({ kind: 'boss', ships: ['bb', 'ca', 'dd1', 'dd2'] });
-    expect(battleNodes(route)).toHaveLength(2);
-    expect(route.length).toBeLessThanOrEqual(3);
+    const routes = data.areas.filter((a) => a.requires.length > 0).map((a) => sortieRoute(a, enemy));
+    for (const route of routes) {
+      expect(route).toHaveLength(2);
+      expect(route[1]).toEqual({ kind: 'boss', ships: ['bb', 'ca', 'dd1', 'dd2'] });
+      expect(battleNodes(route).length).toBeLessThanOrEqual(2);
+    }
+    const fought = routes.find((r) => r[0].kind === 'battle')!;
+    expect(fought[0]).toEqual({ kind: 'battle', ships: ['dd1', 'dd2'] });
     // The same area always has the same route.
-    expect(sortieRoute(area('p4'), enemy)).toEqual(route);
+    expect(sortieRoute(area('p4'), enemy)).toEqual(sortieRoute(area('p4'), enemy));
   });
 
   it('every kind of in-between node appears somewhere, and moving on skips to the next battle', () => {
     const enemy = [ship('a', 700), ship('b', 400), ship('c', 200), ship('d', 210), ship('e', 220)];
     const kinds = new Set(data.areas.flatMap((a) => sortieRoute(a, enemy).map((n) => n.kind)));
     expect(kinds).toEqual(new Set(['battle', 'resource', 'whirlpool', 'boss']));
-    const withCache = data.areas.map((a) => sortieRoute(a, enemy)).find((r) => r.length === 3)!;
-    expect(nextBattleIndex(withCache, 1)).toBe(2);
-    expect(nodesBetween(withCache, 0)).toEqual([withCache[1]]);
-    expect(nodesBetween(withCache, 2)).toEqual([]);
+    const withCache = data.areas.map((a) => sortieRoute(a, enemy)).find((r) => r[0].kind === 'resource')!;
+    expect(nextBattleIndex(withCache, 0)).toBe(1);
+    const fought = data.areas.map((a) => sortieRoute(a, enemy)).find((r) => r[0].kind === 'battle')!;
+    expect(nodesBetween(fought, 0)).toEqual([]);
   });
 
   it('大破 ships drop out before the next battle', () => {

@@ -21,6 +21,11 @@ const CAP_ENDURANCE_MS = 45000;
 const DOGFIGHT_RANGE = 70;
 /** Carriers launch strikes at visible targets within this range. */
 export const STRIKE_RANGE = 1500;
+/**
+ * The first strike leaves this long after the battle starts (#320: ranging the planes on deck). Launched at once, a
+ * carrier fleet's torpedo planes sank the other flagship within five seconds, before a gun was fired.
+ */
+export const FIRST_STRIKE_MS = 20_000;
 const DIVE_RELEASE_DIST = 26;
 const TORPEDO_RELEASE_DIST = 180;
 const BOMB_HIT_CHANCE = 0.55;
@@ -60,6 +65,8 @@ export class AirOpsSystem {
   /** Called when a squadron takes off (sound) */
   onLaunch: (x: number, y: number) => void = () => undefined;
   private wings = new Map<BaseShip, IAirWingState>();
+  /** Battle time the first strike may leave at (set on the first update). */
+  private firstStrikeAt = -1;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -119,11 +126,12 @@ export class AirOpsSystem {
    */
   update(time: number, delta: number, ctx: IAirContext, autoStrike: (carrier: BaseShip) => boolean, pickTarget: (carrier: BaseShip, foes: IShipView[]) => IShipView | null): void {
     const dtSec = delta / 1000;
+    if (this.firstStrikeAt < 0) this.firstStrikeAt = time + FIRST_STRIKE_MS;
     for (const [carrier, wing] of this.wings) {
       if (!carrier.isAlive) continue;
       this.wings.set(carrier, tickAirWing(wing, time));
       this.keepCap(carrier, time);
-      if (autoStrike(carrier) && !this.strikeAloft(carrier)) {
+      if (time >= this.firstStrikeAt && autoStrike(carrier) && !this.strikeAloft(carrier)) {
         const target = pickTarget(carrier, this.strikeTargets(carrier, ctx.foes));
         if (target) this.launchStrike(carrier, target.ship);
       }

@@ -23,10 +23,10 @@ const at = (merit: number, base = '', built = true): IProgress => ({
 });
 
 describe('bases (#88)', () => {
-  it('every playable nation has four bases, the first open from the start', () => {
+  it('every playable nation has a base for each of its theaters, the first open from the start (#293)', () => {
     for (const n of PLAYABLE_NATIONS) {
       const list = nationBases(n);
-      expect(list, n).toHaveLength(4);
+      expect(list.length, n).toBeGreaterThanOrEqual(4);
       expect(list[0].unlockRank).toBe(0);
       expect(baseBonusLines(list[0]).length).toBeGreaterThan(0);
     }
@@ -36,7 +36,8 @@ describe('bases (#88)', () => {
   it('opens more bases on promotion and falls back to the first for an unknown or locked one', () => {
     const [home, light] = nationBases(Nation.IJN);
     expect(isBaseOpen(light, at(0))).toBe(false);
-    expect(baseLockText(light)).toBe('少尉に昇進で着工');
+    expect(baseLockText(light)).toBe('少尉に昇進・南太平洋で 3 海域を攻略で着工');
+    expect(baseLockText(light, { campaign: ['p1'] })).toBe('少尉に昇進・南太平洋で 3 海域を攻略 (1 / 3) で着工');
     expect(currentBase(Nation.IJN, at(0, light.id))?.id).toBe(home.id);
     expect(currentBase(Nation.IJN, at(0, 'nope'))?.id).toBe(home.id);
     // The stored base is still read by old save steps; moving between bases is gone (#281).
@@ -46,12 +47,15 @@ describe('bases (#88)', () => {
   it('a base is built once its rank is reached, and opens when the work ends (#217)', () => {
     const [home, light, cruiser] = nationBases(Nation.IJN);
     const rich = { fuel: 9000, ammo: 9000, steel: 9000, bauxite: 9000 };
-    const p = { ...at(99_999, '', false), resources: rich, items: { ...emptyNationProgress().items, fastBuild: 1 } };
+    const won = ['p1', 'p2', 'p3', 'np1', 'np2', 'np3', 'io1', 'io2', 'io3'];
+    const p = { ...at(99_999, '', false), campaign: won, resources: rich, items: { ...emptyNationProgress().items, fastBuild: 1 } };
     // The first base needs no work; the second waits for its construction.
     expect(isBaseOpen(home, p)).toBe(true);
     expect(baseState(light, p)).toBe('ready');
     expect(baseState(light, { ...p, resources: { fuel: 0, ammo: 0, steel: 0, bauxite: 0 } })).toBe('resources');
     expect(baseState(light, at(0, '', false))).toBe('locked');
+    // The rank alone is not enough (#293): three areas of the previous base's theater too.
+    expect(baseState(light, { ...p, campaign: ['p1', 'p2'] })).toBe('locked');
     expect(baseWorkOf(light)).toEqual({ cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 20 });
     const started = startBaseWork(p, light, T0)!;
     expect(started.resources.steel).toBe(rich.steel - 1000);

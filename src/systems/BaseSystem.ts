@@ -1,4 +1,5 @@
 import baseData from '@/data/bases.json';
+import campaignData from '@/data/campaign.json';
 import { ShipClass } from '@/types/ShipClass';
 import { CLASS_JA } from './EncyclopediaSystem';
 export { scaleCost } from './ResourceSystem';
@@ -12,6 +13,8 @@ import { dockCount, IDockState, MAX_DOCKS, START_DOCKS } from './DockSystem';
  * 軍港 (#88, pure): each nation has five home ports, each with a bonus (cheaper building of some classes, cheaper
  * research, faster repairs) and the seas its sorties reach. Since 0.0.38 (#281) the admiral no longer moves between
  * them: every open base counts at once — their discounts add up (to a cap), their docks pool, their seas join.
+ * Since #293 each base opens one new theater, the nearest sea first: a base is built once the rank of its place in the
+ * order is reached and BASE_PREV_CLEARS areas of the previous base's theater are won, the same for every navy.
  */
 
 export interface IBase {
@@ -28,7 +31,7 @@ export interface IBase {
   research?: number;
   /** Repairs take this many times as long */
   repairTime?: number;
-  /** Theaters a sortie can leave from here for (#145); all of the nation's when absent */
+  /** The theater this base opens (#145; one since #293); all of the nation's when absent */
   theaters?: string[];
 }
 
@@ -145,19 +148,56 @@ export function baseBonusLines(base: IBase): string[] {
   return out;
 }
 
-export function baseLockText(base: IBase): string {
-  return `${RANKS[base.unlockRank]?.name ?? '?'}に昇進で着工`;
+/** Areas of the previous base's theater to win before the next base can be built (#293). */
+export const BASE_PREV_CLEARS = 3;
+
+/** The theater the base before this one opens (undefined for a nation's first base). */
+export function previousTheater(base: IBase): string | undefined {
+  const list = nationBases(base.nation);
+  const i = list.findIndex((b) => b.id === base.id);
+  return i > 0 ? list[i - 1].theaters?.[0] : undefined;
+}
+
+/** Areas won in `theater`, training areas aside. */
+export function theaterClears(theater: string, cleared: readonly string[]): number {
+  return campaignData.areas.filter((a) => a.theater === theater && !(a as { training?: boolean }).training && cleared.includes(a.id)).length;
+}
+
+/** Whether the previous base's theater is far enough along for this base (#293). */
+export function basePrevMet(base: IBase, progress: Pick<IRankProgress, 'campaign'>): boolean {
+  const prev = previousTheater(base);
+  return prev === undefined || theaterClears(prev, progress.campaign) >= BASE_PREV_CLEARS;
+}
+
+const theaterName = (id: string): string => campaignData.theaters.find((t) => t.id === id)?.name ?? id;
+
+/** "少尉・南太平洋 1/3": a locked base's conditions, short, for the list of bases. */
+export function baseLockShort(base: IBase, progress: Pick<IRankProgress, 'campaign'>): string {
+  const prev = previousTheater(base);
+  const rank = RANKS[base.unlockRank]?.name ?? '?';
+  return prev === undefined ? rank : `${rank}・${theaterName(prev)} ${Math.min(BASE_PREV_CLEARS, theaterClears(prev, progress.campaign))}/${BASE_PREV_CLEARS}`;
+}
+
+/** "少佐に昇進・北太平洋で 3 海域を攻略 (1 / 3) で着工": what a locked base waits for. */
+export function baseLockText(base: IBase, progress?: Pick<IRankProgress, 'campaign'>): string {
+  const prev = previousTheater(base);
+  const rank = `${RANKS[base.unlockRank]?.name ?? '?'}に昇進`;
+  if (prev === undefined) return `${rank}で着工`;
+  const done = progress ? ` (${Math.min(BASE_PREV_CLEARS, theaterClears(prev, progress.campaign))} / ${BASE_PREV_CLEARS}) ` : '';
+  return `${rank}・${theaterName(prev)}で ${BASE_PREV_CLEARS} 海域を攻略${done}で着工`;
 }
 
 // ---------------------------------------------------------------------------
 // Building a base (#217)
 // ---------------------------------------------------------------------------
 
-/** Price and minutes of the nation's 2nd, 3rd and 4th base (by their order in bases.json). */
+/** Price and minutes of the nation's 2nd to 6th base (by their order in bases.json). */
 export const BASE_WORKS: ReadonlyArray<{ cost: IResources; minutes: number }> = [
   { cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 20 },
   { cost: { fuel: 1000, ammo: 500, steel: 2000, bauxite: 0 }, minutes: 40 },
   { cost: { fuel: 1500, ammo: 1000, steel: 3000, bauxite: 300 }, minutes: 60 },
+  { cost: { fuel: 2000, ammo: 1500, steel: 4000, bauxite: 500 }, minutes: 80 },
+  { cost: { fuel: 2500, ammo: 2000, steel: 5000, bauxite: 800 }, minutes: 100 },
 ];
 
 /** What building `base` takes (the last entry for any further base). */
@@ -170,12 +210,13 @@ export type BaseState = 'open' | 'building' | 'busy' | 'ready' | 'resources' | '
 
 /**
  * open: usable. building: under construction. busy: another base is being built (one at a time). ready / resources:
- * the rank is met and it can be built now / once resources allow. locked: the rank is not reached yet.
+ * the rank is met and it can be built now / once resources allow. locked: the rank or the previous theater's
+ * progress (#293) is not reached yet.
  */
 export function baseState(base: IBase, progress: IRankProgress & IBaseWorks & { resources: IResources }): BaseState {
   if (isBaseOpen(base, progress)) return 'open';
   if (progress.baseWork?.base === base.id) return 'building';
-  if (!baseRankMet(base, progress)) return 'locked';
+  if (!baseRankMet(base, progress) || !basePrevMet(base, progress)) return 'locked';
   if (progress.baseWork) return 'busy';
   return canAfford(progress.resources, baseWorkOf(base).cost) ? 'ready' : 'resources';
 }
