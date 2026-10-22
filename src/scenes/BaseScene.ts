@@ -140,7 +140,7 @@ export class BaseScene extends Phaser.Scene {
       this.track(this.add.text(bx + 16, by + 12, b.name, textStyle(IS_PORTRAIT ? 16 : 15, open ? Css.text : Css.dim, { fontStyle: 'bold' })));
       // A base past its rank is built before it opens (#217).
       const state = baseState(b, progress);
-      const sub = open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockText(b);
+      const sub = open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockText(b, progress);
       const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
       if (state === 'building' && progress.baseWork) {
         this.workTimer = { text: subText, endsAt: progress.baseWork.endsAt, name: b.name };
@@ -171,7 +171,7 @@ export class BaseScene extends Phaser.Scene {
       const items = progress.items.fastBuild;
       const label = state === 'building' ? `高速建造材で完成 (所持 ${items})`
         : state === 'ready' || state === 'resources' ? `着工 ${work.minutes}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(work.cost)}`
-          : state === 'busy' ? '他の軍港を工事中' : baseLockText(base);
+          : state === 'busy' ? '他の軍港を工事中' : baseLockText(base, progress);
       const enabled = state === 'ready' || (state === 'building' && items > 0);
       const workW = IS_PORTRAIT ? 300 : 340;
       this.track(new UIButton(this, d.x + d.w - 24 - workW / 2, d.y + 44, label, () => (state === 'building' ? this.rushWork() : this.startWork(base)), {
@@ -188,7 +188,7 @@ export class BaseScene extends Phaser.Scene {
     const all = baseOfProgress(progress);
     const time = Math.round((1 - fleetBuildTimeMul(progress)) * 100);
     const total = [...(all ? baseBonusLines(all) : []), ...(time > 0 ? [`建造時間 -${time}%`] : []), `ドック ${dockTotal(progress)} 本`].join('・');
-    const info = this.track(this.add.text(x, y, `出撃できる戦域: ${(base.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・')}\nこの軍港の特色: ${bonus}${uniqueStrength(facilities, base.id) > 1 ? ` (${uniqueName(base)}で強化)` : ''}${open ? '' : ' (開港すると加わる)'}\n全軍港の効果: ${total}`, textStyle(13, Css.muted, { lineSpacing: 4, wordWrap: { width: w, useAdvancedWrap: true } })));
+    const info = this.track(this.add.text(x, y, `解放する戦域: ${(base.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・')}\nこの軍港の特色: ${bonus}${uniqueStrength(facilities, base.id) > 1 ? ` (${uniqueName(base)}で強化)` : ''}${open ? '' : ' (開港すると加わる)'}\n全軍港の効果: ${total}`, textStyle(13, Css.muted, { lineSpacing: 4, wordWrap: { width: w, useAdvancedWrap: true } })));
     y = info.y + info.height + 12;
 
     // The footer is laid out from the bottom up first, so nothing above runs into it (#297): regeneration with

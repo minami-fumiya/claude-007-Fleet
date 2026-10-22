@@ -76,21 +76,13 @@ describe('campaign data for the growth curve (#25 / #18)', () => {
     }
   });
 
-  it('only the first area of each first theater is free; the seas of 0.0.35 open from them (#250)', () => {
+  it('the first area of every theater is free: its base opens the sea (#293)', () => {
     for (const t of data.theaters) {
       // Besides the training area (#202), which is free too.
       const free = areasOf(data, t.id).filter((a) => isFreeArea(a) && !a.training);
-      if (t.tier) {
-        expect(free, t.id).toHaveLength(0);
-        // The first area opens once any first theater's third area is won.
-        const first = areasOf(data, t.id)[0];
-        expect(isUnlocked(first, [])).toBe(false);
-        expect(isUnlocked(first, ['p1', 'p2', 'p3'])).toBe(true);
-        expect(isUnlocked(first, ['b1', 'b2', 'b3'])).toBe(true);
-      } else {
-        expect(free, t.id).toHaveLength(1);
-        expect(isFreeArea(areasOf(data, t.id)[0])).toBe(true);
-      }
+      expect(free, t.id).toHaveLength(1);
+      expect(isFreeArea(areasOf(data, t.id)[0])).toBe(true);
+      expect(isUnlocked(areasOf(data, t.id)[0], [])).toBe(true);
     }
   });
 });

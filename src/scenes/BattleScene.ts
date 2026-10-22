@@ -91,7 +91,7 @@ import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
 import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
-import { fleetPower } from '@/systems/DifficultyCurve';
+import { enemyScale, fleetPower, scaleModifiers } from '@/systems/DifficultyCurve';
 import { UNDERDOG_RATIO } from '@/systems/FleetPower';
 
 
@@ -712,6 +712,9 @@ export class BattleScene extends Phaser.Scene {
       night: this.conditions.time === TimeOfDay.Night, named,
     });
     const offsets = FormationSystem.getOffsets(this.enemyFormation, Math.max(0, ships.length - 1));
+    // A sea further along the player's order meets a stronger enemy (#293).
+    const area = this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId) : undefined;
+    const reach = scaleModifiers(area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1);
     // The flagship starts in the middle of a line north of the centre (moved off any island), the rest in formation.
     const line = lineAtSea(this.map, enemySpawnPoints(ships.length, WORLD));
     const lead = line[Math.floor(line.length / 2)];
@@ -720,7 +723,7 @@ export class BattleScene extends Phaser.Scene {
       const placed = this.scenarioSetup?.enemy.positions[i];
       const slot = i === 0 ? lead : FormationSystem.getWorldPositionFromValues(lead.x, lead.y, 180, offsets[i - 1]);
       const pos = placed ? placeAt(placed, WORLD.w, WORLD.h) : slot;
-      const enemy = this.spawnShip(shipData, pos.x, pos.y, combineModifiers(formationModifiers(this.enemyFormation, i === 0)));
+      const enemy = this.spawnShip(shipData, pos.x, pos.y, combineModifiers(formationModifiers(this.enemyFormation, i === 0), reach));
       // 難易度 (#100): how well the enemy aims and how much it takes.
       enemy.aimErrorMul *= this.difficulty.aimMul;
       enemy.stats.maxHp = Math.round(enemy.stats.maxHp * this.difficulty.hpMul);

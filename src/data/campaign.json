@@ -1,7 +1,7 @@
 {
   "theaters": [
     { "id": "pacific", "name": "南太平洋", "en": "SOUTH PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN"} },
-    { "id": "atlantic", "name": "北大西洋", "en": "NORTH ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM"} },
+    { "id": "atlantic", "name": "北大西洋", "en": "NORTH ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM", "RM": "RN"} },
     { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN", "opponents": {"IJN": "RN", "RN": "RM", "RM": "RN", "FR": "RM", "KM": "RN"} },
     { "id": "baltic", "name": "バルト海", "en": "BALTIC", "opponents": {"SU": "KM", "KM": "SU"}, "inland": true },
     { "id": "blacksea", "name": "黒海", "en": "BLACK SEA", "opponents": {"SU": "KM"}, "exam": false, "inland": true },
@@ -350,7 +350,7 @@
     },
     {
       "id": "np1", "theater": "north_pacific", "name": "アリューシャン哨戒", "description": "霧のアリューシャン列島で、敵の駆逐艦を追い払え。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "USN", "ships": ["fletcher", "sims"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Fog", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -416,7 +416,7 @@
     },
     {
       "id": "sa1", "theater": "south_atlantic", "name": "通商破壊艦の影", "description": "南の航路に潜む U ボートを掃討せよ。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "KM", "ships": ["u_boat_ixc", "u_boat_viic"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -482,7 +482,7 @@
     },
     {
       "id": "io1", "theater": "indian", "name": "アンダマン海哨戒", "description": "島々の間に潜む敵の駆逐艦と護衛艦を追い払え。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "RN", "ships": ["javelin", "black_swan"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"
@@ -548,7 +548,7 @@
     },
     {
       "id": "ar1", "theater": "arctic", "name": "バレンツ海哨戒", "description": "凍える海で、敵の駆逐艦と U ボートを追い払え。",
-      "x": 0.12, "y": 0.4, "requires": [], "requiresAny": ["p3", "a3", "m3", "b3", "bs3"],
+      "x": 0.12, "y": 0.4, "requires": [],
       "enemy": { "nation": "KM", "ships": ["z1", "u_boat_viic"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Fog", "time": "Day",
       "reward": { "fuel": 500, "ammo": 500, "steel": 500, "bauxite": 150 }, "rewardShip": "Destroyer"

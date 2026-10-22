@@ -45,7 +45,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { ownFleetPower } from '@/systems/FleetPower';
-import { fleetPower } from '@/systems/DifficultyCurve';
+import { enemyScale, fleetPower } from '@/systems/DifficultyCurve';
 
 
 /** Landscape: up to this many slots in one column; a bigger fleet is laid out in two columns. */
@@ -1553,7 +1553,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private powerLabel(ships: IShipData[]): string {
     const own = ownFleetPower(ships, loadProgress(), DataLoader.getUpgrades(this));
     if (!this.area) return `戦力 ${own.toLocaleString('en-US')}`;
-    const enemy = fleetPower(enemyShips(this.area, this.shipRegistry, enemyNationFor(campaignData as ICampaignData, this.area, this.nation)));
+    const data = campaignData as ICampaignData;
+    const enemy = Math.round(fleetPower(enemyShips(this.area, this.shipRegistry, enemyNationFor(data, this.area, this.nation))) * enemyScale(data, this.area, this.nation));
     return `戦力 ${own.toLocaleString('en-US')} (敵 ${enemy.toLocaleString('en-US')} ×${(own / Math.max(1, enemy)).toFixed(2)})`;
   }
 

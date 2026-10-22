@@ -20,15 +20,13 @@ export function prerequisitesOf(area: ICampaignArea): string[] {
 }
 
 /**
- * What still has to be won before `area` opens (#250), '' when it is open: the areas of its own theater by name, or,
- * for a sea that opens from the first theaters, the third area of any of them.
+ * What still has to be won before `area` opens (#250), '' when it is open: the areas of its own theater by name (a
+ * theater's first area is free since #293: its base opens the sea).
  */
 export function lockText(data: Pick<ICampaignData, 'areas'>, area: ICampaignArea, cleared: string[]): string {
   if (isUnlocked(area, cleared)) return '';
   const name = (id: string): string => data.areas.find((a) => a.id === id)?.name ?? id;
-  const home = (id: string): boolean => data.areas.find((a) => a.id === id)?.theater === area.theater;
   const any = area.requiresAny ?? [];
-  if (any.length > 0 && !any.some(home)) return '最初の戦域で 3 つ目の海域を攻略すると開きます';
   const missing = area.requires.filter((r) => !cleared.includes(r)).map((r) => `「${name(r)}」`);
   if (any.length > 0 && !any.some((r) => cleared.includes(r))) missing.push(any.map((r) => `「${name(r)}」`).join('か'));
   return `${missing.join('と')}を攻略すると開きます`;

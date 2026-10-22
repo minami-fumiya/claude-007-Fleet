@@ -17,7 +17,7 @@ import { GOLD_SWEEP } from '@/systems/GoldSystem';
 import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
-import { areaDepth, curveText, fleetPower } from '@/systems/DifficultyCurve';
+import { areaDepth, curveText, enemyScale, fleetPower, theaterStep } from '@/systems/DifficultyCurve';
 import { IShipData } from '@/types/Ship';
 import { ownFleetPower, powerCompareText, powerTone } from '@/systems/FleetPower';
 import { selectedShipIds } from '@/utils/FleetSelection';
@@ -130,7 +130,9 @@ export class CampaignMapScene extends Phaser.Scene {
     const pending = pendingSortie(this);
     const pendingArea = pending ? DATA.areas.find((a) => a.id === pending.areaId) : undefined;
     const reachable = baseOfProgress(loadProgress());
-    const all = theatersFor(DATA, loadProgress().nation);
+    // The navy's order (#293): the nearest sea first, as its bases open them.
+    const nation = loadProgress().nation;
+    const all = theatersFor(DATA, nation).sort((x, y) => (theaterStep(nation, x.id) ?? 99) - (theaterStep(nation, y.id) ?? 99));
     this.theaters = all.filter((t) => baseReaches(reachable, t.id) || t.id === pendingArea?.theater);
     const hidden = all.filter((t) => !this.theaters.includes(t));
     if (hidden.length > 0) {
@@ -282,7 +284,10 @@ export class CampaignMapScene extends Phaser.Scene {
     const reward = formatResources(a.reward) + (sReward?.kind === 'ship' ? `  /  S 評価の報酬: ${sReward.ship.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(sReward.ship)})` : '');
     const captain = sReward?.kind === 'captain' ? 'S 評価の報酬: 艦長 +1' : '';
     // 自艦隊の戦力 (#280): the fleet last set up in the builder, against this area's enemy.
-    const enemyPower = fleetPower(enemy);
+    const nation = loadProgress().nation;
+    // Further along the navy's order the same fleet is stronger (#293).
+    const enemyPower = Math.round(fleetPower(enemy) * enemyScale(DATA, a, nation));
+    const depth = areaDepth(DATA, a, nation);
     const ownShips = selectedShipIds(this.registry, progress.nation).map((id) => roster.find((s) => s.id === id)).filter((s): s is IShipData => s !== undefined);
     const ownPower = ownShips.length > 0 ? ownFleetPower(ownShips, progress, DataLoader.getUpgrades(this)) : 0;
     const tone = powerTone(ownPower, enemyPower);
@@ -300,8 +305,8 @@ export class CampaignMapScene extends Phaser.Scene {
       // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.
       // Portrait shares the route's row, so the briefing stays clear of the buttons.
       ...(IS_PORTRAIT
-        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(enemyPower, areaDepth(DATA, a))}${ownPower > 0 ? `  ·  自艦隊 ×${(ownPower / enemyPower).toFixed(2)}` : ''}`] as [string, string]]
-        : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(enemyPower, areaDepth(DATA, a))],
+        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(enemyPower, depth)}${ownPower > 0 ? `  ·  自艦隊 ×${(ownPower / enemyPower).toFixed(2)}` : ''}`] as [string, string]]
+        : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(enemyPower, depth)],
           // The fleet last set up, weighed the same way (#280).
           ...(ownPower > 0 ? [['戦力の比較', powerCompareText(ownPower, enemyPower)] as [string, string]] : [])] as Array<[string, string]>),
       ...(open ? [] : [['解放の条件', lockText(DATA, a, cleared)] as [string, string]]),
