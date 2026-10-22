@@ -39,7 +39,8 @@ async function waitForServer(url, ms = 60_000) {
 
 const server = args.url ? null : spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' });
 const base = args.url ?? `http://localhost:${PORT}`;
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+// No GPU: the battle is stepped without drawing, and a software GPU only burns the CPU the battles need.
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--disable-gpu'] });
 try {
   await waitForServer(base);
   const PAGES = Math.max(1, Number(args.pages ?? 1));
