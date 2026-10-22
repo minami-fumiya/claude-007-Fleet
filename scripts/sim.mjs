@@ -8,7 +8,8 @@
  *
  *   npm run sim -- --nations IJN,USN --areas p1,p5 --runs 3 --out docs/balance/sim.md
  *
- * Without --areas every area of each navy is played; without --nations, every playable navy.
+ * Without --areas every area of each navy is played (--sample 1: the first, a middle and the final area of each
+ * theater); without --nations, every playable navy. --pages N plays on N pages at once.
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -55,7 +56,7 @@ try {
   const page = pages[0];
 
   // What to play: [nation, area id] pairs.
-  const plan = await page.evaluate(async ({ nations, areas }) => {
+  const plan = await page.evaluate(async ({ nations, areas, sample }) => {
     const { PLAYABLE_NATIONS } = await import('/src/config/NationInfo.ts');
     const { theatersFor } = await import('/src/systems/CampaignSystem.ts');
     const data = (await import('/src/data/campaign.json')).default;
@@ -63,11 +64,15 @@ try {
     const wanted = areas ? areas.split(',') : null;
     const out = [];
     for (const n of list) {
-      const theaters = new Set(theatersFor(data, n).map((t) => t.id));
-      for (const a of data.areas) if (theaters.has(a.theater) && !a.training && (!wanted || wanted.includes(a.id))) out.push([n, a.id]);
+      for (const t of theatersFor(data, n)) {
+        const areas = data.areas.filter((a) => a.theater === t.id && !a.training && (!wanted || wanted.includes(a.id)));
+        // --sample: the first, a middle and the final area of each theater.
+        const picked = sample ? [...new Set([areas[0], areas[Math.floor(areas.length / 2)], areas[areas.length - 1]])].filter(Boolean) : areas;
+        for (const a of picked) out.push([n, a.id]);
+      }
     }
     return out;
-  }, { nations: args.nations ?? null, areas: args.areas ?? null });
+  }, { nations: args.nations ?? null, areas: args.areas ?? null, sample: args.sample !== undefined });
 
   // Each page plays the next pair in the plan; rows keep the plan's order.
   const rows = new Array(plan.length);

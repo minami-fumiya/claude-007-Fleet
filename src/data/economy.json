@@ -60,6 +60,7 @@
       "facilityLevels": 2,
       "sweepsPerHour": 1,
       "build": "takao",
+      "baseBuildMul": 0.85,
       "refitsPerHour": 0.5,
       "refitClass": "Cruiser",
       "facilitiesPerHour": 0.5,
@@ -93,11 +94,15 @@
       "facilityLevels": 5,
       "sweepsPerHour": 2,
       "build": "nagato",
+      "carrier": "shokaku",
+      "baseBuildMul": 0.75,
       "refitsPerHour": 0.5,
       "refitClass": "Battleship",
       "facilitiesPerHour": 0.5,
       "facilityLevel": 4
     }
   ],
-  "winRate": 0.85
+  "winRate": 0.85,
+  "_rankShare": "Share of the won battles at each rank, for the gold (#321). 0.0.41: from the battle simulator (#320, docs/balance/0.0.41.md).",
+  "rankShare": { "S": 0.2, "A": 0.3, "B": 0.35, "C": 0.15 }
 }
