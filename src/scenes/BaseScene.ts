@@ -4,7 +4,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import {
-  baseBonusLines, baseLockText, baseOfProgress, BaseState, baseState, baseWorkOf, currentBaseId, dockTotal, fleetBuildTimeMul, IBase, isBaseOpen, nationBases, rushBaseWork, startBaseWork,
+  baseBonusLines, baseLockShort, baseLockText, baseOfProgress, BaseState, baseState, baseWorkOf, currentBaseId, dockTotal, fleetBuildTimeMul, IBase, isBaseOpen, nationBases, rushBaseWork, startBaseWork,
 } from '@/systems/BaseSystem';
 import {
   boostedBase, COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, maxLevelOf, facilityPreview, holdCap, regenRules, startFacility, UNIQUE_REGEN_CAP, uniqueStrength,
@@ -140,8 +140,9 @@ export class BaseScene extends Phaser.Scene {
       this.track(this.add.text(bx + 16, by + 12, b.name, textStyle(IS_PORTRAIT ? 16 : 15, open ? Css.text : Css.dim, { fontStyle: 'bold' })));
       // A base past its rank is built before it opens (#217).
       const state = baseState(b, progress);
-      const sub = open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockText(b, progress);
+      const sub = open ? (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') : BASE_STATE_TEXT[state] ?? baseLockShort(b, progress);
       const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
+      if (subText.width > cw - 32) subText.setScale((cw - 32) / subText.width);
       if (state === 'building' && progress.baseWork) {
         this.workTimer = { text: subText, endsAt: progress.baseWork.endsAt, name: b.name };
         subText.setText(`工事中 残り ${clock(progress.baseWork.endsAt - Date.now())}`);

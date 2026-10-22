@@ -171,6 +171,13 @@ export function basePrevMet(base: IBase, progress: Pick<IRankProgress, 'campaign
 
 const theaterName = (id: string): string => campaignData.theaters.find((t) => t.id === id)?.name ?? id;
 
+/** "少尉・南太平洋 1/3": a locked base's conditions, short, for the list of bases. */
+export function baseLockShort(base: IBase, progress: Pick<IRankProgress, 'campaign'>): string {
+  const prev = previousTheater(base);
+  const rank = RANKS[base.unlockRank]?.name ?? '?';
+  return prev === undefined ? rank : `${rank}・${theaterName(prev)} ${Math.min(BASE_PREV_CLEARS, theaterClears(prev, progress.campaign))}/${BASE_PREV_CLEARS}`;
+}
+
 /** "少佐に昇進・北太平洋で 3 海域を攻略 (1 / 3) で着工": what a locked base waits for. */
 export function baseLockText(base: IBase, progress?: Pick<IRankProgress, 'campaign'>): string {
   const prev = previousTheater(base);
