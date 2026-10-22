@@ -94,11 +94,14 @@ export function enemyScale(data: Pick<ICampaignData, 'areas' | 'theaters'>, area
   return CURVE_GROWTH ** (areaDepth(data, area, nation) - areaDepth(data, area));
 }
 
-/** The enemy's modifiers for a scale: hit points and firepower each take its square root, so their product is it. */
+/**
+ * The enemy's modifiers for a scale: hit points and gun and torpedo power each take its square root, so their product
+ * is it. Air strikes stay as written: they already sink a flagship in seconds (the battle simulator, #320).
+ */
 export function scaleModifiers(scale: number): Partial<IShipModifiers> {
   if (scale === 1) return {};
   const k = Math.sqrt(scale);
-  return { hpMul: k, gunPowerMul: k, torpedoPowerMul: k, airPowerMul: k };
+  return { hpMul: k, gunPowerMul: k, torpedoPowerMul: k };
 }
 
 /** The enemy strength the curve asks for at `depth`. */

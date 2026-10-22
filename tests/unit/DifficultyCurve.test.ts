@@ -79,6 +79,7 @@ describe('the further the sea, the harder (#293)', () => {
     expect(enemyScale(data, area('m1'))).toBe(1);
     const k = scaleModifiers(enemyScale(data, area('m1'), 'IJN'));
     expect(k.hpMul! * k.gunPowerMul!).toBeCloseTo(1.5 ** 3);
+    expect(k.airPowerMul).toBeUndefined();
     expect(scaleModifiers(1)).toEqual({});
     // Every navy meets a sea no easier than written, and every area stays inside the band at its depth for that navy.
     const out: string[] = [];

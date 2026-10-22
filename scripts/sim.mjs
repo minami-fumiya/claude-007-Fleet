@@ -3,7 +3,8 @@
  * table per area: win rate, battle time (mean and range), the ranks S〜D and the player's ships left afloat.
  *
  * The player's fleet is the one of the area's recommended rank (DifficultyCurve.recommendedRank): as many ships as the
- * rank's slots, the strongest the rank may build (no fictional, reward-only or submarine). The enemy is the area's
+ * rank's slots, the strongest the rank may build (no fictional, reward-only or submarine), led by a gun ship, with
+ * carriers in at most a third of the slots. The enemy is the area's
  * main fleet, strengthened for the navy's order (#293). Route battles before the main fleet are not played.
  *
  *   npm run sim -- --nations IJN,USN --areas p1,p5 --runs 3 --out docs/balance/sim.md
@@ -149,10 +150,15 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
 
   const scene = game.scene.getScenes(true)[0] ?? game.scene.getScene('MainMenuScene');
   const registry = DataLoader.getRegistry(scene);
-  const ships = registry.byNation(nation)
+  // A gun ship leads (a carrier flagship sails AUTO straight into torpedoes), and carriers fill at most a third.
+  const slots = RANKS[rank.index].slots;
+  const pool = registry.byNation(nation)
     .filter((s) => !s.fictional && !isRewardOnly(s) && s.shipClass !== 'Submarine' && gradeAllowed(shipGrade(s), rank.index))
-    .sort((x, y) => curve.fleetPower([y]) - curve.fleetPower([x]))
-    .slice(0, RANKS[rank.index].slots);
+    .sort((x, y) => curve.fleetPower([y]) - curve.fleetPower([x]));
+  const guns = pool.filter((s) => s.shipClass !== 'Carrier');
+  const carriers = pool.filter((s) => s.shipClass === 'Carrier').slice(0, Math.floor(slots / 3));
+  const rest = [...guns.slice(1), ...carriers].sort((x, y) => curve.fleetPower([y]) - curve.fleetPower([x]));
+  const ships = [guns[0], ...rest].filter(Boolean).slice(0, slots);
   const enemyNation = enemyNationFor(data, area, nation);
   const enemy = enemyShips(area, registry, enemyNation);
   const ratio = (curve.fleetPower(enemy) * curve.enemyScale(data, area, nation)) / Math.max(1, curve.fleetPower(ships));
@@ -164,7 +170,8 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
   };
 
   game.loop.sleep();
-  let now = performance.now();
+  // The simulated clock runs ahead of the real one; it must never go back for the next battle on this page.
+  let now = Math.max(performance.now(), window.__simNow ?? 0);
   const step = (n) => {
     for (let i = 0; i < n; i++) {
       now += stepMs;
@@ -173,6 +180,7 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
       game.loop.delta = stepMs;
       game.headlessStep(now, stepMs);
     }
+    window.__simNow = now;
   };
   game.scene.getScenes(true).forEach((s) => s.scene.stop());
   game.scene.start('BattleScene', init);
@@ -197,6 +205,6 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
   game.scene.getScenes(true).forEach((s) => s.scene.stop());
   game.loop.wake();
   return res
-    ? { depth, rankName: rank.name, ratio, victory: res.victory, durationSec: res.durationSec, sunk: `${res.enemiesSunk}/${res.enemiesTotal}`, rank: res.rank, survivors: res.survivors, fleetSize: res.fleetSize }
+    ? { depth, rankName: rank.name, ratio, victory: res.victory, durationSec: res.durationSec, sunk: `${res.enemiesSunk}/${res.enemiesTotal}`, note: res.rankNote, why: res.campaign, rank: res.rank, survivors: res.survivors, fleetSize: res.fleetSize }
     : { depth, rankName: rank.name, ratio, victory: false, durationSec: limitSec, rank: 'D', survivors: 0, fleetSize: ships.length };
 }
