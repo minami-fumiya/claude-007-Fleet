@@ -45,6 +45,12 @@ export function fleetPower(ships: ReadonlyArray<Pick<IShipData, 'hp' | 'armor'>>
   return Math.round(ships.reduce((sum, s) => sum + shipPower(s), 0));
 }
 
+/**
+ * How deep a far sea goes for a navy (#293). Past this the curve outgrows the strongest fleets a navy can build (about
+ * 4,000〜9,000 by HP × armor at 元帥), so a sea further along the order starts deeper but tops out here.
+ */
+export const REACH_MAX_DEPTH = 9;
+
 const BASES = (baseData as { bases: Array<{ nation: string; theaters?: string[] }> }).bases;
 
 /** Where `theater` comes in `nation`'s order (#293): the place of the base that opens it, 0 for the first. */
@@ -60,7 +66,7 @@ export function theaterStep(nation: string, theater: string): number | undefined
 export function areaDepth(data: Pick<ICampaignData, 'areas' | 'theaters'>, area: ICampaignArea, nation?: string): number {
   if (area.training) return 1;
   const written = data.theaters.find((t) => t.id === area.theater)?.tier ?? 0;
-  const tier = (nation !== undefined ? theaterStep(nation, area.theater) : undefined) ?? written;
+  const step = nation !== undefined ? theaterStep(nation, area.theater) : undefined;
   const memo = new Map<string, number>();
   const walk = (a: ICampaignArea, seen: ReadonlySet<string>): number => {
     const known = memo.get(a.id);
@@ -73,7 +79,10 @@ export function areaDepth(data: Pick<ICampaignData, 'areas' | 'theaters'>, area:
     memo.set(a.id, d);
     return d;
   };
-  return walk(area, new Set()) + tier;
+  const depth = walk(area, new Set());
+  if (step === undefined) return depth + written;
+  // A far sea is deeper, up to the curve's top (#293): no deeper than REACH_MAX_DEPTH unless written deeper.
+  return Math.max(depth + written, Math.min(depth + step, REACH_MAX_DEPTH));
 }
 
 /**
