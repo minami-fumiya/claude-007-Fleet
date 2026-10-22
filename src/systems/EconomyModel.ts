@@ -12,6 +12,9 @@ import { REFIT_TABLE } from './RefitSystem';
 import { addResources, BAUXITE_PER_PLANE, battleReward, REGEN_INTERVAL_MS, RESOURCE_KEYS, resources, sortieCost } from './ResourceSystem';
 import { SWEEP_REWARD_SCALE } from './ProgressionSystem';
 import { QUESTS_SHOWN } from './QuestSystem';
+import { scaleCost } from './ResourceSystem';
+import { GOLD_FOR_RANK, GOLD_SWEEP, SELL, SHOP_ENTRIES } from './GoldSystem';
+import type { BattleRank } from './BattleRank';
 
 /**
  * Economy model (#222, pure): a typical hour of play at each stage, from `economy.json`, run through the game's own
@@ -45,6 +48,10 @@ export interface IEconomyPhase {
   facilityLevel: number;
   /** The ship a player of this stage builds */
   build: string;
+  /** The carrier a player of this stage builds (#321), its bauxite checked apart */
+  carrier?: string;
+  /** What the open bases take off building (#281 #321): 1 = no discount */
+  baseBuildMul?: number;
 }
 
 interface IEconomyData {
@@ -55,6 +62,8 @@ interface IEconomyData {
   questCompletion: Record<'hourly' | 'daily' | 'weekly', number>;
   /** Share of battles won; a defeat pays half per sink and no victory bonus */
   winRate: number;
+  /** Share of the won battles at each rank (#320: from the battle simulator), for the gold */
+  rankShare: Partial<Record<BattleRank, number>>;
   phases: IEconomyPhase[];
 }
 
@@ -75,8 +84,12 @@ export interface IHourBudget {
   totalOut: IResources;
   /** Income minus spending, before building anything */
   net: IResources;
-  /** What building the phase's ship costs */
+  /** What building the phase's ship costs (with the bases' discount) */
   buildCost: IResources;
+  /** What building the phase's carrier costs, when it has one */
+  carrierCost?: IResources;
+  /** Gold of the hour: battles by rank, sweeps and quests (#321) */
+  gold: number;
 }
 
 /** Average reward of the quests of one kind on a board (the board shows QUESTS_SHOWN of them). */
@@ -127,7 +140,40 @@ export function hourBudget(phase: IEconomyPhase, data: IEconomyData = ECONOMY): 
   const totalOut = sum(spending);
   const net = resources();
   for (const k of RESOURCE_KEYS) net[k] = totalIn[k] - totalOut[k];
-  return { income, spending, totalIn, totalOut, net, buildCost: buildCost(ship(phase.build)) };
+  const mul = phase.baseBuildMul ?? 1;
+  return {
+    income, spending, totalIn, totalOut, net,
+    buildCost: scaleCost(buildCost(ship(phase.build)), mul),
+    ...(phase.carrier ? { carrierCost: scaleCost(buildCost(ship(phase.carrier)), mul) } : {}),
+    gold: hourGold(phase, data),
+  };
+}
+
+/** Gold of an hour (#321): won battles by rank, sweeps and the quests finished. */
+export function hourGold(phase: IEconomyPhase, data: IEconomyData = ECONOMY): number {
+  const perWin = (Object.entries(data.rankShare) as Array<[BattleRank, number]>).reduce((s, [r, share]) => s + GOLD_FOR_RANK[r] * share, 0);
+  const quest = (kind: 'hourly' | 'daily' | 'weekly'): number => {
+    const pool = (questData.quests as Array<{ kind: string; gold?: number }>).filter((q) => q.kind === kind);
+    const sum = pool.reduce((s, q) => s + (q.gold ?? 0), 0);
+    return pool.length > 0 ? (sum * QUESTS_SHOWN[kind] / pool.length) * data.questCompletion[kind] : 0;
+  };
+  const quests = quest('hourly') + quest('daily') / data.playHoursPerDay + quest('weekly') / data.playHoursPerWeek;
+  return Math.round(phase.battlesPerHour * data.winRate * perWin + phase.sweepsPerHour * GOLD_SWEEP + quests);
+}
+
+/** Builds of the phase's carrier one hour's surplus bauxite pays for (#321); Infinity without a carrier. */
+export function bauxiteCarriersPerHour(b: IHourBudget): number {
+  return b.carrierCost && b.carrierCost.bauxite > 0 ? b.net.bauxite / b.carrierCost.bauxite : Infinity;
+}
+
+/**
+ * Fuel the shop turns 1,000 surplus steel into (#321): sold at the steel rate, the gold buys the large fuel pack
+ * (its daily limit aside).
+ */
+export function steelToFuel(): number {
+  const pack = SHOP_ENTRIES.find((e) => e.id === 'fuel_l');
+  const fuelPerGold = pack?.give?.fuel && pack.price ? pack.give.fuel / pack.price : 0;
+  return Math.round(SELL.rates.steel * fuelPerGold * (1000 / SELL.amount));
 }
 
 /** Builds of the phase's ship one hour's surplus steel pays for. */

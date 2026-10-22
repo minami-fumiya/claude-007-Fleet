@@ -11,7 +11,7 @@ import { areaMode } from '@/systems/CampaignSystem';
 import { hpFraction } from '@/systems/DockSystem';
 import { formatResources, gainResources, lostNote, pay } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
-import { battleNodes, NODE_LABEL, nextBattleIndex, nodesBetween, shipsForNextNode, sortieRoute } from '@/systems/SortieMapSystem';
+import { battleNodes, ISortieNode, NODE_LABEL, nextBattleIndex, nodesBetween, shipsForNextNode, sortieRoute } from '@/systems/SortieMapSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 
@@ -72,11 +72,15 @@ export function beginSortie(
 ): IBattleInitData | null {
   const kept = slots.map((s, i) => ({ s, c: captainIds[i] ?? null })).filter((x) => x.s !== null);
   const route = sortieRoute(area, enemy);
+  const at = nextBattleIndex(route, 0);
   const state: ISortieState = {
-    areaId: area.id, route, at: nextBattleIndex(route, 0), nation, enemyNation,
+    areaId: area.id, route, at, nation, enemyNation,
     shipIds: kept.map((x) => x.s!.id), captainIds: kept.map((x) => x.c), formation,
   };
-  setSortie(state);
+  // A supply cache or whirlpool before the first battle (#307: one node on the way) is passed on the way out.
+  const passed = passNodes(loadProgress(), route.slice(0, Math.max(0, at)));
+  saveProgress({ ...passed.progress, sortie: state });
+  if (passed.notes.length > 0) scene.registry.set(NOTES_KEY, passed.notes);
   return battleInit(scene, state);
 }
 
@@ -137,17 +141,11 @@ export function previewAdvance(scene: Phaser.Scene): IAdvancePreview | null {
   return { continuing, dropped };
 }
 
-/**
- * 進撃: passes any supply cache / whirlpool on the way (their resources are applied now), drops 大破 ships and
- * returns the next battle. Null when no ship can go on or there is no next battle.
- */
-export function advanceSortie(scene: Phaser.Scene): { init: IBattleInitData; notes: string[] } | null {
-  const s = currentSortie();
-  const preview = previewAdvance(scene);
-  if (!s || !preview || preview.continuing.length === 0) return null;
+/** Passes supply caches and whirlpools: their resources are applied, with a note for the results. */
+function passNodes<T extends ReturnType<typeof loadProgress>>(start: T, nodes: ISortieNode[]): { progress: T; notes: string[] } {
   const notes: string[] = [];
-  let progress = loadProgress();
-  for (const node of nodesBetween(s.route, s.at)) {
+  let progress = start;
+  for (const node of nodes) {
     const loot = node.loot ?? {};
     if (node.kind === 'resource') {
       const g = gainResources(progress.resources, loot, holdCap(progress.facilities));
@@ -160,6 +158,18 @@ export function advanceSortie(scene: Phaser.Scene): { init: IBattleInitData; not
       notes.push(`${NODE_LABEL.whirlpool}: ${formatResources(loot)} を失った`);
     }
   }
+  return { progress, notes };
+}
+
+/**
+ * 進撃: passes any supply cache / whirlpool on the way (their resources are applied now), drops 大破 ships and
+ * returns the next battle. Null when no ship can go on or there is no next battle.
+ */
+export function advanceSortie(scene: Phaser.Scene): { init: IBattleInitData; notes: string[] } | null {
+  const s = currentSortie();
+  const preview = previewAdvance(scene);
+  if (!s || !preview || preview.continuing.length === 0) return null;
+  const { progress, notes } = passNodes(loadProgress(), nodesBetween(s.route, s.at));
   const keep = s.shipIds.map((id, i) => ({ id, c: s.captainIds[i] ?? null })).filter((x) => preview.continuing.includes(x.id));
   const next: ISortieState = { ...s, at: nextBattleIndex(s.route, s.at + 1), shipIds: keep.map((x) => x.id), captainIds: keep.map((x) => x.c), fought: false };
   saveProgress({ ...progress, sortie: next });

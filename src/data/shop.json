@@ -9,8 +9,8 @@
     { "id": "ammo_l", "name": "弾薬 (大)", "give": { "ammo": 2000 }, "price": 500, "daily": 1 },
     { "id": "steel_l", "name": "鋼材 (大)", "give": { "steel": 2000 }, "price": 650, "daily": 1 },
     { "id": "bauxite_l", "name": "ボーキ (大)", "give": { "bauxite": 600 }, "price": 400, "daily": 1 },
-    { "id": "fast_repair", "name": "高速修理材", "items": { "fastRepair": 1 }, "price": 300, "daily": 3 },
-    { "id": "fast_build", "name": "高速建造材", "items": { "fastBuild": 1 }, "price": 400, "daily": 2 },
+    { "id": "fast_repair", "name": "高速修理材", "items": { "fastRepair": 1 }, "price": 120, "daily": 3 },
+    { "id": "fast_build", "name": "高速建造材", "items": { "fastBuild": 1 }, "price": 180, "daily": 2 },
     { "id": "captain_book", "name": "艦長教本", "items": { "captainBook": 1 }, "price": 600, "daily": 1 }
   ],
   "sell": { "amount": 1000, "rates": { "fuel": 120, "ammo": 120, "steel": 160, "bauxite": 300 } },

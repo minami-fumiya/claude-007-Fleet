@@ -20,7 +20,7 @@ describe('battle rank (#149)', () => {
   });
 
   it('an S is timed by the area: two thirds of its limit, none when holding out wins (#295)', () => {
-    expect(sRankTime({})).toBe(420);
+    expect(sRankTime({})).toBe(300);
     expect(sRankTime({ timeLimitSec: 180 })).toBe(120);
     expect(sRankTime({ timeLimitSec: 150, timeWins: true })).toBe(Infinity);
     expect(battleRank({ ...win, durationSec: 150, timeLimitSec: 180 })).toBe('A');
@@ -31,7 +31,7 @@ describe('battle rank (#149)', () => {
     expect(rankShortfall(win)).toBe('');
     expect(rankShortfall({ ...win, victory: false })).toBe('');
     expect(rankShortfall({ ...win, hpRatio: 0.78 })).toBe('S まで: 残り耐久 78% (85% 必要)');
-    expect(rankShortfall({ ...win, shipsLost: 1, minShipHp: 0.2, durationSec: 500 })).toBe('S まで: 喪失 1 隻 · 大破艦あり · 500 秒 (420 秒以内)');
+    expect(rankShortfall({ ...win, shipsLost: 1, minShipHp: 0.2, durationSec: 500 })).toBe('S まで: 喪失 1 隻 · 大破艦あり · 500 秒 (300 秒以内)');
   });
 
   it('scales the battle reward and merit; S pays more than C', () => {

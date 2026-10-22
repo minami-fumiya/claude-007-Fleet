@@ -386,7 +386,8 @@ test.describe('screens', () => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }>; selectTheater?(id: string): void };
       return s.theaters.map((t) => t.id);
     });
-    expect(tabs).toEqual(['baltic', 'blacksea', 'north_pacific', 'arctic']);
+    // The Soviet order (#293): the Baltic first, then the seas its bases open one by one.
+    expect(tabs).toEqual(['baltic', 'north_pacific', 'blacksea', 'arctic']);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `SU (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('map-su.png') });
     // Only Kronstadt open (#282): the seas it reaches; the rest wait for their bases.
@@ -395,7 +396,7 @@ test.describe('screens', () => {
     await page.waitForFunction(() => (window as unknown as { game?: Phaser.Game }).game?.scene.getScenes(true).length);
     await open(page, 'CampaignMapScene');
     const near = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }> }).theaters.map((t) => t.id));
-    expect(near).toEqual(['baltic', 'arctic']);
+    expect(near).toEqual(['baltic']);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `SU first base (${layout})`).toEqual([]);
     expect(errors).toEqual([]);
   });
@@ -739,7 +740,7 @@ test.describe('screens', () => {
     const full = { fuel: 10000, ammo: 10000, steel: 10000, bauxite: 5000 };
     const save = {
       ...SAVE, version: 15, seenHelp: ['HomeScene', 'BaseScene', 'CampaignMapScene'],
-      nations: { IJN: { ...SAVE.nations.IJN, rankFloor: 2, resources: full, basesOpen: [], baseWork: null, items: { fastRepair: 0, fastBuild: 1, captainBook: 0 } } },
+      nations: { IJN: { ...SAVE.nations.IJN, rankFloor: 2, campaign: ['p1', 'p2', 'p3'], resources: full, basesOpen: [], baseWork: null, items: { fastRepair: 0, fastBuild: 1, captainBook: 0 } } },
     };
     const errors = await boot(page, layout, save);
     type G = { game: Phaser.Game };
@@ -1036,7 +1037,7 @@ test.describe('screens', () => {
 
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
-    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p5'));
     await open(page, 'FleetBuilderScene');
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
@@ -1073,7 +1074,7 @@ test.describe('screens', () => {
   test('a sortie left after its first battle is continued from the map after a reload (#138)', async ({ page }, info) => {
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout);
-    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p4'));
+    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p5'));
     await open(page, 'FleetBuilderScene');
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {

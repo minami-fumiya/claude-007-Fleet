@@ -126,9 +126,10 @@ export function sortieCost(ships: IShipData[]): IResources {
  * research, building and docks all burn it. Steel used to pay double (#35) and piled up while fuel ran out (0.0.12).
  */
 export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses: ShipClass[] = []): IResources {
-  // Fuel and steel come by class (0.0.39 review: late-game fleets burn far more fuel than early ones, and a flat 80 a
-  // sink left the late game short of it); ammo and bauxite stay flat.
-  const perSunk = resources({ fuel: 0, ammo: 70, steel: 0, bauxite: 20 });
+  // Fuel, steel and bauxite come by class (0.0.39 review: late-game fleets burn far more fuel than early ones, and a
+  // flat 80 a sink left the late game short of it; #321: a carrier's hangars give the bauxite carriers are built of);
+  // ammo stays flat.
+  const perSunk = resources({ fuel: 0, ammo: 70, steel: 0, bauxite: 0 });
   const bonus = victory ? resources({ fuel: 160, ammo: 150, steel: 220, bauxite: 50 }) : resources();
   const scale = victory ? 1 : 0.5;
   const out = addResources(bonus, perSunk, Math.max(0, enemiesSunk) * scale);
@@ -136,8 +137,15 @@ export function battleReward(victory: boolean, enemiesSunk: number, sunkClasses:
   const known = sunkClasses.slice(0, Math.max(0, enemiesSunk));
   const steel = known.reduce((sum, c) => sum + (SINK_STEEL[c] ?? SINK_STEEL_DEFAULT), 0) + (Math.max(0, enemiesSunk) - known.length) * SINK_STEEL_DEFAULT;
   const fuel = known.reduce((sum, c) => sum + (SINK_FUEL[c] ?? SINK_FUEL_DEFAULT), 0) + (Math.max(0, enemiesSunk) - known.length) * SINK_FUEL_DEFAULT;
-  return { ...out, fuel: Math.round(out.fuel + fuel * scale), steel: Math.round(out.steel + steel * scale) };
+  const bauxite = known.reduce((sum, c) => sum + (SINK_BAUXITE[c] ?? SINK_BAUXITE_DEFAULT), 0) + (Math.max(0, enemiesSunk) - known.length) * SINK_BAUXITE_DEFAULT;
+  return { ...out, fuel: Math.round(out.fuel + fuel * scale), steel: Math.round(out.steel + steel * scale), bauxite: Math.round(out.bauxite + bauxite * scale) };
 }
+
+/** Bauxite salvaged per enemy sunk (#321): a carrier gives its planes' worth, any other ship the flat 20 of before. */
+export const SINK_BAUXITE: Partial<Record<ShipClass, number>> = {
+  [ShipClass.Carrier]: 120,
+};
+const SINK_BAUXITE_DEFAULT = 20;
 
 /** Steel salvaged per enemy sunk, by class (#132); a quarter more since 0.0.28 (#222): builds burn steel fastest. */
 export const SINK_STEEL: Partial<Record<ShipClass, number>> = {

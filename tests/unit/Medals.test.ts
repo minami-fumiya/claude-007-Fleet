@@ -5,6 +5,7 @@ import { emptyNationProgress, emptySave } from '@/utils/ProgressStore';
 import { QUESTS } from '@/systems/QuestSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
+import campaign from '@/data/campaign.json';
 
 describe('medals (#92)', () => {
   it('about 100 medals with unique ids in every category; the original twelve keep their ids', () => {
@@ -97,5 +98,15 @@ describe('ladder names', () => {
     // The inland seas don't count among the seven.
     expect(ids).not.toContain('seas_2');
     expect(newMedals(r, { clearedTheaters: ['pacific', 'atlantic', 'mediterranean', 'north_pacific', 'south_atlantic', 'indian', 'arctic'] }).map((m) => m.id)).toContain('seas_3');
+  });
+  it('0.0.41: 遠洋章 for a sea far along the navy\'s order, 築港章 up to six bases (#293)', () => {
+    const all = (t: string): string[] => campaign.areas.filter((a) => a.theater === t && !(a as { training?: boolean }).training).map((a) => a.id);
+    // Japan opens the Indian Ocean third: winning it all earns the first rung.
+    const np = { ...emptyNationProgress(), nation: Nation.IJN, campaign: all('indian') };
+    expect(medalContext({ ...emptySave(), nations: { [Nation.IJN]: np } }).farthestSea).toBe(3);
+    const ids = newMedals(emptyRecord(), { clearedTheaters: [], farthestSea: 3 }).map((m) => m.id);
+    expect(ids).toContain('far_seas');
+    expect(ids).not.toContain('far_seas_2');
+    expect(MEDALS.some((m) => m.id === 'harbor_works_4')).toBe(true);
   });
 });

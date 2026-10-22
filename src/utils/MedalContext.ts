@@ -15,6 +15,7 @@ import { shipClasses } from '@/systems/ShipOrder';
 import { shipTypeCode } from '@/systems/Numbering';
 import { levelForXp } from '@/systems/CaptainSystem';
 import { rankOf } from '@/systems/RankSystem';
+import { theaterStep } from '@/systems/DifficultyCurve';
 import { holdCap } from '@/systems/FacilitySystem';
 import { dockTotal, openBaseCount } from '@/systems/BaseSystem';
 import { atHoldCap } from '@/systems/ResourceSystem';
@@ -45,12 +46,16 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, classesComplete: 0, shipTypes: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, shipTypes: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
     for (const [k, v] of Object.entries(np.quests?.totals ?? {})) totals[k] = (totals[k] ?? 0) + (v ?? 0);
-    for (const t of CAMPAIGN.theaters) if (theaterProgress(CAMPAIGN, t.id, np.campaign) >= 1) theaters.add(t.id);
+    for (const t of CAMPAIGN.theaters) {
+      if (theaterProgress(CAMPAIGN, t.id, np.campaign) < 1) continue;
+      theaters.add(t.id);
+      ctx.farthestSea = Math.max(ctx.farthestSea, (theaterStep(nation, t.id) ?? -1) + 1);
+    }
     ctx.areasCleared += np.campaign.length;
     ctx.areasS += Object.values(np.areaRanks ?? {}).filter((r) => r === 'S').length;
     ctx.shipsOwned = Math.max(ctx.shipsOwned, np.ships.length);

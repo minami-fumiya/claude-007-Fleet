@@ -32,22 +32,21 @@ function hash(s: string): number {
 }
 
 /**
- * The area's route: escorts (the lighter half of the enemy, at most three) first, then on some areas a supply
- * cache or a whirlpool (fixed per area), then the whole enemy fleet as the boss.
+ * The area's route: one node on the way (#307: at most two battles an operation), fixed per area — the escorts (the
+ * lighter half of the enemy, at most three), a supply cache or a whirlpool — then the whole enemy fleet as the boss.
  */
 export function sortieRoute(area: ICampaignArea, enemy: IShipData[]): ISortieNode[] {
   const boss: ISortieNode = { kind: 'boss', ships: enemy.map((s) => s.id) };
   if (isFreeArea(area) || enemy.length < MIN_ROUTE_FLEET) return [boss];
-  const escorts = [...enemy].sort((a, b) => a.hp - b.hp).slice(0, Math.min(3, Math.ceil(enemy.length / 2)));
-  const nodes: ISortieNode[] = [{ kind: 'battle', ships: escorts.map((s) => s.id) }];
   const n = enemy.length;
   switch (hash(area.id) % 3) {
-    case 0: nodes.push({ kind: 'resource', loot: { fuel: 40 * n, ammo: 30 * n } }); break;
-    case 1: nodes.push({ kind: 'whirlpool', loot: { fuel: 20 * n } }); break;
-    default: break;
+    case 0: return [{ kind: 'resource', loot: { fuel: 40 * n, ammo: 30 * n } }, boss];
+    case 1: return [{ kind: 'whirlpool', loot: { fuel: 20 * n } }, boss];
+    default: {
+      const escorts = [...enemy].sort((a, b) => a.hp - b.hp).slice(0, Math.min(3, Math.ceil(enemy.length / 2)));
+      return [{ kind: 'battle', ships: escorts.map((s) => s.id) }, boss];
+    }
   }
-  nodes.push(boss);
-  return nodes;
 }
 
 /** Battle nodes only, in order (what the results count as "2 / 2"). */

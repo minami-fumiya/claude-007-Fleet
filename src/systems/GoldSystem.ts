@@ -31,8 +31,8 @@ const SHOP = shopData as unknown as IShopData;
 export const SHOP_ENTRIES = SHOP.entries;
 export const SELL = SHOP.sell;
 
-/** Gold for a won campaign battle by rank (#183); a defeat pays nothing. */
-export const GOLD_FOR_RANK: Record<BattleRank, number> = { S: 60, A: 40, B: 25, C: 10, D: 0 };
+/** Gold for a won campaign battle by rank (#183; half again since #321, the hour had fallen to ~190); a defeat pays nothing. */
+export const GOLD_FOR_RANK: Record<BattleRank, number> = { S: 90, A: 60, B: 40, C: 15, D: 0 };
 export const GOLD_FIRST_CLEAR = 200;
 export const GOLD_SWEEP = 10;
 export const GOLD_PER_MEDAL = 100;
