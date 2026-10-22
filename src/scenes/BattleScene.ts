@@ -436,6 +436,11 @@ export class BattleScene extends Phaser.Scene {
       const p = this.input.activePointer;
       this.aimTarget = this.cameras.main.getWorldPoint(p.x, p.y);
     }
+    // Fire, flooding or a submarine this frame may have sunk the flagship too (found by the battle simulator, #320).
+    if (!this.flagship.active) {
+      this.triggerGameOver(false);
+      return;
+    }
     const target = this.currentTarget();
     this.handleMovement(delta, target);
     this.updateAim();
