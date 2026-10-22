@@ -84,7 +84,13 @@ try {
       const [nation, areaId] = plan[k];
       const runs = [];
       for (let i = 0; i < RUNS; i++) {
-        const r = await p.evaluate(playOne, { nation, areaId, limitSec: LIMIT_SEC, stepMs: STEP_MS });
+        // A battle that throws is reported and counted as lost, so one bug doesn't stop the whole table.
+        const r = await p.evaluate(playOne, { nation, areaId, limitSec: LIMIT_SEC, stepMs: STEP_MS }).catch(async (e) => {
+          console.error(`${nation} ${areaId}: ${e.message.split('\n')[0]}`);
+          await p.reload();
+          await p.waitForFunction(() => window.game?.scene.getScene('MainMenuScene')?.sys.settings.active === true, null, { timeout: 120_000 });
+          return { depth: 0, rankName: '?', ratio: 0, victory: false, durationSec: LIMIT_SEC, rank: 'D', survivors: 0, fleetSize: 1, error: true };
+        });
         runs.push(r);
         if (args.verbose) console.log(JSON.stringify({ nation, areaId, ...r }));
       }
