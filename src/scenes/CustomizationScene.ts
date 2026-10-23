@@ -18,7 +18,7 @@ import { IShipData, IShipStats } from '@/types/Ship';
 import { IUpgradeData } from '@/types/Modifiers';
 import { IWeaponData } from '@/types/Weapon';
 import { ITechNode } from '@/types/Progression';
-import { unlockedUpgrades } from '@/systems/ResearchSystem';
+import { researchOrder, unlockedUpgrades } from '@/systems/ResearchSystem';
 import techTree from '@/data/tech-tree.json';
 import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch, switchCost } from '@/systems/RefitSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
@@ -117,7 +117,8 @@ export class CustomizationScene extends Phaser.Scene {
       this.showAll = true;
       this.ships = customizeShips(owned, this.fleetIds, true);
     }
-    this.catalog = DataLoader.getUpgrades(this);
+    // In the order research opens them (#340): 射撃指揮装置 (after 射撃管制) no longer heads the list.
+    this.catalog = [...DataLoader.getUpgrades(this)].sort((a, b) => (a.requires ? researchOrder(a.requires) : 0) - (b.requires ? researchOrder(b.requires) : 0));
     this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));
     this.selected = Math.max(0, this.ships.findIndex((s) => s.id === this.startShipId));
     this.pickerName = undefined;
