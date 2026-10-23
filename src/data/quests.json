@@ -32,6 +32,7 @@
     {"id": "h_research", "kind": "hourly", "name": "技術の芽", "text": "研究を 2 つ完了する", "event": "research", "goal": 2, "reward": {"fuel": 100, "ammo": 100, "steel": 60}},
     {"id": "d_sortie", "kind": "daily", "name": "出撃せよ", "text": "作戦か演習に 40 回出撃する", "event": "sortie", "goal": 40, "reward": {"fuel": 720, "ammo": 720}},
     {"id": "d_win", "kind": "daily", "name": "勝利を重ねよ", "text": "戦闘に 40 回勝利する", "event": "win", "goal": 40, "reward": {"ammo": 720, "bauxite": 360}},
+    {"id": "d_expedition", "kind": "daily", "name": "遠征に出せ", "text": "遠征を 3 回送り出す", "event": "expeditionStart", "goal": 3, "reward": {"fuel": 300, "steel": 300}, "items": {"fastRepair": 1}},
     {"id": "d_sink", "kind": "daily", "name": "敵艦隊を撃滅せよ", "text": "敵艦を 100 隻撃沈する", "event": "sink", "goal": 100, "reward": {"steel": 720}, "items": {"fastBuild": 1}},
     {"id": "d_repair", "kind": "daily", "name": "艦隊の整備", "text": "損傷艦を 10 隻入渠させる", "event": "repair", "goal": 10, "reward": {"fuel": 270, "steel": 270}, "items": {"fastRepair": 1}},
     {"id": "d_dd", "kind": "daily", "name": "水雷戦", "text": "駆逐艦を 60 隻撃沈する", "event": "sinkDestroyer", "goal": 60, "reward": {"fuel": 510, "ammo": 510, "steel": 330}},
@@ -148,6 +149,8 @@
     {"id": "a_superweapon1", "kind": "once", "name": "巨艦撃沈", "text": "超兵器を 1 隻撃沈する", "event": "superweaponSunk", "goal": 1, "gold": 300, "reward": {"fuel": 1500, "ammo": 1500, "steel": 1500}},
     {"id": "a_base2", "kind": "once", "name": "二つ目の軍港", "text": "軍港を 1 つ開港する", "event": "baseOpened", "goal": 1, "gold": 300, "reward": {"fuel": 1000, "steel": 1000}},
     {"id": "a_dock", "kind": "once", "name": "船渠の拡張", "text": "ドックを 2 本増設する", "event": "dockBuilt", "goal": 2, "gold": 300, "reward": {"fuel": 800, "steel": 1200}},
+    {"id": "a_expedition", "kind": "once", "name": "初めての遠征", "text": "遠征から 1 回帰還する", "event": "expeditionDone", "goal": 1, "gold": 300, "reward": {"fuel": 500, "steel": 500}},
+    {"id": "a_dorm", "kind": "once", "name": "寮舎の訓練", "text": "寮舎で延べ 5 時間訓練する", "event": "dormHours", "goal": 5, "gold": 300, "reward": {"ammo": 500, "steel": 500}},
     {"id": "a_book", "kind": "once", "name": "教本で学ぶ", "text": "艦長教本を 1 冊使う", "event": "bookUse", "goal": 1, "gold": 300, "reward": {"fuel": 500, "ammo": 500}}
   ]
 }

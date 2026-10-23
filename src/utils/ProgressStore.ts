@@ -32,6 +32,8 @@ import { nationCaptains, starterCaptain } from '@/systems/CaptainRoster';
 import { addBackup, BACKUP_KEY, BackupReason, ISaveBackup, parseBackups, rawVersion } from './SaveBackup';
 import { ISweepCharge, SWEEP_MAX } from '@/systems/SweepSystem';
 import { emptyWallet, parseWallet } from '@/systems/GoldSystem';
+import type { IExpeditionRun } from '@/systems/ExpeditionSystem';
+import type { IDormEntry } from '@/systems/DormSystem';
 import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
@@ -115,6 +117,10 @@ export interface INationProgress {
   /** Bases built beyond the nation's first (#217), and the one under construction */
   basesOpen: string[];
   baseWork: IBaseWork | null;
+  /** 遠征 (#41): expeditions under way */
+  expeditions: IExpeditionRun[];
+  /** 寮舎 (#57): ships and captains training */
+  dorm: IDormEntry[];
 }
 
 /** The whole save (v2 and later). */
@@ -162,7 +168,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null,
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], dorm: [],
   };
 }
 
@@ -319,6 +325,12 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     facilityJobs: parseFacilityJobs(data.facilityJobs),
     basesOpen: [...new Set(strings(data.basesOpen))],
     baseWork: isObject(data.baseWork) && typeof data.baseWork.base === 'string' && isNum(data.baseWork.endsAt) ? { base: data.baseWork.base, endsAt: data.baseWork.endsAt } : null,
+    expeditions: (Array.isArray(data.expeditions) ? data.expeditions : [])
+      .filter((r): r is IExpeditionRun => isObject(r) && typeof r.id === 'string' && Array.isArray(r.shipIds) && isNum(r.endsAt))
+      .map((r) => ({ id: r.id, shipIds: strings(r.shipIds), endsAt: r.endsAt })),
+    dorm: (Array.isArray(data.dorm) ? data.dorm : [])
+      .filter((e): e is IDormEntry => isObject(e) && (e.kind === 'ship' || e.kind === 'captain') && typeof e.id === 'string' && isNum(e.since))
+      .map((e) => ({ kind: e.kind, id: e.id, since: e.since })),
   };
 }
 

@@ -10,6 +10,8 @@ import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
 import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
 import { withQuestEvents } from './QuestSystem';
 import { costCap, costOverText, fleetCost } from './FleetCost';
+import { shipsAway } from './ExpeditionSystem';
+import { inDorm } from './DormSystem';
 import { addGold, emptyWallet, GOLD_SWEEP } from './GoldSystem';
 import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
 
@@ -80,6 +82,10 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
   // Ships out on an unfinished campaign sortie (#138) stay with it until it is continued or withdrawn.
   const away = progress.sortie?.shipIds ?? [];
   for (const s of ships) if (away.includes(s.id)) reasons.push(`${s.name} は出撃中 (作戦地図で続けるか撤退)`);
+  // Ships out on an expedition (#41) or training in the dorm (#57) stay where they are.
+  const expedition = shipsAway(progress.expeditions);
+  for (const s of ships) if (expedition.has(s.id)) reasons.push(`${s.name} は遠征中`);
+  for (const s of ships) if (inDorm(progress.dorm, 'ship', s.id)) reasons.push(`${s.name} は寮舎で訓練中`);
   // Exercises use docked ships too: they fight at full HP and keep no damage.
   if (!opts.exercise) {
     for (const s of ships) {
