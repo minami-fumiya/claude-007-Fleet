@@ -6,7 +6,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
-import { exerciseEnemyCount, exerciseEnemyFleet, MAX_EXERCISE_ENEMIES } from '@/systems/EnemyFleetGenerator';
+import { exerciseEnemyCount, exerciseEnemyFleet, trainingEnemyFleet, MAX_EXERCISE_ENEMIES } from '@/systems/EnemyFleetGenerator';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
@@ -46,7 +46,7 @@ import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
-import { ownFleetPower } from '@/systems/FleetPower';
+import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES } from '@/systems/FleetPower';
 import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
 import { shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
@@ -199,13 +199,15 @@ interface IExerciseChoices {
   weather: Choice<Weather>;
   time: Choice<TimeOfDay>;
   count: number;
+  /** 訓練 (#343) */
+  training?: boolean;
 }
 
 /** The standard exercise: the nation's first campaign opponent, a surface battle on a clear day, as many ships. */
 function standardExercise(nation: Nation): IExerciseChoices {
   const theater = (campaignData as ICampaignData).theaters.find((t) => (t.opponents as Partial<Record<Nation, Nation>>)[nation]);
   const foe = (theater?.opponents as Partial<Record<Nation, Nation>> | undefined)?.[nation] ?? PLAYABLE_NATIONS.find((n) => n !== nation) ?? RANDOM;
-  return { enemyNation: foe, mode: BattleMode.Surface, weather: Weather.Clear, time: TimeOfDay.Day, count: SAME_COUNT };
+  return { enemyNation: foe, mode: BattleMode.Surface, weather: Weather.Clear, time: TimeOfDay.Day, count: SAME_COUNT, training: false };
 }
 
 /** 全てランダム: every choice drawn at sortie (the enemy count stays as set). */
@@ -231,6 +233,8 @@ export interface ISelection {
   time?: Choice<TimeOfDay>;
   /** Free battle enemy count, SAME_COUNT = as many as the player (#78) */
   enemyCount?: number;
+  /** 敵の強さ: 訓練 (#343) */
+  training?: boolean;
 }
 
 /** The setup last used with `nation`'s fleet in this session. */
@@ -297,6 +301,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private slotCount = 1;
   /** Free battle enemy count (#78) */
   private enemyCount = SAME_COUNT;
+  /** 演習の訓練 (#343): the enemy's weakest ships */
+  private training = false;
   private formation: Formation = Formation.LineAhead;
   private nation: Nation = Nation.IJN;
   /** Captain id assigned to each slot */
@@ -385,6 +391,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const standard = standardExercise(this.nation);
     this.enemyNation = enemy && enemy !== this.nation ? enemy : standard.enemyNation;
     this.enemyCount = saved?.enemyCount ?? SAME_COUNT;
+    this.training = saved?.training ?? false;
     this.slotCount = fleetSlots(progress);
     this.costCap = costCap(rankOf(progress).index);
     this.rankIndex = rankOf(progress).index;
@@ -990,6 +997,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const count = this.enemyCount === SAME_COUNT ? fleetSize : this.enemyCount;
     groups.push(
       { key: 'enemy', title: '交戦相手', value: nationLabel(this.enemyNation), cols: 4, options: radio(foes, this.enemyNation, nationLabel, (c) => { this.enemyNation = c; }) },
+      // 訓練 (#343): the old 訓練海域 — the enemy's weakest ships, to try new ships and captains on.
+      { key: 'strength', title: '敵の強さ', value: this.training ? '訓練 (弱い敵)' : '標準', cols: 2, options: radio([false, true], this.training, (c) => (c ? '訓練 (弱い敵)' : '標準'), (c) => { this.training = c; }) },
       { key: 'mode', title: '戦闘の種類', value: choiceLabel(this.mode, MODE_LABEL), cols: p ? 4 : 2, options: radio(MODE_CHOICES, this.mode, (c) => choiceLabel(c, MODE_LABEL), (c) => { this.mode = c; }) },
       { key: 'weather', title: '天候', value: choiceLabel(this.weatherChoice, WEATHER_LABEL), cols: p ? 5 : 3, options: radio(WEATHER_CHOICES, this.weatherChoice, (c) => choiceLabel(c, WEATHER_LABEL), (c) => { this.weatherChoice = c; }) },
       { key: 'time', title: '時間', value: choiceLabel(this.timeChoice, TIME_LABEL), cols: 3, options: radio(TIME_CHOICES, this.timeChoice, (c) => choiceLabel(c, TIME_LABEL), (c) => { this.timeChoice = c; }) },
@@ -1088,6 +1097,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     if (c.weather !== undefined) this.weatherChoice = c.weather;
     if (c.time !== undefined) this.timeChoice = c.time;
     if (c.count !== undefined) this.enemyCount = c.count;
+    if (c.training !== undefined) this.training = c.training;
   }
 
   /** 全てランダム / 標準に戻す above the exercise settings. Returns the height used. */
@@ -1404,7 +1414,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         .setInteractive();
       const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0);
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
       this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 46, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 76 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn], 60);
       return;
@@ -1413,7 +1423,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
     this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } }));
+    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } })).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
     this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
   }
 
@@ -1429,7 +1439,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const bar = this.add.rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
       const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0);
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
       const bw = (f.w - 32 - 12) / 2;
       this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 46, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 76, fontSize: 22 });
       const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 46, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 76, fontSize: 22 });
@@ -1439,7 +1449,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
     this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } }));
+    this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } })).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
     this.startBtn = new UIButton(this, f.x + f.w - 172 - 300 - 16, f.y + f.h / 2, '作戦へ  ›', toCampaign, { variant: 'gold', width: 300, height: 60, fontSize: 22 });
     new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '演習へ  ›', toExercise, { variant: 'primary', width: 300, height: 60, fontSize: 22 });
   }
@@ -1663,13 +1673,65 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.detail = [];
   }
 
-  /** 戦力 (#280): the fleet weighed like an area's enemy, and against the area's enemy when sortieing to one. */
-  private powerLabel(ships: IShipData[]): string {
-    const own = ownFleetPower(ships, loadProgress(), DataLoader.getUpgrades(this));
-    if (!this.area) return `戦力 ${own.toLocaleString('en-US')}`;
+  /** 総戦力 (#342): the fleet with its refits, research, captains, crews, morale and formation. */
+  private powerOf(ships: IShipData[]): IPowerBreakdown {
+    const captains = this.slots.flatMap((s, i) => (s ? [this.captainOf(i)] : []));
+    return fleetPowerBreakdown(ships, loadProgress(), DataLoader.getUpgrades(this), { captains, formation: this.formation });
+  }
+
+  /** The area's enemy as the difficulty curve weighs it, or null off a campaign area. */
+  private enemyPower(): number | null {
+    if (!this.area) return null;
     const data = campaignData as ICampaignData;
-    const enemy = Math.round(fleetPower(enemyShips(this.area, this.shipRegistry, enemyNationFor(data, this.area, this.nation))) * enemyScale(data, this.area, this.nation));
-    return `戦力 ${own.toLocaleString('en-US')} (敵 ${enemy.toLocaleString('en-US')} ×${(own / Math.max(1, enemy)).toFixed(2)})`;
+    return Math.round(fleetPower(enemyShips(this.area, this.shipRegistry, enemyNationFor(data, this.area, this.nation))) * enemyScale(data, this.area, this.nation));
+  }
+
+  /** "総戦力 2,340 (敵 1,560 ×1.50) ▸" — tap for the breakdown. */
+  private powerLabel(ships: IShipData[]): string {
+    const own = this.powerOf(ships).total;
+    const enemy = this.enemyPower();
+    const n = (v: number): string => v.toLocaleString('en-US');
+    return enemy === null ? `総戦力 ${n(own)} ▸` : `総戦力 ${n(own)} (敵 ${n(enemy)} ×${(own / Math.max(1, enemy)).toFixed(2)}) ▸`;
+  }
+
+  /** The breakdown of 総戦力 (#342): the ships as built, then what each source adds. */
+  private openPowerDetail(): void {
+    const ships = this.slots.filter((s): s is IShipData => s !== null);
+    if (ships.length === 0) return;
+    this.closeDetail();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(80);
+      this.detail.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive().on('pointerup', () => this.closeDetail()));
+    const b = this.powerOf(ships);
+    const enemy = this.enemyPower();
+    const n = (v: number): string => Math.round(v).toLocaleString('en-US');
+    const rows: Array<[string, string]> = [
+      ['艦の素の戦力 (耐久 × 装甲)', n(b.base)],
+      ...POWER_SOURCES.map((k): [string, string] => [POWER_SOURCE_LABEL[k], `${b.steps[k] >= 0 ? '+' : '−'}${(Math.abs(b.steps[k]) * 100).toFixed(1)}%`]),
+      ['総戦力', n(b.total)],
+      ...(enemy !== null ? [['この海域の敵', `${n(enemy)}  (×${(b.total / Math.max(1, enemy)).toFixed(2)})`] as [string, string]] : []),
+    ];
+    const rowH = IS_PORTRAIT ? 52 : 34;
+    const w = IS_PORTRAIT ? CANVAS_W - 64 : 560;
+    const h = 120 + rows.length * rowH + (IS_PORTRAIT ? 90 : 60);
+    const x = (CANVAS_W - w) / 2;
+    const y = (CANVAS_H - h) / 2;
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 28, y + 22, '総戦力の内訳', eyebrowStyle(11, Css.cyan)));
+    add(this.add.text(x + 28, y + 46, '改装・研究・艦長・練度・士気・陣形を、戦闘での効き目で数えています。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
+    rows.forEach(([label, value], i) => {
+      const ry = y + 110 + i * rowH;
+      const strong = i === 0 || label === '総戦力';
+      add(this.add.text(x + 28, ry, label, textStyle(IS_PORTRAIT ? 16 : 14, strong ? Css.text : Css.muted, { fontStyle: strong ? 'bold' : 'normal' })));
+      add(this.add.text(x + w - 28, ry, value, textStyle(IS_PORTRAIT ? 16 : 14, label === '総戦力' ? Css.gold : Css.text, { fontStyle: 'bold' })).setOrigin(1, 0));
+    });
+    add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 44 : 30), '閉じる', () => this.closeDetail(), {
+      variant: 'secondary', width: IS_PORTRAIT ? 240 : 180, height: IS_PORTRAIT ? 52 : 36, fontSize: 15,
+    }).setScrollFactor(0).setDepth(81));
   }
 
   private refreshFooter(): void {
@@ -1681,7 +1743,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const formation = FORMATION_RULES[this.formation].ja;
       const weight = costText(fleetCost(ships, loadProgress().refits), this.costCap);
       const over = fleetCost(ships, loadProgress().refits) > this.costCap;
-      this.summaryText.setText(IS_PORTRAIT ? `${formation} · ${weight}` : `${this.powerLabel(ships)}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n${weight}   編成を終えたら、作戦か演習へ進みます`).setColor(over ? Css.danger : Css.muted);
+      this.summaryText.setText(IS_PORTRAIT ? `${this.powerLabel(ships)}\n${formation} · ${weight}` : `${this.powerLabel(ships)}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n${weight}   編成を終えたら、作戦か演習へ進みます`).setColor(over ? Css.danger : Css.muted);
     } else {
       const minSpeed = Math.min(...ships.map((s) => s.speed));
       const formation = FORMATION_RULES[this.formation].ja;
@@ -1698,7 +1760,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       this.summaryText
         .setText(
           IS_PORTRAIT
-            ? blockers.length > 0 ? second : `${formation} · ${weight} · ${price}`
+            ? blockers.length > 0 ? second : `${this.powerLabel(ships)}\n${formation} · ${weight} · ${price}`
             : `${this.powerLabel(ships)}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
         )
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
@@ -1864,6 +1926,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       weather: this.weatherChoice,
       time: this.timeChoice,
       enemyCount: this.enemyCount,
+      training: this.training,
     };
     const all = (this.registry.get(SELECTION_KEY) as Partial<Record<Nation, ISelection>> | undefined) ?? {};
     this.registry.set(SELECTION_KEY, { ...all, [this.nation]: selection });
@@ -1897,7 +1960,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const count = exerciseEnemyCount(this.enemyCount === SAME_COUNT ? ships.length : this.enemyCount);
     const enemyShipsList = area
       ? enemyShips(area, this.shipRegistry, enemyNation)
-      : exerciseEnemyFleet(this.shipRegistry, enemyNation, mode, ships, count);
+      : this.training ? trainingEnemyFleet(this.shipRegistry, enemyNation, count) : exerciseEnemyFleet(this.shipRegistry, enemyNation, mode, ships, count);
     const enemyFleet = FleetSystem.createFleet('enemy-fleet', 'Enemy Fleet', enemyNation, enemyShipsList, 0);
 
     const initData: IBattleInitData = {
@@ -1910,6 +1973,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       time: area ? area.time : this.timeChoice === RANDOM ? randomTime() : this.timeChoice,
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
       areaId: area?.id,
+      training: !area && this.training,
       objective: area?.objective ?? Objective.Annihilate,
       support: support.map((g) => ({ ships: g.ships, captainIds: g.captainIds, mission: g.mission })),
     };

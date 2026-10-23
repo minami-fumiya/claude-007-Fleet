@@ -235,31 +235,42 @@ export class HomeScene extends Phaser.Scene {
     this.eventText.setText(next ? `次のイベント: ${eventLabel(next)}  ${longClock(next.startsAt - now)} 後` : '').setColor(Css.muted);
   }
 
-  /** Today's (or, with `ahead` 1, tomorrow's) eight event windows, 00:00〜24:00 JST (#218). */
-  openEventSchedule(ahead: number): void {
+  /**
+   * Today's (or, with `ahead` 1, tomorrow's) events, one an hour (#218 #344), twelve hours a page: `half` 0 for
+   * 0:00〜12:00, 1 for 12:00〜24:00 (today opens on the half that is running).
+   */
+  openEventSchedule(ahead: number, half?: number): void {
     this.closeNationPicker();
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(OVERLAY_DEPTH);
       this.overlay.push(o);
       return o;
     };
+    const now = Date.now();
+    const day = daySchedule(gameDay(now) + ahead);
+    const perPage = WINDOWS_PER_DAY / 2;
+    const page = half ?? (ahead === 0 ? Math.min(1, Math.floor(Math.max(0, day.findIndex((e) => e.startsAt <= now && now < e.endsAt)) / perPage)) : 0);
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
-    const rowH = IS_PORTRAIT ? 60 : 42;
+    const rowH = IS_PORTRAIT ? 60 : 40;
     const w = IS_PORTRAIT ? CANVAS_W - 32 : 640;
-    const head = IS_PORTRAIT ? 150 : 112;
-    const h = head + WINDOWS_PER_DAY * rowH + (IS_PORTRAIT ? 100 : 72);
+    const head = IS_PORTRAIT ? 210 : 150;
+    const h = head + perPage * rowH + (IS_PORTRAIT ? 100 : 64);
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(8, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
-    add(this.add.text(x + 24, y + 20, 'イベントの予定 (日本時間)', eyebrowStyle(11)));
+    add(this.add.text(x + 24, y + 20, 'イベントの予定 (日本時間・1 時間ごと)', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), ahead === 0 ? '今日のイベント' : '明日のイベント', displayStyle(IS_PORTRAIT ? 20 : 18)));
     const tw = IS_PORTRAIT ? 150 : 120;
+    const bh = IS_PORTRAIT ? 48 : 36;
     ['今日', '明日'].forEach((label, i) => add(new UIButton(this, x + w - 24 - (1 - i) * (tw + 8) - tw / 2, y + (IS_PORTRAIT ? 58 : 46), label, () => this.openEventSchedule(i), {
-      variant: i === ahead ? 'primary' : 'secondary', width: tw, height: IS_PORTRAIT ? 48 : 36, fontSize: 14,
+      variant: i === ahead ? 'primary' : 'secondary', width: tw, height: bh, fontSize: 14,
     })));
-    const now = Date.now();
-    daySchedule(gameDay(now) + ahead).forEach((e, i) => {
-      const ry = y + head + i * rowH;
+    ['0:00〜12:00', '12:00〜24:00'].forEach((label, i) => add(new UIButton(this, x + 24 + i * (tw + 30) + (tw + 22) / 2, y + (IS_PORTRAIT ? 124 : 94), label, () => this.openEventSchedule(ahead, i), {
+      variant: i === page ? 'primary' : 'secondary', width: tw + 22, height: bh, fontSize: 13,
+    })));
+    day.slice(page * perPage, (page + 1) * perPage).forEach((e, j) => {
+      const i = page * perPage + j;
+      const ry = y + head + j * rowH;
       const live = e.startsAt <= now && now < e.endsAt;
       if (live) {
         const g = add(this.add.graphics());
@@ -267,7 +278,7 @@ export class HomeScene extends Phaser.Scene {
         g.fillRoundedRect(x + 12, ry - 6, w - 24, rowH - 4, 8);
       }
       const css = live ? Css.gold : e.endsAt <= now ? Css.dim : Css.text;
-      add(this.add.text(x + 28, ry, `${String(i * 3).padStart(2, '0')}:00〜${String(i * 3 + 3).padStart(2, '0')}:00`, textStyle(IS_PORTRAIT ? 15 : 13, css)));
+      add(this.add.text(x + 28, ry, `${String(i).padStart(2, '0')}:00〜${String(i + 1).padStart(2, '0')}:00`, textStyle(IS_PORTRAIT ? 15 : 13, css)));
       add(this.add.text(x + (IS_PORTRAIT ? 190 : 170), ry, `${eventLabel(e)}${live ? '  (開催中)' : ''}`, textStyle(IS_PORTRAIT ? 15 : 13, css, { fontStyle: 'bold' })));
     });
     add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 44 : 32), '閉じる', () => this.closeNationPicker(), {

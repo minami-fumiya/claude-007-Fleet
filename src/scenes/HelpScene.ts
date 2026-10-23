@@ -133,7 +133,7 @@ export class HelpScene extends Phaser.Scene {
               : this.tab === 'battle'
                 ? BATTLE_HELP
                 : this.tab === 'events'
-                  ? [...(Object.keys(EVENT_NAME) as EventKind[]).map((k): [string, string] => [EVENT_NAME[k], eventHelp(k)]), ['予定', '3 時間ごとに 1 つ開催。鎮守府の上の「予定」で先の予定を見られる']]
+                  ? [...(Object.keys(EVENT_NAME) as EventKind[]).map((k): [string, string] => [EVENT_NAME[k], eventHelp(k)]), ['予定', '1 時間ごとに 1 つ開催 (同じものは続かない)。鎮守府の上の「予定」で先の予定を見られる']]
                   : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];
     const x = P.x + 28;
     const w = P.w - 56;

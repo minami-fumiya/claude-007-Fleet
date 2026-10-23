@@ -55,7 +55,7 @@ describe('CampaignSystem', () => {
   it('measures theater progress', () => {
     expect(theaterProgress(data, 'pacific', [])).toBe(0);
     // Training areas (#202) don't count.
-    expect(theaterProgress(data, 'pacific', ['p1', 'p2', 'a1', 'p0'])).toBeCloseTo(2 / areasOf(data, 'pacific').filter((a) => !a.training).length);
+    expect(theaterProgress(data, 'pacific', ['p1', 'p2', 'a1', 'p0'])).toBeCloseTo(2 / areasOf(data, 'pacific').length);
   });
 
   it('data: every area has known ships, maps, theaters and prerequisites, and is reachable', () => {
@@ -186,17 +186,14 @@ describe('delay battles can be won (#40)', () => {
 describe('more theaters and training areas (#202)', () => {
   it('the USSR gets the Black Sea, reachable from Sevastopol by 少尉; its final is no promotion exam', () => {
     expect(theatersFor(data, Nation.SU).map((t) => t.id)).toEqual(['baltic', 'blacksea', 'north_pacific', 'arctic']);
-    expect(areasOf(data, 'blacksea').filter((a) => !a.training)).toHaveLength(8);
+    expect(areasOf(data, 'blacksea')).toHaveLength(10);
     expect(finalAreas('SU')).toEqual(['b5']);
   });
 
-  it('every theater has one training area: free, one weak enemy, not counted toward the theater', () => {
+  it('every theater has ten areas or more, and no training area: training moved into 演習 (#343)', () => {
     for (const t of data.theaters) {
-      const tr = areasOf(data, t.id).filter((a) => a.training);
-      expect(tr, t.id).toHaveLength(1);
-      expect(isFreeArea(tr[0])).toBe(true);
-      expect(tr[0].enemy.ships).toHaveLength(1);
-      expect(theaterProgress(data, t.id, [tr[0].id])).toBe(0);
+      expect(areasOf(data, t.id).length, t.id).toBeGreaterThanOrEqual(10);
+      expect(areasOf(data, t.id).some((a) => a.training), t.id).toBe(false);
     }
     expect(TRAINING_SCALE).toBeLessThan(1);
   });
@@ -217,12 +214,9 @@ describe('the S-rank reward (#247)', () => {
     expect(firstSReward({ id: 'p1' }, { rewardShip: ship, perfect: [], captainsLeft: 5, depth: 1, minDepth: 3 })).toEqual({ kind: 'ship', ship });
   });
 
-  it('no training area lists a reward ship, in the campaign or the reward-ship table', () => {
-    const training = campaign.areas.filter((a) => (a as { training?: boolean }).training);
-    expect(training.length).toBeGreaterThan(0);
-    for (const a of training) {
-      expect((a as { rewardShip?: string }).rewardShip, a.id).toBeUndefined();
-      for (const table of Object.values(rewardShips)) expect((table as Record<string, string>)[a.id], a.id).toBeUndefined();
-    }
+  it('no area is a training one any more (#343), and every reward-ship table names real areas', () => {
+    expect(campaign.areas.some((a) => (a as { training?: boolean }).training)).toBe(false);
+    const ids = new Set(campaign.areas.map((a) => a.id));
+    for (const table of Object.values(rewardShips)) for (const id of Object.keys(table as Record<string, string>)) expect(ids.has(id), id).toBe(true);
   });
 });

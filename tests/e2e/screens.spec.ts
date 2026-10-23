@@ -410,6 +410,24 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the fleet power breakdown opens from the footer and fits (#342)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout);
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
+        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; openPowerDetail(): void;
+      };
+      s.openPicker(0);
+      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
+      s.openPowerDetail();
+    });
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `power detail (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('power-detail.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('a sortie: pick ships, deploy, pause and resume the battle', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'FleetBuilderScene');

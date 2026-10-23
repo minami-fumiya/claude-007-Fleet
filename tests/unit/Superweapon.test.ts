@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { brokenParts, newlyBroken, SUPERWEAPONS, superweaponOf } from '@/systems/SuperweaponSystem';
-import { daySchedule, eventEffects, MAX_SUPERWEAPON, NIGHT_WINDOWS } from '@/systems/EventSystem';
+import { daySchedule, eventEffects, MAX_SUPERWEAPON, MIN_SUPERWEAPON } from '@/systems/EventSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { ShipClass } from '@/types/ShipClass';
 import ijn from '@/data/ships/ijn.json';
@@ -46,11 +46,17 @@ describe('超兵器 (#148)', () => {
     expect(seen).toBeGreaterThan(10);
   });
 
-  it('超兵器出現 never falls in the night windows, 21:00〜6:00 JST (#279)', () => {
+  it('超兵器出現 four or five times a day, at night too, and no kind two hours running (#344)', () => {
+    expect(MIN_SUPERWEAPON).toBeGreaterThanOrEqual(4);
+    let night = 0;
     for (let d = 20_000; d < 20_365; d++) {
-      daySchedule(d).forEach((e, i) => {
-        if (NIGHT_WINDOWS.includes(i)) expect(e.kind, `day ${d} window ${i}`).not.toBe('superweapon');
-      });
+      const day = daySchedule(d);
+      const giants = day.filter((e) => e.kind === 'superweapon').length;
+      expect(giants, `day ${d}`).toBeGreaterThanOrEqual(MIN_SUPERWEAPON);
+      expect(giants, `day ${d}`).toBeLessThanOrEqual(MAX_SUPERWEAPON);
+      night += day.filter((e, i) => e.kind === 'superweapon' && (i < 6 || i >= 21)).length;
+      day.forEach((e, i) => { if (i > 0) expect(e.kind, `day ${d} hour ${i}`).not.toBe(day[i - 1].kind); });
     }
+    expect(night).toBeGreaterThan(0);
   });
 });

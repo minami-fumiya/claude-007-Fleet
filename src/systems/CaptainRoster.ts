@@ -87,7 +87,7 @@ export function recruitCaptain(nation: string, owned: readonly string[], shipCla
 
 /** How captains join (#179; S ranks only since #215), in the words the screens use. */
 export const CAPTAIN_SOURCES: readonly string[] = [
-  `報酬艦のない深さ ${CAPTAIN_MIN_DEPTH} 以上の作戦の海域で、初めて S 評価を取ると 1 名 (訓練海域は除く)`,
+  `報酬艦のない深さ ${CAPTAIN_MIN_DEPTH} 以上の作戦の海域で、初めて S 評価を取ると 1 名`,
   '少佐以上に昇進するたびに 1 名',
   `S 評価で勝つと ${Math.round(CAPTAIN_DROP_CHANCE * 100)}% の確率で 1 名`,
   '一部のウィークリー任務・戦果任務の報酬で 1 名',

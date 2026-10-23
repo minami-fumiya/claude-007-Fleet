@@ -19,7 +19,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventS
 import { activeEvent } from '@/utils/GameClock';
 import { areaDepth, curveText, enemyScale, fleetPower, theaterStep } from '@/systems/DifficultyCurve';
 import { IShipData } from '@/types/Ship';
-import { ownFleetPower, powerCompareText, powerTone } from '@/systems/FleetPower';
+import { fleetPowerBreakdown, powerCompareText, powerTone } from '@/systems/FleetPower';
 import { selectedShipIds } from '@/utils/FleetSelection';
 import { prerequisitesOf, areasOf, firstSReward, lockText, sevenSeasText, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -293,7 +293,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const enemyPower = Math.round(fleetPower(enemy) * enemyScale(DATA, a, nation));
     const depth = areaDepth(DATA, a, nation);
     const ownShips = selectedShipIds(this.registry, progress.nation).map((id) => roster.find((s) => s.id === id)).filter((s): s is IShipData => s !== undefined);
-    const ownPower = ownShips.length > 0 ? ownFleetPower(ownShips, progress, DataLoader.getUpgrades(this)) : 0;
+    // 総戦力 (#342): refits, research, crews and morale too (the captains and formation are picked in the builder).
+    const ownPower = ownShips.length > 0 ? fleetPowerBreakdown(ownShips, progress, DataLoader.getUpgrades(this)).total : 0;
     const tone = powerTone(ownPower, enemyPower);
     const giantEvent = activeEvent();
     const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;

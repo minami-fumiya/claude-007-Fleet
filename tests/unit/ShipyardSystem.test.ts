@@ -114,9 +114,9 @@ describe('ShipyardSystem (#18 / #29)', () => {
 
   it('the heavy-cruiser research exists, needs the light one, and light cruisers cost less to build (#37)', () => {
     const tree = techTree.tech as Array<{ id: string; requires: string[] }>;
-    // The 水上艦 branch is a chain: 軽巡 → 海防艦 → 重巡 (#298).
-    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_escort']);
-    expect(tree.find((n) => n.id === 'build_escort')?.requires).toEqual(['build_cruiser']);
+    // The 水上艦 branch is a chain by ship size (#341): 海防艦 → … → 軽巡 → 防空巡 → 重巡.
+    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_aa_cruiser']);
+    expect(tree.find((n) => n.id === 'build_escort')?.requires).toEqual([]);
     expect(buildTechFor(byId('etorofu'))).toBe('build_escort');
     expect(isBuildTech(HEAVY_CRUISER_TECH)).toBe(true);
     expect(buildTechFor(byId('takao'))).toBe(HEAVY_CRUISER_TECH);
@@ -177,13 +177,15 @@ describe('ShipyardSystem (#18 / #29)', () => {
 describe('reward-only ships (#39)', () => {
   const all = [ijn, usn, km, rn, fr, su, rm].flatMap((d) => d.ships as IShipData[]);
 
-  it('every reward ship exists in its nation, historical, in an area that nation plays', () => {
+  it('every reward ship exists in its nation, in an area that nation plays; planned ships only where history runs out (#331)', () => {
+    // Germany and the Soviet Union have no sister ships left for some seas: their planned designs fill them.
+    const planned = new Set(['h39', 'sovetsky_soyuz', 'project71']);
     for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
       const theaters = campaignData.theaters.filter((t) => (t.opponents as Record<string, string | undefined>)[nation]).map((t) => t.id);
       for (const [area, shipId] of Object.entries(byArea ?? {})) {
         const ship = all.find((x) => x.id === shipId);
         expect(ship?.nation, `${nation} ${shipId}`).toBe(nation);
-        expect(ship?.fictional ?? false).toBe(false);
+        expect(!(ship?.fictional ?? false) || planned.has(shipId), `${nation} ${shipId}`).toBe(true);
         expect(theaters).toContain(campaignData.areas.find((a) => a.id === area)?.theater);
       }
     }
