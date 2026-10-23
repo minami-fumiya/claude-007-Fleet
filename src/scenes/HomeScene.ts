@@ -200,7 +200,7 @@ export class HomeScene extends Phaser.Scene {
     this.regenRoom = a.x + a.w - x - 8;
     // ゴールド (#183) beside the resources; a tap opens the items (#184). Portrait: the admiral row's top right;
     // landscape: right of the event line, above the resources.
-    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook + progress.items.trainingManual;
+    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook + progress.items.trainingManual + progress.items.supplyShip;
     const gw = IS_PORTRAIT ? 190 : 220;
     const gx = IS_PORTRAIT ? a.x + a.w - gw / 2 : L.resources.x + L.resources.w - gw / 2;
     const gy = IS_PORTRAIT ? a.y + 14 : 80;

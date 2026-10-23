@@ -25,6 +25,7 @@ import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor 
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
+import { MORALE_WARN, moraleLabel, moraleMood, moraleOf } from '@/systems/MoraleSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { HEAVY_DAMAGE } from '@/systems/SortieMapSystem';
@@ -692,8 +693,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
     const kc = kindColor(ship);
     const badge = addChip(this, 0, name.y + name.height / 2, kindShort(ship), kc.color, kc.css);
-    // The ship's sortie cost (#306) next to its kind.
-    const costChip = addChip(this, 0, name.y + name.height / 2, `コスト ${shipCost(ship, loadProgress().refits[ship.id] ?? 0)}`, Colors.gold, Css.gold);
+    // The ship's sortie cost (#306) and morale (#54) next to its kind.
+    const p = loadProgress();
+    const morale = moraleOf(p, ship.id, Date.now());
+    const mood = moraleMood(morale);
+    const costChip = addChip(this, 0, name.y + name.height / 2, `コスト ${shipCost(ship, p.refits[ship.id] ?? 0)} · ${moraleLabel(morale)}`,
+      mood === 'tired' ? Colors.danger : Colors.gold, mood === 'tired' ? Css.danger : Css.gold);
     // Long names drop their English part so the kind badge clears the + button.
     fitName(name, ship.name, w - statX - plusR * 2 - 30 - chipWidth(badge) - chipWidth(costChip) - 16);
     badge.setX(statX + name.displayWidth + 10);
@@ -1597,7 +1602,9 @@ export class FleetBuilderScene extends Phaser.Scene {
       // The fleet's cost against the rank's cap (#306), then what the sortie spends.
       const weight = costText(fleetCost(ships, loadProgress().refits), this.costCap);
       const cost = `${weight}   消費  ${price}`;
-      const second = blockers.length > 0 ? `⚠ ${blockers.join(' / ')}` : cost;
+      // 士気 (#54): a ship too tired still sails, with a warning.
+      const tired = ships.filter((s) => moraleOf(loadProgress(), s.id, Date.now()) < MORALE_WARN).map((s) => s.name.replace(/\s*\(.*\)\s*$/, ''));
+      const second = blockers.length > 0 ? `⚠ ${blockers.join(' / ')}` : tired.length > 0 ? `⚠ 士気が低い: ${tired.join('・')}  (出撃はできます)` : cost;
       this.summaryText
         .setText(
           IS_PORTRAIT

@@ -73,7 +73,7 @@
     {"id": "d_skill", "kind": "daily", "name": "艦長の教育", "text": "艦長にスキルを 2 回習得させる", "event": "learnSkill", "goal": 2, "reward": {"fuel": 450, "ammo": 450}},
     {"id": "d_history", "kind": "daily", "name": "戦史に学ぶ", "text": "史実シナリオで 2 回勝利する", "event": "scenarioWin", "goal": 2, "reward": {"fuel": 450, "ammo": 450, "steel": 450}},
     {"id": "d_event", "kind": "daily", "name": "イベント参加", "text": "資源 2 倍のイベント中に 6 回勝利する", "event": "event_double", "goal": 6, "reward": {"fuel": 680, "ammo": 680}},
-    {"id": "w_sortie", "kind": "weekly", "name": "週間出撃", "text": "作戦か演習に 400 回出撃する", "event": "sortie", "goal": 400, "gold": 150, "reward": {"fuel": 4800, "ammo": 4800, "steel": 7200}, "items": {"fastRepair": 6, "fastBuild": 4, "trainingManual": 3}, "captains": 1},
+    {"id": "w_sortie", "kind": "weekly", "name": "週間出撃", "text": "作戦か演習に 400 回出撃する", "event": "sortie", "goal": 400, "gold": 150, "reward": {"fuel": 4800, "ammo": 4800, "steel": 7200}, "items": {"fastRepair": 6, "fastBuild": 4, "trainingManual": 3, "supplyShip": 2}, "captains": 1},
     {"id": "w_carrier", "kind": "weekly", "name": "機動部隊を叩け", "text": "空母を 200 隻撃沈する", "event": "sinkCarrier", "goal": 200, "gold": 150, "reward": {"steel": 7500, "bauxite": 5620}},
     {"id": "w_sub", "kind": "weekly", "name": "対潜掃討", "text": "潜水艦を 400 隻撃沈する", "event": "sinkSubmarine", "goal": 400, "gold": 150, "reward": {"fuel": 7500, "ammo": 7500}},
     {"id": "w_night", "kind": "weekly", "name": "夜戦の名手", "text": "夜戦で 200 回勝利する", "event": "nightWin", "goal": 200, "gold": 150, "reward": {"ammo": 7500, "steel": 6000}, "items": {"fastRepair": 4}},

@@ -3,7 +3,9 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { ITEMS } from '@/systems/GoldSystem';
-import { loadProgress, walletOf } from '@/utils/ProgressStore';
+import { loadProgress, saveProgress, walletOf } from '@/utils/ProgressStore';
+import { useSupplyShip } from '@/systems/MoraleSystem';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { Colors, Css, displayStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -45,9 +47,21 @@ export class ItemScene extends Phaser.Scene {
       const wrap = { wordWrap: { width: textW, useAdvancedWrap: true } };
       this.add.text(tx, y + (IS_PORTRAIT ? 48 : 44), item.description, textStyle(13, Css.muted, wrap));
       this.add.text(tx, y + rowH - (IS_PORTRAIT ? 48 : 30), `入手: ${item.sources.join('・')}`, textStyle(12, Css.cyan, wrap));
-      new UIButton(this, x + w - 20 - bw / 2, y + rowH / 2, item.use, () => this.scene.start(item.scene, { returnTo: SceneKeys.ITEMS }), {
+      // 給糧艦 (#54) is used right here, on every ship of the navy.
+      const use = item.id === 'supplyShip' ? () => this.useSupplyShip() : () => this.scene.start(item.scene, { returnTo: SceneKeys.ITEMS });
+      const btn = new UIButton(this, x + w - 20 - bw / 2, y + rowH / 2, item.use, use, {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 56 : 44, fontSize: 15,
       });
+      if (item.id === 'supplyShip') btn.setEnabled(count > 0);
     });
+  }
+
+  private useSupplyShip(): void {
+    const p = loadProgress();
+    const now = Date.now();
+    const next = useSupplyShip(p, p.ships, now);
+    if (!next) return;
+    saveProgress(withQuestEvents(next, [['supplyUse', 1]], now));
+    this.scene.restart();
   }
 }

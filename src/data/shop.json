@@ -12,6 +12,7 @@
     { "id": "fast_repair", "name": "高速修理材", "items": { "fastRepair": 1 }, "price": 120, "daily": 3 },
     { "id": "fast_build", "name": "高速建造材", "items": { "fastBuild": 1 }, "price": 180, "daily": 2 },
     { "id": "training_manual", "name": "訓練教範", "items": { "trainingManual": 1 }, "price": 250, "daily": 2 },
+    { "id": "supply_ship", "name": "給糧艦", "items": { "supplyShip": 1 }, "price": 300, "daily": 1 },
     { "id": "captain_book", "name": "艦長教本", "items": { "captainBook": 1 }, "price": 600, "daily": 1 }
   ],
   "sell": { "amount": 1000, "rates": { "fuel": 120, "ammo": 120, "steel": 160, "bauxite": 300 } },

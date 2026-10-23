@@ -30,6 +30,7 @@ import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED }
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
 import { costCap, fleetCost } from '@/systems/FleetCost';
+import { addMorale, battleMoraleDelta, IMoraleState, MORALE_HIGH, moraleModifiers, moraleOf } from '@/systems/MoraleSystem';
 import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
@@ -648,6 +649,8 @@ export class BattleScene extends Phaser.Scene {
       captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass,
         captain ? progress.captainBonus[captain.id] ?? [] : []),
       formation,
+      // 士気 (#54): a cheerful crew dodges and reloads a little better, a tired one worse.
+      moraleModifiers(moraleOf(progress, shipData.id, Date.now())),
     );
   }
 
@@ -1819,6 +1822,9 @@ export class BattleScene extends Phaser.Scene {
       proficiency[s.dataId] = addProficiency(current, Math.round(proficiencyGain({ victory, enemiesSunk: enemiesSunk + landKills, survived: s.isAlive, current }) * this.battleEvent.xpMul * (area?.training ? TRAINING_SCALE : 1)));
     }
     progress = { ...progress, proficiency };
+    // 士気 (#54): a campaign battle tires the ships that fought; a win lifts them again.
+    const moraleBefore: IMoraleState = { morale: progress.morale, moraleAt: progress.moraleAt };
+    if (area && !area.training) progress = addMorale(progress, fleet.map((s) => s.dataId).filter((id): id is string => !!id), battleMoraleDelta(victory, rank), now);
     let firstClear = false;
     // An area's S rank brings one reward (#247): its reward-only ship, else (the first S) a captain; training none.
     let firstS = false;
@@ -1855,6 +1861,7 @@ export class BattleScene extends Phaser.Scene {
       // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
       ['underdogWin', won(!!area && this.underdog())],
       // 出撃コスト (#306): a campaign win with the fleet's cost right at the rank's cap, or at half of it or less.
+      ['sparkleWin', won(!!area && sailed.length > 0 && sailed.every((s) => moraleOf(moraleBefore, s.id, now) >= MORALE_HIGH))],
       ['fullCostWin', won(!!area && fleetCostNow === costCapNow)], ['lightCostWin', won(!!area && fleetCostNow * 2 <= costCapNow)],
       // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.
       ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],

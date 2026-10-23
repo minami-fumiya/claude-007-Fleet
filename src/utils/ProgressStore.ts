@@ -39,7 +39,7 @@ export const STORAGE_KEY = 'ww2fleet.progress.v2';
 export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
 export const SAVE_VERSION = LATEST_VERSION;
 /** A new nation starts with one of each time-saving item (#143). */
-export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1, captainBook: 0, trainingManual: 0 };
+export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1, captainBook: 0, trainingManual: 0, supplyShip: 0 };
 
 /** Everything one nation's admiral has built up. */
 export interface INationProgress {
@@ -61,6 +61,9 @@ export interface INationProgress {
   refitBranches: Record<string, string>;
   /** Ship id → crew proficiency 0..100 */
   proficiency: Record<string, number>;
+  /** 士気 (#54): ship id → morale when last changed, and when (MoraleSystem.moraleOf for now) */
+  morale: Record<string, number>;
+  moraleAt: Record<string, number>;
   /** Captain id → total XP */
   captainXp: Record<string, number>;
   /** Cleared campaign area ids (rank exams and first-clear rewards) */
@@ -157,7 +160,7 @@ export function walletOf(p: Pick<IProgress, 'wallet'>): IWallet {
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, captainXp: {}, campaign: [], presets: [],
+    upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null,
   };
@@ -287,6 +290,8 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     refits: numbers(data.refits),
     refitBranches: stringMap(data.refitBranches),
     proficiency: numbers(data.proficiency),
+    morale: numbers(data.morale),
+    moraleAt: numbers(data.moraleAt),
     captainXp: numbers(data.captainXp),
     campaign: strings(data.campaign),
     presets: (Array.isArray(data.presets) ? data.presets : []).slice(0, PRESET_COUNT).map(parsePreset),
@@ -382,7 +387,7 @@ function stringMap(src: unknown): Record<string, string> {
 function parseItems(v: unknown): IItems {
   const o = isObject(v) ? v : {};
   const n = (x: unknown): number => (isNum(x) ? Math.max(0, Math.floor(x)) : 0);
-  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild), captainBook: n(o.captainBook), trainingManual: n(o.trainingManual) };
+  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild), captainBook: n(o.captainBook), trainingManual: n(o.trainingManual), supplyShip: n(o.supplyShip) };
 }
 
 function parseSweepCharges(src: unknown): Record<string, ISweepCharge> {
