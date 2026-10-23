@@ -159,7 +159,7 @@
       "airWing": {
         "fighters": 5,
         "diveBombers": 5,
-        "torpedoBombers": 4
+        "torpedoBombers": 5
       },
       "fictional": true,
       "description": "客船ローマを改造したイタリア初の航空母艦。ほぼ完成したが、就役することなく終戦を迎えた (架空艦)。",

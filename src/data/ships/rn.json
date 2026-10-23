@@ -185,8 +185,8 @@
       "nation": "RN",
       "shipClass": "Cruiser",
       "subtype": "HeavyCruiser",
-      "hp": 395,
-      "armor": 34,
+      "hp": 435,
+      "armor": 38,
       "speed": 172,
       "weapons": [
         "8in_mk8",
@@ -394,8 +394,8 @@
       "nation": "RN",
       "shipClass": "Cruiser",
       "subtype": "HeavyCruiser",
-      "hp": 390,
-      "armor": 32,
+      "hp": 430,
+      "armor": 36,
       "speed": 172,
       "weapons": [
         "8in_mk8",
@@ -412,8 +412,8 @@
       "nation": "RN",
       "shipClass": "Cruiser",
       "subtype": "HeavyCruiser",
-      "hp": 360,
-      "armor": 30,
+      "hp": 400,
+      "armor": 34,
       "speed": 174,
       "weapons": [
         "8in_mk8",

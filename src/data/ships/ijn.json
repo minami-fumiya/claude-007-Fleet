@@ -319,7 +319,7 @@
       ],
       "spriteKey": "shokaku",
       "airWing": {
-        "fighters": 4,
+        "fighters": 5,
         "diveBombers": 4,
         "torpedoBombers": 4
       },
@@ -341,7 +341,7 @@
       "spriteKey": "akagi",
       "airWing": {
         "fighters": 4,
-        "diveBombers": 5,
+        "diveBombers": 4,
         "torpedoBombers": 4
       },
       "description": "巡洋戦艦から改造された航空母艦。真珠湾攻撃では機動部隊の旗艦を務めた。1942年6月、ミッドウェー海戦で沈没。",
@@ -362,8 +362,8 @@
       "spriteKey": "kaga",
       "airWing": {
         "fighters": 4,
-        "diveBombers": 5,
-        "torpedoBombers": 5
+        "diveBombers": 4,
+        "torpedoBombers": 4
       },
       "description": "戦艦から改造された航空母艦。多くの艦載機を搭載できた。1942年6月、ミッドウェー海戦で沈没。",
       "year": 1928
@@ -382,7 +382,7 @@
       ],
       "spriteKey": "zuikaku",
       "airWing": {
-        "fighters": 4,
+        "fighters": 5,
         "diveBombers": 4,
         "torpedoBombers": 4
       },
@@ -500,7 +500,7 @@
       "spriteKey": "soryu",
       "airWing": {
         "fighters": 4,
-        "diveBombers": 3,
+        "diveBombers": 4,
         "torpedoBombers": 3
       },
       "description": "中型の航空母艦。真珠湾攻撃に参加し、1942年6月のミッドウェー海戦で沈没した。",
@@ -521,7 +521,7 @@
       "spriteKey": "hiryu",
       "airWing": {
         "fighters": 4,
-        "diveBombers": 3,
+        "diveBombers": 4,
         "torpedoBombers": 3
       },
       "description": "蒼龍を改良した中型空母。ミッドウェー海戦で最後まで反撃を続けたが、被弾して沈没した。",
@@ -542,7 +542,7 @@
       "spriteKey": "unryu",
       "airWing": {
         "fighters": 4,
-        "diveBombers": 3,
+        "diveBombers": 4,
         "torpedoBombers": 3
       },
       "description": "飛龍の設計をもとに量産を目指した雲龍型航空母艦の1番艦。1944年12月、米潜水艦の雷撃で沈没した。",
@@ -584,9 +584,9 @@
       ],
       "spriteKey": "junyo",
       "airWing": {
-        "fighters": 3,
-        "diveBombers": 3,
-        "torpedoBombers": 3
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 4
       },
       "description": "大型客船として建造中に空母へ改装された隼鷹型の1番艦。終戦まで生き残った。",
       "year": 1942
