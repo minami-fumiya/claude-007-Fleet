@@ -40,7 +40,8 @@ describe('the difficulty curve (#254)', () => {
     expect(areaDepth(data, area('p1'))).toBe(1);
     expect(areaDepth(data, area('p2'))).toBe(2);
     expect(areaDepth(data, area('p6'))).toBe(8);
-    expect(areaDepth(data, area('a0'))).toBe(1);
+    // 支線 (#343): a side sea is a step past the area it opens from.
+    expect(areaDepth(data, area('a9'))).toBe(areaDepth(data, area('a3')) + 1);
     // np1 opens from another theater's third area, but its depth counts from its own sea.
     expect(areaDepth(data, area('np1'))).toBe(2);
     expect(areaDepth(data, area('np5'))).toBe(8);

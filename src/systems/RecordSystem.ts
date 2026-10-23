@@ -207,6 +207,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('perfect', '完全勝利章', 'battle', [5, 25, 100], (g) => `1 隻も失わずに ${g} 回勝利する`, (r) => r.perfectVictories),
   ...ladder('big_gun', '大火力章', 'battle', [3000, 8000, 15000], (g) => `1 回の戦闘で ${g.toLocaleString()} ダメージを与える`, (r) => r.bestDamage),
   ...ladder('firepower', '砲撃章', 'battle', [50_000, 250_000, 1_000_000], (g) => `累計 ${g.toLocaleString()} ダメージを与える`, (r) => r.damageDealt),
+  // 陣形 (#345): wins in different formations.
+  ...ladder('formations', '陣形章', 'battle', [3, 6], (g) => (g >= 6 ? 'すべての陣形 (6 つ) で勝利する' : `${g} つの陣形で勝利する`),
+    (_r, c) => ['winLineAhead', 'winDoubleLine', 'winCircle', 'winEchelon', 'winLineAbreast', 'winVanguard'].filter((e) => total(c, e) > 0).length),
   ...ladder('night_fighter', '夜戦章', 'battle', [5, 30, 100], (g) => `夜戦で ${g} 回勝利する`, (_r, c) => total(c, 'nightWin')),
   ...ladder('s_rank', '完勝章', 'battle', [10, 50, 200], (g) => `S 評価で ${g} 回勝利する`, (_r, c) => total(c, 'winS')),
   // 作戦
@@ -224,7 +227,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('med_war', '地中海従軍章', 'campaign', [10, 50], (g) => `地中海で ${g} 回勝利する`, (_r, c) => total(c, 'winMediterranean')),
   { id: 'blacksea', name: '黒海制覇章', description: '黒海戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('blacksea') ? 1 : 0), goal: 1 },
   ...ladder('blacksea_war', '黒海従軍章', 'campaign', [10, 50], (g) => `黒海で ${g} 回勝利する`, (_r, c) => total(c, 'winBlackSea')),
-  ...ladder('training', '訓練章', 'campaign', [5, 30], (g) => `訓練海域で ${g} 回勝利する`, (_r, c) => total(c, 'trainingWin')),
+  ...ladder('training', '訓練章', 'campaign', [5, 30], (g) => `演習の訓練で ${g} 回勝利する`, (_r, c) => total(c, 'trainingWin')),
   // 七つの海 (#250): each sea added in 0.0.35, its battles, and the seven together (the inland seas aside).
   ...([['north_pacific', '北太平洋', 'winNorthPacific'], ['south_atlantic', '南大西洋', 'winSouthAtlantic'], ['indian', 'インド洋', 'winIndian'], ['arctic', '北極海', 'winArctic']] as const).flatMap(([t, name, event]): IMedalRule[] => [
     { id: t, name: `${name}制覇章`, description: `${name}の全海域を攻略する`, category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes(t) ? 1 : 0), goal: 1 },

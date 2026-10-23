@@ -78,8 +78,7 @@ describe('campaign data for the growth curve (#25 / #18)', () => {
 
   it('the first area of every theater is free: its base opens the sea (#293)', () => {
     for (const t of data.theaters) {
-      // Besides the training area (#202), which is free too.
-      const free = areasOf(data, t.id).filter((a) => isFreeArea(a) && !a.training);
+      const free = areasOf(data, t.id).filter((a) => isFreeArea(a));
       expect(free, t.id).toHaveLength(1);
       expect(isFreeArea(areasOf(data, t.id)[0])).toBe(true);
       expect(isUnlocked(areasOf(data, t.id)[0], [])).toBe(true);

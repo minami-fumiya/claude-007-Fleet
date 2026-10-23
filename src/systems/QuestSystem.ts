@@ -58,6 +58,8 @@ export const QUEST_EVENTS = [
   'airfieldDown', 'superweaponSunk',
   // 0.0.40: historical wins (#314), bases opened and docks built (#314), items used (#315)
   'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse', 'supplyUse', 'sparkleWin', 'expeditionStart', 'expeditionDone', 'dormHours', 'multiFleetWin', 'allyWin', 'eventQuestClaim', 'expeditionPicked',
+  // 0.0.45: wins by formation (#345)
+  'winLineAhead', 'winDoubleLine', 'winCircle', 'winEchelon', 'winLineAbreast', 'winVanguard',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
@@ -136,8 +138,8 @@ export function gameHour(now: number): number {
   return Math.floor(now / HOUR);
 }
 
-/** Limited-time events run in 3-hour windows from the start of the game day (#89 #218). */
-export const EVENT_WINDOW = 3 * HOUR;
+/** Limited-time events run in hour-long windows from the start of the game day (#89 #218 #344). */
+export const EVENT_WINDOW = HOUR;
 
 export function gameWindow(now: number): number {
   return Math.floor((now - DAY_START_UTC) / EVENT_WINDOW);

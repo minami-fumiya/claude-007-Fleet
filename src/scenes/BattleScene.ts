@@ -11,7 +11,7 @@ import { WeaponSystem } from '@/systems/WeaponSystem';
 import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
-import { FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
+import { FORMATION_ORDER, FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
 import { airfieldRearmMs, REARM_MS } from '@/systems/AirWingSystem';
 import { AircraftType } from '@/types/Aircraft';
@@ -134,6 +134,8 @@ const CONVOY_EXIT_MARGIN = 90;
 const OBJECTIVE_PRIORITY = 0.5;
 /** Enemy AI prefers convoy ships over warships by this much. */
 const CONVOY_PRIORITY = 0.6;
+/** Enemy air strikes hold back from the player's flagship (#328): on top of the formation's flagship priority. */
+const AIR_FLAGSHIP_PRIORITY = -0.35;
 /** A lost contact's last known position stays marked this long (ms, #98). */
 const LAST_SEEN_MS = 30_000;
 
@@ -1222,7 +1224,14 @@ export class BattleScene extends Phaser.Scene {
       delta,
       { foes: playerView, foeSquadrons: this.playerAir.squadrons, foeGuns: aaGuns(this.playerSide()) },
       () => true,
-      pick(this.enemyNation),
+      (carrier, foes) => {
+        // Strikes spread out (#328): a ship already under attack draws fewer, and the flagship (the battle) less
+        // still — every strike went for it and sank it in seconds before the guns had a say.
+        const aimed = (ship: BaseShip): number => this.enemyAir.squadrons.filter((q) => q.alive && q.target === ship).length;
+        const view = foes.map((f) => ({ ...f, attackers: (f.attackers ?? 0) + 2 * aimed(f.ship), priority: (f.priority ?? 0) + (f.ship === this.flagship ? AIR_FLAGSHIP_PRIORITY : 0) }));
+        const chosen = pick(this.enemyNation)(carrier, view);
+        return chosen ? foes.find((f) => f.ship === chosen.ship) ?? null : null;
+      },
     );
   }
 
@@ -2061,6 +2070,8 @@ export class BattleScene extends Phaser.Scene {
     const theaterEvent = area ? theaterWin[area.theater] : undefined;
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
+      // 陣形章 (#345): a win in each formation.
+      [`win${this.formation}` as QuestEvent, won(true)],
       ['landKill', this.enemies.filter((e) => e.isLand && !e.isAlive).length],
       // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
       ['underdogWin', won(!!area && this.underdog())],
@@ -2078,7 +2089,7 @@ export class BattleScene extends Phaser.Scene {
       // Enemy planes shot down, by guns or fighters (#185).
       ['planesDown', this.enemyAir.totalLost()],
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
-      ['trainingWin', won(!!area?.training)],
+      ['trainingWin', won(this.exercise && this.battleData?.training === true)],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
       // A win under each kind of event counts for the イベント巡り章 (#218).
@@ -2137,7 +2148,9 @@ export class BattleScene extends Phaser.Scene {
     if (gold > 0) progress = { ...progress, wallet: addGold(walletOf(progress), gold) };
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };
-    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
+    // A formation that comes with the new rank (#345) is named with the promotion.
+    const newFormations = promoted.promotedTo ? FORMATION_ORDER.filter((f) => FORMATION_RULES[f].minRank > before.index && FORMATION_RULES[f].minRank <= after.index).map((f) => FORMATION_RULES[f].ja) : [];
+    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}${newFormations.length > 0 ? `  ·  新しい陣形: ${newFormations.join('・')}` : ''}`;
     // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
     const sWin = victory && rank === 'S';
     // At most one a battle (#303: an area's first S that also promoted brought two, three with the random one).

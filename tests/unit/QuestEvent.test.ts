@@ -19,9 +19,10 @@ const MONDAY_5AM = Date.UTC(2026, 9, 18, 15);
 const HOUR = 3_600_000;
 
 describe('events (#89)', () => {
-  it('the same moment gives the same event; windows are three hours from 00:00 JST (#219)', () => {
+  it('the same moment gives the same event; windows are an hour from 00:00 JST (#219 #344)', () => {
     expect(windowIndex(MONDAY_5AM + 1) - windowIndex(MONDAY_5AM - 1)).toBe(1);
-    expect(windowIndex(MONDAY_5AM + 3 * HOUR - 1)).toBe(windowIndex(MONDAY_5AM));
+    expect(windowIndex(MONDAY_5AM + HOUR - 1)).toBe(windowIndex(MONDAY_5AM));
+    expect(windowIndex(MONDAY_5AM + HOUR)).toBe(windowIndex(MONDAY_5AM) + 1);
     for (let i = 0; i < 50; i++) {
       const t = MONDAY_5AM + i * EVENT_WINDOW_MS + 1234;
       const e = eventAt(t);
@@ -30,7 +31,7 @@ describe('events (#89)', () => {
     }
   });
 
-  it('every window has an event (#218); every kind turns up; 報酬 2 倍 at most twice a day', () => {
+  it('every window has an event (#218); every kind turns up; 報酬 2 倍 at most MAX_DOUBLE a day', () => {
     const kinds = new Set<string>();
     for (let i = 0; i < 400; i++) {
       const e = eventAt(MONDAY_5AM + i * EVENT_WINDOW_MS);
