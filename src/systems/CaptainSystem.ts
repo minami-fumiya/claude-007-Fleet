@@ -5,7 +5,7 @@ import { combineModifiers } from './CustomizationSystem';
 
 /**
  * Captains (pure): experience, levels and the bonus a captain's speciality gives their ship.
- * Level n needs 100 × n(n−1)/2 XP in total (Lv2 = 100, Lv3 = 300, Lv4 = 600 …), capped at MAX_LEVEL (100, #131).
+ * Level n needs 35 × n(n−1) XP in total (Lv2 = 70, Lv3 = 210, Lv4 = 420 …, #322), capped at MAX_LEVEL (100, #131).
  * XP is what the save keeps, so raising the cap needs no migration.
  */
 
@@ -13,9 +13,12 @@ export const MAX_LEVEL = 100;
 /** Skills grow with level up to here; past it the inherent skill strengthens in tiers instead (#131). */
 export const SKILL_LEVEL_CAP = 10;
 
+/** XP of the level curve's step (#322: 50 until 0.0.41) */
+export const XP_PER_LEVEL_STEP = 35;
+
 export function xpForLevel(level: number): number {
   const n = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
-  return (100 * n * (n - 1)) / 2;
+  return XP_PER_LEVEL_STEP * n * (n - 1);
 }
 
 export function levelForXp(xp: number): number {

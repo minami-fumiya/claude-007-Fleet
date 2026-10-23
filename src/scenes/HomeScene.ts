@@ -13,10 +13,10 @@ import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveP
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources } from '@/systems/ResourceSystem';
-import { captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
+import { CAPTAIN_PROMOTION_RANK, captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
-import { clearCount, fleetSlots, missionCount, missionText, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
+import { clearCount, fleetSlots, missionDone, missionText, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
 import { buildDock, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
@@ -188,7 +188,10 @@ export class HomeScene extends Phaser.Scene {
     const rankLine = `${rank.name}  ·  出撃枠 ${fleetSlots(progress)}`;
     if (IS_PORTRAIT) {
       this.add.text(x, a.y, rankLine, textStyle(12, Css.gold, { fontStyle: 'bold' }));
-      this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
+      const next = this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
+      // An exam and the missions can outgrow the narrow screen: shrink to fit.
+      const room = CANVAS_W - x - 12;
+      if (next.width > room) next.setScale(room / next.width);
     } else {
       this.add.text(x, a.y + 2, `${rankLine}  ·  ${promotionText(progress)}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
     }
@@ -197,7 +200,7 @@ export class HomeScene extends Phaser.Scene {
     this.regenRoom = a.x + a.w - x - 8;
     // ゴールド (#183) beside the resources; a tap opens the items (#184). Portrait: the admiral row's top right;
     // landscape: right of the event line, above the resources.
-    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook;
+    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook + progress.items.trainingManual;
     const gw = IS_PORTRAIT ? 190 : 220;
     const gx = IS_PORTRAIT ? a.x + a.w - gw / 2 : L.resources.x + L.resources.w - gw / 2;
     const gy = IS_PORTRAIT ? a.y + 14 : 80;
@@ -293,7 +296,7 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(x + 28, y + (IS_PORTRAIT ? 104 : 80), '国ごとに資源・保有艦・研究・作戦の進み具合が別々に記録されます。\n新しい国は駆逐艦 1 隻・資源 0 から始まり、資源は時間で回復します。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
     let ry = y + (IS_PORTRAIT ? 210 : 136);
     // Nations open step by step (#134): locked ones show what opens them.
-    const locks = nationLocks(save.nations);
+    const locks = nationLocks(save.nations, save.record);
     for (const n of PLAYABLE_NATIONS) {
       const np = save.nations[n];
       const lock = locks[n];
@@ -420,21 +423,16 @@ export class HomeScene extends Phaser.Scene {
     }
   }
 
-  /** The promotion missions (#142) of the ranks ahead, for the 昇進 tab (#158). */
+  /** The promotion missions (#142) of the next rank only (#261), for the 昇進 tab (#158). */
   private rankMissionRows(progress: IProgress): IQuestRow[] {
-    const current = rankOf(progress).index;
-    const rows: IQuestRow[] = [];
-    for (const [index, missions] of Object.entries(RANK_MISSIONS)) {
-      if (Number(index) <= current) continue;
-      for (const m of missions ?? []) {
-        const value = Math.min(m.goal, missionCount(progress, m.stat));
-        rows.push({
-          id: `${index}_${m.stat}`, name: `${RANKS[Number(index)].name}への昇進任務`, text: m.text, value, goal: m.goal, reward: '',
-          status: value >= m.goal ? 'claimed' : value > 0 ? 'progress' : 'idle',
-        });
-      }
-    }
-    return rows.slice(0, QUESTS_SHOWN.once);
+    const next = rankOf(progress).index + 1;
+    return (RANK_MISSIONS[next] ?? []).map((m) => {
+      const value = Math.min(m.goal, missionValue(progress, m));
+      return {
+        id: `${next}_${m.medal ?? m.stat}`, name: `${RANKS[next].name}への昇進任務`, text: m.text, value, goal: m.goal, reward: '',
+        status: value >= m.goal ? 'claimed' : value > 0 ? 'progress' : 'idle',
+      };
+    });
   }
 
   /** Every rank (#128): merit needed, sortie slots, ship grade and what it opens; the current one highlighted. */
@@ -476,11 +474,12 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[1], ry + 4, String(r.minMerit), textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
-      // Promotion missions (#142) first: done (✓) or how far along.
-      const missions = (RANK_MISSIONS[r.index] ?? []).map((m) => (missionCount(progress, m.stat) >= m.goal || r.index <= current.index ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`));
+      // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
+      const missions = r.index === current.index + 1 ? (RANK_MISSIONS[r.index] ?? []).map((m) => (missionDone(progress, m) ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
-      const ahead = r.index - current.index;
-      const captain = ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
+      // From 少佐 on (#285).
+      const ahead = RANKS.filter((x) => x.index > current.index && x.index <= r.index && x.index >= CAPTAIN_PROMOTION_RANK).length;
+      const captain = r.index >= CAPTAIN_PROMOTION_RANK && ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
       const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
         const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
@@ -568,7 +567,7 @@ export class HomeScene extends Phaser.Scene {
   }
 
   private selectNation(nation: Nation): void {
-    if (!nationLocks(loadSave().nations)[nation].unlocked) return;
+    if (!nationLocks(loadSave().nations, loadSave().record)[nation].unlocked) return;
     const starter = starterShip(this.registryShips.byNation(nation));
     saveSave(switchNation(loadSave(), nation, starter?.id, Date.now()));
     // The fleet selection belongs to the previous nation.

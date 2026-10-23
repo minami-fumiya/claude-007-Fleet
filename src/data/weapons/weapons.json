@@ -477,7 +477,7 @@
       "type": "ShellAP",
       "firePower": 62,
       "range": 520,
-      "reloadTime": 1200,
+      "reloadTime": 1100,
       "projectileSpeed": 560
     },
     {
@@ -605,9 +605,9 @@
       "no": 5001025,
       "name": "30.5cm 52 口径 3 連装砲",
       "type": "ShellAP",
-      "firePower": 94,
+      "firePower": 82,
       "range": 570,
-      "reloadTime": 1050,
+      "reloadTime": 1250,
       "projectileSpeed": 610
     },
     {

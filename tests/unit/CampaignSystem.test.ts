@@ -211,6 +211,10 @@ describe('the S-rank reward (#247)', () => {
     expect(firstSReward({ id: 'p1' }, { perfect: [], captainsLeft: 0 })).toBeNull();
     expect(firstSReward({ id: 'p0', training: true }, { rewardShip: ship, perfect: [], captainsLeft: 5 })).toBeNull();
     expect(firstSReward({ id: 'p0', training: true }, { perfect: [], captainsLeft: 5 })).toBeNull();
+    // #285: a captain only from the deeper seas.
+    expect(firstSReward({ id: 'p1' }, { perfect: [], captainsLeft: 5, depth: 2, minDepth: 3 })).toBeNull();
+    expect(firstSReward({ id: 'p3' }, { perfect: [], captainsLeft: 5, depth: 3, minDepth: 3 })).toEqual({ kind: 'captain' });
+    expect(firstSReward({ id: 'p1' }, { rewardShip: ship, perfect: [], captainsLeft: 5, depth: 1, minDepth: 3 })).toEqual({ kind: 'ship', ship });
   });
 
   it('no training area lists a reward ship, in the campaign or the reward-ship table', () => {

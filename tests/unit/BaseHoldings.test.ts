@@ -4,8 +4,9 @@ import { buildDock, MAX_DOCKS, dockCount, startRepair, setDamage } from '@/syste
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { buildsHere, startBuild } from '@/systems/ShipyardSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
-import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
+import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { emptySave, IProgress, progressView, switchNation } from '@/utils/ProgressStore';
+import { emptyRecord } from '@/systems/RecordSystem';
 import { runMigrations } from '@/utils/SaveMigration';
 import { resources } from '@/systems/ResourceSystem';
 import { Nation } from '@/types/Nation';
@@ -21,7 +22,7 @@ const byId = (id: string): IShipData => IJN.find((s) => s.id === id)!;
 const admiral = (patch: Partial<IProgress> = {}): IProgress => ({
   ...progressView(switchNation(emptySave(), Nation.IJN, 'fubuki', T0)),
   // Every base built (#217), so the admiral can work from any of them.
-  merit: 900, rankStats: ALL_MISSIONS_DONE, base: 'ijn_heavy', basesOpen: nationBases(Nation.IJN).map((b) => b.id), resources: resources({ fuel: 5000, ammo: 5000, steel: 5000, bauxite: 5000 }),
+  merit: 900, rankStats: ALL_MISSIONS_DONE, record: { ...emptyRecord(), medals: ALL_MISSION_MEDALS }, base: 'ijn_heavy', basesOpen: nationBases(Nation.IJN).map((b) => b.id), resources: resources({ fuel: 5000, ammo: 5000, steel: 5000, bauxite: 5000 }),
   ships: ['fubuki', 'yukikaze', 'nagato'], shipBases: { fubuki: 'ijn_home', yukikaze: 'ijn_home', nagato: 'ijn_heavy' },
   ...patch,
 });
@@ -79,7 +80,7 @@ describe('ships, docks and builds by base (#145)', () => {
   });
 
   it('builds share the pooled docks wherever they were laid down', () => {
-    const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('etorofu'), T0)!;
+    const p = startBuild(admiral({ research: ['build_cruiser'] }), IJN, byId('mutsuki'), T0)!;
     expect(buildsHere(p)).toHaveLength(1);
     expect(buildsHere({ ...p, builds: [...p.builds, { shipId: 'kongo', endsAt: T0, base: 'ijn_light' }] })).toHaveLength(2);
   });

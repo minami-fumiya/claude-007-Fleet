@@ -7,14 +7,15 @@ import {
   canResearch,
   medalMet,
   prerequisitesMet,
+  rankMet,
   regenMultiplier,
   researchModifiers,
-  romanLevel,
   TECH_BRANCHES,
 } from '@/systems/ResearchSystem';
 import { describeModifiers } from '@/systems/CustomizationSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
 import { canAfford, formatResources, scaleCost } from '@/systems/ResourceSystem';
+import { RANKS } from '@/systems/RankSystem';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
@@ -25,14 +26,14 @@ export interface IResearchViewArea {
   h: number;
 }
 
-/** Tabs per row: one row of 12 in landscape, two rows of 6 in portrait. */
-const TAB_COLS = IS_PORTRAIT ? 6 : 12;
+/** Tabs per row: one row of 13 in landscape, two rows of 7 in portrait. */
+const TAB_COLS = IS_PORTRAIT ? 7 : 13;
 const TAB_H = IS_PORTRAIT ? 58 : 44;
-const TAB_GAP = 8;
-/** Node cards: one column in portrait, three in landscape. */
-const CARD_COLS = IS_PORTRAIT ? 1 : 3;
-const CARD_GAP = IS_PORTRAIT ? 8 : 12;
-const LEVEL_COL = IS_PORTRAIT ? 72 : 64;
+const TAB_GAP = IS_PORTRAIT ? 6 : 8;
+/** Node cards: ten levels a branch (#298) — two columns of five in portrait, five columns of two in landscape. */
+const CARD_COLS = IS_PORTRAIT ? 2 : 5;
+const CARD_GAP = IS_PORTRAIT ? 8 : 10;
+const LEVEL_COL = IS_PORTRAIT ? 40 : 44;
 
 /** The tab the player looked at last (kept while the game runs). */
 let lastBranch: TechBranch = 'gunnery';
@@ -62,7 +63,7 @@ export class ResearchView {
     private readonly scene: Phaser.Scene,
     private readonly area: IResearchViewArea,
     private readonly tree: ITechNode[],
-    private readonly state: () => { done: string[]; resources: IResources; costMul?: number; medals?: string[] },
+    private readonly state: () => { done: string[]; resources: IResources; costMul?: number; medals?: string[]; rankIndex?: number },
     private readonly onResearch: (node: ITechNode) => void,
   ) {
     const rows = Math.ceil(TECH_BRANCHES.length / TAB_COLS);
@@ -98,24 +99,24 @@ export class ResearchView {
     const rows = Math.ceil(nodes.length / CARD_COLS);
     const w = (this.area.w - CARD_GAP * (CARD_COLS - 1)) / CARD_COLS;
     const avail = this.area.y + this.area.h - this.cardsTop;
-    const h = Math.min(IS_PORTRAIT ? 132 : 150, (avail - CARD_GAP * (rows - 1)) / rows);
+    const h = Math.min(IS_PORTRAIT ? 172 : 230, (avail - CARD_GAP * (rows - 1)) / rows);
     const layer = this.scene.add.container(0, 0);
     nodes.forEach((node, i) => {
       const x = this.area.x + (i % CARD_COLS) * (w + CARD_GAP);
       const y = this.cardsTop + Math.floor(i / CARD_COLS) * (h + CARD_GAP);
-      const tx = LEVEL_COL + 8;
-      const tw = w - tx - 16;
+      const tx = LEVEL_COL + 6;
+      const tw = w - tx - 10;
       const frame = this.scene.add.graphics();
       const level = this.scene.add
-        .text(LEVEL_COL / 2 + 6, h / 2, romanLevel(node.level), textStyle(IS_PORTRAIT ? 20 : 22, Css.gold, { fontStyle: '900' }))
+        .text(LEVEL_COL / 2 + 4, h / 2, String(node.level), textStyle(IS_PORTRAIT ? 18 : 20, Css.gold, { fontStyle: '900' }))
         .setOrigin(0.5);
-      const lv = this.scene.add.text(LEVEL_COL / 2 + 6, h / 2 - (IS_PORTRAIT ? 30 : 26), 'LV', eyebrowStyle(9, Css.muted)).setOrigin(0.5);
-      const name = this.scene.add.text(tx, 12, node.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
-      const state = this.scene.add.text(w - 14, 14, '', eyebrowStyle(10, Css.cyan)).setOrigin(1, 0);
-      const desc = this.scene.add.text(tx, name.y + name.height + 4, node.description, textStyle(11, Css.muted, { wordWrap: { width: tw, useAdvancedWrap: true } }));
-      const cost = this.scene.add.text(tx, h - 10, `費用  ${formatResources(scaleCost(node.cost, this.state().costMul ?? 1))}`, textStyle(11, Css.dim)).setOrigin(0, 1);
+      const lv = this.scene.add.text(LEVEL_COL / 2 + 4, h / 2 - 22, 'LV', eyebrowStyle(9, Css.muted)).setOrigin(0.5);
+      const name = this.scene.add.text(tx, 10, node.name, textStyle(13, Css.text, { fontStyle: 'bold', wordWrap: { width: tw, useAdvancedWrap: true } }));
+      const state = this.scene.add.text(tx, name.y + name.height + 2, '', eyebrowStyle(10, Css.cyan));
+      const desc = this.scene.add.text(tx, state.y + 16, node.description, textStyle(11, Css.muted, { wordWrap: { width: tw, useAdvancedWrap: true } }));
+      const cost = this.scene.add.text(tx, h - 8, formatResources(scaleCost(node.cost, this.state().costMul ?? 1)), textStyle(10, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } })).setOrigin(0, 1);
       const requires = this.scene.add
-        .text(tx, cost.y - cost.height - 2, this.requiresText(node), textStyle(11, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } }))
+        .text(tx, cost.y - cost.height - 2, this.requiresText(node), textStyle(10, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } }))
         .setOrigin(0, 1);
       const card = this.scene.add.container(x, y, [frame, lv, level, name, state, desc, requires, cost]);
       makeClickable(card, w, h);
@@ -126,20 +127,21 @@ export class ResearchView {
     this.cardLayer = layer;
   }
 
-  /** "前提: 砲術研究 II・射撃管制 (砲術)": the branch is named for prerequisites from another branch. */
+  /** "少尉・前提: 砲術研究 II・射撃管制 (電探)": the rank (#298), then the branch of prerequisites from another branch. */
   private requiresText(node: ITechNode): string {
-    if (node.requires.length === 0) return '前提なし';
+    const rank = node.rank ? `${RANKS[node.rank].name}以上` : '';
+    if (node.requires.length === 0) return rank || '前提なし';
     const names = node.requires.map((id) => {
       const r = this.tree.find((n) => n.id === id);
       if (!r) return id;
       const other = r.branch !== node.branch ? ` (${TECH_BRANCHES.find((b) => b.id === r.branch)?.name ?? ''})` : '';
       return `${r.name}${other}`;
     });
-    return `前提: ${names.join('・')}`;
+    return `${rank ? `${rank}・` : ''}前提: ${names.join('・')}`;
   }
 
   refresh(): void {
-    const { done, resources, costMul = 1, medals } = this.state();
+    const { done, resources, costMul = 1, medals, rankIndex } = this.state();
     TECH_BRANCHES.forEach((b, i) => {
       const p = branchProgress(this.tree, b.id, done);
       const tab = this.tabs[i];
@@ -152,15 +154,16 @@ export class ResearchView {
     this.summary.setText(this.summaryText(done));
     for (const c of this.cards) {
       const finished = done.includes(c.node.id);
-      const ready = canResearch(c.node, done, resources, costMul, medals);
-      // A medal the project needs (#169) counts as a prerequisite and is named with them.
+      const ready = canResearch(c.node, done, resources, costMul, medals, rankIndex);
+      // A medal and a rank the project needs (#169 #298) count as prerequisites and are named with them.
       const medal = researchMedal(c.node.id);
       const medalOk = medalMet(c.node, medals);
-      const met = prerequisitesMet(c.node, done) && medalOk;
-      const label = finished ? '✓ 研究済' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
+      const rankOk = rankMet(c.node, rankIndex);
+      const met = prerequisitesMet(c.node, done) && medalOk && rankOk;
+      const label = finished ? '✓ 研究済' : !rankOk ? '要階級' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
       // 研究済 is green (#283): gold stays for what can be done now.
       c.state.setText(label).setColor(finished ? Css.success : ready ? Css.cyan : met ? Css.muted : Css.danger);
-      c.requires.setText(medal && !finished ? `${this.requiresText(c.node)}・勲章「${medalName(medal)}」` : this.requiresText(c.node));
+      c.requires.setText(finished ? this.requiresText(c.node) : [this.requiresText(c.node), ...(medal ? [`勲章「${medalName(medal)}」`] : [])].join('・'));
       c.requires.setColor(finished || met ? Css.dim : Css.danger);
       c.frame.clear();
       drawPanel(c.frame, 0, 0, c.w, c.h, {
@@ -186,7 +189,7 @@ export class ResearchView {
     if (lastBranch === 'logistics') {
       const m = regenMultiplier(finished.map((n) => n.id), this.tree);
       effect = m !== 1 ? [`資源の自然回復 ×${m.toFixed(2)}`] : [];
-    } else if (lastBranch === 'shipbuilding') {
+    } else if (lastBranch === 'shipbuilding' || lastBranch === 'shipbuilding_air') {
       effect = finished.map((n) => n.name);
     } else {
       effect = describeModifiers(researchModifiers(this.tree, finished.map((n) => n.id)));

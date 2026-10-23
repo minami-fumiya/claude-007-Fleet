@@ -100,7 +100,9 @@ function clear(p: IProgress, a: ICampaignArea, roster: IShipData[]): IProgress {
   const rec = recordClear(settled.campaign, a.id);
   let next = { ...settled, campaign: rec.cleared, resources: addResources(settled.resources, a.reward) };
   // BattleScene counts the win for the promotion missions (#142) before adding merit.
-  next = addRankStats(next, { campaignWin: 1, sink: a.enemy.ships.length });
+  next = addRankStats(next, { campaignWin: 1, sink: a.enemy.ships.length, areaClear: rec.firstClear ? 1 : 0 });
+  // The first win earns the 初陣勝利章, which 少尉 asks for (#261).
+  next = { ...next, record: { ...next.record, medals: [...new Set([...next.record.medals, 'first_victory'])] } };
   next = addMerit(next, meritFor({ victory: true, campaign: true, firstClear: rec.firstClear, enemiesSunk: a.enemy.ships.length })).progress;
   // An S-rank win also brings the area's reward-only ship, if it has one (#160).
   const ship = rewardShipFor(roster, ownedIds(next, roster), a.id);

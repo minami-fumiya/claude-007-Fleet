@@ -27,6 +27,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { actionVariant, addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
+import { MAX_PROFICIENCY, TRAINING_MANUAL_GAIN, useTrainingManual } from '@/systems/ProficiencySystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -58,6 +59,8 @@ export class CustomizationScene extends Phaser.Scene {
   private ships: IShipData[] = [];
   private refitText!: Phaser.GameObjects.Text;
   private refitBtn!: UIButton;
+  /** 訓練教範 (#305): proficiency +10 for the selected ship */
+  private manualBtn!: UIButton;
   private readonly refitTable = REFIT_TABLE;
   private readonly tech = techTree.tech as ITechNode[];
   private selected = 0;
@@ -282,6 +285,9 @@ export class CustomizationScene extends Phaser.Scene {
     this.extrasText = this.add.text(p.x + 22, top + statRows * rowH, '', textStyle(11, Css.cyan, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
     const ry = p.y + p.h - REFIT_H + 8;
     this.add.text(p.x + 22, ry, '改造', eyebrowStyle(10, Css.gold));
+    this.manualBtn = new UIButton(this, p.x + p.w - 22 - 90, ry + 6, '訓練教範', () => this.useManual(), {
+      variant: 'secondary', width: 180, height: IS_PORTRAIT ? 30 : 24, fontSize: 11,
+    });
     this.refitText = this.add.text(p.x + 22, ry + (IS_PORTRAIT ? 26 : 20), '', textStyle(12, Css.muted, { wordWrap: { width: p.w - 44, useAdvancedWrap: true } }));
     this.refitBtn = new UIButton(this, p.x + p.w / 2, p.y + p.h - (IS_PORTRAIT ? 34 : 28), '改造', () => this.remodel(), {
       variant: 'gold', width: p.w - 44, height: IS_PORTRAIT ? 48 : 36, fontSize: 14,
@@ -331,6 +337,16 @@ export class CustomizationScene extends Phaser.Scene {
     const progress = loadProgress();
     const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId, this.slots());
     saveProgress({ ...progress, upgrades: { ...progress.upgrades, [ship.id]: next } });
+    this.refresh();
+  }
+
+  /** Uses a 訓練教範 on the selected ship (#305). */
+  private useManual(): void {
+    const ship = this.ships[this.selected];
+    if (!ship || this.away(ship.id)) return;
+    const next = useTrainingManual(loadProgress(), ship.id);
+    if (!next) return;
+    saveProgress(withQuestEvents(next, [['manualUse', 1]], Date.now()));
     this.refresh();
   }
 
@@ -525,6 +541,8 @@ export class CustomizationScene extends Phaser.Scene {
       const ready = canRefit(this.refitTable, ship, stage, prof, progress.resources);
       this.refitBtn.setLabel(`${next.suffix} に改造`).setEnabled(ready).setVariant(actionVariant(ready));
     }
+    const books = progress.items.trainingManual ?? 0;
+    this.manualBtn.setLabel(`訓練教範 +${TRAINING_MANUAL_GAIN} (所持 ${books})`).setEnabled(books > 0 && prof < MAX_PROFICIENCY && !this.away(ship.id));
     // Unremodelled ships have no upgrade slots (#72): point at the remodel that opens them.
     this.slotText.setText(slots > 0 ? `装備 ${fitted.length} / ${slots}` : `装備枠なし — 改に改造すると ${upgradeSlots(1)} 枠`);
     if (this.away(ship.id)) {

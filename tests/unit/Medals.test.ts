@@ -109,4 +109,19 @@ describe('ladder names', () => {
     expect(ids).not.toContain('far_seas_2');
     expect(MEDALS.some((m) => m.id === 'harbor_works_4')).toBe(true);
   });
+
+  it('0.0.42: 中分類 (#260), escorts, research Lv10 (#298) and 訓練教範 (#305)', () => {
+    for (const id of ['mid_classes', 'mid_classes_3', 'escort_fleet', 'escort_fleet_3', 'research_peak', 'research_peak_3', 'manual_use', 'science_5']) {
+      expect(MEDALS.some((m) => m.id === id), id).toBe(true);
+    }
+    // 吹雪 and 択捉 (海防艦) are two 中分類 and one escort.
+    const np = { ...emptyNationProgress(['fubuki', 'etorofu', 'kongo']), nation: Nation.IJN, research: ['gunnery_10', 'torpedo_10', 'gunnery_9'] };
+    const ctx = medalContext({ ...emptySave(), nations: { [Nation.IJN]: np } });
+    expect(ctx.midClasses).toBe(3);
+    expect(ctx.escortsOwned).toBe(1);
+    expect(ctx.researchTop).toBe(2);
+    const ids = newMedals(emptyRecord(), { ...ctx, totals: { manualUse: 5 } }).map((m) => m.id);
+    expect(ids).toEqual(expect.arrayContaining(['research_peak', 'manual_use']));
+    expect(ids).not.toContain('mid_classes');
+  });
 });

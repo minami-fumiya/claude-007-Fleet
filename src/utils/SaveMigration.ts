@@ -9,7 +9,7 @@
 
 import { ALL_CAPTAINS, nationCaptains } from '@/systems/CaptainRoster';
 import { CaptainSkill } from '@/types/Captain';
-import { finalAreas, RANKS, rankOf } from '@/systems/RankSystem';
+import { examPassed, finalAreas, RANKS, rankOf } from '@/systems/RankSystem';
 import { currentBase, nationBases } from '@/systems/BaseSystem';
 
 export type RawSave = Record<string, unknown>;
@@ -232,10 +232,36 @@ export const MIGRATIONS: MigrationStep[] = [
     const campaign = Array.isArray(nation.campaign) ? (nation.campaign as unknown[]).filter((c): c is string => typeof c === 'string') : [];
     const finals = finalAreas(key);
     const marshal = RANKS[RANKS.length - 1];
-    const wasMarshal = num(nation.merit) >= marshal.minMerit && finals.length > 0 && finals.every((id) => campaign.includes(id));
+    const wasMarshal = num(nation.merit) >= OLD_MIN_MERIT[marshal.index] && finals.length > 0 && finals.every((id) => campaign.includes(id));
     return wasMarshal ? { ...nation, rankFloor: Math.max(num(nation.rankFloor), marshal.index) } : nation;
   }),
+  // v21 → v22 (0.0.42, #261 #322): four promotion missions per rank (one a medal) and more merit from 少将 on. The rank
+  // held under the old rules (its merit, exams and the one mission per rank) becomes the floor, so nobody is demoted.
+  (data) => mapNations(data, (nation, key) => {
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const campaign = Array.isArray(nation.campaign) ? (nation.campaign as unknown[]).filter((c): c is string => typeof c === 'string') : [];
+    const stats = (typeof nation.rankStats === 'object' && nation.rankStats !== null ? nation.rankStats : {}) as Record<string, unknown>;
+    const merit = num(nation.merit);
+    const progress = { campaign, nation: key };
+    let held = 0;
+    for (const r of RANKS) {
+      const [stat, goal] = OLD_RANK_MISSIONS[r.index] ?? ['', 0];
+      if (merit < OLD_MIN_MERIT[r.index] || !examPassed(r, progress) || (stat && num(stats[stat]) < goal)) break;
+      held = r.index;
+    }
+    // The new 海域攻略 mission counts first clears: those made so far count.
+    const rankStats = { ...stats, areaClear: Math.max(num(stats.areaClear), new Set(campaign).size) };
+    return { ...nation, rankStats, ...(held > num(nation.rankFloor) ? { rankFloor: held } : {}) };
+  }),
 ];
+
+/** The merit of each rank before 0.0.42 (#322) */
+const OLD_MIN_MERIT = [0, 30, 80, 150, 250, 350, 500, 650, 850, 1000, 1300, 1650, 2050, 2500];
+/** The one promotion mission of a rank before 0.0.42 (#142): its counter and goal */
+const OLD_RANK_MISSIONS: Partial<Record<number, [string, number]>> = {
+  2: ['campaignWin', 1], 3: ['sink', 20], 4: ['nightWin', 1], 6: ['sinkCarrier', 1], 7: ['objectiveWin', 1], 8: ['bigS', 1],
+  10: ['sinkSubmarine', 10], 11: ['sinkBattleship', 5], 12: ['sweep', 20],
+};
 
 /** The v18 record (#177): totals kept, an empty split by kind of battle and by scenario. */
 function withSplitRecord(data: RawSave): RawSave {

@@ -1,4 +1,5 @@
-import { IShipData, SUBTYPE_JA } from '@/types/Ship';
+import { IShipData } from '@/types/Ship';
+import { midClass, midLabel } from './ShipKind';
 import { ADDITIVE_MODIFIERS, IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { ShipClass } from '@/types/ShipClass';
 import { shipOrder } from './ShipOrder';
@@ -11,9 +12,9 @@ export const CLASS_JA: Record<ShipClass, string> = {
   [ShipClass.Submarine]: '潜水艦',
 };
 
-/** The ship's type for display: its subtype (巡洋戦艦, 軽空母 …) when it has one, else its class. */
+/** The ship's type for display: its 中分類 (#260: 高速戦艦, 軽空母, 正規空母 …). */
 export function kindLabel(ship: Pick<IShipData, 'shipClass' | 'subtype'>): string {
-  return ship.subtype ? SUBTYPE_JA[ship.subtype] : CLASS_JA[ship.shipClass];
+  return midLabel(midClass(ship));
 }
 
 /** Display order of ship classes in the encyclopedia. */

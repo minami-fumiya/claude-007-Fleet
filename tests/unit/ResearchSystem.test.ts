@@ -7,17 +7,21 @@ import {
   buildUnlocked,
   canResearch,
   FICTIONAL_TECH,
+  MID_BUILD_TECH,
   prerequisitesMet,
+  rankMet,
   regenMultiplier,
   research,
   researchModifiers,
   romanLevel,
   TECH_BRANCHES,
+  TECH_LEVELS,
   TECH_TREE,
   techTier,
   unlockedUpgrades,
 } from '@/systems/ResearchSystem';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
+import { researchMedal } from '@/systems/MedalGate';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
 import { resources } from '@/systems/ResourceSystem';
@@ -48,7 +52,7 @@ describe('ResearchSystem', () => {
 
   it('combines the effects of finished research', () => {
     expect(researchModifiers(tree, []).hpMul).toBe(1);
-    expect(researchModifiers(tree, ['armor_1', 'damage_control_1']).hpMul).toBeCloseTo(1.1025);
+    expect(researchModifiers(tree, ['armor_1', 'damage_control_1']).hpMul).toBeCloseTo(node('armor_1').effects.hpMul! * node('damage_control_1').effects.hpMul!);
   });
 
   it('locks upgrades behind their research', () => {
@@ -100,26 +104,30 @@ describe('tech tree breadth (Sprint 12)', () => {
     expect(TECH_TREE).toBe(tree);
   });
 
-  it('has every branch, each with levels I to at least III and at most V', () => {
+  it('has every branch, each with exactly one project at every level 1〜10 (#298)', () => {
     expect(TECH_BRANCHES.map((b) => b.id)).toEqual([
-      'gunnery', 'torpedo', 'armor', 'damage_control', 'engine', 'radar', 'aa', 'aviation', 'asw', 'night', 'logistics', 'shipbuilding',
+      'gunnery', 'torpedo', 'armor', 'damage_control', 'engine', 'radar', 'aa', 'aviation', 'asw', 'night', 'logistics', 'shipbuilding', 'shipbuilding_air',
     ]);
     for (const b of TECH_BRANCHES) {
-      const nodes = branchNodes(tree, b.id);
-      const levels = new Set(nodes.map((n) => n.level));
-      expect(levels.has(1), b.id).toBe(true);
-      expect(Math.max(...levels), b.id).toBeGreaterThanOrEqual(b.id === 'shipbuilding' ? 2 : 3);
-      expect(Math.max(...levels), b.id).toBeLessThanOrEqual(5);
+      expect(branchNodes(tree, b.id).map((n) => n.level), b.id).toEqual(Array.from({ length: TECH_LEVELS }, (_, i) => i + 1));
     }
     for (const n of tree) expect(TECH_BRANCHES.some((b) => b.id === n.branch), n.id).toBe(true);
-    expect(tree.length).toBeGreaterThanOrEqual(35);
-    expect(tree.length).toBeLessThanOrEqual(55);
+    expect(tree.length).toBe(TECH_BRANCHES.length * TECH_LEVELS);
   });
 
-  it('the five combat branches go up to level V', () => {
-    for (const b of ['gunnery', 'torpedo', 'armor', 'aa', 'aviation'] as const) {
-      expect(Math.max(...branchNodes(tree, b).map((n) => n.level)), b).toBe(5);
+  it('ranks rise with the level, and every branch asks a medal of its field at level 5 and 10 (#298)', () => {
+    for (const b of TECH_BRANCHES) {
+      const nodes = branchNodes(tree, b.id);
+      for (let i = 1; i < nodes.length; i++) expect(nodes[i].rank ?? 0, nodes[i].id).toBeGreaterThanOrEqual(nodes[i - 1].rank ?? 0);
+      expect(nodes[0].rank, b.id).toBeLessThanOrEqual(2);
+      expect(nodes[9].rank, b.id).toBeGreaterThanOrEqual(9);
+      expect(researchMedal(nodes[4].id), nodes[4].id).toBeDefined();
+      expect(researchMedal(nodes[9].id), nodes[9].id).toBeDefined();
     }
+    const n = node('gunnery_6');
+    expect(rankMet(n, (n.rank ?? 0) - 1)).toBe(false);
+    expect(rankMet(n, n.rank)).toBe(true);
+    expect(canResearch(n, ['gunnery_5'], rich, 1, undefined, 0)).toBe(false);
   });
 
   it('costs increase with the level inside every branch', () => {
@@ -156,7 +164,6 @@ describe('tech tree breadth (Sprint 12)', () => {
 
   it('levels II+ need the previous level of the branch (a chain, not a free pick)', () => {
     for (const b of TECH_BRANCHES) {
-      if (b.id === 'shipbuilding') continue;
       for (const n of branchNodes(tree, b.id).filter((x) => x.level > 1)) {
         const sameBranch = n.requires.map(node).filter((r) => r.branch === b.id);
         expect(sameBranch.length, n.id).toBeGreaterThan(0);
@@ -164,25 +171,31 @@ describe('tech tree breadth (Sprint 12)', () => {
     }
   });
 
-  it('shipbuilding nodes have the shared ids, prerequisites and no stat effect', () => {
+  it('shipbuilding: one project per 中分類 in two branches, no stat effect but the larger air wing (#260 #298)', () => {
     expect(node(BUILD_TECH.cruiser).requires).toEqual([]);
     expect(node(BUILD_TECH.submarine).requires).toEqual([]);
-    expect(node(BUILD_TECH.battleship).requires).toEqual(['build_cruiser']);
-    expect(node(BUILD_TECH.carrier).requires).toEqual(['build_cruiser']);
-    for (const id of Object.values(BUILD_TECH)) {
-      expect(node(id).branch).toBe('shipbuilding');
-      expect(node(id).effects).toEqual({});
+    for (const [mid, id] of Object.entries(MID_BUILD_TECH)) {
+      if (!id) continue;
+      expect(['shipbuilding', 'shipbuilding_air'], mid).toContain(node(id).branch);
+      expect(node(id).effects, id).toEqual({});
     }
+    expect(new Set(Object.values(MID_BUILD_TECH).filter(Boolean)).size).toBe(Object.values(MID_BUILD_TECH).filter(Boolean).length);
     expect(researchModifiers(tree, Object.values(BUILD_TECH))).toEqual(researchModifiers(tree, []));
-    expect(buildUnlocked(ShipClass.Destroyer, [])).toBe(true);
-    expect(buildUnlocked(ShipClass.Battleship, ['build_cruiser'])).toBe(false);
-    expect(buildUnlocked(ShipClass.Battleship, ['build_cruiser', 'build_battleship'])).toBe(true);
+    const ship = (shipClass: ShipClass, subtype?: ShipSubtype) => ({ shipClass, subtype });
+    expect(buildUnlocked(ship(ShipClass.Destroyer), [])).toBe(true);
+    expect(buildUnlocked(ship(ShipClass.Destroyer, ShipSubtype.Escort), [])).toBe(false);
+    expect(buildUnlocked(ship(ShipClass.Battleship), ['build_cruiser'])).toBe(false);
+    expect(buildUnlocked(ship(ShipClass.Battleship), ['build_battleship'])).toBe(true);
+    expect(buildUnlocked(ship(ShipClass.Battleship, ShipSubtype.FastBattleship), ['build_battleship'])).toBe(false);
+    // Carriers come before the air research (#85).
+    expect(node('aviation_1').requires).toContain('build_escort_carrier');
   });
 
   it('logistics research multiplies resource regeneration', () => {
     expect(regenMultiplier([])).toBe(1);
-    expect(regenMultiplier(['logistics_1'])).toBeCloseTo(1.1);
-    expect(regenMultiplier(['logistics_1', 'logistics_2', 'logistics_3'])).toBeCloseTo(1.1 * 1.15 * 1.2);
+    // The three old levels' 1.1 × 1.15 × 1.2 spread over ten (#298).
+    expect(regenMultiplier(tree.filter((n) => n.branch === 'logistics').map((n) => n.id))).toBeCloseTo(1.1 * 1.15 * 1.2, 2);
+    expect(regenMultiplier(['logistics_1'])).toBeGreaterThan(1);
     expect(regenMultiplier(['gunnery_1', 'unknown'])).toBe(1);
     // Only logistics nodes carry a regeneration bonus.
     for (const n of tree) if (n.regenMul !== undefined) expect(n.branch, n.id).toBe('logistics');
@@ -200,7 +213,7 @@ describe('tech tree breadth (Sprint 12)', () => {
   });
 
   it('reports branch progress and roman levels', () => {
-    expect(branchProgress(tree, 'gunnery', ['gunnery_1', 'fire_control', 'armor_1'])).toEqual({ done: 2, total: branchNodes(tree, 'gunnery').length });
-    expect(['I', 'II', 'III', 'IV', 'V'].map((_, i) => romanLevel(i + 1))).toEqual(['I', 'II', 'III', 'IV', 'V']);
+    expect(branchProgress(tree, 'gunnery', ['gunnery_1', 'gunnery_2', 'fire_control', 'armor_1'])).toEqual({ done: 2, total: branchNodes(tree, 'gunnery').length });
+    expect([1, 2, 3, 4, 5, 10].map(romanLevel)).toEqual(['I', 'II', 'III', 'IV', 'V', 'X']);
   });
 });

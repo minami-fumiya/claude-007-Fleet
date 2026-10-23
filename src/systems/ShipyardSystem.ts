@@ -3,10 +3,11 @@ import { ShipClass } from '@/types/ShipClass';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
-import { FICTIONAL_TECH } from './ResearchSystem';
+import { FICTIONAL_TECH, MID_BUILD_TECH } from './ResearchSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
 import { assignShips, baseOfProgress, buildMultiplier, currentBaseId, dockTotal, scaleCost } from './BaseSystem';
-import { isHeavyCruiser, isLightCruiser } from './ShipKind';
+import { ESCORT_COST_MUL, ESCORT_TIME_MUL, isLightCruiser, MidClass, midClass } from './ShipKind';
+import { IServiceRecord } from '@/types/Record';
 import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
 import { withQuestEvents } from './QuestSystem';
@@ -17,7 +18,7 @@ import { withQuestEvents } from './QuestSystem';
  * construction research and by the admiral's rank against the ship's grade, or granted as first-clear rewards.
  */
 
-/** Research that allows building each class; destroyers need none. */
+/** Research that allows building each class's plain kind; destroyers need none (the 中分類 have their own, #260). */
 export const BUILD_TECH: Partial<Record<ShipClass, string>> = {
   [ShipClass.Cruiser]: 'build_cruiser',
   [ShipClass.Battleship]: 'build_battleship',
@@ -28,13 +29,13 @@ export const BUILD_TECH: Partial<Record<ShipClass, string>> = {
 /** Heavy cruisers need their own research on top of the (light) cruiser one (#37). */
 export const HEAVY_CRUISER_TECH = 'build_heavy_cruiser';
 
-/** Research that allows building this ship (undefined = none needed). */
+/** Research that allows building this ship (undefined = none needed): its 中分類's (#260 #298). */
 export function buildTechFor(ship: Pick<IShipData, 'shipClass' | 'subtype'>): string | undefined {
-  return isHeavyCruiser(ship) ? HEAVY_CRUISER_TECH : BUILD_TECH[ship.shipClass];
+  return MID_BUILD_TECH[midClass(ship)];
 }
 
 export function isBuildTech(id: string): boolean {
-  return id === HEAVY_CRUISER_TECH || Object.values(BUILD_TECH).includes(id);
+  return Object.values(MID_BUILD_TECH).includes(id);
 }
 
 /** A ship's grade is how many of these HP marks it exceeds (0..5); each grade needs a rank (RankSystem.GRADE_RANK). */
@@ -76,7 +77,7 @@ const LIGHT_CRUISER_COST_MUL = 0.85;
 /** Build cost from the ship's class, HP and armour (rounded to tens). */
 export function buildCost(ship: IShipData): IResources {
   const k = COST_PER_HP[ship.shipClass] ?? COST_PER_HP[ShipClass.Cruiser];
-  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1);
+  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_COST_MUL : 1);
   const size = { fuel: ship.hp, ammo: ship.hp, steel: ship.hp + ship.armor * ARMOR_HP, bauxite: ship.hp };
   const out = resources();
   for (const key of RESOURCE_KEYS) out[key] = Math.round((k[key] * size[key] * mul) / 10) * 10;
@@ -144,7 +145,47 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
-export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'medal' | 'resources' | 'dock' | 'ready';
+export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
+
+/**
+ * Sinkings each 中分類 asks before it can be built (#285): the kind of enemy the new kind of ship answers, from the
+ * shared service record. Plain destroyers (the starters) ask none.
+ */
+export const MID_KILLS: Partial<Record<MidClass, { target: ShipClass; count: number }>> = {
+  LeaderDestroyer: { target: ShipClass.Destroyer, count: 30 },
+  AADestroyer: { target: ShipClass.Carrier, count: 3 },
+  EscortDestroyer: { target: ShipClass.Submarine, count: 5 },
+  Escort: { target: ShipClass.Submarine, count: 3 },
+  LightCruiser: { target: ShipClass.Destroyer, count: 10 },
+  HeavyCruiser: { target: ShipClass.Cruiser, count: 10 },
+  AACruiser: { target: ShipClass.Carrier, count: 5 },
+  BattleCruiser: { target: ShipClass.Cruiser, count: 15 },
+  Battleship: { target: ShipClass.Battleship, count: 3 },
+  FastBattleship: { target: ShipClass.Battleship, count: 10 },
+  AviationBattleship: { target: ShipClass.Carrier, count: 8 },
+  EscortCarrier: { target: ShipClass.Submarine, count: 3 },
+  LightCarrier: { target: ShipClass.Carrier, count: 2 },
+  FleetCarrier: { target: ShipClass.Carrier, count: 5 },
+  ArmoredCarrier: { target: ShipClass.Carrier, count: 15 },
+  Submarine: { target: ShipClass.Destroyer, count: 5 },
+  LargeSubmarine: { target: ShipClass.Cruiser, count: 5 },
+  SubmarineCarrier: { target: ShipClass.Carrier, count: 10 },
+};
+
+/** The ship's kill condition and how far the record is: undefined when its 中分類 asks none. */
+export function killNeed(ship: Pick<IShipData, 'shipClass' | 'subtype'>, record?: Pick<IServiceRecord, 'sunk'>): { target: ShipClass; count: number; have: number } | undefined {
+  const need = MID_KILLS[midClass(ship)];
+  return need ? { ...need, have: record?.sunk[need.target] ?? 0 } : undefined;
+}
+
+/** "巡洋艦撃沈 4 / 10" */
+export function killNeedText(need: { target: ShipClass; count: number; have: number }): string {
+  return `${CLASS_SINK_JA[need.target]}撃沈 ${Math.min(need.have, need.count)} / ${need.count}`;
+}
+
+const CLASS_SINK_JA: Record<ShipClass, string> = {
+  [ShipClass.Battleship]: '戦艦', [ShipClass.Cruiser]: '巡洋艦', [ShipClass.Destroyer]: '駆逐艦', [ShipClass.Carrier]: '空母', [ShipClass.Submarine]: '潜水艦',
+};
 
 /** Why a ship can or can't be built right now; `techNames` maps research ids to their display names. */
 export function buildState(progress: IProgress, roster: IShipData[], ship: IShipData): BuildState {
@@ -155,6 +196,8 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
+  const kills = killNeed(ship, progress.record);
+  if (kills && kills.have < kills.count) return 'kills';
   // The biggest battleships and carriers, and the fictional designs, need a medal too (#169).
   if (!hasMedal(progress.record ?? { medals: [] }, shipMedal(ship, shipGrade(ship)))) return 'medal';
   if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
@@ -163,7 +206,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
 }
 
 /** Short label for a build state, e.g. "要研究: 巡洋艦建造" / "要階級: 少将" / "作戦報酬: 坊ノ岬沖". */
-export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}): string {
+export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>): string {
   switch (state) {
     case 'owned': return '保有';
     case 'building': return '建造中';
@@ -178,6 +221,10 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
     }
     case 'fictional': return `要研究: ${techNames[FICTIONAL_TECH] ?? FICTIONAL_TECH}`;
     case 'rank': return `要階級: ${gradeRankName(shipGrade(ship))}`;
+    case 'kills': {
+      const need = killNeed(ship, record);
+      return need ? `不足: ${killNeedText(need)}` : '';
+    }
     case 'medal': return `要勲章: ${medalName(shipMedal(ship, shipGrade(ship)) ?? '')}`;
     case 'resources': return '資源不足';
     case 'ready': return '建造可 ›';
@@ -204,7 +251,7 @@ export const GRADE_MINUTES = 0.5;
 
 export function buildTimeMs(ship: IShipData, timeMul = 1): number {
   const base = isLightCruiser(ship) ? LIGHT_CRUISER_MINUTES : BUILD_MINUTES[ship.shipClass];
-  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.fictional ? 1.5 : 1);
+  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.fictional ? 1.5 : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_TIME_MUL : 1);
   return Math.round(minutes * 60_000 * timeMul);
 }
 
@@ -248,7 +295,7 @@ export function completeBuilds(progress: IProgress, roster: IShipData[], now: nu
 
 /** Finishes a build at once with a 高速建造材; null when there is none or the ship isn't being built. */
 export function fastBuild(progress: IProgress, roster: IShipData[], shipId: string, now: number): IProgress | null {
-  const items = progress.items ?? { fastRepair: 0, fastBuild: 0, captainBook: 0 };
+  const items = progress.items ?? { fastRepair: 0, fastBuild: 0, captainBook: 0, trainingManual: 0 };
   if (items.fastBuild <= 0 || !(progress.builds ?? []).some((b) => b.shipId === shipId)) return null;
   const sped = { ...progress, items: { ...items, fastBuild: items.fastBuild - 1 }, builds: progress.builds.map((b) => (b.shipId === shipId ? { ...b, endsAt: now } : b)) };
   // 突貫建造章 (#315) counts the items used.

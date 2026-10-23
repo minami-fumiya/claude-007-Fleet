@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ShipClass } from '@/types/ShipClass';
-import { ALL_MISSIONS_DONE } from '@/systems/RankSystem';
+import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MIN_REPAIR_MS, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
 
 const empty = (): IDockState => ({ damage: {}, docks: [] });
@@ -65,7 +65,7 @@ describe('DockSystem', () => {
 
   it('a new base has one dock and builds more with rank and resources, up to eight (#38 #211 #244)', () => {
     const rich = { fuel: 9999, ammo: 9999, steel: 9999, bauxite: 9999 };
-    const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich, rankStats: ALL_MISSIONS_DONE };
+    const base = { ...empty(), campaign: [] as string[], merit: 0, resources: rich, rankStats: ALL_MISSIONS_DONE, record: { medals: ALL_MISSION_MEDALS } };
     expect(dockCount(base)).toBe(START_DOCKS);
     expect(START_DOCKS).toBe(1);
     expect(nextDock(base)?.state).toBe('rank');
