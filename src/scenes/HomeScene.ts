@@ -188,7 +188,10 @@ export class HomeScene extends Phaser.Scene {
     const rankLine = `${rank.name}  ·  出撃枠 ${fleetSlots(progress)}`;
     if (IS_PORTRAIT) {
       this.add.text(x, a.y, rankLine, textStyle(12, Css.gold, { fontStyle: 'bold' }));
-      this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
+      const next = this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
+      // An exam and the missions can outgrow the narrow screen: shrink to fit.
+      const room = CANVAS_W - x - 12;
+      if (next.width > room) next.setScale(room / next.width);
     } else {
       this.add.text(x, a.y + 2, `${rankLine}  ·  ${promotionText(progress)}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
     }
