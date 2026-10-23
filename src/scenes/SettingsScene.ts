@@ -6,7 +6,8 @@ import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { clampVolume, ISettings, stepVolume } from '@/systems/SettingsSystem';
+import { clampVolume, frameLimitLabel, ISettings, nextFrameLimit, stepVolume } from '@/systems/SettingsSystem';
+import { applyFrameLimit } from '@/utils/FrameLimit';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
 import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
@@ -131,11 +132,19 @@ export class SettingsScene extends Phaser.Scene {
       x = P.x + 28 + colW + COL_GAP;
       y = P.y + 24;
     }
-    // 動作情報 (#99): fps, objects and frame time over the battle.
-    this.track(this.add.text(x, y + BTN_H / 2, '動作情報 (戦闘中の fps)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    // 動作情報 (#99): fps, objects and frame time over the battle; and the frame limit (#336), 30 to save the battery.
+    const fpsW = IS_PORTRAIT ? 170 : 130;
+    this.track(this.add.text(x, y + BTN_H / 2, '動作情報 (fps)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
     this.track(
-      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.showFps ? '表示' : '非表示', () => this.change({ showFps: !s.showFps }), {
-        variant: s.showFps ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
+      new UIButton(this, x + w - fpsW * 1.5 - 10, y + BTN_H / 2, frameLimitLabel(s.frameLimit), () => {
+        const frameLimit = nextFrameLimit(s.frameLimit);
+        this.change({ frameLimit });
+        applyFrameLimit(this.game, frameLimit);
+      }, { variant: s.frameLimit === 0 ? 'secondary' : 'primary', width: fpsW, height: BTN_H, fontSize: 15 }),
+    );
+    this.track(
+      new UIButton(this, x + w - fpsW / 2, y + BTN_H / 2, s.showFps ? '表示' : '非表示', () => this.change({ showFps: !s.showFps }), {
+        variant: s.showFps ? 'primary' : 'secondary', width: fpsW, height: BTN_H, fontSize: 16,
       }),
     );
     y += BTN_H + (IS_PORTRAIT ? 16 : 20);

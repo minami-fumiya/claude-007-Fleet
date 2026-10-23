@@ -22,9 +22,24 @@ export interface ISettings {
   difficulty: Difficulty;
   /** 動作情報 (#99): fps, objects and frame time in battle */
   showFps: boolean;
+  /** フレームの上限 (#336): 0 = the screen's own rate, else 30 or 60 (30 saves the battery) */
+  frameLimit: FrameLimit;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false };
+export type FrameLimit = 0 | 30 | 60;
+export const FRAME_LIMITS: FrameLimit[] = [0, 60, 30];
+
+/** "端末" / "60" / "30" for the settings button. */
+export function frameLimitLabel(limit: FrameLimit): string {
+  return limit === 0 ? '上限 端末' : `上限 ${limit}`;
+}
+
+/** The next choice of the frame limit button. */
+export function nextFrameLimit(limit: FrameLimit): FrameLimit {
+  return FRAME_LIMITS[(FRAME_LIMITS.indexOf(limit) + 1) % FRAME_LIMITS.length];
+}
+
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false, frameLimit: 0 };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -56,6 +71,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       lastSeenVersion: typeof d.lastSeenVersion === 'string' ? d.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
       difficulty: isDifficulty(d.difficulty) ? d.difficulty : DEFAULT_SETTINGS.difficulty,
       showFps: typeof d.showFps === 'boolean' ? d.showFps : DEFAULT_SETTINGS.showFps,
+      frameLimit: FRAME_LIMITS.includes(d.frameLimit as FrameLimit) ? (d.frameLimit as FrameLimit) : DEFAULT_SETTINGS.frameLimit,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

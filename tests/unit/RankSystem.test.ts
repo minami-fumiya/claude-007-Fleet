@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { MEDALS } from '@/systems/RecordSystem';
 import { runMigrations } from '@/utils/SaveMigration';
 import {
-  addMerit, addRankStats, ALL_MISSION_MEDALS, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examAreas, examPassed, examProgress, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
+  addMerit, addRankStats, ALL_MISSION_MEDALS, missionLines, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examAreas, examPassed, examProgress, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
   MERIT_FIRST_CLEAR, maxBuildGrade, meritFor, nextRank, nextSlotRank, promotionText, RANKS, rankOf, START_RANK, TUTORIAL_RANK,
 } from '@/systems/RankSystem';
 import campaign from '@/data/campaign.json';
@@ -112,7 +112,10 @@ describe('promotion missions (#142)', () => {
   it('merit alone stops at the first rank with an open mission', () => {
     expect(rankOf(fresh(100)).name).toBe('准尉');
     expect(nextRank(fresh(100))?.missions.map((m) => m.stat)).toEqual(['campaignWin', 'sink', 'areaClear', 'medal']);
-    expect(promotionText(fresh(100))).toBe('次の昇進: 少尉 (昇進任務 あと 4)');
+    // 少尉's four come from the first clear: one line while none is done (#339).
+    expect(promotionText(fresh(100))).toBe('次の昇進: 少尉 (最初の海域を攻略する)');
+    expect(missionLines(2, fresh(100))).toEqual(['最初の海域を攻略する']);
+    expect(missionLines(2, addRankStats(fresh(100), { campaignWin: 1, sink: 1, areaClear: 1 }))).toEqual(['勲章「初陣勝利章」を得る', '済 3 / 4']);
     expect(promotionText(addRankStats(fresh(100), { campaignWin: 1, sink: 1, areaClear: 1 }))).toBe('次の昇進: 少尉 (勲章「初陣勝利章」を得る)');
     const done = addRankStats(fresh(100), { campaignWin: 1, sink: 1, areaClear: 1 });
     expect(rankOf(done).name).toBe('准尉');
@@ -121,19 +124,20 @@ describe('promotion missions (#142)', () => {
 
   it('counters add up and show their progress', () => {
     const medals = { record: { medals: ['first_victory', 'victor'] } };
-    let p = { ...addRankStats(fresh(200), { campaignWin: 5, sink: 12, areaClear: 1, nightWin: 1 }), ...medals };
+    let p = { ...addRankStats(fresh(200), { campaignWin: 5, sink: 10, areaClear: 1 }), ...medals };
     expect(rankOf(p).name).toBe('少尉');
-    expect(missionText(openMissions(RANKS[3], p)[0], p)).toBe('作戦で敵艦を 20 隻撃沈 (12 / 20)');
-    p = addRankStats(p, { sink: 8, nightWin: 0 });
+    // 中尉 since #339: no night battle (its first area is deeper) and no medal.
+    expect(missionText(openMissions(RANKS[3], p)[0], p)).toBe('作戦の海域を 3 か所攻略 (1 / 3)');
+    p = addRankStats(p, { areaClear: 2 });
     expect(rankOf(p).name).toBe('中尉');
     expect(addRankStats(p, { sink: 0 })).toBe(p);
   });
 
-  it('four missions on every rank from 少尉 to 元帥, one of them a medal that exists (#261)', () => {
+  it('four missions on every rank from 少尉 to 元帥, one of them a medal that exists (#261; 中尉 three, #339)', () => {
     for (let index = 2; index < RANKS.length; index++) {
       const list = RANK_MISSIONS[index] ?? [];
-      expect(list, RANKS[index].name).toHaveLength(4);
-      expect(list.filter((m) => m.stat === 'medal'), RANKS[index].name).toHaveLength(1);
+      expect(list, RANKS[index].name).toHaveLength(index === 3 ? 3 : 4);
+      expect(list.filter((m) => m.stat === 'medal'), RANKS[index].name).toHaveLength(index === 3 ? 0 : 1);
       for (const m of list) expect(m.goal).toBeGreaterThan(0);
       for (const m of list) if (m.medal) expect(MEDALS.some((x) => x.id === m.medal), m.medal).toBe(true);
     }

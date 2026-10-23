@@ -16,7 +16,7 @@ import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources }
 import { CAPTAIN_PROMOTION_RANK, captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
-import { clearCount, fleetSlots, missionDone, missionText, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
+import { clearCount, fleetSlots, missionLines, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
 import { buildDock, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
@@ -32,7 +32,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseOfProgress, fleetBuildTimeMul, fleetDockView, mergeFleetDocks, repairTimeMultiplier } from '@/systems/BaseSystem';
 import {
-  activeQuests, addItems, claimableCount, recordQuestEvent, QUESTS, formatItems, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
+  activeQuests, addItems, claimableCount, recordQuestEvent, QUESTS, formatItems, shortReward, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
   gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
 import { MEDALS } from '@/systems/RecordSystem';
@@ -349,7 +349,9 @@ export class HomeScene extends Phaser.Scene {
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
       // A reward that would overflow the holding cap (#221) waits unclaimed until there is room, or is taken anyway.
       const lost = status === 'claimable' ? gainResources(progress.resources, q.reward, cap).lost : resources();
-      const reward = [formatResources(q.reward), formatItems(q.items ?? {}), q.gold ? `ゴールド ${q.gold}` : '', q.captains ? `艦長 +${q.captains}` : '', medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・') + lostNote(lost);
+      // The short form on a phone (#336): the long one shrank out of reading there.
+      const full = [formatResources(q.reward), formatItems(q.items ?? {}), q.gold ? `ゴールド ${q.gold}` : '', q.captains ? `艦長 +${q.captains}` : '', medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・');
+      const reward = (IS_PORTRAIT ? shortReward(q, medal) : full) + lostNote(lost);
       return { id: q.id, name: q.name, text: q.text, value: questProgress(state, q), goal: q.goal, reward, status, overflow: lostNote(lost) !== '' };
     });
     const cols = IS_PORTRAIT ? 1 : 2;
@@ -403,11 +405,19 @@ export class HomeScene extends Phaser.Scene {
       const fit = <T extends Phaser.GameObjects.Text>(t: T): T => (t.width > textW ? t.setScale(textW / t.width) : t);
       add(fit(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted))));
       drawMeter(add(this.add.graphics()), tx, ry + rowH - (IS_PORTRAIT ? 30 : 27), textW, 4, r.value / r.goal, r.status === 'claimable' ? Colors.gold : claimed ? Colors.muted : Colors.cyan);
-      if (r.reward) add(fit(this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : r.overflow ? Css.danger : Css.gold)).setOrigin(0, 1)));
+      // On a phone the reward runs the whole width of the row, under the button (#336: a weekly's resources, items
+      // and gold shrank out of reading beside it, and the gold was lost).
+      const rewardW = IS_PORTRAIT ? colW - 32 : textW;
+      if (r.reward) {
+        const t = this.add.text(tx, ry + rowH - 8, r.reward, textStyle(11, claimed ? Css.dim : r.overflow ? Css.danger : Css.gold)).setOrigin(0, 1);
+        add(t.width > rewardW ? t.setScale(rewardW / t.width) : t);
+      }
       const claimLabel = !r.overflow ? '受け取る' : this.confirmClaim === r.id ? 'あふれても\n受け取る' : '上限で保留';
       const label = { claimable: claimLabel, progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
-      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
-        variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: rowH - 24, fontSize: 14,
+      // Portrait: the button keeps to the top of the row, clear of the reward line.
+      const btnH = IS_PORTRAIT ? rowH - 44 : rowH - 24;
+      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, IS_PORTRAIT ? ry + 10 + btnH / 2 : ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
+        variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: btnH, fontSize: 14,
       })).setEnabled(r.status === 'claimable' && tab !== 'rank');
       if (claimed) btn.setAlpha(0.5);
     });
@@ -480,7 +490,7 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
-      const missions = r.index === current.index + 1 ? (RANK_MISSIONS[r.index] ?? []).map((m) => (missionDone(progress, m) ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`)) : [];
+      const missions = r.index === current.index + 1 ? missionLines(r.index, progress).map((m) => (m.startsWith('済') ? m : `任務: ${m}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
       // From 少佐 on (#285).
       const ahead = RANKS.filter((x) => x.index > current.index && x.index <= r.index && x.index >= CAPTAIN_PROMOTION_RANK).length;
@@ -767,7 +777,7 @@ export class HomeScene extends Phaser.Scene {
     const list = new ScrollList(this, { x: d.x + pad - 4, y, w: d.w - pad * 2 + 8, h: d.y + d.h - 12 - y });
     this.dockList = list;
     const rowW = d.w - pad * 2 - 8;
-    const rowH = IS_PORTRAIT ? 70 : 50;
+    const rowH = IS_PORTRAIT ? 78 : 50;
     // Portrait: the tag over the name on the left, the action and the time left on the right, the meter along the
     // bottom. Landscape: tag, name over the meter (time to its right) or the damage line, the action on the right.
     const meterX = IS_PORTRAIT ? 12 : 110;

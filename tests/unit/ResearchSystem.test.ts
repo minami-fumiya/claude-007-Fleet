@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import upgradesData from '@/data/upgrades.json';
 import {
   availableShips,
+  researchOrder,
   branchNodes,
   branchProgress,
   BUILD_TECH,
@@ -215,5 +217,16 @@ describe('tech tree breadth (Sprint 12)', () => {
   it('reports branch progress and roman levels', () => {
     expect(branchProgress(tree, 'gunnery', ['gunnery_1', 'gunnery_2', 'fire_control', 'armor_1'])).toEqual({ done: 2, total: branchNodes(tree, 'gunnery').length });
     expect([1, 2, 3, 4, 5, 10].map(romanLevel)).toEqual(['I', 'II', 'III', 'IV', 'V', 'X']);
+  });
+});
+
+describe('the order research opens things (#340)', () => {
+  it('refits follow it: 射撃指揮装置 (after 射撃管制) comes after the first-level ones', () => {
+    const upgrades = (upgradesData as { upgrades: Array<{ id: string; requires?: string }> }).upgrades;
+    const sorted = [...upgrades].sort((a, b) => researchOrder(a.requires ?? '') - researchOrder(b.requires ?? ''));
+    expect(sorted[0].id).toBe('heavy_shells');
+    expect(sorted.findIndex((u) => u.id === 'fire_director')).toBeGreaterThan(sorted.findIndex((u) => u.id === 'aa_guns'));
+    expect(sorted[sorted.length - 1].id).toBe('radar');
+    expect(researchOrder('gunnery_1')).toBeLessThan(researchOrder('fire_control'));
   });
 });

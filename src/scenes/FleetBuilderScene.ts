@@ -1751,6 +1751,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
     const f = hpFraction(progress, ship.id);
     const p = progress.proficiency[ship.id] ?? 0;
+    // Out on an expedition or in the dorm (#337): said first, it can't sail.
+    const away = shipsAway(progress.expeditions).has(ship.id) ? '遠征中' : inDorm(progress.dorm, 'ship', ship.id) ? '寮舎' : '';
+    if (away) return short ? `${away}  HP ${Math.round(ship.hp * f)}/${ship.hp}` : `${away}   HP ${Math.round(ship.hp * f)} / ${ship.hp}`;
     if (f >= 1) return short ? `HP ${ship.hp} 装 ${ship.armor} 速 ${ship.speed}` : `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}  ·  ${proficiencyLabel(p)} ${p}`;
     const tag = isDocked(progress, ship.id) ? '入渠中' : f <= 0.25 ? '大破' : f <= 0.5 ? '中破' : '小破';
     // Exercises start at full HP, so the damage only matters for a campaign sortie.

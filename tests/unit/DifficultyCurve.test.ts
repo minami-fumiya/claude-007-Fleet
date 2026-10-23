@@ -6,6 +6,8 @@ import { SEVEN_SEAS } from '@/systems/RecordSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { ICampaignData } from '@/types/Campaign';
 import { IShipData } from '@/types/Ship';
+import { ShipClass } from '@/types/ShipClass';
+import { RANK_MISSIONS, RANKS } from '@/systems/RankSystem';
 import campaign from '@/data/campaign.json';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
@@ -147,5 +149,29 @@ describe('七つの海の進み具合 (#250)', () => {
     const all = (t: string): string[] => data.areas.filter((a) => a.theater === t && !a.training).map((a) => a.id);
     expect(sevenSeasText(data, {})).toBe('七つの海 0 / 7 制覇');
     expect(sevenSeasText(data, { IJN: { campaign: all('pacific') }, RN: { campaign: [...all('atlantic'), ...all('baltic')] } })).toBe('七つの海 2 / 7 制覇');
+  });
+});
+
+describe('promotion missions and the curve (#339)', () => {
+  it('no rank asks for a fight its recommended areas do not have', () => {
+    // A mission that needs a kind of area (night, a carrier, a submarine, a battleship, an objective) belongs to a
+    // rank at or past the recommended rank of the shallowest such area, for every nation: 中尉 asked for a night
+    // battle whose first area was a 大尉 one.
+    const cls = (a: ICampaignData['areas'][number]) => a.enemy.ships.map((id) => registry.byId(id)?.shipClass);
+    const needs: Record<string, (a: ICampaignData['areas'][number]) => boolean> = {
+      nightWin: (a) => (a as { time?: string }).time === 'Night',
+      sinkCarrier: (a) => cls(a).includes(ShipClass.Carrier),
+      sinkSubmarine: (a) => cls(a).includes(ShipClass.Submarine),
+      sinkBattleship: (a) => cls(a).includes(ShipClass.Battleship),
+      objectiveWin: (a) => String(a.objective) !== 'Annihilate',
+    };
+    for (const nation of PLAYABLE_NATIONS) {
+      const areas = data.areas.filter((a) => !a.training);
+      for (const [stat, has] of Object.entries(needs)) {
+        const first = Math.min(...areas.filter(has).map((a) => areaDepth(data, a, nation)));
+        const asked = Object.entries(RANK_MISSIONS).filter(([, list]) => list?.some((m) => m.stat === stat)).map(([i]) => Number(i));
+        for (const rank of asked) expect(rank, `${nation} ${stat}: ${RANKS[rank].name} < ${recommendedRank(first).name}`).toBeGreaterThanOrEqual(recommendedRank(first).index);
+      }
+    }
   });
 });
