@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  BUILD_TECH, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
+  BUILD_TECH, killNeed, MID_KILLS, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
   REWARD_SHIPS, rewardShipFor, shipGrade, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, docksInUse, fastBuild,
 } from '@/systems/ShipyardSystem';
 import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE, RANKS } from '@/systems/RankSystem';
@@ -9,6 +9,7 @@ import { emptyProgress, finishBuilds, IProgress } from '@/utils/ProgressStore';
 import { resources } from '@/systems/ResourceSystem';
 import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
+import { ALL_MID_CLASSES } from '@/systems/ShipKind';
 import { Nation } from '@/types/Nation';
 import { ITechNode } from '@/types/Progression';
 import techTree from '@/data/tech-tree.json';
@@ -32,9 +33,11 @@ const byId = (id: string): IShipData => IJN.find((s) => s.id === id)!;
 const rich = resources({ fuel: 20000, ammo: 20000, steel: 20000, bauxite: 20000 });
 const withClears = (n: number): string[] => Array.from({ length: n }, (_, i) => `x${i}`);
 // Promotion missions (#142) done: merit alone sets the rank here.
+/** Enough sinkings of every class for every kill condition (#285). */
+const ALL_SUNK = Object.fromEntries(Object.values(ShipClass).map((c) => [c, 999]));
 const player = (patch: Partial<IProgress> = {}): IProgress => {
   const p = emptyProgress();
-  return { ...p, ships: ['fubuki'], rankStats: ALL_MISSIONS_DONE, record: { ...p.record, medals: ALL_MISSION_MEDALS }, ...patch };
+  return { ...p, ships: ['fubuki'], rankStats: ALL_MISSIONS_DONE, record: { ...p.record, medals: ALL_MISSION_MEDALS, sunk: ALL_SUNK }, ...patch };
 };
 
 describe('ShipyardSystem (#18 / #29)', () => {
@@ -122,6 +125,20 @@ describe('ShipyardSystem (#18 / #29)', () => {
     const light = byId('sendai');
     const asHeavy = { ...light, subtype: ShipSubtype.HeavyCruiser };
     expect(buildCost(light).steel).toBeLessThan(buildCost(asHeavy).steel);
+  });
+
+  it('each 中分類 asks sinkings of its foe before it can be built, and says how far (#285)', () => {
+    const none = (p: IProgress): IProgress => ({ ...p, record: { ...p.record, sunk: {} } });
+    const p = player({ resources: rich, research: ['build_cruiser', 'build_escort', 'build_heavy_cruiser'], merit: 100 });
+    expect(killNeed(byId('mutsuki'))).toBeUndefined();
+    expect(buildState(none(p), IJN, byId('mutsuki'))).toBe('ready');
+    expect(buildState(none(p), IJN, byId('atago'))).toBe('kills');
+    expect(buildStateLabel('kills', byId('atago'), {}, {}, { sunk: { [ShipClass.Cruiser]: 4 } })).toBe('不足: 巡洋艦撃沈 4 / 10');
+    const nine = { ...p, record: { ...p.record, sunk: { [ShipClass.Cruiser]: 9 } } };
+    expect(buildState(nine, IJN, byId('atago'))).toBe('kills');
+    expect(buildState({ ...p, record: { ...p.record, sunk: { [ShipClass.Cruiser]: 10 } } }, IJN, byId('atago'))).toBe('ready');
+    // Every 中分類 but the starters' asks something, and only of real ship classes.
+    for (const m of ALL_MID_CLASSES) if (m !== 'Destroyer') expect(MID_KILLS[m], m).toBeDefined();
   });
 
   it('building pays and adds the ship once', () => {
@@ -215,6 +232,15 @@ describe('reward-only ships (#39)', () => {
         const cls = all.find((x) => x.id === id)!.shipClass;
         const want = campaignData.areas.find((x) => x.id === area)!.rewardShip as ShipClass;
         expect(order.indexOf(cls), `${area} ${id}`).toBeLessThanOrEqual(order.indexOf(want));
+      }
+    }
+  });
+
+  it('every theater a navy fights in has three reward ships or more (#285)', () => {
+    for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
+      for (const t of campaignData.theaters.filter((x) => (x.opponents as Record<string, string | undefined>)[nation])) {
+        const n = campaignData.areas.filter((x) => x.theater === t.id && byArea?.[x.id]).length;
+        expect(n, `${nation} ${t.id}`).toBeGreaterThanOrEqual(3);
       }
     }
   });

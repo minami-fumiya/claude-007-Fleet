@@ -18,7 +18,9 @@ import { midClass, midLabel, midModifiers } from '@/systems/ShipKind';
 import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
 import { SKILL_COLOR } from '@/ui/SkillColors';
 import { nationCaptains } from '@/systems/CaptainRoster';
-import { rewardAreaOf } from '@/systems/ShipyardSystem';
+import { buildTechFor, gradeRankName, killNeed, killNeedText, rewardAreaOf, shipGrade } from '@/systems/ShipyardSystem';
+import { medalName, shipMedal } from '@/systems/MedalGate';
+import { FICTIONAL_TECH, TECH_TREE } from '@/systems/ResearchSystem';
 import { loadSave } from '@/utils/ProgressStore';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
@@ -374,8 +376,18 @@ export class EncyclopediaScene extends Phaser.Scene {
   private shipSource(ship: IShipData): string {
     const area = rewardAreaOf(ship);
     if (area) return `報酬限定艦 — 作戦「${AREA_NAMES[area] ?? area}」で S 評価を取ると入手`;
-    if (ship.fictional) return '工廠で建造 (研究「架空艦計画」が必要)';
-    return '工廠で建造 (研究と階級で建造できる艦が増えます)';
+    // The build conditions (#285), with how far the shared record is on the sinkings.
+    const tech = (id: string): string => TECH_TREE.find((n) => n.id === id)?.name ?? id;
+    const record = loadSave().record;
+    const lines = ['工廠で建造 — 条件:'];
+    const research = [buildTechFor(ship), ship.fictional ? FICTIONAL_TECH : undefined].filter((id): id is string => id !== undefined);
+    if (research.length > 0) lines.push(`・研究「${research.map(tech).join('」「')}」`);
+    lines.push(`・階級 ${gradeRankName(shipGrade(ship))} 以上`);
+    const kills = killNeed(ship, record);
+    if (kills) lines.push(`・${killNeedText(kills)}${kills.have >= kills.count ? ' ✓' : ''}`);
+    const medal = shipMedal(ship, shipGrade(ship));
+    if (medal) lines.push(`・勲章「${medalName(medal)}」${record.medals.includes(medal) ? ' ✓' : ''}`);
+    return lines.join('\n');
   }
 
   private buildShipDetail(ship: IShipData, owned: boolean): void {
@@ -438,7 +450,8 @@ export class EncyclopediaScene extends Phaser.Scene {
       const names = others.map((s) => (have.includes(s.id) ? s.name.replace(/\s*\(.*\)\s*$/, '') : HIDDEN_NAME));
       y = this.section(y, `同型艦 — ${hull.className} ${hull.number} 番艦 (全 ${hull.of} 隻)`, names.join('・'), Css.muted);
     }
-    this.section(y, '解説', ship.description ?? '—', Css.muted);
+    y = this.section(y, '解説', ship.description ?? '—', Css.muted);
+    this.section(y, '入手・解禁の条件', this.shipSource(ship), Css.dim);
   }
 
   // -------------------------------------------------------------------------
