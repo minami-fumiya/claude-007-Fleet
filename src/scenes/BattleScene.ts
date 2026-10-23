@@ -29,6 +29,7 @@ import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
+import { costCap, fleetCost } from '@/systems/FleetCost';
 import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
@@ -1836,6 +1837,10 @@ export class BattleScene extends Phaser.Scene {
       const best = betterRank(progress.areaRanks[area.id], rank);
       if (best && best !== progress.areaRanks[area.id]) progress = { ...progress, areaRanks: { ...progress.areaRanks, [area.id]: best } };
     }
+    // The fleet's sortie cost against the cap of the rank it sailed at (#306).
+    const sailed = (this.battleData?.playerFleet?.slots ?? []).map((s) => s.shipData).filter((s): s is IShipData => s !== null);
+    const fleetCostNow = fleetCost(sailed, progress.refits);
+    const costCapNow = costCap(rankOf(progress).index);
     // 任務 (#52): the sortie, the win and what was sunk.
     const sunk = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy);
     const sunkOf = (c: ShipClass): number => sunk.filter((e) => e.stats.shipClass === c).length;
@@ -1849,6 +1854,8 @@ export class BattleScene extends Phaser.Scene {
       ['landKill', this.enemies.filter((e) => e.isLand && !e.isAlive).length],
       // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
       ['underdogWin', won(!!area && this.underdog())],
+      // 出撃コスト (#306): a campaign win with the fleet's cost right at the rank's cap, or at half of it or less.
+      ['fullCostWin', won(!!area && fleetCostNow === costCapNow)], ['lightCostWin', won(!!area && fleetCostNow * 2 <= costCapNow)],
       // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.
       ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.

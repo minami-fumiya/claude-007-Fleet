@@ -247,6 +247,9 @@ export const MEDALS: IMedalRule[] = [
   // Lv10 of a branch (#298): one branch, then most, then all of them.
   ...ladder('research_peak', '研究の極み章', 'growth', [1, 6, 13], (g) => (g === 13 ? '1 か国で全部門の研究を Lv10 まで終える' : `1 か国で ${g} 部門の研究を Lv10 まで終える`), (_r, c) => c.researchTop ?? 0),
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9, 20, 30], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
+  // 出撃コスト (#306): the fleet right at its cap, or a light one.
+  ...ladder('full_cost', '総力戦章', 'battle', [1, 10, 50], (g) => `作戦の海域で、出撃コストを上限ちょうどにして ${g} 回勝利する`, (_r, c) => total(c, 'fullCostWin')),
+  ...ladder('light_cost', '軽快部隊章', 'battle', [1, 10, 50], (g) => `作戦の海域で、出撃コストを上限の半分以下にして ${g} 回勝利する`, (_r, c) => total(c, 'lightCostWin')),
   ...ladder('underdog', '寡兵の勝利章', 'battle', [1, 5, 20], (g) => `作戦の海域で、敵の 0.6 倍以下の戦力で ${g} 回勝利する`, (_r, c) => total(c, 'underdogWin')),
   ...ladder('spotless', '無傷の完勝章', 'battle', [1, 10, 50], (g) => `喪失なし・残り耐久 95% 以上で ${g} 回勝利する`, (_r, c) => total(c, 'flawlessWin')),
   ...ladder('land_attack', '対地攻撃章', 'battle', [10, 50, 200], (g) => `陸上目標 (砲台・飛行場など) を ${g} 個破壊する`, (_r, c) => total(c, 'landKill')),

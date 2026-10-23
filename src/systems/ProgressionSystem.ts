@@ -9,6 +9,7 @@ import { isFreeArea } from './CampaignSystem';
 import { applyEventReward, IEventEffects, NO_EVENT } from './EventSystem';
 import { addMerit, addRankStats, IRank, meritFor, rankOf } from './RankSystem';
 import { withQuestEvents } from './QuestSystem';
+import { costCap, costOverText, fleetCost } from './FleetCost';
 import { addGold, emptyWallet, GOLD_SWEEP } from './GoldSystem';
 import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
 
@@ -85,6 +86,9 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
       if (isDocked(state, s.id)) reasons.push(`${s.name} は入渠中`);
     }
   }
+  // The rank caps the fleet's sortie cost (#306).
+  const over = costOverText(fleetCost(ships, progress.refits ?? {}), costCap(rankOf(progress).index));
+  if (over) reasons.push(over);
   // What is short and by how much (#303): "資源が不足: 燃料 120 / 180 (60 不足)".
   const cost = sortieCostFor(ships, opts);
   if (!canAfford(progress.resources, cost)) {
