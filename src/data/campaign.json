@@ -42,7 +42,7 @@
     {
       "id": "p5", "theater": "pacific", "name": "機動部隊決戦", "description": "敵空母機動部隊を捕捉、撃滅せよ。",
       "x": 0.58, "y": 0.62, "requires": [], "requiresAny": ["p4", "p7"],
-      "enemy": { "nation": "USN", "ships": ["essex", "enterprise", "baltimore", "fletcher", "gearing"] },
+      "enemy": { "nation": "USN", "ships": ["essex", "atlanta", "cleveland", "fletcher", "gearing"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 600, "ammo": 500, "steel": 600, "bauxite": 500 }, "rewardShip": "Carrier"
     },
@@ -361,7 +361,7 @@
       "x": 0.82, "y": 0.16, "requires": ["bs7"],
       "enemy": { "nation": "KM", "ships": ["admiral_hipper", "blucher", "nurnberg", "z17", "z18"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Night",
-      "reward": { "fuel": 800, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
+      "reward": { "fuel": 800, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Battleship"
     },
     {
       "id": "bs8", "theater": "blacksea", "name": "セヴァストポリ防衛", "description": "港へ迫る敵艦隊を、時間いっぱい食い止めよ。",

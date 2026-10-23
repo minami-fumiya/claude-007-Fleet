@@ -177,13 +177,15 @@ describe('ShipyardSystem (#18 / #29)', () => {
 describe('reward-only ships (#39)', () => {
   const all = [ijn, usn, km, rn, fr, su, rm].flatMap((d) => d.ships as IShipData[]);
 
-  it('every reward ship exists in its nation, historical, in an area that nation plays', () => {
+  it('every reward ship exists in its nation, in an area that nation plays; planned ships only where history runs out (#331)', () => {
+    // Germany and the Soviet Union have no sister ships left for some seas: their planned designs fill them.
+    const planned = new Set(['h39', 'sovetsky_soyuz', 'project71']);
     for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
       const theaters = campaignData.theaters.filter((t) => (t.opponents as Record<string, string | undefined>)[nation]).map((t) => t.id);
       for (const [area, shipId] of Object.entries(byArea ?? {})) {
         const ship = all.find((x) => x.id === shipId);
         expect(ship?.nation, `${nation} ${shipId}`).toBe(nation);
-        expect(ship?.fictional ?? false).toBe(false);
+        expect(!(ship?.fictional ?? false) || planned.has(shipId), `${nation} ${shipId}`).toBe(true);
         expect(theaters).toContain(campaignData.areas.find((a) => a.id === area)?.theater);
       }
     }
