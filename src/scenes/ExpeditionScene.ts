@@ -29,7 +29,7 @@ type Tab = 'expedition' | 'dorm';
 
 const L = IS_PORTRAIT
   ? { left: 16, top: 250, cols: 2, cardH: 152, gap: 12, tabY: 170 }
-  : { left: 24, top: 150, cols: 3, cardH: 150, gap: 10, tabY: 104 };
+  : { left: 24, top: 166, cols: 3, cardH: 150, gap: 10, tabY: 104 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 
 /**

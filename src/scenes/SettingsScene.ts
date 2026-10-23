@@ -138,7 +138,7 @@ export class SettingsScene extends Phaser.Scene {
         variant: s.showFps ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
       }),
     );
-    y += BTN_H + (IS_PORTRAIT ? 24 : 20);
+    y += BTN_H + (IS_PORTRAIT ? 16 : 20);
 
     this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
@@ -158,8 +158,8 @@ export class SettingsScene extends Phaser.Scene {
       }, 'secondary'],
       [this.resetArmed ? 'もう一度押すと全部リセット' : '全部リセット', () => this.resetSave(), this.resetArmed ? 'danger' : 'secondary'],
     ];
-    // Two per row so the section fits (and the backups below it) on a phone.
-    const cols = 2;
+    // Three per row on a phone so the section fits (and the backups below it), two in the landscape column.
+    const cols = IS_PORTRAIT ? 3 : 2;
     const gap = 12;
     const bw = (w - gap * (cols - 1)) / cols;
     buttons.forEach(([label, fn, variant], i) => {
