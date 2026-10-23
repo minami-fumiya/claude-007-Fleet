@@ -11,7 +11,8 @@ import { IItems, IResources } from '@/types/Progression';
  * for some one-time ones, a medal (#92) — is claimed on the 任務 screen.
  */
 
-export type QuestKind = 'hourly' | 'daily' | 'weekly' | 'once';
+/** 'event' (#89): quests that only move while their limited-time event runs; they turn over with its 3-hour window. */
+export type QuestKind = 'hourly' | 'daily' | 'weekly' | 'event' | 'once';
 /**
  * Every quest event (#318): a list the data checks can read at run time, so a misspelt `event` in quests.json (a
  * quest that never moves) or an event nothing uses is caught by the tests. The type is made from it.
@@ -56,7 +57,7 @@ export const QUEST_EVENTS = [
   // airfields destroyed (#83), superweapons sunk (#148)
   'airfieldDown', 'superweaponSunk',
   // 0.0.40: historical wins (#314), bases opened and docks built (#314), items used (#315)
-  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse', 'supplyUse', 'sparkleWin', 'expeditionStart', 'expeditionDone', 'dormHours', 'multiFleetWin', 'allyWin',
+  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse', 'supplyUse', 'sparkleWin', 'expeditionStart', 'expeditionDone', 'dormHours', 'multiFleetWin', 'allyWin', 'eventQuestClaim',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
@@ -91,6 +92,8 @@ export interface IQuestState {
   week: number;
   /** Hour (epoch hours) the hourly progress belongs to (#158) */
   hour: number;
+  /** Event window (3 hours, #89) the event quests' progress belongs to */
+  window?: number;
   /** Quest id → progress */
   progress: Record<string, number>;
   /** Quest ids whose reward was taken (this hour / day / week for repeating ones) */
@@ -100,10 +103,10 @@ export interface IQuestState {
 }
 
 export const QUESTS = (questData as { quests: IQuest[] }).quests;
-export const QUEST_KINDS: QuestKind[] = ['hourly', 'daily', 'weekly', 'once'];
-export const QUEST_KIND_LABEL: Record<QuestKind, string> = { hourly: '毎時', daily: 'デイリー', weekly: 'ウィークリー', once: '戦果' };
+export const QUEST_KINDS: QuestKind[] = ['hourly', 'daily', 'weekly', 'event', 'once'];
+export const QUEST_KIND_LABEL: Record<QuestKind, string> = { hourly: '毎時', daily: 'デイリー', weekly: 'ウィークリー', event: 'イベント', once: '戦果' };
 /** How many of each kind are on the board at a time (#158; ten of each since #180); one-time ones show the first 10 by state. */
-export const QUESTS_SHOWN: Record<QuestKind, number> = { hourly: 10, daily: 10, weekly: 10, once: 10 };
+export const QUESTS_SHOWN: Record<QuestKind, number> = { hourly: 10, daily: 10, weekly: 10, event: 10, once: 10 };
 /** Dailies always on the board: the four from 0.0.15, so their progress carries over. */
 const CORE_DAILIES = ['d_sortie', 'd_win', 'd_sink', 'd_repair'];
 
@@ -133,9 +136,17 @@ export function gameHour(now: number): number {
   return Math.floor(now / HOUR);
 }
 
+/** Limited-time events run in 3-hour windows from the start of the game day (#89 #218). */
+export const EVENT_WINDOW = 3 * HOUR;
+
+export function gameWindow(now: number): number {
+  return Math.floor((now - DAY_START_UTC) / EVENT_WINDOW);
+}
+
 /** Next reset of `kind` after `now` (epoch ms). */
-export function nextReset(kind: 'hourly' | 'daily' | 'weekly', now: number): number {
+export function nextReset(kind: 'hourly' | 'daily' | 'weekly' | 'event', now: number): number {
   if (kind === 'hourly') return (gameHour(now) + 1) * HOUR;
+  if (kind === 'event') return DAY_START_UTC + (gameWindow(now) + 1) * EVENT_WINDOW;
   if (kind === 'daily') return DAY_START_UTC + (gameDay(now) + 1) * DAY;
   return DAY_START_UTC + ((gameWeek(now) + 1) * 7 - MONDAY_OFFSET) * DAY;
 }
@@ -155,7 +166,8 @@ function seeded(seed: number): () => number {
 /** The repeating quests on the board for the period containing `now` (one-time ones: all of them). */
 export function activeQuests(kind: QuestKind, now: number): IQuest[] {
   const pool = QUESTS.filter((q) => q.kind === kind);
-  if (kind === 'once') return pool;
+  // Event quests are all on the board; only the running event's own counter moves them.
+  if (kind === 'once' || kind === 'event') return pool;
   const period = kind === 'hourly' ? gameHour(now) : kind === 'daily' ? gameDay(now) : gameWeek(now);
   const fixed = kind === 'daily' ? pool.filter((q) => CORE_DAILIES.includes(q.id)) : [];
   const rest = pool.filter((q) => !fixed.includes(q));
@@ -177,12 +189,14 @@ export function refreshQuests(state: IQuestState, now: number): IQuestState {
   const hour = gameHour(now);
   const day = gameDay(now);
   const week = gameWeek(now);
-  if (hour === state.hour && day === state.day && week === state.week) return state;
+  const window = gameWindow(now);
+  if (hour === state.hour && day === state.day && week === state.week && window === state.window) return state;
   const stale = (q: IQuest): boolean =>
-    (q.kind === 'hourly' && hour !== state.hour) || (q.kind === 'daily' && day !== state.day) || (q.kind === 'weekly' && week !== state.week);
+    (q.kind === 'hourly' && hour !== state.hour) || (q.kind === 'daily' && day !== state.day) || (q.kind === 'weekly' && week !== state.week)
+    || (q.kind === 'event' && window !== state.window);
   const progress = { ...state.progress };
   for (const q of QUESTS) if (stale(q)) delete progress[q.id];
-  return { ...state, hour, day, week, progress, claimed: state.claimed.filter((id) => !QUESTS.some((q) => q.id === id && stale(q))) };
+  return { ...state, hour, day, week, window, progress, claimed: state.claimed.filter((id) => !QUESTS.some((q) => q.id === id && stale(q))) };
 }
 
 /** Adds `count` to the lifetime total and to every unclaimed quest on the board waiting for `event` (capped at its goal). */
@@ -258,6 +272,7 @@ export function parseQuestState(v: unknown): IQuestState {
     day: num(o.day),
     week: num(o.week),
     hour: num(o.hour),
+    ...(typeof o.window === 'number' && Number.isFinite(o.window) ? { window: o.window } : {}),
     progress,
     claimed: Array.isArray(o.claimed) ? o.claimed.filter((x): x is string => typeof x === 'string') : [],
     totals,

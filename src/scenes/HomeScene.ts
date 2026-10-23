@@ -341,7 +341,10 @@ export class HomeScene extends Phaser.Scene {
     };
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
     const cap = holdCap(progress.facilities);
-    const rows: IQuestRow[] = tab === 'rank' ? this.rankMissionRows(progress) : questBoard(state, tab, now).map((q) => {
+    // The event tab (#89) shows the running event's quests only.
+    const running = activeEvent(now);
+    const board = tab === 'rank' ? [] : questBoard(state, tab, now).filter((q) => tab !== 'event' || (running !== null && q.event === `event_${running.kind}`));
+    const rows: IQuestRow[] = tab === 'rank' ? this.rankMissionRows(progress) : board.map((q) => {
       const status = questStatus(state, q);
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
       // A reward that would overflow the holding cap (#221) waits unclaimed until there is room, or is taken anyway.
@@ -363,6 +366,7 @@ export class HomeScene extends Phaser.Scene {
     const next = nextRank(progress);
     const note = tab === 'once' ? '1 回限り・達成で勲章がもらえるものも'
       : tab === 'rank' ? (next ? `次の階級: ${next.rank.name}` : '最高の階級です')
+        : tab === 'event' ? (running ? `${eventLabel(running)} 終了まで ${longClock(running.endsAt - now)}` : 'イベントはありません')
         : `更新まで ${longClock(nextReset(tab, now) - now)}`;
     add(this.add.text(x + w - 28, y + 22, note, textStyle(12, Css.muted)).setOrigin(1, 0));
     // Captains a claim just brought (#209), once.
@@ -375,7 +379,7 @@ export class HomeScene extends Phaser.Scene {
     const tw = (w - 56 - 8 * (tabs.length - 1)) / tabs.length;
     const tabH = IS_PORTRAIT ? 52 : 40;
     tabs.forEach((k, i) => {
-      const n = k === 'rank' ? 0 : activeQuests(k, now).filter((q) => isClaimable(state, q)).length;
+      const n = k === 'rank' ? 0 : activeQuests(k, now).filter((q) => isClaimable(state, q) && (k !== 'event' || (running !== null && q.event === `event_${running.kind}`))).length;
       const label = k === 'rank' ? '昇進' : QUEST_KIND_LABEL[k];
       // The hourly tab tells when its quests turn over (#180).
       const caption = k === 'hourly' ? `あと ${Math.ceil((nextReset('hourly', now) - now) / 60_000)} 分` : undefined;
@@ -544,7 +548,10 @@ export class HomeScene extends Phaser.Scene {
     if (!r) return null;
     // A ladder quest's medal (#158) goes into the shared record with the reward.
     const record = r.medal && !progress.record.medals.includes(r.medal) ? { ...progress.record, medals: [...progress.record.medals, r.medal] } : progress.record;
-    let next: IProgress = { ...progress, record, wallet: addGold(walletOf(progress), r.gold), quests: recordQuestEvent(r.state, 'questClaim', Date.now()), resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
+    // An event quest (#89) counts for its medal too.
+    const isEvent = QUESTS.find((q) => q.id === id)?.kind === 'event';
+    const quests = isEvent ? recordQuestEvent(recordQuestEvent(r.state, 'questClaim', Date.now()), 'eventQuestClaim', Date.now()) : recordQuestEvent(r.state, 'questClaim', Date.now());
+    let next: IProgress = { ...progress, record, wallet: addGold(walletOf(progress), r.gold), quests, resources: gainResources(progress.resources, r.reward, holdCap(progress.facilities)).resources, items: addItems(progress.items, r.items) };
     let note = '';
     // Some quests bring a captain (#209), chosen like any recruit: for the classes the fleet is short of.
     if (r.captains > 0) {
