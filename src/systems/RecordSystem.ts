@@ -247,6 +247,9 @@ export const MEDALS: IMedalRule[] = [
   // Lv10 of a branch (#298): one branch, then most, then all of them.
   ...ladder('research_peak', '研究の極み章', 'growth', [1, 6, 13], (g) => (g === 13 ? '1 か国で全部門の研究を Lv10 まで終える' : `1 か国で ${g} 部門の研究を Lv10 まで終える`), (_r, c) => c.researchTop ?? 0),
   ...ladder('captains', '艦長章', 'growth', [3, 6, 9, 20, 30], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
+  // 出撃コスト (#306): the fleet right at its cap, or a light one.
+  ...ladder('full_cost', '総力戦章', 'battle', [1, 10, 50], (g) => `作戦の海域で、出撃コストを上限ちょうどにして ${g} 回勝利する`, (_r, c) => total(c, 'fullCostWin')),
+  ...ladder('light_cost', '軽快部隊章', 'battle', [1, 10, 50], (g) => `作戦の海域で、出撃コストを上限の半分以下にして ${g} 回勝利する`, (_r, c) => total(c, 'lightCostWin')),
   ...ladder('underdog', '寡兵の勝利章', 'battle', [1, 5, 20], (g) => `作戦の海域で、敵の 0.6 倍以下の戦力で ${g} 回勝利する`, (_r, c) => total(c, 'underdogWin')),
   ...ladder('spotless', '無傷の完勝章', 'battle', [1, 10, 50], (g) => `喪失なし・残り耐久 95% 以上で ${g} 回勝利する`, (_r, c) => total(c, 'flawlessWin')),
   ...ladder('land_attack', '対地攻撃章', 'battle', [10, 50, 200], (g) => `陸上目標 (砲台・飛行場など) を ${g} 個破壊する`, (_r, c) => total(c, 'landKill')),
@@ -276,6 +279,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('builder', '軍港建設章', 'base', [5, 15, 30], (g) => `軍港の施設を合計 Lv${g} にする`, (_r, c) => c.facilityLevels ?? 0),
   ...ladder('patrol', '哨戒章', 'base', [10, 100, 300, 1000], (g) => `攻略済みの海域を ${g} 回掃討する`, (_r, c) => total(c, 'sweep')),
   // 特殊
+  ...ladder('event_quest', 'イベント任務章', 'special', [3, 20, 80], (g) => `イベント任務を ${g} 回達成する`, (_r, c) => total(c, 'eventQuestClaim')),
   ...ladder('event_tour', 'イベント巡り章', 'special', [3, 7], (g) => `${g} 種類のイベントの開催中に勝利する`, (_r, c) => EVENT_KINDS.filter((k) => total(c, `event_${k}`) > 0).length),
   ...ladder('veteran_player', '古参章', 'special', [1, 3, 10], (g) => `新しい版を ${g} 回迎える (タイトルの更新内容)`, (_r, c) => total(c, 'versionUpdate')),
   ...ladder('nations', '連合章', 'special', [2, 4, 7], (g) => `${g} か国で艦隊を率いる`, (_r, c) => c.nationsPlayed ?? 0),
@@ -293,6 +297,15 @@ export const MEDALS: IMedalRule[] = [
   // Items used (#315): books on captains, 高速修理材 and 高速建造材.
   ...ladder('books_used', '教本章', 'growth', [1, 10, 30], (g) => `艦長教本を ${g} 冊使う`, (_r, c) => total(c, 'bookUse')),
   ...ladder('manual_use', '教範章', 'growth', [5, 30, 100], (g) => `訓練教範を ${g} 冊使う`, (_r, c) => total(c, 'manualUse')),
+  // 複数艦隊 (#84) and 友軍艦隊 (#64)
+  ...ladder('combined_fleet', '連合艦隊章', 'battle', [1, 20, 100], (g) => `作戦の海域で、支援艦隊と一緒に ${g} 回勝利する`, (_r, c) => total(c, 'multiFleetWin')),
+  ...ladder('allied', '友軍章', 'battle', [1, 5, 20], (g) => `友軍艦隊と一緒に ${g} 回勝利する`, (_r, c) => total(c, 'allyWin')),
+  // 遠征 (#41) and 寮舎 (#57)
+  ...ladder('expedition', '遠征章', 'growth', [5, 50, 300], (g) => `遠征から ${g} 回帰還する`, (_r, c) => total(c, 'expeditionDone')),
+  ...ladder('dorm', '寮舎章', 'growth', [10, 100, 500], (g) => `寮舎で延べ ${g} 時間訓練する`, (_r, c) => total(c, 'dormHours')),
+  // 士気 (#54)
+  ...ladder('supply', '給糧章', 'growth', [3, 20, 60], (g) => `給糧艦を ${g} 隻使う`, (_r, c) => total(c, 'supplyUse')),
+  ...ladder('sparkle', '意気軒昂章', 'battle', [5, 30, 100], (g) => `作戦の海域で、全艦の士気 70 以上で ${g} 回勝利する`, (_r, c) => total(c, 'sparkleWin')),
   ...ladder('fast_repair', '応急修理章', 'base', [10, 50, 200], (g) => `高速修理材を ${g} 個使う`, (_r, c) => total(c, 'fastRepairUse')),
   ...ladder('fast_build', '突貫建造章', 'base', [10, 50, 200], (g) => `高速建造材を ${g} 個使う (建造・軍港の工事)`, (_r, c) => total(c, 'fastBuildUse')),
   ...ladder('merchant', '資源商人章', 'base', [5, 50, 200], (g) => `ショップで資源を ${g} 回売る`, (_r, c) => total(c, 'shopSell')),

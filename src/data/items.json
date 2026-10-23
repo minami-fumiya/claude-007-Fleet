@@ -5,6 +5,7 @@
     { "id": "fastRepair", "no": 6001002, "name": "高速修理材", "description": "入渠中の艦の修理をすぐに終わらせる", "sources": ["任務", "ショップ"], "scene": "HomeScene", "use": "入渠へ" },
     { "id": "fastBuild", "no": 6001003, "name": "高速建造材", "description": "建造中の艦や軍港の工事をすぐに終わらせる", "sources": ["任務", "ショップ"], "scene": "ShipyardScene", "use": "建造へ" },
     { "id": "trainingManual", "no": 6001005, "name": "訓練教範", "description": "改装の画面で艦に使うと練度が 10 上がる (上限 100)", "sources": ["任務 (週間)", "ショップ (1 日 2 冊)", "S 評価の勝利 (まれ)"], "scene": "CustomizationScene", "use": "改装へ" },
+    { "id": "supplyShip", "no": 6001006, "name": "給糧艦", "description": "全ての艦の士気が 30 上がる (上限 100)。疲れた艦隊をすぐに出撃させたい時に", "sources": ["任務 (週間)", "ショップ (1 日 1 隻)"], "scene": "ItemScene", "use": "使う" },
     { "id": "captainBook", "no": 6001004, "name": "艦長教本", "description": "好きな艦長に使うと経験値が増える", "sources": ["艦長が全員そろった後の S 評価・昇進", "ショップ"], "scene": "CaptainScene", "use": "艦長へ" }
   ]
 }

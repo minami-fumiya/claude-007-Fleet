@@ -3,6 +3,7 @@ import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { IShipModifiers } from '@/types/Modifiers';
 import { RANKS, START_RANK } from './RankSystem';
+import { costCap } from './FleetCost';
 import baseData from '@/data/bases.json';
 
 /**
@@ -125,7 +126,8 @@ export function recommendedRank(depth: number): { index: number; name: string } 
   return { index, name: RANKS[index].name };
 }
 
-/** "敵の戦力 1,560 (目安 844) · 推奨 中尉" for the area briefing. */
+/** "敵の戦力 1,560 (目安 844) · 推奨 准佐 (コスト 15)" for the area briefing: the rank and its cost cap (#306). */
 export function curveText(power: number, depth: number): string {
-  return `${power.toLocaleString('en-US')} (目安 ${targetPower(depth).toLocaleString('en-US')})  ·  推奨 ${recommendedRank(depth).name}`;
+  const rank = recommendedRank(depth);
+  return `${power.toLocaleString('en-US')} (目安 ${targetPower(depth).toLocaleString('en-US')})  ·  推奨 ${rank.name} (コスト ${costCap(rank.index)})`;
 }

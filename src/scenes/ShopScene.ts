@@ -16,7 +16,7 @@ import { IResources } from '@/types/Progression';
 
 const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, info: 290, top: 350, cols: 3, cardH: 128, gap: 12, left: 16, sellY: 1000 }
-  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, info: 166, top: 206, cols: 4, cardH: 118, gap: 10, left: 24, sellY: 640 };
+  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, info: 166, top: 206, cols: 5, cardH: 118, gap: 10, left: 24, sellY: 640 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 
 const REFUSAL: Record<Exclude<ShopRefusal, null>, string> = { gold: 'ゴールド不足', limit: '本日分は終了', cap: '保有上限' };
@@ -78,12 +78,14 @@ export class ShopScene extends Phaser.Scene {
         variant: refusal ? 'secondary' : 'gold', width: CARD_W - 28, height: IS_PORTRAIT ? 36 : 28, fontSize: 13,
       })).setEnabled(refusal === null);
     });
-    // 売る: spare resources back to gold, as often as there is enough (#296).
-    this.track(this.add.text(L.left, L.sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・回数の制限なし)`, eyebrowStyle(11, Css.gold)));
+    // 売る: spare resources back to gold, as often as there is enough (#296), below the last row of cards.
+    const rows = Math.ceil(SHOP_ENTRIES.length / L.cols);
+    const sellY = Math.max(L.sellY, L.top + rows * (L.cardH + L.gap) + (IS_PORTRAIT ? 34 : 26) + 6);
+    this.track(this.add.text(L.left, sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・回数の制限なし)`, eyebrowStyle(11, Css.gold)));
     const bw = (CANVAS_W - L.left * 2 - L.gap * 3) / 4;
     RESOURCE_KEYS.forEach((k, i) => {
       const enough = p.resources[k] >= SELL.amount;
-      this.track(new UIButton(this, L.left + i * (bw + L.gap) + bw / 2, L.sellY + 20, `${RESOURCE_LABEL[k]} → ${SELL.rates[k]} G`, () => this.sell(k), {
+      this.track(new UIButton(this, L.left + i * (bw + L.gap) + bw / 2, sellY + 20, `${RESOURCE_LABEL[k]} → ${SELL.rates[k]} G`, () => this.sell(k), {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 48 : 40, fontSize: 13,
       })).setEnabled(enough);
     });

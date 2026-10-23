@@ -13,6 +13,7 @@ import { formatResources, gainResources, lostNote, pay } from '@/systems/Resourc
 import { holdCap } from '@/systems/FacilitySystem';
 import { battleNodes, ISortieNode, NODE_LABEL, nextBattleIndex, nodesBetween, shipsForNextNode, sortieRoute } from '@/systems/SortieMapSystem';
 import { DataLoader } from '@/utils/DataLoader';
+import { sailingIds } from '@/systems/FleetGroups';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 
 /** Registry key: notes from the route passed on the way to the next battle (shown once, on its results). */
@@ -34,7 +35,7 @@ export function markSortieFought<T extends { sortie: ISortieState | null }>(prog
 
 /** The ships of a sortie in progress (#138): they can't be docked, refitted or sent elsewhere until it ends. */
 export function sortieShipIds(progress: { sortie: ISortieState | null }): string[] {
-  return progress.sortie?.shipIds ?? [];
+  return sailingIds(progress.sortie);
 }
 
 const areaById = (id: string): ICampaignArea | undefined => (campaignData as ICampaignData).areas.find((a) => a.id === id);
@@ -62,6 +63,10 @@ function battleInit(scene: Phaser.Scene, s: ISortieState): IBattleInitData | nul
     // Only the boss node has the area's own objective; the skirmishes before it are fights to the finish.
     objective: boss ? area.objective : Objective.Annihilate,
     sortie: { node: battles.indexOf(node) + 1, battles: battles.length, boss },
+    // 支援艦隊 (#84) sail with the main fleet through the whole sortie.
+    support: (s.support ?? []).map((g) => ({
+      ships: g.shipIds.map((id) => registry.byId(id)).filter((x): x is IShipData => x !== undefined), captainIds: g.captainIds, mission: g.mission,
+    })).filter((g) => g.ships.length > 0),
   };
 }
 
@@ -69,13 +74,14 @@ function battleInit(scene: Phaser.Scene, s: ISortieState): IBattleInitData | nul
 export function beginSortie(
   scene: Phaser.Scene, area: ICampaignArea, slots: (IShipData | null)[], captainIds: (string | null)[],
   formation: Formation, nation: Nation, enemyNation: Nation, enemy: IShipData[],
+  support: ISortieState['support'] = [],
 ): IBattleInitData | null {
   const kept = slots.map((s, i) => ({ s, c: captainIds[i] ?? null })).filter((x) => x.s !== null);
   const route = sortieRoute(area, enemy);
   const at = nextBattleIndex(route, 0);
   const state: ISortieState = {
     areaId: area.id, route, at, nation, enemyNation,
-    shipIds: kept.map((x) => x.s!.id), captainIds: kept.map((x) => x.c), formation,
+    shipIds: kept.map((x) => x.s!.id), captainIds: kept.map((x) => x.c), formation, support,
   };
   // A supply cache or whirlpool before the first battle (#307: one node on the way) is passed on the way out.
   const passed = passNodes(loadProgress(), route.slice(0, Math.max(0, at)));

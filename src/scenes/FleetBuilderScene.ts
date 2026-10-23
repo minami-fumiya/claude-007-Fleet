@@ -24,6 +24,8 @@ import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
+import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
+import { MORALE_WARN, moraleLabel, moraleMood, moraleOf } from '@/systems/MoraleSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { HEAVY_DAMAGE } from '@/systems/SortieMapSystem';
@@ -45,6 +47,9 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { ownFleetPower } from '@/systems/FleetPower';
+import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
+import { shipsAway } from '@/systems/ExpeditionSystem';
+import { inDorm } from '@/systems/DormSystem';
 import { enemyScale, fleetPower } from '@/systems/DifficultyCurve';
 
 
@@ -286,6 +291,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private ships: IShipData[] = [];
   /** Owned ships based elsewhere (#145): offered after the base's own, brought over for fuel */
   private slots: (IShipData | null)[] = [null];
+  /** The fleet's cost cap at the admiral's rank (#306) */
+  private costCap = 0;
   /** Fleet slots the admiral's rank allows (#25 / #30) */
   private slotCount = 1;
   /** Free battle enemy count (#78) */
@@ -334,6 +341,9 @@ export class FleetBuilderScene extends Phaser.Scene {
   private detail: Phaser.GameObjects.GameObject[] = [];
   /** Open ship picker sheet (#77): its objects, list, controls and the slot it fills */
   private picker: Phaser.GameObjects.GameObject[] = [];
+  /** 支援艦隊 (#84): the button above the slots and its sheet */
+  private supportBtn: UIButton | null = null;
+  private supportSheet: Phaser.GameObjects.GameObject[] = [];
   private pickerList: ScrollList | null = null;
   private pickerControls: IListControls | null = null;
   private pickerSlot = -1;
@@ -376,6 +386,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.enemyNation = enemy && enemy !== this.nation ? enemy : standard.enemyNation;
     this.enemyCount = saved?.enemyCount ?? SAME_COUNT;
     this.slotCount = fleetSlots(progress);
+    this.costCap = costCap(rankOf(progress).index);
     this.rankIndex = rankOf(progress).index;
     this.L = builderLayout(this.slotCount, nextSlotRank(progress) !== null && IS_PORTRAIT);
     // Free battles default to random everything (#78) until the player picks something.
@@ -688,9 +699,16 @@ export class FleetBuilderScene extends Phaser.Scene {
     const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
     const kc = kindColor(ship);
     const badge = addChip(this, 0, name.y + name.height / 2, kindShort(ship), kc.color, kc.css);
+    // The ship's sortie cost (#306) and morale (#54) next to its kind.
+    const p = loadProgress();
+    const morale = moraleOf(p, ship.id, Date.now());
+    const mood = moraleMood(morale);
+    const costChip = addChip(this, 0, name.y + name.height / 2, `コスト ${shipCost(ship, p.refits[ship.id] ?? 0)} · ${moraleLabel(morale)}`,
+      mood === 'tired' ? Colors.danger : Colors.gold, mood === 'tired' ? Css.danger : Css.gold);
     // Long names drop their English part so the kind badge clears the + button.
-    fitName(name, ship.name, w - statX - plusR * 2 - 30 - chipWidth(badge) - 10);
+    fitName(name, ship.name, w - statX - plusR * 2 - 30 - chipWidth(badge) - chipWidth(costChip) - 16);
     badge.setX(statX + name.displayWidth + 10);
+    costChip.setX(badge.x + chipWidth(badge) + 6);
 
     const meters = this.add.graphics();
     const stats: Array<[string, number, number, number]> = [
@@ -717,7 +735,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       plus.strokeCircle(plusX, itemH / 2, plusR);
       end.push(plus, this.add.text(plusX, itemH / 2 - 1, '+', textStyle(22, Css.cyan, { fontStyle: 'bold' })).setOrigin(0.5));
     }
-    const card = this.add.container(0, 0, [bg, hover, icon, name, badge, meters, ...statLabels, ...end]);
+    const card = this.add.container(0, 0, [bg, hover, icon, name, badge, costChip, meters, ...statLabels, ...end]);
     card.on('pointerover', () => hover.setVisible(true));
     card.on('pointerout', () => hover.setVisible(false));
     return card;
@@ -741,10 +759,17 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.refreshShipCards();
   }
 
-  /** Dims list rows whose ship is already in the fleet. */
+  /** Dims list rows whose ship is already in the fleet, or would take the fleet past its cost cap (#306). */
   private refreshShipCards(): void {
-    const inFleet = new Set(this.slots.filter((s): s is IShipData => s !== null).map((s) => s.id));
-    for (const { id, card } of this.shipCards) card.setAlpha(inFleet.has(id) ? 0.4 : 1);
+    const fleet = this.slots.filter((s): s is IShipData => s !== null);
+    const inFleet = new Set(fleet.map((s) => s.id));
+    const refits = loadProgress().refits;
+    const full = fleet.length >= this.slotCount;
+    for (const { id, card } of this.shipCards) {
+      const ship = this.ships.find((s) => s.id === id);
+      const heavy = !full && ship !== undefined && !inFleet.has(id) && !fitsCost(ship, fleet, this.costCap, refits);
+      card.setAlpha(inFleet.has(id) ? 0.4 : heavy ? 0.5 : 1);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -797,9 +822,15 @@ export class FleetBuilderScene extends Phaser.Scene {
     shown.forEach((ship, i) => {
       const at = this.slotOf(ship);
       // A ship already in another slot swaps places with this one (#147); it is never in two slots (#76).
-      const tag = at === -1 ? null : at === this.pickerSlot ? '選択中' : `${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
+      // A ship that would take the fleet past its cost cap (#306) says by how much.
+      const fleet = this.slots.filter((s): s is IShipData => s !== null);
+      const refits = loadProgress().refits;
+      const heavy = at === -1 && !fitsCost(ship, fleet, this.costCap, refits, this.slots[this.pickerSlot]);
+      const short = heavy ? fleetCost([...fleet.filter((s) => s.id !== this.slots[this.pickerSlot]?.id), ship], refits) - this.costCap : 0;
+      const tag = heavy ? `コストが ${short} 足りません` : at === -1 ? null : at === this.pickerSlot ? '選択中' : `${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
       const card = this.shipRow(ship, w, itemH, tag).setY(i * (itemH + ITEM_GAP));
-      if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
+      if (heavy) card.setAlpha(0.5);
+      else if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
       list.addItem(card, w, itemH, () => this.pickShip(ship));
     });
     list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
@@ -833,6 +864,84 @@ export class FleetBuilderScene extends Phaser.Scene {
     if (a === b || a < 0 || b < 0) return;
     [this.slots[a], this.slots[b]] = [this.slots[b], this.slots[a]];
     [this.captainIds[a], this.captainIds[b]] = [this.captainIds[b], this.captainIds[a]];
+  }
+
+  /** 支援艦隊 (#84) as they would sail now: the chosen setups' ships the rank allows, none twice or unavailable. */
+  private supportFleets(): ReturnType<typeof resolveSupport> {
+    const progress = loadProgress();
+    const now = Date.now();
+    const exercise = this.sortieOptions().exercise === true;
+    const away = shipsAway(progress.expeditions);
+    const sailing = new Set(sailingIds(progress.sortie));
+    const unavailable = (id: string): boolean => away.has(id) || sailing.has(id) || inDorm(progress.dorm, 'ship', id)
+      || (!exercise && (isDocked(completeRepairs(progress, now), id) || hpFraction(progress, id) <= HEAVY_DAMAGE));
+    const main = this.slots.filter((s): s is IShipData => s !== null).map((s) => s.id);
+    return resolveSupport(progress.support, progress.presets, this.ships, main, supportSlots(this.rankIndex), unavailable);
+  }
+
+  /** The 支援艦隊 sheet: for each place the rank opens, which saved setup sails and with what mission. */
+  private openSupport(): void {
+    this.closeSupport();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(SHEET_DEPTH);
+      this.supportSheet.push(o);
+      return o;
+    };
+    const cam = this.cameras.main;
+    add(this.add.rectangle(cam.scrollX, cam.scrollY, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive()).on('pointerup', () => this.closeSupport());
+    const p = IS_PORTRAIT;
+    const d = { x: cam.scrollX + (p ? 16 : 240), y: cam.scrollY + (p ? 260 : 120), w: p ? CANVAS_W - 32 : 800, h: p ? 640 : 460 };
+    add(addPanel(this, d.x, d.y, d.w, d.h, { radius: 24, fillAlpha: 0.97, glow: 0.8 }));
+    add(this.add.zone(d.x, d.y, d.w, d.h).setOrigin(0, 0).setInteractive());
+    add(this.add.text(d.x + 24, d.y + 20, '支援艦隊', displayStyle(p ? 22 : 20)));
+    add(this.add.text(d.x + 24, d.y + (p ? 58 : 52), '保存した編成を第 2 艦隊以降として一緒に出撃させます。任務どおりに自動で戦い、戦闘中に操作を切り替えられます。', textStyle(12, Css.muted, { wordWrap: { width: d.w - 48, useAdvancedWrap: true } })));
+    const progress = loadProgress();
+    const slots = supportSlots(this.rankIndex);
+    const resolved = this.supportFleets();
+    const rowH = p ? 120 : 84;
+    const presets = progress.presets;
+    for (let i = 0; i < PRESET_COUNT; i++) {
+      const y = d.y + (p ? 120 : 100) + i * (rowH + 10);
+      const open = i < slots;
+      const choice = progress.support[i];
+      add(this.add.text(d.x + 24, y, `第${i + 2}艦隊`, textStyle(16, open ? Css.text : Css.dim, { fontStyle: 'bold' })));
+      if (!open) {
+        add(this.add.text(d.x + 24, y + 28, `要階級: ${RANKS[[6, 9, 12][i]].name}`, textStyle(13, Css.dim)));
+        continue;
+      }
+      const ships = resolved.find((r) => r.preset === choice?.preset)?.ships ?? [];
+      const presetLabel = choice ? `編成 ${choice.preset + 1}${presets[choice.preset] ? '' : ' (空)'}` : 'なし';
+      const bw = p ? 200 : 180;
+      add(new UIButton(this, d.x + 24 + bw / 2, y + 44, `${presetLabel}  ›`, () => this.cycleSupport(i, 'preset'), { variant: choice ? 'primary' : 'secondary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
+      if (choice) {
+        add(new UIButton(this, d.x + 24 + bw + 12 + bw / 2, y + 44, `任務: ${MISSION_LABEL[choice.mission]}  ›`, () => this.cycleSupport(i, 'mission'), { variant: 'primary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
+        const names = ships.map((s) => shortName(s.name)).join('・') || '出せる艦がありません';
+        add(this.add.text(d.x + 24, y + (p ? 74 : 66), `${MISSION_NOTE[choice.mission]}  ·  ${names}`, textStyle(12, ships.length > 0 ? Css.muted : Css.danger, { wordWrap: { width: d.w - 48, useAdvancedWrap: true } })));
+      }
+    }
+    add(new UIButton(this, d.x + d.w / 2, d.y + d.h - (p ? 44 : 34), '閉じる', () => this.closeSupport(), { variant: 'secondary', width: p ? 240 : 200, height: p ? 56 : 40, fontSize: 15 }));
+  }
+
+  /** Steps one 支援艦隊 place through なし → 編成 1〜3, or through the missions. */
+  private cycleSupport(index: number, what: 'preset' | 'mission'): void {
+    const progress = loadProgress();
+    const support = [...progress.support];
+    const cur = support[index];
+    if (what === 'preset') {
+      const next = cur ? cur.preset + 1 : 0;
+      if (next >= PRESET_COUNT) support.splice(index, 1);
+      else support[index] = { preset: next, mission: cur?.mission ?? 'strike' };
+    } else if (cur) {
+      support[index] = { ...cur, mission: MISSIONS[(MISSIONS.indexOf(cur.mission) + 1) % MISSIONS.length] };
+    }
+    saveProgress({ ...progress, support: support.filter((c): c is ISupportChoice => !!c) });
+    this.openSupport();
+    this.refresh();
+  }
+
+  private closeSupport(): void {
+    for (const o of this.supportSheet) o.destroy();
+    this.supportSheet = [];
   }
 
   private closePicker(): void {
@@ -1216,8 +1325,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     const w = p.w - PANEL_PAD * 2;
     const gap = 8;
     const saveW = IS_PORTRAIT ? 130 : 76;
-    const bw = (w - saveW - gap * PRESET_COUNT) / PRESET_COUNT;
+    // 支援艦隊 (#84): the setups that sail with this fleet.
+    const supW = IS_PORTRAIT ? 130 : 76;
+    const bw = (w - saveW - supW - gap * (PRESET_COUNT + 1)) / PRESET_COUNT;
     const font = IS_PORTRAIT ? 13 : 10;
+    this.supportBtn = new UIButton(this, x + w - saveW - gap - supW / 2, y, '支援', this.onTap(() => this.openSupport()), { variant: 'secondary', width: supW, height: h, fontSize: font });
     this.presetButtons = Array.from({ length: PRESET_COUNT }, (_, i) =>
       new UIButton(this, x + i * (bw + gap) + bw / 2, y, '', this.onTap(() => this.onPreset(i)), { variant: 'secondary', width: bw, height: h, fontSize: font }),
     );
@@ -1230,6 +1342,8 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private refreshPresets(): void {
     const presets = loadProgress().presets;
+    const n = this.supportFleets().length;
+    this.supportBtn?.setLabel(n > 0 ? `支援 ${n}` : '支援').setVariant(n > 0 ? 'primary' : 'secondary');
     const nameOf = (id: string): string | undefined => {
       const ship = this.shipRegistry.byId(id);
       return ship ? shortName(ship.name) : undefined;
@@ -1565,19 +1679,26 @@ export class FleetBuilderScene extends Phaser.Scene {
       this.summaryText.setText(IS_PORTRAIT ? '艦を選ぶと出撃できます' : '艦を 1 隻以上選ぶと出撃できます');
     } else if (this.organizeOnly) {
       const formation = FORMATION_RULES[this.formation].ja;
-      this.summaryText.setText(IS_PORTRAIT ? `${formation} · ${this.powerLabel(ships)}` : `${this.powerLabel(ships)}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n編成を終えたら、作戦か演習へ進みます`).setColor(Css.muted);
+      const weight = costText(fleetCost(ships, loadProgress().refits), this.costCap);
+      const over = fleetCost(ships, loadProgress().refits) > this.costCap;
+      this.summaryText.setText(IS_PORTRAIT ? `${formation} · ${weight}` : `${this.powerLabel(ships)}   艦隊速力 ${Math.min(...ships.map((s) => s.speed))}   陣形 ${formation}\n${weight}   編成を終えたら、作戦か演習へ進みます`).setColor(over ? Css.danger : Css.muted);
     } else {
       const minSpeed = Math.min(...ships.map((s) => s.speed));
       const formation = FORMATION_RULES[this.formation].ja;
       const opts = this.sortieOptions();
-      const blockers = sortieBlockers(loadProgress(), ships, Date.now(), opts);
-      const price = isFreeSortie(opts) ? (opts.exercise ? '無料 (演習)' : '無料 (最初の海域)') : formatResources(sortieCostFor(ships, opts));
-      const cost = `出撃コスト  ${price}`;
-      const second = blockers.length > 0 ? `⚠ ${blockers.join(' / ')}` : cost;
+      const all = this.allShips(ships);
+      const blockers = sortieBlockers(loadProgress(), all, Date.now(), this.sortieOptions(ships));
+      const price = isFreeSortie(opts) ? (opts.exercise ? '無料 (演習)' : '無料 (最初の海域)') : formatResources(sortieCostFor(all, opts));
+      // The fleet's cost against the rank's cap (#306), then what the sortie spends.
+      const weight = costText(fleetCost(ships, loadProgress().refits), this.costCap);
+      const cost = `${weight}   消費  ${price}`;
+      // 士気 (#54): a ship too tired still sails, with a warning.
+      const tired = ships.filter((s) => moraleOf(loadProgress(), s.id, Date.now()) < MORALE_WARN).map((s) => s.name.replace(/\s*\(.*\)\s*$/, ''));
+      const second = blockers.length > 0 ? `⚠ ${blockers.join(' / ')}` : tired.length > 0 ? `⚠ 士気が低い: ${tired.join('・')}  (出撃はできます)` : cost;
       this.summaryText
         .setText(
           IS_PORTRAIT
-            ? blockers.length > 0 ? second : `${formation} · ${price}`
+            ? blockers.length > 0 ? second : `${formation} · ${weight} · ${price}`
             : `${this.powerLabel(ships)}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
         )
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
@@ -1605,13 +1726,20 @@ export class FleetBuilderScene extends Phaser.Scene {
   }
 
   /** 演習 (no campaign area) is free and may use docked ships (#15); the first area of a theater is free (#28). */
-  private sortieOptions(): ISortieOptions {
-    return { exercise: this.area === null, area: this.area };
+  /** With the main fleet's ships, also the fleets for the cost check (#306): the main one and each 支援艦隊 (#84). */
+  private sortieOptions(ships?: IShipData[]): ISortieOptions {
+    const fleets = ships ? [ships, ...this.supportFleets().map((g) => g.ships)] : undefined;
+    return { exercise: this.area === null, area: this.area, fleets };
+  }
+
+  /** The main fleet's ships and those of its 支援艦隊 (#84). */
+  private allShips(ships: IShipData[]): IShipData[] {
+    return [...ships, ...this.supportFleets().flatMap((g) => g.ships)];
   }
 
   private canStart(): boolean {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
-    return ships.length > 0 && sortieBlockers(loadProgress(), ships, Date.now(), this.sortieOptions()).length === 0;
+    return ships.length > 0 && sortieBlockers(loadProgress(), this.allShips(ships), Date.now(), this.sortieOptions(ships)).length === 0;
   }
 
   private isDamaged(ship: IShipData): boolean {
@@ -1740,7 +1868,9 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private startBattle(): void {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
-    const paid = paySortie(loadProgress(), ships, this.sortieOptions());
+    // 支援艦隊 (#84) pay their sortie too and sail with the main fleet.
+    const support = this.supportFleets();
+    const paid = paySortie(loadProgress(), this.allShips(ships), this.sortieOptions());
     if (!paid) return;
     saveProgress(paid, 'sortie');
     this.saveSelection();
@@ -1778,12 +1908,14 @@ export class FleetBuilderScene extends Phaser.Scene {
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
       areaId: area?.id,
       objective: area?.objective ?? Objective.Annihilate,
+      support: support.map((g) => ({ ships: g.ships, captainIds: g.captainIds, mission: g.mission })),
     };
 
     emitTutorial('sortie', this.registry);
     // A campaign area is fought node by node (#53); the first battle may be its escorts.
     const sortie = area
-      ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList)
+      ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList,
+        support.map((g) => ({ shipIds: g.ships.map((s) => s.id), captainIds: g.captainIds, mission: g.mission })))
       : null;
     // An exercise leaves a campaign sortie in progress alone (#138): it can still be continued from the map.
     this.scene.start(SceneKeys.BATTLE, sortie ?? initData);
