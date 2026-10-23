@@ -111,13 +111,17 @@ export class ResearchView {
         .text(LEVEL_COL / 2 + 4, h / 2, String(node.level), textStyle(IS_PORTRAIT ? 18 : 20, Css.gold, { fontStyle: '900' }))
         .setOrigin(0.5);
       const lv = this.scene.add.text(LEVEL_COL / 2 + 4, h / 2 - 22, 'LV', eyebrowStyle(9, Css.muted)).setOrigin(0.5);
-      const name = this.scene.add.text(tx, 10, node.name, textStyle(13, Css.text, { fontStyle: 'bold', wordWrap: { width: tw, useAdvancedWrap: true } }));
-      const state = this.scene.add.text(tx, name.y + name.height + 2, '', eyebrowStyle(10, Css.cyan));
-      const desc = this.scene.add.text(tx, state.y + 16, node.description, textStyle(11, Css.muted, { wordWrap: { width: tw, useAdvancedWrap: true } }));
+      // The state sits at the top right, beside the name, so a long requirement (rank, prerequisites and a medal) has
+      // room under the effect (#336: it ran over the effect on a phone).
+      const state = this.scene.add.text(w - 10, 12, '', eyebrowStyle(10, Css.cyan)).setOrigin(1, 0);
+      const name = this.scene.add.text(tx, 10, node.name, textStyle(13, Css.text, { fontStyle: 'bold', wordWrap: { width: tw - 64, useAdvancedWrap: true } }));
+      const desc = this.scene.add.text(tx, name.y + name.height + 4, node.description, textStyle(11, Css.muted, { wordWrap: { width: tw, useAdvancedWrap: true } }));
       const cost = this.scene.add.text(tx, h - 8, formatResources(scaleCost(node.cost, this.state().costMul ?? 1)), textStyle(10, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } })).setOrigin(0, 1);
       const requires = this.scene.add
         .text(tx, cost.y - cost.height - 2, this.requiresText(node), textStyle(10, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } }))
         .setOrigin(0, 1);
+      // Still too tall: the effect gives way to one line.
+      if (requires.y - requires.height < desc.y + desc.height + 2) desc.setText(desc.getWrappedText(node.description)[0] ?? '');
       const card = this.scene.add.container(x, y, [frame, lv, level, name, state, desc, requires, cost]);
       makeClickable(card, w, h);
       card.on('pointerup', () => this.onResearch(node));

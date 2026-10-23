@@ -75,6 +75,9 @@ const NODE_R = IS_PORTRAIT ? 26 : 22;
  * 作戦: the strategic map. Each theater is a chain of sea areas; clearing one unlocks the next.
  * Selecting an area shows its briefing; 出撃準備 opens the Fleet Builder for that operation.
  */
+/** Height kept free at the bottom of the map for the note on the seas not open yet (#336). */
+const NOTE_STRIP = 28;
+
 export class CampaignMapScene extends Phaser.Scene {
   private theater = DATA.theaters[0].id;
   /** Theaters the nation being played can fight in (#27) */
@@ -188,7 +191,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const ys = areas.map((n) => n.y);
     return {
       x: m.x + pad + fit(a.x, Math.min(...xs), Math.max(...xs)) * (m.w - pad * 2),
-      y: m.y + pad + fit(a.y, Math.min(...ys), Math.max(...ys)) * (m.h - pad * 2),
+      // The bottom strip is the note's (other seas, #282): nodes and their names keep above it (#336).
+      y: m.y + pad + fit(a.y, Math.min(...ys), Math.max(...ys)) * (m.h - pad * 2 - NOTE_STRIP),
     };
   }
 
@@ -244,7 +248,7 @@ export class CampaignMapScene extends Phaser.Scene {
       }
     });
     // Names go wherever they overlap nothing (#162): dense theaters crowd the portrait map.
-    const placed = placeLabels(areas.map((a) => this.nodePos(a)), names.map((t) => ({ w: t.width, h: t.height })), NODE_R, { x: L.map.x + 8, y: L.map.y + 8, w: L.map.w - 16, h: L.map.h - 16 });
+    const placed = placeLabels(areas.map((a) => this.nodePos(a)), names.map((t) => ({ w: t.width, h: t.height })), NODE_R, { x: L.map.x + 8, y: L.map.y + 8, w: L.map.w - 16, h: L.map.h - 16 - NOTE_STRIP });
     placed.forEach((p, i) => names[i].setPosition(p.x, p.y).setScale(p.scale));
   }
 

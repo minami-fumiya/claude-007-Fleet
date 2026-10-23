@@ -294,6 +294,20 @@ export function formatItems(items: Partial<IItems>): string {
   return (Object.keys(ITEM_LABEL) as Array<keyof IItems>).filter((k) => (items[k] ?? 0) > 0).map((k) => `${ITEM_LABEL[k]} ${items[k]}`).join('・');
 }
 
+/** Short item names for a narrow reward line (#336): "修理材 6・教範 3". */
+const RESOURCE_SHORT: Record<keyof IResources, string> = { fuel: '燃', ammo: '弾', steel: '鋼', bauxite: 'ボ' };
+const ITEM_SHORT: Record<keyof IItems, string> = { fastRepair: '修理材', fastBuild: '建造材', captainBook: '教本', trainingManual: '教範', supplyShip: '給糧艦' };
+
+/**
+ * A quest's reward in short for a phone (#336): "燃 4800 弾 4800・修理材 6・G 150・艦長 +1", so a weekly's fits two
+ * lines (the long form shrank out of reading and the gold was lost).
+ */
+export function shortReward(q: { reward: Partial<IResources>; items?: Partial<IItems>; gold?: number; captains?: number }, medal?: string): string {
+  const res = (Object.keys(q.reward) as Array<keyof IResources>).filter((k) => (q.reward[k] ?? 0) > 0).map((k) => `${RESOURCE_SHORT[k]} ${q.reward[k]}`).join(' ');
+  const items = (Object.keys(ITEM_SHORT) as Array<keyof IItems>).filter((k) => (q.items?.[k] ?? 0) > 0).map((k) => `${ITEM_SHORT[k]} ${q.items?.[k]}`);
+  return [res, ...items, q.gold ? `G ${q.gold}` : '', q.captains ? `艦長 +${q.captains}` : '', medal ? `勲章「${medal}」` : ''].filter((t) => t).join('・');
+}
+
 export function addItems(have: IItems, add: Partial<IItems>): IItems {
   return { fastRepair: have.fastRepair + (add.fastRepair ?? 0), fastBuild: have.fastBuild + (add.fastBuild ?? 0), captainBook: (have.captainBook ?? 0) + (add.captainBook ?? 0), trainingManual: (have.trainingManual ?? 0) + (add.trainingManual ?? 0), supplyShip: (have.supplyShip ?? 0) + (add.supplyShip ?? 0) };
 }
