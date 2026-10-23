@@ -134,6 +134,8 @@ const CONVOY_EXIT_MARGIN = 90;
 const OBJECTIVE_PRIORITY = 0.5;
 /** Enemy AI prefers convoy ships over warships by this much. */
 const CONVOY_PRIORITY = 0.6;
+/** Enemy air strikes hold back from the player's flagship (#328): on top of the formation's flagship priority. */
+const AIR_FLAGSHIP_PRIORITY = -0.35;
 /** A lost contact's last known position stays marked this long (ms, #98). */
 const LAST_SEEN_MS = 30_000;
 
@@ -1222,7 +1224,14 @@ export class BattleScene extends Phaser.Scene {
       delta,
       { foes: playerView, foeSquadrons: this.playerAir.squadrons, foeGuns: aaGuns(this.playerSide()) },
       () => true,
-      pick(this.enemyNation),
+      (carrier, foes) => {
+        // Strikes spread out (#328): a ship already under attack draws fewer, and the flagship (the battle) less
+        // still — every strike went for it and sank it in seconds before the guns had a say.
+        const aimed = (ship: BaseShip): number => this.enemyAir.squadrons.filter((q) => q.alive && q.target === ship).length;
+        const view = foes.map((f) => ({ ...f, attackers: (f.attackers ?? 0) + 2 * aimed(f.ship), priority: (f.priority ?? 0) + (f.ship === this.flagship ? AIR_FLAGSHIP_PRIORITY : 0) }));
+        const chosen = pick(this.enemyNation)(carrier, view);
+        return chosen ? foes.find((f) => f.ship === chosen.ship) ?? null : null;
+      },
     );
   }
 

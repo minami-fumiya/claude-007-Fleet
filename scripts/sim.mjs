@@ -11,6 +11,10 @@
  *
  * Without --areas every area of each navy is played (--sample 1: the first, a middle and the final area of each
  * theater); without --nations, every playable navy. --pages N plays on N pages at once.
+ *
+ * --grown 1 (#346): the fleet of a player who has grown with the rank — the research the rank allows, proficiency 40,
+ * the first remodel from 大尉 and the second from 大佐 — and from 少佐 a 支援艦隊 (#84) of the next strongest ships.
+ * Battles past 300 seconds are listed: a fight with no end in sight (only a submarine left, ships circling out of range).
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -24,6 +28,9 @@ const RUNS = Number(args.runs ?? 3);
 /** Battle seconds before a run counts as unfinished (a draw). */
 const LIMIT_SEC = Number(args.limit ?? 900);
 const STEP_MS = 50;
+const GROWN = args.grown !== undefined && args.grown !== '0';
+/** A battle this long is listed as one that may never end (#346). */
+const LONG_SEC = 300;
 
 async function waitForServer(url, ms = 60_000) {
   const end = Date.now() + ms;
@@ -78,6 +85,7 @@ try {
 
   // Each page plays the next pair in the plan; rows keep the plan's order.
   const rows = new Array(plan.length);
+  const long = [];
   let next = 0;
   await Promise.all(pages.map(async (p) => {
     while (next < plan.length) {
@@ -86,13 +94,14 @@ try {
       const runs = [];
       for (let i = 0; i < RUNS; i++) {
         // A battle that throws is reported and counted as lost, so one bug doesn't stop the whole table.
-        const r = await p.evaluate(playOne, { nation, areaId, limitSec: LIMIT_SEC, stepMs: STEP_MS }).catch(async (e) => {
+        const r = await p.evaluate(playOne, { nation, areaId, limitSec: LIMIT_SEC, stepMs: STEP_MS, grown: GROWN }).catch(async (e) => {
           console.error(`${nation} ${areaId}: ${e.message.split('\n')[0]}`);
           await p.reload();
           await p.waitForFunction(() => window.game?.scene.getScene('MainMenuScene')?.sys.settings.active === true, null, { timeout: 120_000 });
           return { depth: 0, rankName: '?', ratio: 0, victory: false, durationSec: LIMIT_SEC, rank: 'D', survivors: 0, fleetSize: 1, error: true };
         });
         runs.push(r);
+        if (r.durationSec >= LONG_SEC) long.push(`${nation} ${areaId}: ${Math.round(r.durationSec)} 秒 (${r.victory ? '勝利' : '敗北'}・撃沈 ${r.sunk ?? '?'})`);
         if (args.verbose) console.log(JSON.stringify({ nation, areaId, ...r }));
       }
       rows[k] = summarize(nation, areaId, runs);
@@ -103,6 +112,7 @@ try {
     `| 国 | 海域 | 深さ | 推奨 | 敵 / 自 | 勝率 | 時間 (秒) 平均 (幅) | S / A / B / C / D | 残存 |`,
     '|---|---|---|---|---|---|---|---|---|',
     ...rows.map(line),
+    ...(long.length > 0 ? ['', `${LONG_SEC} 秒を超えた戦闘 (決着のつかない組み合わせの候補):`, ...long.map((l) => `- ${l}`)] : []),
   ].join('\n');
   if (args.out) writeFileSync(args.out, `${table}\n`);
   else console.log(`\n${table}`);
@@ -128,7 +138,7 @@ function line(r) {
 }
 
 /** Runs in the page: one battle of `nation` against `areaId`'s main fleet, returned as its results. */
-async function playOne({ nation, areaId, limitSec, stepMs }) {
+async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   const game = window.game;
   const ps = await import('/src/utils/ProgressStore.ts');
   const { DataLoader } = await import('/src/utils/DataLoader.ts');
@@ -147,6 +157,11 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
   const helps = (await import('/src/data/screen-help.json')).default.screens?.map((h) => h.id) ?? [];
   let save = ps.switchNation(ps.emptySave(), nation, undefined, Date.now());
   save = { ...save, seenHelp: [...helps, 'BattleScene'], nations: { ...save.nations, [nation]: { ...save.nations[nation], merit: RANKS[rank.index].minMerit, rankFloor: rank.index } } };
+  if (grown) {
+    // The research the rank allows (#346), every branch.
+    const tech = (await import('/src/data/tech-tree.json')).default.tech.filter((n) => (n.rank ?? 0) <= rank.index && !(n.medal)).map((n) => n.id);
+    save.nations[nation] = { ...save.nations[nation], research: tech };
+  }
   ps.saveSave(save);
 
   const scene = game.scene.getScenes(true)[0] ?? game.scene.getScene('MainMenuScene');
@@ -169,6 +184,28 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
     ships.push(s);
     used += shipCost(s);
   }
+  // 支援艦隊 (#84) from 少佐 in the grown fleet: the next strongest ships, guarding the flagship.
+  const support = [];
+  if (grown && rank.index >= 6) {
+    const left = [...guns, ...carriers].filter((s) => !ships.includes(s));
+    const group = [];
+    let cost = 0;
+    for (const s of left) {
+      if (group.length >= slots) break;
+      if (cost + shipCost(s) > cap) continue;
+      group.push(s);
+      cost += shipCost(s);
+    }
+    if (group.length > 0) support.push({ ships: group, captainIds: group.map(() => null), mission: 'escort' });
+  }
+  if (grown) {
+    // Proficiency 40 and remodels by rank on every ship that sails.
+    const stage = rank.index >= 8 ? 2 : rank.index >= 4 ? 1 : 0;
+    const all = [...ships, ...support.flatMap((g) => g.ships)];
+    const s2 = ps.loadSave();
+    s2.nations[nation] = { ...s2.nations[nation], ships: all.map((s) => s.id), proficiency: Object.fromEntries(all.map((s) => [s.id, 40])), refits: Object.fromEntries(all.map((s) => [s.id, stage])) };
+    ps.saveSave(s2);
+  }
   const enemyNation = enemyNationFor(data, area, nation);
   const enemy = enemyShips(area, registry, enemyNation);
   const ratio = (curve.fleetPower(enemy) * curve.enemyScale(data, area, nation)) / Math.max(1, curve.fleetPower(ships));
@@ -177,6 +214,7 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
     enemyFleet: FleetSystem.createFleet('enemy-fleet', 'Enemy Fleet', enemyNation, enemy, 0),
     mapKey: area.map, mode: areaMode(enemy), weather: area.weather, time: area.time,
     captainIds: ships.map(() => null), areaId: area.id, objective: area.objective,
+    ...(support.length > 0 ? { support } : {}),
   };
 
   game.loop.sleep();
