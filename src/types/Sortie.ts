@@ -15,4 +15,6 @@ export interface ISortieState {
   formation: Formation;
   /** The battle at `at` has been settled: what's left is to advance or retreat */
   fought?: boolean;
+  /** 支援艦隊 (#84) sailing with the main fleet */
+  support?: Array<{ shipIds: string[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
 }

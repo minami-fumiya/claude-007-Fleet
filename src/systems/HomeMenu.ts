@@ -40,6 +40,8 @@ export const HOME_MENU: IHomeMenuTab[] = [
       { label: '改装', caption: '改造と部品', scene: SceneKeys.CUSTOMIZATION, variant: 'primary' },
       { label: '艦長', caption: 'スキルと成長', scene: SceneKeys.CAPTAIN, variant: 'primary' },
       { label: '軍港', caption: '開港と施設', scene: SceneKeys.BASE, variant: 'secondary' },
+      // 遠征 (#41) and 寮舎 (#57)
+      { label: '遠征', caption: '遠征と寮舎', scene: SceneKeys.EXPEDITION, variant: 'secondary' },
     ],
   },
   {

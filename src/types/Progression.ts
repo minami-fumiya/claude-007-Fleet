@@ -27,6 +27,8 @@ export interface IItems {
   captainBook: number;
   /** 訓練教範 (#305): a ship's proficiency +10, used on the refit screen */
   trainingManual: number;
+  /** 給糧艦 (#54): the whole navy's morale +30, used on the items screen */
+  supplyShip: number;
 }
 
 /**

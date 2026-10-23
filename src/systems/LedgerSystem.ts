@@ -9,6 +9,8 @@ import { RESOURCE_KEYS, resources } from './ResourceSystem';
 
 export type LedgerCategory =
   | 'regen' | 'battle' | 'firstClear' | 'quest' | 'sweep'
+  /** Resources brought home by expeditions (#41) */
+  | 'expedition'
   /** Resources bought with gold, and sold for it (#183) */
   | 'shop' | 'shopSell'
   | 'sortie' | 'aircraft' | 'repair' | 'build' | 'research' | 'refit' | 'dock' | 'facility' | 'captain'
@@ -16,12 +18,12 @@ export type LedgerCategory =
   | 'overflow';
 
 export const LEDGER_LABEL: Record<LedgerCategory, string> = {
-  regen: '自然回復', battle: '戦闘', firstClear: '初回報酬', quest: '任務', sweep: '掃討', shop: 'ショップ (購入)', shopSell: 'ショップ (売却)',
+  regen: '自然回復', battle: '戦闘', firstClear: '初回報酬', quest: '任務', sweep: '掃討', expedition: '遠征', shop: 'ショップ (購入)', shopSell: 'ショップ (売却)',
   sortie: '出撃', aircraft: '艦載機補充', repair: '修理', build: '建造', research: '研究', refit: '改造', dock: 'ドック増設', facility: '軍港の施設', captain: '艦長',
   overflow: '上限で受け取れず',
 };
 
-export const INCOME: LedgerCategory[] = ['regen', 'battle', 'firstClear', 'quest', 'sweep', 'shop'];
+export const INCOME: LedgerCategory[] = ['regen', 'battle', 'firstClear', 'quest', 'sweep', 'expedition', 'shop'];
 export const SPENDING: LedgerCategory[] = ['shopSell', 'sortie', 'aircraft', 'repair', 'build', 'research', 'refit', 'dock', 'facility', 'captain'];
 
 /** "hour:category" → resources (always positive; the category says which way they went). */

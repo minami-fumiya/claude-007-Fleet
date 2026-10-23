@@ -42,7 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
-  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene',
+  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene',
 ];
 
 /** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */

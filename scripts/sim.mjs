@@ -3,8 +3,8 @@
  * table per area: win rate, battle time (mean and range), the ranks S〜D and the player's ships left afloat.
  *
  * The player's fleet is the one of the area's recommended rank (DifficultyCurve.recommendedRank): as many ships as the
- * rank's slots, the strongest the rank may build (no fictional, reward-only or submarine), led by a gun ship, with
- * carriers in at most a third of the slots. The enemy is the area's
+ * rank's slots, the strongest the rank may build (no fictional, reward-only or submarine) within its cost cap (#306),
+ * led by a gun ship, with carriers in at most a third of the slots. The enemy is the area's
  * main fleet, strengthened for the navy's order (#293). Route battles before the main fleet are not played.
  *
  *   npm run sim -- --nations IJN,USN --areas p1,p5 --runs 3 --out docs/balance/sim.md
@@ -137,6 +137,7 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
   const curve = await import('/src/systems/DifficultyCurve.ts');
   const { RANKS } = await import('/src/systems/RankSystem.ts');
   const { shipGrade, gradeAllowed, isRewardOnly } = await import('/src/systems/ShipyardSystem.ts');
+  const { costCap, shipCost } = await import('/src/systems/FleetCost.ts');
   const data = (await import('/src/data/campaign.json')).default;
   const area = data.areas.find((a) => a.id === areaId);
   const depth = curve.areaDepth(data, area, nation);
@@ -158,7 +159,16 @@ async function playOne({ nation, areaId, limitSec, stepMs }) {
   const guns = pool.filter((s) => s.shipClass !== 'Carrier');
   const carriers = pool.filter((s) => s.shipClass === 'Carrier').slice(0, Math.floor(slots / 3));
   const rest = [...guns.slice(1), ...carriers].sort((x, y) => curve.fleetPower([y]) - curve.fleetPower([x]));
-  const ships = [guns[0], ...rest].filter(Boolean).slice(0, slots);
+  // Within the rank's cost cap (#306): the strongest that still fit, in that order.
+  const cap = costCap(rank.index);
+  const ships = [];
+  let used = 0;
+  for (const s of [guns[0], ...rest].filter(Boolean)) {
+    if (ships.length >= slots) break;
+    if (used + shipCost(s) > cap) continue;
+    ships.push(s);
+    used += shipCost(s);
+  }
   const enemyNation = enemyNationFor(data, area, nation);
   const enemy = enemyShips(area, registry, enemyNation);
   const ratio = (curve.fleetPower(enemy) * curve.enemyScale(data, area, nation)) / Math.max(1, curve.fleetPower(ships));

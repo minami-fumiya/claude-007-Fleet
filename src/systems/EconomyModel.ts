@@ -11,6 +11,7 @@ import { facilityCost, regenRules } from './FacilitySystem';
 import { REFIT_TABLE } from './RefitSystem';
 import { addResources, BAUXITE_PER_PLANE, battleReward, REGEN_INTERVAL_MS, RESOURCE_KEYS, resources, sortieCost } from './ResourceSystem';
 import { SWEEP_REWARD_SCALE } from './ProgressionSystem';
+import { EXPEDITIONS } from './ExpeditionSystem';
 import { QUESTS_SHOWN } from './QuestSystem';
 import { scaleCost } from './ResourceSystem';
 import { GOLD_FOR_RANK, GOLD_SWEEP, SELL, SHOP_ENTRIES } from './GoldSystem';
@@ -52,9 +53,13 @@ export interface IEconomyPhase {
   carrier?: string;
   /** What the open bases take off building (#281 #321): 1 = no discount */
   baseBuildMul?: number;
+  /** 遠征 kept running through the hour (#41), one per slot */
+  expeditions?: string[];
 }
 
 interface IEconomyData {
+  /** Share of the hour an expedition is out (the player sends it again when it is back, not at once) */
+  expeditionUptime?: number;
   playHoursPerDay: number;
   playHoursPerWeek: number;
   rankRewardMul: number;
@@ -105,6 +110,14 @@ function researchCost(level: number): IResources {
   return addResources(resources(), sum, nodes.length > 0 ? 1 / nodes.length : 0);
 }
 
+/** Resources an hour of the phase's 遠征 bring (#41): each reward × runs per hour × uptime. */
+function expeditionIncome(phase: IEconomyPhase, data: IEconomyData): IResources {
+  return (phase.expeditions ?? []).reduce((acc, id) => {
+    const e = EXPEDITIONS.find((x) => x.id === id);
+    return e ? addResources(acc, e.reward, (60 / e.minutes) * (data.expeditionUptime ?? 1)) : acc;
+  }, resources());
+}
+
 function sum(parts: Record<string, IResources>): IResources {
   return Object.values(parts).reduce((s, r) => addResources(s, r), resources());
 }
@@ -125,6 +138,7 @@ export function hourBudget(phase: IEconomyPhase, data: IEconomyData = ECONOMY): 
     sweep: addResources(resources(), battleReward(true, enemies.length, enemies), SWEEP_REWARD_SCALE * phase.sweepsPerHour),
     regen: addResources(resources(), regen, ticks),
     quest: addResources(addResources(questShare('hourly', data), questShare('daily', data), 1 / data.playHoursPerDay), questShare('weekly', data), 1 / data.playHoursPerWeek),
+    expedition: expeditionIncome(phase, data),
   };
   const repairs = fleet.reduce((s, x) => addResources(s, repairCost(x.hp, 1 - phase.damagePerBattle)), resources());
   const spending: Record<string, IResources> = {

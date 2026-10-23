@@ -31,7 +31,7 @@ describe('the difficulty curve (#254)', () => {
     expect(recommendedRank(7).name).toBe('大佐');
     expect(recommendedRank(20).name).toBe('元帥');
     expect(fleetPower([{ hp: 100, armor: 50 }, { hp: 200, armor: 0 }])).toBe(350);
-    expect(curveText(1560, 4)).toBe('1,560 (目安 844)  ·  推奨 准佐');
+    expect(curveText(1560, 4)).toBe('1,560 (目安 844)  ·  推奨 准佐 (コスト 15)');
   });
 
   it('depth: the chain inside the theater; the seas of 0.0.35 start a step in (#250)', () => {

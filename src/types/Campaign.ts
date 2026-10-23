@@ -38,6 +38,8 @@ export interface ICampaignSide {
 
 export interface ICampaignArea {
   id: string;
+  /** 友軍艦隊 (#64): allied fleets that join the battle at the main fleet */
+  allies?: Array<{ nation: string; ships: string[]; arriveSec?: number; name?: string; /** Player navies it fights for (all when absent) */ for?: string[] }>;
   theater: string;
   name: string;
   description: string;

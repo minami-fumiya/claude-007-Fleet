@@ -21,7 +21,8 @@ import { nationCaptains } from '@/systems/CaptainRoster';
 import { buildTechFor, gradeRankName, killNeed, killNeedText, rewardAreaOf, shipGrade } from '@/systems/ShipyardSystem';
 import { medalName, shipMedal } from '@/systems/MedalGate';
 import { FICTIONAL_TECH, TECH_TREE } from '@/systems/ResearchSystem';
-import { loadSave } from '@/utils/ProgressStore';
+import { loadProgress, loadSave } from '@/utils/ProgressStore';
+import { moraleLabel, moraleOf } from '@/systems/MoraleSystem';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
@@ -420,6 +421,12 @@ export class EncyclopediaScene extends Phaser.Scene {
       drawMeter(meters, x + 56, y + 3, meterW, 8, v / max, color);
       this.track(this.add.text(x + 66 + meterW, y - 3, String(v), textStyle(14, Css.text, { fontStyle: 'bold' })));
       y += 26;
+    }
+    // The crew of an owned ship of the nation being played: morale (#54) and proficiency.
+    if (owned && this.nation === loadSave().current) {
+      const p = loadProgress();
+      this.track(this.add.text(x, y, `${moraleLabel(moraleOf(p, ship.id, Date.now()))}  ·  練度 ${p.proficiency[ship.id] ?? 0}`, textStyle(12, Css.muted)));
+      y += 22;
     }
     y += 8;
     // 改装 › (#178): owned ships of the nation being played open on the refit screen.
