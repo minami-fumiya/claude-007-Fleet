@@ -34,6 +34,7 @@ import { ISweepCharge, SWEEP_MAX } from '@/systems/SweepSystem';
 import { emptyWallet, parseWallet } from '@/systems/GoldSystem';
 import type { IExpeditionRun } from '@/systems/ExpeditionSystem';
 import type { IDormEntry } from '@/systems/DormSystem';
+import { ISupportChoice, MISSIONS } from '@/systems/FleetGroups';
 import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
@@ -121,6 +122,8 @@ export interface INationProgress {
   expeditions: IExpeditionRun[];
   /** 寮舎 (#57): ships and captains training */
   dorm: IDormEntry[];
+  /** 支援艦隊 (#84): the saved setups chosen to sail with the main fleet, and their missions */
+  support: ISupportChoice[];
 }
 
 /** The whole save (v2 and later). */
@@ -168,7 +171,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], dorm: [],
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], dorm: [], support: [],
   };
 }
 
@@ -331,6 +334,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     dorm: (Array.isArray(data.dorm) ? data.dorm : [])
       .filter((e): e is IDormEntry => isObject(e) && (e.kind === 'ship' || e.kind === 'captain') && typeof e.id === 'string' && isNum(e.since))
       .map((e) => ({ kind: e.kind, id: e.id, since: e.since })),
+    support: (Array.isArray(data.support) ? data.support : []).filter(isObject)
+      .map((c) => ({ preset: isNum(c.preset) ? c.preset : -1, mission: MISSIONS.find((m) => m === c.mission) ?? 'strike' }))
+      .filter((c) => c.preset >= 0 && c.preset < PRESET_COUNT),
   };
 }
 
@@ -344,6 +350,10 @@ function parseSortie(v: unknown): ISortieState | null {
   return {
     areaId: v.areaId, route, at: v.at, nation: v.nation, enemyNation: v.enemyNation, shipIds, captainIds,
     formation: (Object.values(Formation) as string[]).includes(v.formation as string) ? (v.formation as Formation) : Formation.LineAhead, fought: v.fought === true,
+    support: (Array.isArray(v.support) ? v.support : []).filter(isObject).map((g) => ({
+      shipIds: strings(g.shipIds), captainIds: (Array.isArray(g.captainIds) ? g.captainIds : []).map((c) => (typeof c === 'string' ? c : null)),
+      mission: (['strike', 'escort', 'asw', 'air'] as const).find((m) => m === g.mission) ?? 'strike',
+    })).filter((g) => g.shipIds.length > 0),
   };
 }
 

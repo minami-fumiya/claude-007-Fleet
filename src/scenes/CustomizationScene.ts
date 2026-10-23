@@ -27,6 +27,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { actionVariant, addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
+import { sailingIds } from '@/systems/FleetGroups';
 import { MAX_PROFICIENCY, TRAINING_MANUAL_GAIN, useTrainingManual } from '@/systems/ProficiencySystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
@@ -327,7 +328,7 @@ export class CustomizationScene extends Phaser.Scene {
 
   /** A ship out on an unfinished sortie (#138) keeps its fit until it comes home. */
   private away(shipId: string): boolean {
-    return (loadProgress().sortie?.shipIds ?? []).includes(shipId);
+    return sailingIds(loadProgress().sortie).includes(shipId);
   }
 
   private toggle(upgradeId: string): void {

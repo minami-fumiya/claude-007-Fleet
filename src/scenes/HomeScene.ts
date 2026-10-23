@@ -38,6 +38,7 @@ import {
 import { MEDALS } from '@/systems/RecordSystem';
 import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
+import { sailingIds } from '@/systems/FleetGroups';
 import { rankTable } from '@/systems/RankTable';
 
 interface IRect { x: number; y: number; w: number; h: number }
@@ -817,7 +818,7 @@ export class HomeScene extends Phaser.Scene {
       const f = hpFraction(progress, ship.id);
       const cost = scaleCost(repairCost(ship.hp, f), event.repairMul);
       const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
-      const away = (progress.sortie?.shipIds ?? []).includes(ship.id);
+      const away = sailingIds(progress.sortie).includes(ship.id);
       const afford = canAfford(progress.resources, cost);
       addRow({
         tag: '損傷', tagCss: Css.danger, name: ship.name,

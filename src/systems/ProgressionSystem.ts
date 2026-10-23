@@ -16,6 +16,7 @@ import { addGold, emptyWallet, GOLD_SWEEP } from './GoldSystem';
 import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
 
 export { nextSweepMs, SWEEP_MAX, SWEEP_RECHARGE_MS, sweepCharges } from './SweepSystem';
+import { sailingIds } from './FleetGroups';
 import { ShipClass } from '@/types/ShipClass';
 
 /**
@@ -32,6 +33,8 @@ export interface ISortieOptions {
   exercise?: boolean;
   /** Campaign area being sortied to (the first area of a theater is free, #28) */
   area?: ICampaignArea | null;
+  /** The fleets the ships sail in (#84): each keeps under the cost cap on its own (default: all one fleet) */
+  fleets?: IShipData[][];
 }
 
 /** A battle is an exercise when it is neither a campaign area nor a historical scenario. */
@@ -80,7 +83,7 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
   const state = completeRepairs(progress, now);
   const reasons: string[] = [];
   // Ships out on an unfinished campaign sortie (#138) stay with it until it is continued or withdrawn.
-  const away = progress.sortie?.shipIds ?? [];
+  const away = sailingIds(progress.sortie);
   for (const s of ships) if (away.includes(s.id)) reasons.push(`${s.name} は出撃中 (作戦地図で続けるか撤退)`);
   // Ships out on an expedition (#41) or training in the dorm (#57) stay where they are.
   const expedition = shipsAway(progress.expeditions);
@@ -93,8 +96,11 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
     }
   }
   // The rank caps the fleet's sortie cost (#306).
-  const over = costOverText(fleetCost(ships, progress.refits ?? {}), costCap(rankOf(progress).index));
-  if (over) reasons.push(over);
+  const cap = costCap(rankOf(progress).index);
+  (opts.fleets ?? [ships]).forEach((fleet, i, all) => {
+    const over = costOverText(fleetCost(fleet, progress.refits ?? {}), cap);
+    if (over) reasons.push(all.length > 1 ? `第${i + 1}艦隊の${over}` : over);
+  });
   // What is short and by how much (#303): "資源が不足: 燃料 120 / 180 (60 不足)".
   const cost = sortieCostFor(ships, opts);
   if (!canAfford(progress.resources, cost)) {

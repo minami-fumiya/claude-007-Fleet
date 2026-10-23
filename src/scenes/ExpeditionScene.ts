@@ -22,6 +22,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
+import { sailingIds } from '@/systems/FleetGroups';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 type Tab = 'expedition' | 'dorm';
@@ -80,7 +81,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private idleShips(p: IProgress, now: number): IShipData[] {
     const roster = DataLoader.getRegistry(this).byNation(p.nation);
     const away = shipsAway(p.expeditions);
-    const sortie = new Set(p.sortie?.shipIds ?? []);
+    const sortie = new Set(sailingIds(p.sortie));
     return ownedShips(p, roster).filter((s) => !away.has(s.id) && !sortie.has(s.id) && !isDocked({ ...p, docks: p.docks.filter((d) => d.endsAt > now) }, s.id) && !inDorm(p.dorm, 'ship', s.id));
   }
 

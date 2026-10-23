@@ -1,3 +1,4 @@
+import { IShipData } from './Ship';
 import { IFleet } from './Fleet';
 import { Formation } from './Formation';
 import { BattleMode } from './Battle';
@@ -19,6 +20,8 @@ export interface IBattleInitData {
   objective?: Objective;
   /** The enemy brings its superweapon (#148), whatever the event */
   superweapon?: boolean;
+  /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
+  support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */
   captainIds?: (string | null)[];
   /** Node of a multi-battle campaign sortie (#53): battle number, battles in all, and whether it is the boss */

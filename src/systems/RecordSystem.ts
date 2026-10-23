@@ -296,6 +296,9 @@ export const MEDALS: IMedalRule[] = [
   // Items used (#315): books on captains, 高速修理材 and 高速建造材.
   ...ladder('books_used', '教本章', 'growth', [1, 10, 30], (g) => `艦長教本を ${g} 冊使う`, (_r, c) => total(c, 'bookUse')),
   ...ladder('manual_use', '教範章', 'growth', [5, 30, 100], (g) => `訓練教範を ${g} 冊使う`, (_r, c) => total(c, 'manualUse')),
+  // 複数艦隊 (#84) and 友軍艦隊 (#64)
+  ...ladder('combined_fleet', '連合艦隊章', 'battle', [1, 20, 100], (g) => `作戦の海域で、支援艦隊と一緒に ${g} 回勝利する`, (_r, c) => total(c, 'multiFleetWin')),
+  ...ladder('allied', '友軍章', 'battle', [1, 5, 20], (g) => `友軍艦隊と一緒に ${g} 回勝利する`, (_r, c) => total(c, 'allyWin')),
   // 遠征 (#41) and 寮舎 (#57)
   ...ladder('expedition', '遠征章', 'growth', [5, 50, 300], (g) => `遠征から ${g} 回帰還する`, (_r, c) => total(c, 'expeditionDone')),
   ...ladder('dorm', '寮舎章', 'growth', [10, 100, 500], (g) => `寮舎で延べ ${g} 時間訓練する`, (_r, c) => total(c, 'dormHours')),

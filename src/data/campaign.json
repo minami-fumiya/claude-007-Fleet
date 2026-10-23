@@ -117,6 +117,7 @@
       "id": "a7", "theater": "atlantic", "name": "ビスマルク追撃", "description": "僚艦と別れ、嵐の大西洋を逃れる戦艦ビスマルクを、逃げられる前に撃沈せよ。",
       "x": 0.78, "y": 0.42, "requires": ["a4"],
       "enemy": { "nation": "KM", "ships": ["bismarck", "z1", "z20", "z23", "u_boat_viic"] },
+      "allies": [{"for": ["RN", "USN", "FR"], "nation": "RN", "name": "英本国艦隊", "ships": ["rodney", "king_george_v", "cossack"], "arriveSec": 60}],
       "objective": "SinkTargets", "map": "open-sea", "weather": "Storm", "time": "Day",
       "side": { "targetLead": true, "timeLimitSec": 200 },
       "reward": { "fuel": 700, "ammo": 800, "steel": 900, "bauxite": 300 }, "rewardShip": "Cruiser"
@@ -133,6 +134,7 @@
       "id": "a5", "theater": "atlantic", "name": "フィヨルドの巨艦", "description": "フィヨルドに潜む戦艦ティルピッツを夜襲せよ。",
       "x": 0.92, "y": 0.4, "requires": ["a8"],
       "enemy": { "nation": "KM", "ships": ["tirpitz", "scharnhorst", "gneisenau", "admiral_hipper", "prinz_eugen", "z1", "z20", "u_boat_xxi"] },
+      "allies": [{"for": ["USN", "FR"], "nation": "RN", "name": "英本国艦隊", "ships": ["duke_of_york", "belfast", "sheffield"]}, {"for": ["RN"], "nation": "USN", "name": "米第 39 任務部隊", "ships": ["washington", "fletcher", "benson"], "arriveSec": 45}],
       "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 800, "ammo": 900, "steel": 1200, "bauxite": 400 }, "rewardShip": "Battleship"
     },
@@ -404,6 +406,7 @@
       "id": "np5", "theater": "north_pacific", "name": "北太平洋決戦", "description": "高速戦艦と大型空母の主力艦隊を迎え撃て。",
       "x": 0.92, "y": 0.4, "requires": ["np8"],
       "enemy": { "nation": "USN", "ships": ["iowa", "missouri", "essex", "midway", "baltimore", "des_moines", "fletcher", "gearing"] },
+      "allies": [{"for": ["SU"], "nation": "USN", "name": "米太平洋艦隊", "ships": ["south_dakota", "fletcher", "sims"], "arriveSec": 60}],
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 1000, "ammo": 1100, "steel": 1400, "bauxite": 500 }, "rewardShip": "Battleship"
     },
@@ -602,6 +605,7 @@
       "id": "ar5", "theater": "arctic", "name": "北極海決戦", "description": "フィヨルドを出た戦艦群を、北の海で撃滅せよ。",
       "x": 0.92, "y": 0.4, "requires": ["ar8"],
       "enemy": { "nation": "KM", "ships": ["tirpitz", "bismarck", "scharnhorst", "admiral_hipper", "prinz_eugen", "deutschland", "z23", "u_boat_xxi"] },
+      "allies": [{"for": ["SU", "USN"], "nation": "RN", "name": "英本国艦隊", "ships": ["duke_of_york", "belfast", "norfolk"], "arriveSec": 45}, {"for": ["RN"], "nation": "USN", "name": "米第 39 任務部隊", "ships": ["washington", "sims", "benson"], "arriveSec": 45}],
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 1000, "ammo": 1100, "steel": 1400, "bauxite": 500 }, "rewardShip": "Battleship"
     },

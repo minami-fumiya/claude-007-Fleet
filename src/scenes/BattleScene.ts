@@ -30,6 +30,7 @@ import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED }
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
 import { costCap, fleetCost } from '@/systems/FleetCost';
+import { allyArrived, defaultMission, FleetMission, missionFoes } from '@/systems/FleetGroups';
 import { addMorale, battleMoraleDelta, IMoraleState, MORALE_HIGH, moraleModifiers, moraleOf } from '@/systems/MoraleSystem';
 import { BATTLE_WORLD, CONVOY_START_X, convoyEscortStart, enemySpawnPoints, IPoint, lineAtSea, playerStart } from '@/systems/BattleLayout';
 import { Minimap } from '@/ui/Minimap';
@@ -77,7 +78,7 @@ import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/Resear
 import { addResources, formatResources, gainResources, lostNote } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
-import type { ICampaignData } from '@/types/Campaign';
+import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
 import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
@@ -152,6 +153,18 @@ const FALLBACK_WEAPON: IWeaponData = {
   projectileSpeed: 550,
 };
 
+/** A fleet fighting beside the one the player steers (#84 #64): its ships and their AIs; `owned` = the player's own. */
+interface IFleetGroup {
+  label: string;
+  ships: BaseShip[];
+  ais: AISystem[];
+  owned: boolean;
+  mission: FleetMission;
+}
+
+/** 友軍艦隊 (#64) are tinted green. */
+const ALLY_TINT = 0x9fe8b0;
+
 export class BattleScene extends Phaser.Scene {
   private battleData: IBattleInitData | null = null;
 
@@ -197,6 +210,16 @@ export class BattleScene extends Phaser.Scene {
   /** 超兵器 (#148): whether the enemy brings one, and the one on the sea */
   private bringsSuperweapon = false;
   private superweapon: BaseShip | null = null;
+  /** Fleets fighting beside the one the player steers (#84 支援艦隊, #64 友軍艦隊), each ship with its own AI */
+  private groups: IFleetGroup[] = [];
+  /** 友軍艦隊 still to arrive (#64) */
+  private pendingAllies: Array<{ ships: IShipData[]; arriveSec: number; name: string; nation: Nation }> = [];
+  /** Name of the fleet the player steers now (第一艦隊 until a switch, #84) */
+  private controlLabel = '第一艦隊';
+  private switchBtn: UIButton | null = null;
+  /** What enemy shells can hit and what land stops (arrays the colliders read in place, #64) */
+  private friendlyTargets: BaseShip[] = [];
+  private landColliders: BaseShip[] = [];
   /** Fires and floods the player's side started on enemy ships (#48) */
   private firesSet = 0;
   /** The enemy fleet's formation (#82) */
@@ -280,6 +303,10 @@ export class BattleScene extends Phaser.Scene {
     this.enemies = [];
     this.aiSystems = [];
     this.escortAISystems = [];
+    this.groups = [];
+    this.pendingAllies = [];
+    this.controlLabel = '第一艦隊';
+    this.switchBtn = null;
     this.firesSet = 0;
     this.superweapon = null;
     this.seenByEnemy = new Set();
@@ -355,6 +382,8 @@ export class BattleScene extends Phaser.Scene {
     this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);
+    this.spawnSupportFleets(playerFleet.nation);
+    this.queueAllies(battleArea);
     this.spawnEnemyFleet(enemyFleet);
     if (this.objective === Objective.Convoy) this.spawnConvoy();
     if (this.objective === Objective.Bombard) this.spawnLandTargets();
@@ -416,12 +445,16 @@ export class BattleScene extends Phaser.Scene {
 
     // Flagship may have been destroyed by a physics overlap callback in the previous frame.
     // Guard here before accessing .body in handleMovement to prevent a null-body crash.
-    if (!this.flagship.active) {
-      this.triggerGameOver(false);
-      return;
+    // The steered flagship lost: another of the player's fleets takes over (#84) before the battle is lost.
+    if (!this.flagship.active || !this.flagship.isAlive) {
+      if (!this.switchControl()) {
+        this.triggerGameOver(false);
+        return;
+      }
     }
 
     const dtSec = delta / 1000;
+    this.arriveAllies((time - this.battleStartedAt) / 1000);
     this.burnAndFlood(delta);
     this.updateSubmarines(dtSec);
     this.playerRecon.update(time, delta, aaGuns(this.enemies), this.enemies);
@@ -473,6 +506,7 @@ export class BattleScene extends Phaser.Scene {
       count(ai.targetShip, 1);
     }
 
+    this.updateGroups(enemyView, time, delta);
     for (let i = 0; i < this.escorts.length; i++) {
       if (this.escorts[i].isAlive) {
         this.escortAISystems[i].update(this.escorts[i], this.flagship, enemyView, time, delta);
@@ -496,13 +530,144 @@ export class BattleScene extends Phaser.Scene {
     this.checkWinLoss();
   }
 
+  /** The player's own ships: the fleet steered and its 支援艦隊 (#84), whose damage and experience carry over. */
   private friendlies(): BaseShip[] {
-    return [this.flagship, ...this.escorts];
+    return [this.flagship, ...this.escorts, ...this.groups.filter((g) => g.owned).flatMap((g) => g.ships)];
   }
 
-  /** Everything on the player's side the enemy can shoot at: warships plus the convoy still at sea. */
+  /** Everything on the player's side the enemy can shoot at: warships, the fleets beside them and the convoy at sea. */
   private playerSide(): BaseShip[] {
-    return [this.flagship, ...this.escorts, ...this.convoy.filter((c) => c.active)];
+    return [this.flagship, ...this.escorts, ...this.groups.flatMap((g) => g.ships), ...this.convoy.filter((c) => c.active)];
+  }
+
+  // -------------------------------------------------------------------------
+  // 支援艦隊 (#84) and 友軍艦隊 (#64)
+  // -------------------------------------------------------------------------
+
+  /** Where the n-th fleet beside the main one starts: alternately left and right of it, further out each pair. */
+  private groupSpawn(n: number): { x: number; y: number } {
+    const base = this.flagshipSpawn();
+    const side = n % 2 === 0 ? -1 : 1;
+    const step = Math.floor(n / 2) + 1;
+    return { x: Math.max(80, Math.min(WORLD.w - 80, base.x + side * step * 320)), y: base.y + step * 60 };
+  }
+
+  /** An AI for a ship of a fleet beside the player's: escorts keep station on the steered flagship, the rest go hunting. */
+  private groupAI(ship: BaseShip, mission: FleetMission, nation: Nation, slot: number): AISystem {
+    const ai = new AISystem(this.playerWeapons, TACTICS[nation], WORLD_BOUNDS);
+    ai.patrol = { x: ship.x, y: WORLD.h / 2 };
+    if (mission === 'escort') ai.station = { lead: this.flagship, offset: FormationSystem.getOffsets(Formation.Circle, slot + 6)[slot + 5] };
+    return ai;
+  }
+
+  private spawnGroup(ships: IShipData[], label: string, mission: FleetMission, owned: boolean, nation: Nation, captainIds: (string | null)[] = []): void {
+    const at = this.groupSpawn(this.groups.length);
+    const offsets = FormationSystem.getOffsets(Formation.LineAhead, Math.max(0, ships.length - 1));
+    const group: IFleetGroup = { label, ships: [], ais: [], owned, mission };
+    ships.forEach((raw, i) => {
+      const data = owned ? this.rebuilt(raw) : raw;
+      const pos = i === 0 ? at : FormationSystem.getWorldPositionFromValues(at.x, at.y, 0, offsets[i - 1]);
+      const captainId = captainIds[i];
+      const captainData = captainId ? DataLoader.getCaptains(this).find((c) => c.id === captainId) : undefined;
+      const captain = owned && captainData ? withProgress(captainData, loadProgress().captainXp[captainData.id] ?? 0) : null;
+      const ship = this.spawnShip(data, pos.x, pos.y, owned ? this.playerModifiers(data, captain, false) : NO_MODIFIERS);
+      if (owned) {
+        if (captain) this.captains.set(ship, captain);
+        this.applyStartingDamage(ship);
+        this.playerAir.register(ship, AirOpsSystem.wingFor(data, ship.mods));
+      } else {
+        ship.setTint(ALLY_TINT);
+      }
+      this.playerRecon.register(ship);
+      group.ships.push(ship);
+      group.ais.push(this.groupAI(ship, mission, nation, i));
+    });
+    if (group.ships.length > 0) this.groups.push(group);
+  }
+
+  /** The player's 支援艦隊 (#84), each fighting by its mission. */
+  private spawnSupportFleets(nation: Nation): void {
+    if (this.scenario) return;
+    (this.battleData?.support ?? []).forEach((g, i) => this.spawnGroup(g.ships, `第${i + 2}艦隊`, g.mission, true, nation, g.captainIds));
+  }
+
+  /** The area's 友軍艦隊 (#64): those there from the start join now, the others when their time comes. */
+  private queueAllies(area: ICampaignArea | undefined): void {
+    if (!area || this.exercise || this.scenario) return;
+    const registry = DataLoader.getRegistry(this);
+    for (const a of (area.allies ?? []).filter((x) => !x.for || x.for.includes(this.playerNation))) {
+      const ships = a.ships.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
+      if (ships.length === 0) continue;
+      const entry = { ships, arriveSec: a.arriveSec ?? 0, name: a.name ?? '友軍艦隊', nation: a.nation as Nation };
+      if (entry.arriveSec <= 0) this.spawnGroup(entry.ships, entry.name, defaultMission(entry.ships), false, entry.nation);
+      else this.pendingAllies.push(entry);
+    }
+  }
+
+  /** Allies whose time has come join the battle. */
+  private arriveAllies(elapsedSec: number): void {
+    const due = this.pendingAllies.filter((a) => allyArrived(a, elapsedSec));
+    if (due.length === 0) return;
+    this.pendingAllies = this.pendingAllies.filter((a) => !due.includes(a));
+    for (const a of due) {
+      const before = this.groups.length;
+      this.spawnGroup(a.ships, a.name, defaultMission(a.ships), false, a.nation);
+      for (const s of this.groups.slice(before).flatMap((g) => g.ships)) {
+        this.trails.add(s);
+        this.friendlyTargets.push(s);
+        this.landColliders.push(s);
+      }
+      this.showToast(`友軍到着: ${a.name}`);
+    }
+  }
+
+  /** Every fleet beside the player's fights by its mission. */
+  private updateGroups(enemyView: IShipView[], time: number, delta: number): void {
+    for (const g of this.groups) {
+      const foes = missionFoes(g.mission, enemyView.map((v, i) => ({ ...v, shipClass: this.enemies[i].stats.shipClass, alive: this.enemies[i].isAlive })));
+      g.ships.forEach((ship, i) => {
+        if (ship.isAlive) g.ais[i].update(ship, foes, time, delta);
+      });
+    }
+  }
+
+  /** The player takes the helm of another of their fleets (#84); the one steered so far fights on by itself. */
+  private switchControl(): boolean {
+    const next = this.groups.find((g) => g.owned && g.ships.some((s) => s.isAlive));
+    if (!next) return false;
+    const nation = this.playerNation;
+    const old = [this.flagship, ...this.escorts].filter((s) => s.active && s.isAlive);
+    this.groups = this.groups.filter((g) => g !== next);
+    if (old.length > 0) {
+      const g: IFleetGroup = { label: this.controlLabel, ships: old, ais: [], owned: true, mission: 'strike' };
+      g.ais = old.map((s, i) => this.groupAI(s, 'strike', nation, i));
+      this.groups.push(g);
+    }
+    const alive = next.ships.filter((s) => s.isAlive);
+    this.flagship = alive[0];
+    this.escorts = alive.slice(1);
+    const offsets = FormationSystem.getOffsets(this.formation, this.escorts.length);
+    this.escortAISystems = this.escorts.map((_, i) => new EscortAISystem(this.playerWeapons, offsets[i], TACTICS[nation]));
+    // Escorts of the fleets beside keep station on whichever flagship is steered now.
+    for (const g of this.groups) g.ais.forEach((ai) => { if (ai.station) ai.station = { ...ai.station, lead: this.flagship }; });
+    this.controlLabel = next.label;
+    this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
+    this.cameras.main.startFollow(this.flagship, true, CAMERA_LERP, CAMERA_LERP);
+    this.showToast(`${this.controlLabel}を操作`);
+    this.refreshSwitchBtn();
+    return true;
+  }
+
+  /** A line at the top of the screen for a few seconds: an ally arriving, the fleet now steered. */
+  private showToast(text: string): void {
+    const t = this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 170 : 110, text, textStyle(16, Css.gold, { fontStyle: 'bold' }))
+      .setOrigin(0.5).setDepth(DEPTH_HUD + 3).setScrollFactor(0);
+    this.tweens.add({ targets: t, alpha: 0, delay: 2200, duration: 600, onComplete: () => t.destroy() });
+  }
+
+  private refreshSwitchBtn(): void {
+    const others = this.groups.filter((g) => g.owned && g.ships.some((s) => s.isAlive));
+    this.switchBtn?.setVisible(others.length > 0).setLabel(`艦隊切替 (${this.controlLabel})`);
   }
 
   /** Breakthrough / escape zone of a scenario: a dashed gold ring with its name. */
@@ -1191,7 +1356,9 @@ export class BattleScene extends Phaser.Scene {
 
   private setupOverlaps(): void {
     const enemyObjs = this.enemies as unknown as Phaser.GameObjects.GameObject[];
-    const friendlyObjs = this.playerSide() as unknown as Phaser.GameObjects.GameObject[];
+    // Kept as fields: allies arriving later (#64) join these arrays, which the colliders read in place.
+    this.friendlyTargets = this.playerSide();
+    const friendlyObjs = this.friendlyTargets as unknown as Phaser.GameObjects.GameObject[];
     const hit: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p, s) => {
       this.onProjectileHit(p as unknown as BaseProjectile, s as unknown as BaseShip);
     };
@@ -1199,8 +1366,8 @@ export class BattleScene extends Phaser.Scene {
     this.physics.add.overlap(this.playerWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], enemyObjs, hit);
     this.physics.add.overlap(this.enemyWeapons.projectiles as unknown as Phaser.GameObjects.GameObject[], friendlyObjs, hit);
     // Land stops ships and torpedoes; shells fly over it (so shore targets can be shelled).
-    const ships = [...this.playerSide(), ...this.enemies.filter((e) => !e.isLand)] as unknown as Phaser.GameObjects.GameObject[];
-    this.physics.add.collider(ships, this.islands);
+    this.landColliders = [...this.playerSide(), ...this.enemies.filter((e) => !e.isLand)];
+    this.physics.add.collider(this.landColliders as unknown as Phaser.GameObjects.GameObject[], this.islands);
     const intoLand: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p) => {
       const projectile = p as unknown as BaseProjectile;
       if (!projectile.active || !(projectile instanceof Torpedo)) return;
@@ -1436,6 +1603,12 @@ export class BattleScene extends Phaser.Scene {
     this.autoBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
 
     this.buildActionButtons();
+    // 艦隊切替 (#84): steer another of the player's fleets; the one steered so far fights on by itself.
+    this.switchBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2 - (IS_PORTRAIT ? 0 : b.w + 10), b.y + (IS_PORTRAIT ? b.h + 10 : 0), '艦隊切替', () => this.switchControl(), {
+      variant: 'primary', width: IS_PORTRAIT ? b.w : b.w + 40, height: b.h, fontSize: IS_PORTRAIT ? 13 : 12,
+    });
+    this.switchBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
+    this.refreshSwitchBtn();
 
     if (this.isTouch) {
       const hint = addChip(this, 0, CANVAS_H - 36, '敵をタップ: 目標  /  海をタップ: 移動', Colors.cyan, Css.cyan);
@@ -1861,6 +2034,8 @@ export class BattleScene extends Phaser.Scene {
       // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
       ['underdogWin', won(!!area && this.underdog())],
       // 出撃コスト (#306): a campaign win with the fleet's cost right at the rank's cap, or at half of it or less.
+      // 複数艦隊 (#84) and 友軍艦隊 (#64)
+      ['multiFleetWin', won(!!area && (this.groups.some((g) => g.owned) || this.controlLabel !== '第一艦隊'))], ['allyWin', won(this.groups.some((g) => !g.owned))],
       ['sparkleWin', won(!!area && sailed.length > 0 && sailed.every((s) => moraleOf(moraleBefore, s.id, now) >= MORALE_HIGH))],
       ['fullCostWin', won(!!area && fleetCostNow === costCapNow)], ['lightCostWin', won(!!area && fleetCostNow * 2 <= costCapNow)],
       // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.

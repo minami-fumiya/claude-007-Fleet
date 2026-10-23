@@ -18,7 +18,7 @@ describe('a sortie survives closing the game (#138)', () => {
     const save = switchNation(emptySave(), Nation.IJN, 'fubuki', T0);
     const p = { ...progressView(save), sortie };
     const back = progressView(parseSave(JSON.stringify(withProgress(save, p))));
-    expect(back.sortie).toEqual(sortie);
+    expect(back.sortie).toEqual({ ...sortie, support: [] });
     // A new nation, or a malformed entry, has none.
     expect(progressView(save).sortie).toBeNull();
     const broken = JSON.parse(JSON.stringify(withProgress(save, p)));
