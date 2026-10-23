@@ -54,7 +54,7 @@ export const QUEST_EVENTS = [
   // airfields destroyed (#83), superweapons sunk (#148)
   'airfieldDown', 'superweaponSunk',
   // 0.0.40: historical wins (#314), bases opened and docks built (#314), items used (#315)
-  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse',
+  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
@@ -278,5 +278,5 @@ export function formatItems(items: Partial<IItems>): string {
 }
 
 export function addItems(have: IItems, add: Partial<IItems>): IItems {
-  return { fastRepair: have.fastRepair + (add.fastRepair ?? 0), fastBuild: have.fastBuild + (add.fastBuild ?? 0), captainBook: (have.captainBook ?? 0) + (add.captainBook ?? 0) };
+  return { fastRepair: have.fastRepair + (add.fastRepair ?? 0), fastBuild: have.fastBuild + (add.fastBuild ?? 0), captainBook: (have.captainBook ?? 0) + (add.captainBook ?? 0), trainingManual: (have.trainingManual ?? 0) + (add.trainingManual ?? 0) };
 }

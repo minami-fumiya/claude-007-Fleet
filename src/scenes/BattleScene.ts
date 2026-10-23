@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CAPTAIN_DROP_CHANCE, DUPLICATE_CAPTAIN_XP, MAX_RECRUITS_PER_BATTLE, recruitCaptains } from '@/systems/CaptainRoster';
+import { CAPTAIN_DROP_CHANCE, CAPTAIN_MIN_DEPTH, CAPTAIN_PROMOTION_RANK, DUPLICATE_CAPTAIN_XP, MAX_RECRUITS_PER_BATTLE, recruitCaptains } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
@@ -80,7 +80,7 @@ import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/syste
 import { recordBattle } from '@/systems/RecordSystem';
 import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
-import { addProficiency, evadeChance, proficiencyGain } from '@/systems/ProficiencySystem';
+import { addProficiency, evadeChance, proficiencyGain, TRAINING_MANUAL_DROP_CHANCE } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
 import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
@@ -92,7 +92,7 @@ import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
 import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
-import { enemyScale, fleetPower, scaleModifiers } from '@/systems/DifficultyCurve';
+import { areaDepth, enemyScale, fleetPower, scaleModifiers } from '@/systems/DifficultyCurve';
 import { UNDERDOG_RATIO } from '@/systems/FleetPower';
 
 
@@ -1829,7 +1829,7 @@ export class BattleScene extends Phaser.Scene {
     // An S on the area's main fleet lets it be swept from now on (#57 / #149); the area keeps its best rank.
     if (area && !skirmish) {
       const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-      const reward = firstSReward(area, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), area.id), perfect: progress.perfect, captainsLeft: Number.POSITIVE_INFINITY });
+      const reward = firstSReward(area, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), area.id), perfect: progress.perfect, captainsLeft: Number.POSITIVE_INFINITY, depth: areaDepth(campaignData as ICampaignData, area, progress.nation), minDepth: CAPTAIN_MIN_DEPTH });
       if (rank === 'S' && victory && reward?.kind === 'captain') firstS = true;
       // The first S opens sweeping at 0, one more each hour (#181).
       if (rank === 'S' && !progress.perfect.includes(area.id)) progress = openSweeps({ ...progress, perfect: [...progress.perfect, area.id] }, area.id, Date.now());
@@ -1921,7 +1921,7 @@ export class BattleScene extends Phaser.Scene {
     // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
     const sWin = victory && rank === 'S';
     // At most one a battle (#303: an area's first S that also promoted brought two, three with the random one).
-    const recruits = Math.min(MAX_RECRUITS_PER_BATTLE, [firstS, promoted.promotedTo !== null, sWin && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length);
+    const recruits = Math.min(MAX_RECRUITS_PER_BATTLE, [firstS, (promoted.promotedTo?.index ?? 0) >= CAPTAIN_PROMOTION_RANK, sWin && Math.random() < CAPTAIN_DROP_CHANCE].filter(Boolean).length);
     // Captains go to the classes the fleet is shortest of (#159 #210): one class entry per owned ship. Once everyone
     // has joined (#131), a recruit becomes a 艦長教本 the player uses on a captain of their choice (#199).
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
@@ -1935,6 +1935,11 @@ export class BattleScene extends Phaser.Scene {
       joined.length > 0 ? `新しい艦長: ${joined.join('・')}` : '',
       books > 0 ? `艦長教本 +${books} (艦長画面で好きな艦長に使えます: 経験値 +${DUPLICATE_CAPTAIN_XP})` : '',
     ].filter((l) => l);
+    // 訓練教範 (#305): now and then an S win.
+    if (sWin && Math.random() < TRAINING_MANUAL_DROP_CHANCE) {
+      progress = { ...progress, items: { ...progress.items, trainingManual: (progress.items.trainingManual ?? 0) + 1 } };
+      recruitLines.push('訓練教範 +1 (改装の画面で艦の練度を上げられます)');
+    }
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
     // The sortie's battle is settled (#138): reopening the game offers the advance, not this battle again.

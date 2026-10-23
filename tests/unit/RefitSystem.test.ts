@@ -57,12 +57,13 @@ describe('RefitSystem', () => {
   });
 
   it('needs proficiency and resources', () => {
-    expect(canRefit(table, BB, 0, 29, rich)).toBe(false);
-    expect(canRefit(table, BB, 0, 30, rich)).toBe(true);
-    expect(canRefit(table, BB, 0, 30, resources())).toBe(false);
-    expect(canRefit(table, BB, 1, 50, rich)).toBe(false);
-    expect(canRefit(table, BB, 2, 89, rich)).toBe(false);
-    expect(canRefit(table, BB, 2, 90, rich)).toBe(true);
+    // Battleships need 40 / 80 / 100 (#305).
+    expect(canRefit(table, BB, 0, 39, rich)).toBe(false);
+    expect(canRefit(table, BB, 0, 40, rich)).toBe(true);
+    expect(canRefit(table, BB, 0, 40, resources())).toBe(false);
+    expect(canRefit(table, BB, 1, 70, rich)).toBe(false);
+    expect(canRefit(table, BB, 2, 99, rich)).toBe(false);
+    expect(canRefit(table, BB, 2, 100, rich)).toBe(true);
     expect(canRefit(table, BB, 3, 100, rich)).toBe(false);
     expect(nextStage(table, BB, 3)).toBeNull();
     expect(maxStage(table, BB)).toBe(3);

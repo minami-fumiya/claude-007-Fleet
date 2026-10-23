@@ -63,11 +63,13 @@ export type FirstSReward = { kind: 'ship'; ship: IShipData } | { kind: 'captain'
  */
 export function firstSReward(
   area: Pick<ICampaignArea, 'id' | 'training'>,
-  input: { rewardShip?: IShipData; perfect: string[]; captainsLeft: number },
+  input: { rewardShip?: IShipData; perfect: string[]; captainsLeft: number; depth?: number; minDepth?: number },
 ): FirstSReward {
   if (area.training) return null;
   if (input.rewardShip) return { kind: 'ship', ship: input.rewardShip };
   if (input.perfect.includes(area.id) || input.captainsLeft <= 0) return null;
+  // Only the deeper seas bring a captain (#285).
+  if (input.depth !== undefined && input.depth < (input.minDepth ?? 0)) return null;
   return { kind: 'captain' };
 }
 

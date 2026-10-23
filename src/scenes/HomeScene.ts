@@ -13,7 +13,7 @@ import { awardPendingMedals, IProgress, isStarted, loadProgress, loadSave, saveP
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources } from '@/systems/ResourceSystem';
-import { captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
+import { CAPTAIN_PROMOTION_RANK, captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionDone, missionText, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
@@ -197,7 +197,7 @@ export class HomeScene extends Phaser.Scene {
     this.regenRoom = a.x + a.w - x - 8;
     // ゴールド (#183) beside the resources; a tap opens the items (#184). Portrait: the admiral row's top right;
     // landscape: right of the event line, above the resources.
-    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook;
+    const items = progress.items.fastRepair + progress.items.fastBuild + progress.items.captainBook + progress.items.trainingManual;
     const gw = IS_PORTRAIT ? 190 : 220;
     const gx = IS_PORTRAIT ? a.x + a.w - gw / 2 : L.resources.x + L.resources.w - gw / 2;
     const gy = IS_PORTRAIT ? a.y + 14 : 80;
@@ -474,8 +474,9 @@ export class HomeScene extends Phaser.Scene {
       // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
       const missions = r.index === current.index + 1 ? (RANK_MISSIONS[r.index] ?? []).map((m) => (missionDone(progress, m) ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
-      const ahead = r.index - current.index;
-      const captain = ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
+      // From 少佐 on (#285).
+      const ahead = RANKS.filter((x) => x.index > current.index && x.index <= r.index && x.index >= CAPTAIN_PROMOTION_RANK).length;
+      const captain = r.index >= CAPTAIN_PROMOTION_RANK && ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
       const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
         const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];

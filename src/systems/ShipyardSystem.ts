@@ -248,7 +248,7 @@ export function completeBuilds(progress: IProgress, roster: IShipData[], now: nu
 
 /** Finishes a build at once with a 高速建造材; null when there is none or the ship isn't being built. */
 export function fastBuild(progress: IProgress, roster: IShipData[], shipId: string, now: number): IProgress | null {
-  const items = progress.items ?? { fastRepair: 0, fastBuild: 0, captainBook: 0 };
+  const items = progress.items ?? { fastRepair: 0, fastBuild: 0, captainBook: 0, trainingManual: 0 };
   if (items.fastBuild <= 0 || !(progress.builds ?? []).some((b) => b.shipId === shipId)) return null;
   const sped = { ...progress, items: { ...items, fastBuild: items.fastBuild - 1 }, builds: progress.builds.map((b) => (b.shipId === shipId ? { ...b, endsAt: now } : b)) };
   // 突貫建造章 (#315) counts the items used.

@@ -92,12 +92,12 @@ describe('shop (#183)', () => {
 
 describe('items (#184)', () => {
   it('items.json lists gold and every item, each with a use, sources and the screen it is used on', () => {
-    expect(ITEMS.map((i) => i.id)).toEqual(['gold', 'fastRepair', 'fastBuild', 'captainBook']);
+    expect(ITEMS.map((i) => i.id)).toEqual(['gold', 'fastRepair', 'fastBuild', 'trainingManual', 'captainBook']);
     for (const i of ITEMS) {
       expect(i.description.length).toBeGreaterThan(5);
       expect(i.sources.length).toBeGreaterThan(0);
       expect(i.scene).toMatch(/Scene$/);
     }
-    expect(ITEM_LABEL).toEqual({ fastRepair: '高速修理材', fastBuild: '高速建造材', captainBook: '艦長教本' });
+    expect(ITEM_LABEL).toEqual({ fastRepair: '高速修理材', fastBuild: '高速建造材', trainingManual: '訓練教範', captainBook: '艦長教本' });
   });
 });

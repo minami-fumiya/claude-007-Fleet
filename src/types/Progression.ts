@@ -25,6 +25,8 @@ export interface IItems {
   fastBuild: number;
   /** 艦長教本 (#199): a captain's XP +DUPLICATE_CAPTAIN_XP, used on whom the player chooses */
   captainBook: number;
+  /** 訓練教範 (#305): a ship's proficiency +10, used on the refit screen */
+  trainingManual: number;
 }
 
 /**

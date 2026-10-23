@@ -457,7 +457,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     y = this.section(y, `固有スキル「${owned ? inherentLabel(captain) : SKILL_LABEL[data.skill]}」`, `${modifierLines(skillModifiers(data.skill, SKILL_LEVEL_CAP, { night: true })).join('・')} (Lv${SKILL_LEVEL_CAP})\nLv10 で II (1.5 倍)、Lv50 で III (2 倍) に強化`, sc.css);
     y = this.section(y, '搭乗適性', CLASS_ORDER.map((c) => `${CLASS_JA[c].slice(0, 2)} ${aptitudeFor(data, c)}`).join('   '));
     if (!owned) {
-      this.section(y, '入手方法', '報酬艦のない海域で初めて S 評価を取る・昇進・S 評価の勝利 (低確率) で、まだ仲間になっていない艦長が加わります。', Css.gold);
+      this.section(y, '入手方法', '報酬艦のない深さ 3 以上の海域で初めて S 評価を取る・少佐以上への昇進・S 評価の勝利 (まれ) で、まだ仲間になっていない艦長が加わります。', Css.gold);
       return;
     }
     const earned = earnedTraits(np?.captainStats[data.id]);

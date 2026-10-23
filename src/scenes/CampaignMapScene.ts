@@ -23,7 +23,7 @@ import { ownFleetPower, powerCompareText, powerTone } from '@/systems/FleetPower
 import { selectedShipIds } from '@/utils/FleetSelection';
 import { prerequisitesOf, areasOf, firstSReward, lockText, sevenSeasText, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
-import { captainsLeft } from '@/systems/CaptainRoster';
+import { CAPTAIN_MIN_DEPTH, captainsLeft } from '@/systems/CaptainRoster';
 import { kindLabel } from '@/systems/EncyclopediaSystem';
 import { hasCapitalShips, kindBreakdown, kindGroups } from '@/systems/ShipKind';
 import { addResources, canAfford, formatResources, lostNote } from '@/systems/ResourceSystem';
@@ -280,7 +280,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const roster = registry.byNation(progress.nation);
     // One S-rank reward an area (#247): its reward-only ship, else a captain on the first S (who stays a surprise);
     // none in a training area.
-    const sReward = firstSReward(a, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), a.id), perfect: progress.perfect, captainsLeft: captainsLeft(progress.nation, progress.captains) });
+    const sReward = firstSReward(a, { rewardShip: rewardShipFor(roster, ownedIds(progress, roster), a.id), perfect: progress.perfect, captainsLeft: captainsLeft(progress.nation, progress.captains), depth: areaDepth(DATA, a, progress.nation), minDepth: CAPTAIN_MIN_DEPTH });
     const reward = formatResources(a.reward) + (sReward?.kind === 'ship' ? `  /  S 評価の報酬: ${sReward.ship.name.replace(/\s*\(.*\)\s*$/, '')} (${kindLabel(sReward.ship)})` : '');
     const captain = sReward?.kind === 'captain' ? 'S 評価の報酬: 艦長 +1' : '';
     // 自艦隊の戦力 (#280): the fleet last set up in the builder, against this area's enemy.

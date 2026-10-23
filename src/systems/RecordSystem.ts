@@ -292,6 +292,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
   // Items used (#315): books on captains, 高速修理材 and 高速建造材.
   ...ladder('books_used', '教本章', 'growth', [1, 10, 30], (g) => `艦長教本を ${g} 冊使う`, (_r, c) => total(c, 'bookUse')),
+  ...ladder('manual_use', '教範章', 'growth', [5, 30, 100], (g) => `訓練教範を ${g} 冊使う`, (_r, c) => total(c, 'manualUse')),
   ...ladder('fast_repair', '応急修理章', 'base', [10, 50, 200], (g) => `高速修理材を ${g} 個使う`, (_r, c) => total(c, 'fastRepairUse')),
   ...ladder('fast_build', '突貫建造章', 'base', [10, 50, 200], (g) => `高速建造材を ${g} 個使う (建造・軍港の工事)`, (_r, c) => total(c, 'fastBuildUse')),
   ...ladder('merchant', '資源商人章', 'base', [5, 50, 200], (g) => `ショップで資源を ${g} 回売る`, (_r, c) => total(c, 'shopSell')),
