@@ -182,9 +182,8 @@ export class ExpeditionScene extends Phaser.Scene {
       this.draw();
       return;
     }
-    const now = Date.now();
     const p = loadProgress();
-    saveProgress(withQuestEvents({ ...p, expeditions: recallExpedition(p.expeditions, e.id) }, [['expeditionRecall', 1]], now));
+    saveProgress({ ...p, expeditions: recallExpedition(p.expeditions, e.id) });
     this.recallArmed = null;
     this.status = `${e.name}を呼び戻しました (報酬なし)`;
     this.draw();
@@ -223,7 +222,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const on = this.pickerIds.includes(s.id);
       const card = this.add.container(0, i * (itemH + 4), [
         drawPanel(this.add.graphics(), 0, 0, w - 52, itemH, { radius: 10, fillAlpha: on ? 0.7 : 0.4, rim: on ? Colors.gold : undefined, rimAlpha: on ? 0.8 : 0.15 }),
-        this.add.text(14, itemH / 2, `${on ? '✓ ' : '　 '}${s.name.replace(/\s*\(.*\)\s*$/, '')}  ·  ${CLASS_JA[s.shipClass]}`, textStyle(14, on ? Css.gold : Css.text)).setOrigin(0, 0.5),
+        this.add.text(14, itemH / 2, `${on ? '✓  ' : '    '}${s.name.replace(/\s*\(.*\)\s*$/, '')}  ·  ${CLASS_JA[s.shipClass]}`, textStyle(14, on ? Css.gold : Css.text)).setOrigin(0, 0.5),
       ]);
       list.addItem(card, w - 52, itemH, () => {
         this.pickerIds = on ? this.pickerIds.filter((id) => id !== s.id) : [...this.pickerIds, s.id];
