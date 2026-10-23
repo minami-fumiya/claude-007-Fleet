@@ -1,6 +1,7 @@
 import { nationBases } from './BaseSystem';
 import { DOCK_UPGRADES } from './DockSystem';
 import { examText, maxBuildGrade, RANKS, START_RANK } from './RankSystem';
+import { FORMATION_ORDER, FORMATION_RULES } from './FormationRules';
 
 /** One row of the rank list (#128): what a rank needs and what it brings. */
 export interface IRankRow {
@@ -22,6 +23,8 @@ export function rankTable(nation: string): IRankRow[] {
     const docks = DOCK_UPGRADES.filter((d) => d.rank === r.index).length;
     if (docks > 0) unlocks.push('ドック増設');
     for (const b of bases.filter((x) => x.unlockRank === r.index && r.index > 0)) unlocks.push(`軍港の着工: ${b.name}`);
+    // 陣形 (#345): one more as the fleet grows.
+    for (const f of FORMATION_ORDER.filter((x) => FORMATION_RULES[x].minRank === r.index && r.index > 0)) unlocks.push(`陣形: ${FORMATION_RULES[f].ja}`);
     if (r.exam) unlocks.push(`昇進試験: ${examText(r.exam)}`);
     return {
       index: r.index, name: r.name, minMerit: r.minMerit, slots: r.slots, grade: maxBuildGrade(r.index),

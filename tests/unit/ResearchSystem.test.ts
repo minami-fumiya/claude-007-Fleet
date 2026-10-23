@@ -174,7 +174,9 @@ describe('tech tree breadth (Sprint 12)', () => {
   });
 
   it('shipbuilding: one project per 中分類 in two branches, no stat effect but the larger air wing (#260 #298)', () => {
-    expect(node(BUILD_TECH.cruiser).requires).toEqual([]);
+    // By ship size (#341): the 水上艦 branch starts at 海防艦.
+    expect(node('build_escort').requires).toEqual([]);
+    expect(node(BUILD_TECH.cruiser).requires).toEqual(['build_aa_destroyer']);
     expect(node(BUILD_TECH.submarine).requires).toEqual([]);
     for (const [mid, id] of Object.entries(MID_BUILD_TECH)) {
       if (!id) continue;

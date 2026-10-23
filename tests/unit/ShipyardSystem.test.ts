@@ -114,9 +114,9 @@ describe('ShipyardSystem (#18 / #29)', () => {
 
   it('the heavy-cruiser research exists, needs the light one, and light cruisers cost less to build (#37)', () => {
     const tree = techTree.tech as Array<{ id: string; requires: string[] }>;
-    // The 水上艦 branch is a chain: 軽巡 → 海防艦 → 重巡 (#298).
-    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_escort']);
-    expect(tree.find((n) => n.id === 'build_escort')?.requires).toEqual(['build_cruiser']);
+    // The 水上艦 branch is a chain by ship size (#341): 海防艦 → … → 軽巡 → 防空巡 → 重巡.
+    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_aa_cruiser']);
+    expect(tree.find((n) => n.id === 'build_escort')?.requires).toEqual([]);
     expect(buildTechFor(byId('etorofu'))).toBe('build_escort');
     expect(isBuildTech(HEAVY_CRUISER_TECH)).toBe(true);
     expect(buildTechFor(byId('takao'))).toBe(HEAVY_CRUISER_TECH);

@@ -35,7 +35,7 @@ export const RESEARCH_MEDALS: Readonly<Record<string, string>> = {
   night_10: 'night_fighter_2',
   logistics_5: 'shipwright_2',
   logistics_10: 'build_done_2',
-  build_leader_destroyer: 'destroyer_slayer',
+  build_cruiser: 'cruiser_slayer',
   build_fast_battleship: 'battleship_slayer',
   build_light_carrier: 'carrier_slayer',
   fictional_ships: 'ace',

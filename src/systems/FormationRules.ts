@@ -41,19 +41,19 @@ export const FORMATION_RULES: Record<Formation, IFormationRule> = {
   },
   [Formation.DoubleLine]: {
     ja: '複縦陣', en: 'DOUBLE LINE', summary: '砲 +3%・魚雷 +5%・回避 +3%',
-    all: { gunPowerMul: 1.03, torpedoPowerMul: 1.05, evadeAdd: 0.03 }, flagshipPriority: 0, minRank: 0,
+    all: { gunPowerMul: 1.03, torpedoPowerMul: 1.05, evadeAdd: 0.03 }, flagshipPriority: 0, minRank: 2,
   },
   [Formation.Circle]: {
     ja: '輪形陣', en: 'CIRCLE', summary: '対空 +50%・旗艦を守る / 砲 −15%',
-    all: { aaMul: 1.5, gunPowerMul: 0.85 }, flagshipPriority: -0.25, minRank: 0,
+    all: { aaMul: 1.5, gunPowerMul: 0.85 }, flagshipPriority: -0.25, minRank: 4,
   },
   [Formation.Echelon]: {
     ja: '梯形陣', en: 'ECHELON', summary: '対潜 +20%・回避 +5% / 砲 −8%',
-    all: { depthChargeMul: 1.2, sonarMul: 1.15, evadeAdd: 0.05, gunPowerMul: 0.92 }, flagshipPriority: 0, minRank: 2,
+    all: { depthChargeMul: 1.2, sonarMul: 1.15, evadeAdd: 0.05, gunPowerMul: 0.92 }, flagshipPriority: 0, minRank: 6,
   },
   [Formation.LineAbreast]: {
     ja: '単横陣', en: 'LINE ABREAST', summary: '対潜 +40%・ソナー +30% / 砲 −25%',
-    all: { depthChargeMul: 1.4, sonarMul: 1.3, gunPowerMul: 0.75, torpedoPowerMul: 0.9 }, flagshipPriority: 0, minRank: 4,
+    all: { depthChargeMul: 1.4, sonarMul: 1.3, gunPowerMul: 0.75, torpedoPowerMul: 0.9 }, flagshipPriority: 0, minRank: 3,
   },
   [Formation.Vanguard]: {
     ja: '警戒陣', en: 'VANGUARD', summary: '前衛の回避 +12%・旗艦を守る / 砲 −15%',

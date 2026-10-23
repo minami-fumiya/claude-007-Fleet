@@ -11,7 +11,7 @@ import { WeaponSystem } from '@/systems/WeaponSystem';
 import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
-import { FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
+import { FORMATION_ORDER, FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
 import { airfieldRearmMs, REARM_MS } from '@/systems/AirWingSystem';
 import { AircraftType } from '@/types/Aircraft';
@@ -2061,6 +2061,8 @@ export class BattleScene extends Phaser.Scene {
     const theaterEvent = area ? theaterWin[area.theater] : undefined;
     progress = withQuestEvents(progress, [
       ['sortie', 1], ['win', won(true)], ['nightWin', won(night)], ['dayWin', won(!night)], ['sink', sunk.length],
+      // 陣形章 (#345): a win in each formation.
+      [`win${this.formation}` as QuestEvent, won(true)],
       ['landKill', this.enemies.filter((e) => e.isLand && !e.isAlive).length],
       // 寡兵の勝利 (#280): a campaign win with a fleet at most UNDERDOG_RATIO of the enemy's strength.
       ['underdogWin', won(!!area && this.underdog())],
@@ -2137,7 +2139,9 @@ export class BattleScene extends Phaser.Scene {
     if (gold > 0) progress = { ...progress, wallet: addGold(walletOf(progress), gold) };
     const after = rankOf(progress);
     const promoted = { promotedTo: after.index > before.index ? after : null };
-    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}`;
+    // A formation that comes with the new rank (#345) is named with the promotion.
+    const newFormations = promoted.promotedTo ? FORMATION_ORDER.filter((f) => FORMATION_RULES[f].minRank > before.index && FORMATION_RULES[f].minRank <= after.index).map((f) => FORMATION_RULES[f].ja) : [];
+    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}${newFormations.length > 0 ? `  ·  新しい陣形: ${newFormations.join('・')}` : ''}`;
     // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
     const sWin = victory && rank === 'S';
     // At most one a battle (#303: an area's first S that also promoted brought two, three with the random one).
