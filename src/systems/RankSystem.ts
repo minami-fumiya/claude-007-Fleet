@@ -106,10 +106,11 @@ const medal = (id: string): IRankMission => ({ stat: 'medal', goal: 1, medal: id
  */
 export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
   2: [win(1), sink(1), areas(1), medal('first_victory')],
-  3: [win(5), sink(20), night(1), medal('victor')],
+  // 中尉 asks what the first areas give (#339): no night battle (the first is deeper than its areas) and no medal.
+  3: [win(5), sink(10), areas(3)],
   4: [areas(5), sink(40), objective(1), medal('veteran')],
-  5: [win(15), carrier(1), sweep(5), medal('perfect')],
-  6: [carrier(3), objective(3), night(3), medal('fleet_2')],
+  5: [win(15), night(1), sweep(5), medal('perfect')],
+  6: [carrier(1), objective(3), night(3), medal('fleet_2')],
   7: [bigS(1), sink(100), sub(3), medal('operations')],
   8: [bigS(3), battleship(2), win(40), medal('flawless')],
   9: [sub(10), battleship(5), sweep(15), medal('science_3')],
@@ -124,6 +125,14 @@ export const ALL_MISSIONS_DONE: Record<RankStat, number> = Object.values(RANK_MI
   (out, m) => (m && m.stat !== 'medal' ? { ...out, [m.stat]: Math.max(out[m.stat] ?? 0, m.goal) } : out),
   {} as Record<RankStat, number>,
 );
+
+/**
+ * One line for a rank whose missions all come from the same thing (#339): 少尉's four are done by the first clear.
+ * Shown while none of them is done; after that the open ones are named.
+ */
+export const RANK_MISSION_SUMMARY: Partial<Record<number, string>> = {
+  2: '最初の海域を攻略する',
+};
 
 /** Every medal the promotion missions ask for (a granted promotion, tests). */
 export const ALL_MISSION_MEDALS: string[] = Object.values(RANK_MISSIONS).flat().flatMap((m) => (m?.medal ? [m.medal] : []));
@@ -276,9 +285,25 @@ export function needText(next: INextRank, progress?: IRankProgress): string {
     parts.push(progress && need > 1 ? `${examText(next.exam)} (${done} / ${need})` : examText(next.exam));
   }
   // Four missions a rank since #261: one open is named, more are counted (the 昇進 tab of the quests lists them).
-  if (next.missions.length === 1) parts.push(progress ? missionText(next.missions[0], progress) : next.missions[0].text);
+  const summary = RANK_MISSION_SUMMARY[next.rank.index];
+  const all = RANK_MISSIONS[next.rank.index] ?? [];
+  if (summary && next.missions.length === all.length && all.length > 0) parts.push(summary);
+  else if (next.missions.length === 1) parts.push(progress ? missionText(next.missions[0], progress) : next.missions[0].text);
   else if (next.missions.length > 1) parts.push(`昇進任務 あと ${next.missions.length}`);
   return parts.join(' + ');
+}
+
+/**
+ * The missions of a rank in short (#339): its one-line summary while none is done, else the open ones with their
+ * progress and the done ones counted ("済 2 / 4").
+ */
+export function missionLines(rankIndex: number, progress: IRankProgress): string[] {
+  const all = RANK_MISSIONS[rankIndex] ?? [];
+  const open = all.filter((m) => !missionDone(progress, m));
+  const summary = RANK_MISSION_SUMMARY[rankIndex];
+  if (summary && open.length === all.length && all.length > 0) return [summary];
+  const done = all.length - open.length;
+  return [...open.map((m) => missionText(m, progress)), ...(done > 0 ? [`済 ${done} / ${all.length}`] : [])];
 }
 
 /** "次の昇進: 中尉 (戦功 あと 70)" / "最高位に到達". */

@@ -70,11 +70,44 @@ export function expeditionState(exp: IExpedition, runs: readonly IExpeditionRun[
   return pickShips(exp, idle) ? 'ready' : 'ships';
 }
 
-/** Sends `exp` out with its picked ships; null when it can't go. */
-export function startExpedition(runs: readonly IExpeditionRun[], exp: IExpedition, rankIndex: number, idle: readonly IShipData[], now: number): IExpeditionRun[] | null {
+/**
+ * What keeps a chosen group (遠征用の編成, #337) from going: "あと 1 隻" / "駆逐艦があと 1 隻" / "多すぎる (3 隻まで)";
+ * null when it fits.
+ */
+export function groupProblem(exp: IExpedition, group: readonly Pick<IShipData, 'shipClass'>[], classLabel: (c: ShipClass) => string = (c) => c): string | null {
+  for (const [cls, n] of Object.entries(exp.needs) as Array<[ShipClass, number]>) {
+    const have = group.filter((s) => s.shipClass === cls).length;
+    if (have < n) return `${classLabel(cls)}があと ${n - have} 隻`;
+  }
+  if (group.length < exp.ships) return `あと ${exp.ships - group.length} 隻`;
+  if (group.length > exp.ships) return `多すぎる (${exp.ships} 隻まで)`;
+  return null;
+}
+
+/**
+ * Sends `exp` out: with `group` when the player chose one (#337) and it fits from the idle ships, else with the
+ * picked ships. Null when it can't go.
+ */
+export function startExpedition(runs: readonly IExpeditionRun[], exp: IExpedition, rankIndex: number, idle: readonly IShipData[], now: number, group?: readonly IShipData[]): IExpeditionRun[] | null {
   if (expeditionState(exp, runs, rankIndex, idle) !== 'ready') return null;
-  const ships = pickShips(exp, idle)!;
+  const chosen = group && group.every((s) => idle.some((i) => i.id === s.id)) && groupProblem(exp, group) === null ? group : null;
+  const ships = chosen ?? pickShips(exp, idle)!;
   return [...runs, { id: exp.id, shipIds: ships.map((s) => s.id), endsAt: now + exp.minutes * 60_000 }];
+}
+
+/** 呼び戻す (#337): the expedition comes home at once, its ships free again, without its reward. */
+export function recallExpedition(runs: readonly IExpeditionRun[], id: string): IExpeditionRun[] {
+  return runs.filter((r) => r.id !== id);
+}
+
+/** The group last sent on `exp`, if every ship of it is idle again: the next send takes it as it was. */
+export function rememberedGroup(groups: Readonly<Record<string, string[]>> | undefined, exp: IExpedition, idle: readonly IShipData[]): IShipData[] | null {
+  const ids = groups?.[exp.id];
+  if (!ids || ids.length === 0) return null;
+  const ships = ids.map((id) => idle.find((s) => s.id === id));
+  if (ships.some((s) => !s)) return null;
+  const group = ships as IShipData[];
+  return groupProblem(exp, group) === null ? group : null;
 }
 
 /**

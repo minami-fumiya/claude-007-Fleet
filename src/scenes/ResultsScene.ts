@@ -84,7 +84,7 @@ export class ResultsScene extends Phaser.Scene {
       if (data.rankNote) this.add.text(rx, y + 250, data.rankNote, textStyle(11, Css.muted)).setOrigin(0.5, 0);
     }
     this.add
-      .text(CANVAS_W / 2, y + 262, victory ? '敵艦隊を殲滅した！' : '旗艦が撃沈された…', textStyle(18, Css.text, { fontStyle: 'bold' }))
+      .text(CANVAS_W / 2, y + 262, data?.reason ?? (victory ? '敵艦隊を殲滅した！' : '旗艦が撃沈された…'), textStyle(18, Css.text, { fontStyle: 'bold' }))
       .setOrigin(0.5);
 
     const sunk = data?.enemiesSunk ?? 0;

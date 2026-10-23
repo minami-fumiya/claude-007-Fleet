@@ -39,6 +39,8 @@ export interface ICaptainReport {
 
 export interface IBattleResultData {
   victory: boolean;
+  /** Why it ended (#335): "輸送船が 2 隻沈められ…"; absent = the old flagship / annihilation line */
+  reason?: string;
   score: number;
   turnsElapsed: number;
   /** Enemy ships sunk and in the battle; land targets are counted apart (#278) */

@@ -109,7 +109,7 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
 
 /**
  * Wrapped texts of `key` whose second or later line starts with a character a Japanese line may not start with
- * (#248 禁則処理): "。", "、", small kana, "ー", closing brackets.
+ * (#248 禁則処理): "。", "、", small kana, "ー", closing brackets; or a line that ends inside a word (#349).
  */
 async function badLineStarts(page: Page, key: string): Promise<string[]> {
   return page.evaluate((k) => {
@@ -124,8 +124,17 @@ async function badLineStarts(page: Page, key: string): Promise<string[]> {
       const t = o as Phaser.GameObjects.Text;
       if (o.type !== 'Text' || !t.style.wordWrapWidth) return;
       const lines = t.getWrappedText(t.text);
+      // Lines break between phrases (#349): not inside a run of hiragana ("上限ま | で") or of kanji ("上 | 限").
+      const hira = /[\u3041-\u309f]/;
+      const kanji = /[\u4e00-\u9fff]/;
+      const particles = 'をがはにでとのへもや';
       lines.forEach((line, i) => {
-        if (i > 0 && line.length > 0 && banned.includes(line[0]) && !t.text.includes(`\n${line}`)) out.push(`${lines[i - 1]} | ${line}`);
+        if (i === 0 || line.length === 0 || t.text.includes(`\n${line}`)) return;
+        const end = lines[i - 1].slice(-1);
+        // A space in the text there is a fine place ("大火力章 | 三等").
+        const atSpace = t.text.includes(`${end} ${line[0]}`);
+        const midWord = !atSpace && ((hira.test(end) && hira.test(line[0]) && !particles.includes(end)) || (kanji.test(end) && kanji.test(line[0])));
+        if (banned.includes(line[0]) || midWord) out.push(`${lines[i - 1]} | ${line}`);
       });
     };
     scene.children.list.forEach(visit);

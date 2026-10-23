@@ -66,6 +66,36 @@ export function evaluateObjective(objective: Objective, s: IObjectiveState): Out
   }
 }
 
+/**
+ * Why the battle ended (#335), for the results: the objective's own words, not "旗艦が撃沈された" for every loss (a convoy
+ * that lost its merchants, a time limit or an escaped enemy said the flagship sank).
+ */
+export function outcomeReason(objective: Objective, s: IObjectiveState, victory: boolean): string {
+  const timeUp = (s.timeLimitSec ?? 0) > 0 && (s.elapsedSec ?? 0) >= (s.timeLimitSec ?? 0);
+  const allSunk = s.enemiesTotal > 0 && s.enemiesAlive === 0;
+  if (!victory) {
+    if (!s.flagshipAlive) return '旗艦が撃沈された…';
+    switch (objective) {
+      case Objective.Convoy: return `輸送船が ${s.convoyLost ?? 0} 隻沈められ、船団を守れなかった…`;
+      case Objective.PreventEscape: return s.enemyInZone ? '目標の敵艦に逃げられた…' : '時間切れ。目標の敵艦を沈められなかった…';
+      case Objective.Delay: return '敵の突破を許した…';
+      case Objective.Breakthrough: return '時間切れ。突破できなかった…';
+      case Objective.SinkTargets: return '時間切れ。目標を沈められなかった…';
+      default: return timeUp ? '時間切れ…' : '作戦に失敗した…';
+    }
+  }
+  switch (objective) {
+    case Objective.Convoy:
+      return allSunk && (s.convoyEscaped ?? 0) < CONVOY_NEEDED ? '敵を殲滅し、船団を守り抜いた！' : `輸送船 ${s.convoyEscaped ?? 0} 隻が無事に抜けた！`;
+    case Objective.SinkTargets: return '目標を撃沈した！';
+    case Objective.Breakthrough: return '突破に成功した！';
+    case Objective.PreventEscape: return '目標の敵艦を逃さず撃沈した！';
+    case Objective.Delay: return allSunk ? '敵艦隊を殲滅した！' : '時間まで敵を食い止めた！';
+    case Objective.Bombard: return '地上の目標をすべて破壊した！';
+    default: return '敵艦隊を殲滅した！';
+  }
+}
+
 /** Short HUD line describing progress towards the objective. */
 function clock(sec: number): string {
   const t = Math.max(0, Math.ceil(sec));

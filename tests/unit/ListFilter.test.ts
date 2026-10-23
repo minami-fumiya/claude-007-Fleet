@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterShips, kindsOf, nextIn, NO_FILTER, normalizeQuery } from '@/systems/ListFilter';
+import { filterShips, kanaToRomaji, kindsOf, nextIn, NO_FILTER, normalizeQuery, romajiKey } from '@/systems/ListFilter';
 import { IShipData } from '@/types/Ship';
 import ijn from '@/data/ships/ijn.json';
 
@@ -27,6 +27,30 @@ describe('一覧の絞り込み (#263)', () => {
     expect(ids(filterShips(roster, { ...NO_FILTER, query: '長門型' }, { owned: [], roster }))).toEqual(expect.arrayContaining(['nagato', 'mutsu']));
     expect(ids(filterShips(roster, { ...NO_FILTER, query: 'kongo' }, { owned: [], roster }))).toContain('kongo');
     expect(filterShips(roster, { ...NO_FILTER, query: '長門' }, { owned: [], roster, nameKnown: () => false })).toEqual([]);
+  });
+
+  it('かな検索: hiragana or katakana finds a name written in kanji by its romaji (#338)', () => {
+    expect(kanaToRomaji('しょうかく')).toBe('shoukaku');
+    expect(kanaToRomaji('じんつう')).toBe('jintsuu');
+    expect(kanaToRomaji('はっこうだ')).toBe('hakkouda');
+    expect(kanaToRomaji('ちゃ')).toBe('cha');
+    expect(romajiKey('Shōkaku')).toBe(romajiKey(kanaToRomaji('しょうかく')));
+    const find = (q: string): string[] => ids(filterShips(roster, { ...NO_FILTER, query: q }, { owned: [], roster }));
+    expect(find('ながと')).toContain('nagato');
+    expect(find('ナガト')).toContain('nagato');
+    for (const [q, id] of [['しょうかく', 'shokaku'], ['じんつう', 'jintsu'], ['ゆうだち', 'yudachi'], ['ほうしょう', 'hosho'], ['あきづき', 'akizuki'], ['こんごう', 'kongo'], ['ちよだ', 'chiyoda']]) {
+      expect(find(q), q).toContain(id);
+    }
+    // Part of a name, and not everything for one kana.
+    expect(find('かぜ')).toEqual(expect.arrayContaining(['shimakaze', 'yukikaze']));
+    expect(find('ながと')).not.toContain('yamato');
+  });
+
+  it('every name in kanji carries its romaji, so かな検索 can find it (#338)', () => {
+    const all = Object.values(import.meta.glob('@/data/ships/*.json', { eager: true }) as Record<string, { ships: IShipData[] }>).flatMap((m) => m.ships);
+    expect(all.length).toBeGreaterThan(200);
+    const missing = all.filter((s) => /[\u4e00-\u9fff]/.test(s.name) && !/\([^)]*[A-Za-z][^)]*\)/.test(s.name)).map((s) => s.name);
+    expect(missing).toEqual([]);
   });
 
   it('the kind button steps through the kinds present, then back to every kind', () => {

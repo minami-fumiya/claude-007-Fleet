@@ -58,9 +58,53 @@ export function jaTokens(text: string): string[] {
   return out;
 }
 
+const HIRAGANA = /[\u3041-\u309f]/;
+/** One-kana particles: a single hiragana between kanji ends a phrase only when it is one of these (送り出す stays whole). */
+const PARTICLES = new Set([...'をがはにでとのへもや']);
+/** Marks after which a line may always break: the ends of sentences and clauses. */
+const CLAUSE_END = new Set([...'、。，．・：；？！）〕］｝〉》」』】']);
+
 /**
- * Wraps `text` to `width` (as measured by `measure`), paragraph by paragraph, keeping the 禁則 rules. A piece wider
- * than a whole line is split by character as a last resort.
+ * Groups the pieces of a paragraph into phrases (#349): a line may break between them, not inside. A phrase ends
+ * after 、。 and closing brackets, before an opening bracket, at a space, and where a run of hiragana (the endings and
+ * particles of a 文節) meets kanji, katakana or a number again: 「送り出すと、」「時間がたって」「資源を」. A single kana
+ * between kanji is 送り仮名 (送り出す) unless it is a particle (艦を).
+ */
+export function jaPhrases(text: string): string[][] {
+  const out: string[][] = [];
+  let cur: string[] = [];
+  let kana = 0;
+  const close = (): void => {
+    if (cur.length > 0) out.push(cur);
+    cur = [];
+    kana = 0;
+  };
+  for (const piece of jaTokens(text)) {
+    if (piece.trim() === '') {
+      close();
+      out.push([piece]);
+      kana = 0;
+      continue;
+    }
+    const prev = cur[cur.length - 1];
+    if (prev !== undefined) {
+      const last = prev[prev.length - 1];
+      const first = piece[0];
+      const wordEnd = HIRAGANA.test(last) && !HIRAGANA.test(first) && !NO_START.has(first) && (kana > 1 || PARTICLES.has(last));
+      if (CLAUSE_END.has(last) || NO_END.has(first) || wordEnd) close();
+    }
+    cur.push(piece);
+    // Length of the run of hiragana the phrase now ends with.
+    kana = [...piece].every((c) => HIRAGANA.test(c)) ? kana + [...piece].length : HIRAGANA.test(piece[piece.length - 1]) ? 1 : 0;
+  }
+  close();
+  return out;
+}
+
+/**
+ * Wraps `text` to `width` (as measured by `measure`), paragraph by paragraph: between phrases (#349), keeping the 禁則
+ * rules. A phrase wider than a whole line is split between its pieces, and a piece wider than a line by character, as
+ * a last resort.
  */
 export function wrapJa(text: string, width: number, measure: (s: string) => number): string[] {
   const lines: string[] = [];
@@ -70,19 +114,11 @@ export function wrapJa(text: string, width: number, measure: (s: string) => numb
       lines.push(line.replace(/ +$/, ''));
       line = '';
     };
-    for (const token of jaTokens(para)) {
-      if (token.trim() === '') {
-        if (line !== '') line += token;
-        continue;
-      }
-      if (line === '' || measure(line + token) <= width) {
-        line += token;
-        if (measure(line) <= width) continue;
-      } else {
-        flush();
-        line = token;
-        if (measure(line) <= width) continue;
-      }
+    const addPiece = (piece: string): void => {
+      if (line !== '' && measure(line + piece) > width) flush();
+      if (line === '' && piece.trim() === '') return;
+      line += piece;
+      if (measure(line) <= width) return;
       // Too wide for a line of its own: break it by character.
       const chars = [...line];
       line = '';
@@ -90,6 +126,20 @@ export function wrapJa(text: string, width: number, measure: (s: string) => numb
         if (line !== '' && measure(line + c) > width) flush();
         line += c;
       }
+    };
+    for (const phrase of jaPhrases(para)) {
+      const whole = phrase.join('');
+      if (whole.trim() === '') {
+        if (line !== '') line += whole;
+        continue;
+      }
+      if (line === '' || measure(line + whole) <= width) {
+        for (const piece of phrase) addPiece(piece);
+        continue;
+      }
+      // The phrase does not fit: it starts the next line, unless it is wider than a line of its own.
+      if (measure(whole) <= width) flush();
+      for (const piece of phrase) addPiece(piece);
     }
     flush();
   }

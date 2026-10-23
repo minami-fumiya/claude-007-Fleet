@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { collectExpeditions, EXPEDITIONS, expeditionSlots, expeditionState, pickShips, shipsAway, startExpedition } from '@/systems/ExpeditionSystem';
+import { collectExpeditions, EXPEDITIONS, expeditionSlots, expeditionState, groupProblem, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition } from '@/systems/ExpeditionSystem';
 import { collectDorm, DORM_PROFICIENCY_CAP, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { resources } from '@/systems/ResourceSystem';
@@ -66,6 +66,41 @@ describe('遠征 (#41)', () => {
     const capped = collectExpeditions(resources(), runs, resources({ fuel: 10, ammo: 10, steel: 10, bauxite: 10 }), T0 + 999 * HOUR);
     expect(capped.resources.fuel).toBe(10);
     expect(capped.lost.fuel).toBe((drill.reward.fuel ?? 0) - 10);
+  });
+});
+
+describe('遠征の編成と呼び戻し (#337)', () => {
+  const escort = () => EXPEDITIONS.find((e) => e.id === 'ex_escort')!;
+  const idle = [byId('yamato'), byId('sendai'), byId('fubuki'), byId('yukikaze'), byId('mutsuki')];
+
+  it('a chosen group goes as chosen when it fits, and says what it lacks when not', () => {
+    const e = escort();
+    // 海上護衛任務: a cruiser and two destroyers.
+    const mine = [byId('sendai'), byId('yukikaze'), byId('fubuki')];
+    expect(groupProblem(e, mine)).toBeNull();
+    expect(groupProblem(e, [byId('sendai'), byId('yukikaze')])).toContain('あと 1 隻');
+    expect(groupProblem(e, [byId('yamato'), byId('fubuki'), byId('yukikaze')])).not.toBeNull();
+    expect(groupProblem(e, [...mine, byId('yamato')])).toContain('多すぎる');
+    const runs = startExpedition([], e, 4, idle, T0, mine)!;
+    expect(runs[0].shipIds).toEqual(mine.map((s) => s.id));
+    // A group that doesn't fit falls back to the picked ships.
+    expect(startExpedition([], e, 4, idle, T0, [byId('yamato')])![0].shipIds).not.toContain('yamato');
+  });
+
+  it('the group sent last time is kept for the next, while its ships are free', () => {
+    const e = escort();
+    const groups = { ex_escort: ['sendai', 'yukikaze', 'fubuki'] };
+    expect(rememberedGroup(groups, e, idle)?.map((s) => s.id)).toEqual(['sendai', 'yukikaze', 'fubuki']);
+    expect(rememberedGroup(groups, e, idle.filter((s) => s.id !== 'fubuki'))).toBeNull();
+    expect(rememberedGroup({}, e, idle)).toBeNull();
+  });
+
+  it('recalling frees the ships at once, without the reward', () => {
+    const runs = startExpedition([], escort(), 4, idle, T0)!;
+    const back = recallExpedition(runs, 'ex_escort');
+    expect(back).toEqual([]);
+    expect(collectExpeditions(resources(), back, CAP, T0 + 999 * HOUR).done).toBe(0);
+    expect(parseSave(JSON.stringify({ version: 1, nations: { IJN: { ships: [] } } })).nations.IJN!.expeditionGroups).toEqual({});
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { jaTokens, wrapJa } from '@/utils/JaWrap';
+import { jaPhrases, jaTokens, wrapJa } from '@/utils/JaWrap';
 
 /** One unit a character: full and half width alike, enough to see where lines break. */
 const len = (s: string): number => [...s].length;
@@ -42,5 +42,27 @@ describe('Japanese line breaking (#248)', () => {
 
   it('a piece wider than a line is split by character as a last resort', () => {
     expect(wrapJa('ABCDEFGHIJ', 4, len)).toEqual(['ABCD', 'EFGH', 'IJ']);
+  });
+
+  it('breaks between phrases, at 、。 and where a word ends, not inside a word (#349)', () => {
+    const text = '遠征: 出撃していない艦を送り出すと、時間がたって資源を持ち帰ります (保有上限まで)。艦は小さい順に自動で選ばれます。';
+    expect(jaPhrases('送り出すと、時間がたって資源を').map((p) => p.join(''))).toEqual(['送り出すと、', '時間がたって', '資源を']);
+    expect(jaPhrases('艦を持ち帰ります').map((p) => p.join(''))).toEqual(['艦を', '持ち帰ります']);
+    for (let w = 12; w <= 40; w++) {
+      const lines = wrapJa(text, w, len);
+      const joined = lines.join('|');
+      // Words the old wrap cut: 「上限ま|で」「時間がた|って」「持ち帰|ります」.
+      for (const word of ['上限まで', 'たって', '持ち帰ります', '小さい', '自動で']) {
+        expect(joined.includes(word) || !text.includes(word), `width ${w}: ${joined}`).toBe(true);
+      }
+      expect(lines.join('').replace(/ /g, ''), `width ${w}`).toBe(text.replace(/ /g, ''));
+    }
+  });
+
+  it('splits a phrase only when it is wider than a line', () => {
+    // 「ありがとうございました」 is one phrase: it fills the line after 「本日は」 (too long for a line of its own).
+    expect(wrapJa('本日はありがとうございました', 10, len)[0]).toBe('本日はありがとうござ');
+    // A phrase that fits the next line goes there when this one is mostly full.
+    expect(wrapJa('戦闘の結果を確かめます', 8, len)).toEqual(['戦闘の結果を', '確かめます']);
   });
 });

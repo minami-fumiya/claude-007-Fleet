@@ -27,6 +27,23 @@ export const TECH_BRANCHES: ReadonlyArray<{ id: TechBranch; name: string }> = [
   { id: 'shipbuilding_air', name: '空母・潜水' },
 ];
 
+/**
+ * Where a project falls in the order research opens up (#340): how many projects lead to it, then its branch in
+ * display order, then its level. 砲術研究 I (nothing before it) comes before 射撃管制 (after 砲術研究 I).
+ */
+export function researchOrder(techId: string, tree: readonly ITechNode[] = TECH_TREE): number {
+  const depth = (id: string, seen: Set<string> = new Set()): number => {
+    const node = tree.find((n) => n.id === id);
+    if (!node || seen.has(id)) return 0;
+    seen.add(id);
+    return 1 + Math.max(0, ...node.requires.map((r) => depth(r, seen)));
+  };
+  const node = tree.find((n) => n.id === techId);
+  if (!node) return Number.MAX_SAFE_INTEGER;
+  const branch = TECH_BRANCHES.findIndex((b) => b.id === node.branch);
+  return depth(techId) * 10_000 + Math.max(0, branch) * 100 + (node.level ?? 0);
+}
+
 /** Levels a branch runs through (#298): each has exactly one project at every level. */
 export const TECH_LEVELS = 10;
 

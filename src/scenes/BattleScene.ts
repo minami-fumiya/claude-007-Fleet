@@ -81,7 +81,7 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
-import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
+import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain, TRAINING_MANUAL_DROP_CHANCE } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
@@ -1636,7 +1636,8 @@ export class BattleScene extends Phaser.Scene {
     this.switchBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     this.refreshSwitchBtn();
     if (audio.settings.showFps || new URLSearchParams(window.location.search).has('fps')) {
-      this.perfText = this.add.text(20, CANVAS_H - (IS_PORTRAIT ? 300 : 70), '', textStyle(12, Css.cyan, { fontStyle: 'bold' })).setDepth(DEPTH_HUD + 3).setScrollFactor(0);
+      // At the top, under the weather and the objective (#336: it sat low among the controls).
+      this.perfText = this.add.text(20, IS_PORTRAIT ? 340 : 140, '', textStyle(12, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setDepth(DEPTH_HUD + 3).setScrollFactor(0);
     }
 
     if (this.isTouch) {
@@ -1954,6 +1955,7 @@ export class BattleScene extends Phaser.Scene {
     this.battleEvent = eventEffects(event);
     const result: IBattleResultData = {
       victory,
+      reason: outcomeReason(this.objective, this.objectiveState(), victory),
       score: 0,
       turnsElapsed: 0,
       enemiesSunk,
