@@ -599,9 +599,7 @@ export class BattleScene extends Phaser.Scene {
     return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
   }
 
-  private spawnShip(shipData: IShipData, wantX: number, wantY: number, given: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {
-    // What the 中分類 is good at (#260): escorts hunt submarines, the AA kinds shoot down planes.
-    const mods = combineModifiers(given, midModifiers(shipData));
+  private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {
     const { x, y } = avoidLand ? clearSpawn(this.map, wantX, wantY, 60, this.spawnedAt, SPAWN_GAP) : { x: wantX, y: wantY };
     if (avoidLand) this.spawnedAt.push({ x, y });
     const loadout = applyToWeapons(this.loadoutOf(shipData), mods);
@@ -633,7 +631,9 @@ export class BattleScene extends Phaser.Scene {
   private playerModifiers(shipData: IShipData, captain: ICaptain | null, isFlagship: boolean): IShipModifiers {
     // Scenarios are exhibitions: the save's upgrades, research and refits don't apply.
     const captainCtx = { night: this.conditions.time === TimeOfDay.Night };
-    const formation = formationModifiers(this.formation, isFlagship);
+    // What the 中分類 is good at (#260), on the player's ships only: the enemy's strength is set by the difficulty
+    // curve, which knows nothing of it (enemy AA cruisers at ×1.5 halved the win rate in the simulator).
+    const formation = combineModifiers(formationModifiers(this.formation, isFlagship), midModifiers(shipData));
     if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx, [], undefined, shipData.shipClass), formation);
     const progress = loadProgress();
     const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
