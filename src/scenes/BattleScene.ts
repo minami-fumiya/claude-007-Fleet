@@ -81,7 +81,7 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { recordBattle } from '@/systems/RecordSystem';
-import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
+import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain, TRAINING_MANUAL_DROP_CHANCE } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
@@ -1954,6 +1954,7 @@ export class BattleScene extends Phaser.Scene {
     this.battleEvent = eventEffects(event);
     const result: IBattleResultData = {
       victory,
+      reason: outcomeReason(this.objective, this.objectiveState(), victory),
       score: 0,
       turnsElapsed: 0,
       enemiesSunk,

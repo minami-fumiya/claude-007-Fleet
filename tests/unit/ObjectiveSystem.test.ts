@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { battleBanner, CONVOY_NEEDED, evaluateObjective, objectiveStatus, pauseLines } from '@/systems/ObjectiveSystem';
+import { battleBanner, CONVOY_NEEDED, evaluateObjective, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { Objective } from '@/types/Campaign';
 
 const base = { flagshipAlive: true, enemiesAlive: 2, enemiesTotal: 3 };
@@ -102,5 +102,20 @@ describe('the battle banner (#279)', () => {
     expect(battleBanner({ areaName: 'p1', goal: 'x', timeLimitSec: 150 })).toEqual(['p1  ·  主力戦', '勝利条件: x  (制限 2分30秒)']);
     expect(battleBanner({ exercise: true, goal: 'x' })[0]).toBe('演習');
     expect(battleBanner({ scenarioName: 'ミッドウェー', goal: 'x' })[0]).toBe('史実: ミッドウェー');
+  });
+
+  it('says why the battle ended in the objective\'s words (#335)', () => {
+    // A convoy that lost two merchants is lost with the flagship afloat: not "旗艦が撃沈された".
+    const convoy = { ...base, convoyTotal: 3, convoyLost: 2, convoyEscaped: 0 };
+    expect(evaluateObjective(Objective.Convoy, convoy)).toBe('defeat');
+    expect(outcomeReason(Objective.Convoy, convoy, false)).toBe('輸送船が 2 隻沈められ、船団を守れなかった…');
+    expect(outcomeReason(Objective.Convoy, { ...convoy, flagshipAlive: false }, false)).toBe('旗艦が撃沈された…');
+    expect(outcomeReason(Objective.Convoy, { ...base, convoyTotal: 3, convoyEscaped: 2, convoyLost: 1 }, true)).toBe('輸送船 2 隻が無事に抜けた！');
+    expect(outcomeReason(Objective.Breakthrough, { ...base, elapsedSec: 300, timeLimitSec: 300 }, false)).toContain('時間切れ');
+    expect(outcomeReason(Objective.Delay, { ...base, elapsedSec: 300, timeLimitSec: 300 }, true)).toBe('時間まで敵を食い止めた！');
+    for (const o of Object.values(Objective)) {
+      expect(outcomeReason(o, base, true).length, o).toBeGreaterThan(0);
+      expect(outcomeReason(o, base, false).length, o).toBeGreaterThan(0);
+    }
   });
 });

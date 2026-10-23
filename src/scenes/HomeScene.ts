@@ -16,7 +16,7 @@ import { gainResources, lostNote, nextRegenMs, overflows, regenFull, resources }
 import { CAPTAIN_PROMOTION_RANK, captainsLeft, recruitCaptains } from '@/systems/CaptainRoster';
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
-import { clearCount, fleetSlots, missionDone, missionText, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
+import { clearCount, fleetSlots, missionLines, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
 import { buildDock, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
@@ -480,7 +480,7 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
-      const missions = r.index === current.index + 1 ? (RANK_MISSIONS[r.index] ?? []).map((m) => (missionDone(progress, m) ? `✓ ${m.text}` : `任務: ${missionText(m, progress)}`)) : [];
+      const missions = r.index === current.index + 1 ? missionLines(r.index, progress).map((m) => (m.startsWith('済') ? m : `任務: ${m}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
       // From 少佐 on (#285).
       const ahead = RANKS.filter((x) => x.index > current.index && x.index <= r.index && x.index >= CAPTAIN_PROMOTION_RANK).length;
