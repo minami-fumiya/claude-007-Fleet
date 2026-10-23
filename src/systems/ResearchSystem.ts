@@ -1,8 +1,8 @@
 import { researchMedal } from './MedalGate';
 import { IShipModifiers, IUpgradeData } from '@/types/Modifiers';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
+import { MidClass, midClass } from './ShipKind';
 import { IResources, ITechNode, TechBranch } from '@/types/Progression';
-import { ShipClass } from '@/types/ShipClass';
 import { combineModifiers } from './CustomizationSystem';
 import { canAfford, pay, scaleCost } from './ResourceSystem';
 import techTree from '@/data/tech-tree.json';
@@ -23,10 +23,14 @@ export const TECH_BRANCHES: ReadonlyArray<{ id: TechBranch; name: string }> = [
   { id: 'asw', name: '対潜' },
   { id: 'night', name: '夜戦' },
   { id: 'logistics', name: '補給' },
-  { id: 'shipbuilding', name: '建造' },
+  { id: 'shipbuilding', name: '水上艦' },
+  { id: 'shipbuilding_air', name: '空母・潜水' },
 ];
 
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+/** Levels a branch runs through (#298): each has exactly one project at every level. */
+export const TECH_LEVELS = 10;
+
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export function romanLevel(level: number): string {
   return ROMAN[level] ?? String(level);
 }
@@ -42,7 +46,7 @@ export function branchProgress(tree: ITechNode[], branch: TechBranch, done: stri
   return { done: nodes.filter((n) => done.includes(n.id)).length, total: nodes.length };
 }
 
-/** Shipbuilding research ids (no stat effect; they gate which classes can be built). */
+/** Shipbuilding research ids of the plain kinds (no stat effect; they gate which ships can be built). */
 export const BUILD_TECH = {
   cruiser: 'build_cruiser',
   battleship: 'build_battleship',
@@ -50,16 +54,35 @@ export const BUILD_TECH = {
   submarine: 'build_submarine',
 } as const;
 
-/** Research needed to build a class (destroyers need none). */
-export const BUILD_TECH_FOR: Partial<Record<ShipClass, string>> = {
-  [ShipClass.Cruiser]: BUILD_TECH.cruiser,
-  [ShipClass.Battleship]: BUILD_TECH.battleship,
-  [ShipClass.Carrier]: BUILD_TECH.carrier,
-  [ShipClass.Submarine]: BUILD_TECH.submarine,
+/**
+ * Research needed to build each 中分類 (#260 #298): one project per kind in the two shipbuilding branches; plain
+ * destroyers need none.
+ */
+export const MID_BUILD_TECH: Record<MidClass, string | undefined> = {
+  Battleship: BUILD_TECH.battleship,
+  [ShipSubtype.FastBattleship]: 'build_fast_battleship',
+  [ShipSubtype.BattleCruiser]: 'build_battlecruiser',
+  [ShipSubtype.AviationBattleship]: 'build_aviation_battleship',
+  [ShipSubtype.HeavyCruiser]: 'build_heavy_cruiser',
+  [ShipSubtype.LightCruiser]: BUILD_TECH.cruiser,
+  [ShipSubtype.AACruiser]: 'build_aa_cruiser',
+  Destroyer: undefined,
+  [ShipSubtype.LeaderDestroyer]: 'build_leader_destroyer',
+  [ShipSubtype.AADestroyer]: 'build_aa_destroyer',
+  [ShipSubtype.EscortDestroyer]: 'build_escort_destroyer',
+  [ShipSubtype.Escort]: 'build_escort',
+  FleetCarrier: BUILD_TECH.carrier,
+  [ShipSubtype.ArmoredCarrier]: 'build_armored_carrier',
+  [ShipSubtype.LightCarrier]: 'build_light_carrier',
+  [ShipSubtype.EscortCarrier]: 'build_escort_carrier',
+  Submarine: BUILD_TECH.submarine,
+  [ShipSubtype.LargeSubmarine]: 'build_large_submarine',
+  [ShipSubtype.SubmarineCarrier]: 'build_submarine_carrier',
 };
 
-export function buildUnlocked(shipClass: ShipClass, done: string[]): boolean {
-  const need = BUILD_TECH_FOR[shipClass];
+/** Whether a ship of this kind may be built with `done` research. */
+export function buildUnlocked(ship: Pick<IShipData, 'shipClass' | 'subtype'>, done: string[]): boolean {
+  const need = MID_BUILD_TECH[midClass(ship)];
   return !need || done.includes(need);
 }
 
@@ -80,14 +103,19 @@ export function medalMet(node: Pick<ITechNode, 'id'>, medals?: readonly string[]
   return !need || !medals || medals.includes(need);
 }
 
-/** `costMul` is the current base's research multiplier (#88); `medals` the admiral's (#169). */
-export function canResearch(node: ITechNode, done: string[], have: IResources, costMul = 1, medals?: readonly string[]): boolean {
-  return !done.includes(node.id) && prerequisitesMet(node, done) && medalMet(node, medals) && canAfford(have, scaleCost(node.cost, costMul));
+/** Whether the admiral's rank (index) reaches the project's (#298); an undefined rank skips the check (tests of costs alone). */
+export function rankMet(node: Pick<ITechNode, 'rank'>, rankIndex?: number): boolean {
+  return rankIndex === undefined || rankIndex >= (node.rank ?? 0);
+}
+
+/** `costMul` is the current base's research multiplier (#88); `medals` the admiral's (#169); `rankIndex` theirs (#298). */
+export function canResearch(node: ITechNode, done: string[], have: IResources, costMul = 1, medals?: readonly string[], rankIndex?: number): boolean {
+  return !done.includes(node.id) && prerequisitesMet(node, done) && medalMet(node, medals) && rankMet(node, rankIndex) && canAfford(have, scaleCost(node.cost, costMul));
 }
 
 /** Pays for and completes `node`. Returns null if it can't be researched now. */
-export function research(node: ITechNode, done: string[], have: IResources, costMul = 1, medals?: readonly string[]): { done: string[]; resources: IResources } | null {
-  if (!canResearch(node, done, have, costMul, medals)) return null;
+export function research(node: ITechNode, done: string[], have: IResources, costMul = 1, medals?: readonly string[], rankIndex?: number): { done: string[]; resources: IResources } | null {
+  if (!canResearch(node, done, have, costMul, medals, rankIndex)) return null;
   const left = pay(have, scaleCost(node.cost, costMul));
   return left ? { done: [...done, node.id], resources: left } : null;
 }

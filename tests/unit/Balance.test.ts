@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { duelRatio, shipDps } from '@/systems/BalanceModel';
-import { IShipData } from '@/types/Ship';
+import { IShipData, ShipSubtype } from '@/types/Ship';
+import { midClass } from '@/systems/ShipKind';
 import { IWeaponData } from '@/types/Weapon';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
@@ -21,6 +22,12 @@ const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships
 const ALL = EVERY.filter((s) => !s.fictional && !s.sisterOf);
 /** Fictional battleships; fictional carriers (USSR, Italy) only have to keep the hull order. */
 const FICTIONAL = EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Battleship);
+/** Navies whose newest historical battleship is from 1920 or before: their designed one stands in for it (#319). */
+const OLD_ONLY = Object.values(Nation).filter((n) => {
+  const own = ALL.filter((s) => s.nation === n && s.shipClass === ShipClass.Battleship);
+  return own.length > 0 && own.every((s) => (s.year ?? 0) <= 1920);
+});
+const planesOf = (s: IShipData): number => (s.airWing ? s.airWing.fighters + s.airWing.diveBombers + s.airWing.torpedoBombers : 0);
 const loadout = (s: IShipData): IWeaponData[] => s.weapons.map((id) => W.get(id)!);
 const of = (cls: ShipClass): IShipData[] => ALL.filter((s) => s.shipClass === cls);
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -44,17 +51,21 @@ describe('balance', () => {
   });
 
   it('keeps each nation flagship battleship duel within 0.7–1.4 of the others', () => {
-    const best = (n: Nation): IShipData =>
-      of(ShipClass.Battleship)
-        .filter((s) => s.nation === n)
+    // A navy without a battleship after 1920 (the Soviet Union, #319) fields its designed one instead (#309).
+    const best = (n: Nation): IShipData => {
+      const own = of(ShipClass.Battleship).filter((s) => s.nation === n && !OLD_ONLY.includes(n));
+      return (own.length > 0 ? own : FICTIONAL.filter((s) => s.nation === n))
         .sort((a, b) => b.hp * shipDps(loadout(b), BB_TARGET) - a.hp * shipDps(loadout(a), BB_TARGET))[0];
+    };
     const nations = Object.values(Nation);
     for (const a of nations) {
       for (const b of nations) {
         if (a === b) continue;
         const r = duelRatio(loadout(best(a)), best(a), loadout(best(b)), best(b));
-        expect(r, `${best(a).id} vs ${best(b).id}`).toBeGreaterThan(0.7);
-        expect(r, `${best(a).id} vs ${best(b).id}`).toBeLessThan(1.4);
+        // A designed stand-in is a step above the historical ships (the same 0.6 bound as the fictional test below).
+        const wide = OLD_ONLY.includes(a) || OLD_ONLY.includes(b);
+        expect(r, `${best(a).id} vs ${best(b).id}`).toBeGreaterThan(wide ? 0.6 : 0.7);
+        expect(r, `${best(a).id} vs ${best(b).id}`).toBeLessThan(wide ? 1 / 0.6 : 1.4);
       }
     }
   });
@@ -92,6 +103,43 @@ describe('balance', () => {
     }
   });
 
+  it('a ship five years or more younger than another of its 中分類 is at least 0.8 as strong; carriers count their air wing (#319)', () => {
+    const refArmor: Partial<Record<ShipClass, number>> = { [ShipClass.Battleship]: 55, [ShipClass.Cruiser]: 35, [ShipClass.Destroyer]: 15, [ShipClass.Submarine]: 6 };
+    const power = (s: IShipData): number => (s.shipClass === ShipClass.Carrier
+      ? Math.sqrt(s.hp * (1 + s.armor / 100)) * planesOf(s)
+      : s.hp * (1 + s.armor / 100) * shipDps(loadout(s), { shipClass: s.shipClass, armor: refArmor[s.shipClass] ?? 30 }));
+    const dated = ALL.filter((s) => s.year !== undefined);
+    for (const a of dated) {
+      for (const b of dated) {
+        if (a.nation !== b.nation || midClass(a) !== midClass(b) || b.year! - a.year! < 5) continue;
+        expect(power(b) / power(a), `${b.id} (${b.year}) vs ${a.id} (${a.year})`).toBeGreaterThanOrEqual(0.8);
+      }
+    }
+    // A fictional carrier flies more than the best historical one of its 中分類.
+    for (const f of EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Carrier)) {
+      const best = Math.max(...ALL.filter((s) => s.shipClass === ShipClass.Carrier && midClass(s) === midClass(f)).map(planesOf));
+      expect(planesOf(f), f.id).toBeGreaterThan(best);
+    }
+  });
+
+  it('no gun ship from 1920 or before matches the 46cm guns of Yamato (#319)', () => {
+    const yamato = ALL.find((s) => s.id === 'yamato')!;
+    for (const s of of(ShipClass.Battleship).filter((x) => (x.year ?? 9999) <= 1920)) {
+      expect(shipDps(loadout(s), BB_TARGET), s.id).toBeLessThan(shipDps(loadout(yamato), BB_TARGET) * 0.85);
+    }
+  });
+
+  it("British heavy cruisers are not the weakest of the world's nor weaker than Belfast (#319)", () => {
+    const power = (s: IShipData): number => s.hp * (1 + s.armor / 100) * shipDps(loadout(s), { shipClass: ShipClass.Cruiser, armor: 35 });
+    const heavy = ALL.filter((s) => s.subtype === ShipSubtype.HeavyCruiser);
+    const rn = heavy.filter((s) => s.nation === Nation.RN);
+    const belfast = ALL.find((s) => s.id === 'belfast')!;
+    expect(Math.max(...rn.map(power))).toBeGreaterThan(power(belfast));
+    // The German armoured ships stay within a fifth of the Hipper class.
+    const hipper = power(ALL.find((s) => s.id === 'admiral_hipper')!);
+    expect(power(ALL.find((s) => s.id === 'deutschland')!) / hipper).toBeLessThan(1.2);
+  });
+
   it('makes small ships faster than big ones on average', () => {
     const avg = (cls: ShipClass): number => of(cls).reduce((n, s) => n + s.speed, 0) / of(cls).length;
     expect(avg(ShipClass.Destroyer)).toBeGreaterThan(avg(ShipClass.Cruiser));
@@ -99,7 +147,7 @@ describe('balance', () => {
   });
 
   it('makes each fictional battleship a step above its nation\'s best historical one, but not overwhelming', () => {
-    for (const f of FICTIONAL) {
+    for (const f of FICTIONAL.filter((x) => !OLD_ONLY.includes(x.nation))) {
       const rivals = of(ShipClass.Battleship).filter((s) => s.nation === f.nation);
       const best = rivals.sort((a, b) => b.hp * shipDps(loadout(b), BB_TARGET) - a.hp * shipDps(loadout(a), BB_TARGET))[0];
       const r = duelRatio(loadout(f), f, loadout(best), best);

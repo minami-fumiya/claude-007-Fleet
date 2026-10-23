@@ -1,9 +1,9 @@
 {
-  "IJN": {"p3": "i400", "p5": "takao", "p8": "myoko", "p6": "nagato", "m2": "mogami", "m5": "mutsu"},
-  "USN": {"p3": "balao", "p5": "independence", "p8": "cleveland", "p6": "south_dakota", "a2": "gearing", "a7": "des_moines", "a5": "north_carolina"},
-  "KM": {"a2": "u_boat_ixc", "a7": "prinz_eugen", "a5": "scharnhorst", "m2": "nurnberg", "m4": "deutschland", "m7": "u_boat_xxi", "m5": "tirpitz", "b2": "z23", "b4": "blucher", "b7": "admiral_graf_spee", "b5": "gneisenau", "ar3": "koenigsberg"},
-  "RN": {"a2": "truant", "a4": "hermes", "a7": "belfast", "a5": "renown", "m2": "southampton", "m5": "warspite", "sa3": "exeter", "ar7": "leander"},
-  "FR": {"a7": "dupleix", "a5": "dunkerque", "m2": "la_galissonniere", "m4": "algerie", "m5": "strasbourg", "sa8": "bretagne"},
-  "SU": {"b4": "kirov", "b7": "maxim_gorky", "b5": "marat", "bs4": "voroshilov", "bs5": "molotov", "ar7": "leningrad"},
-  "RM": {"m2": "garibaldi", "m4": "zara", "m7": "trento", "m5": "conte_di_cavour", "io3": "alberto_di_giussano", "sa5": "andrea_doria"}
+  "IJN": {"p3": "i400", "p5": "takao", "p8": "myoko", "p6": "nagato", "m2": "mogami", "m5": "mutsu", "m8": "hiei", "np5": "haruna", "np8": "kirishima", "np7": "tatsuta", "io5": "yamashiro", "io8": "hyuga", "io7": "tama"},
+  "USN": {"p3": "balao", "p5": "independence", "p8": "cleveland", "p6": "south_dakota", "a2": "gearing", "a7": "des_moines", "a5": "north_carolina", "np5": "washington", "np8": "texas", "np7": "boston", "sa5": "indiana", "sa8": "massachusetts", "sa7": "canberra", "ar5": "alabama", "ar8": "new_jersey", "ar7": "pittsburgh"},
+  "KM": {"a2": "u_boat_ixc", "a7": "prinz_eugen", "a5": "scharnhorst", "m2": "nurnberg", "m4": "deutschland", "m7": "u_boat_xxi", "m5": "tirpitz", "b2": "z23", "b4": "blucher", "b7": "admiral_graf_spee", "b5": "gneisenau", "ar3": "koenigsberg", "sa5": "admiral_scheer", "sa8": "karlsruhe", "sa7": "koeln", "io5": "z2", "io8": "z3", "io7": "z4", "ar5": "z17", "ar8": "z18"},
+  "RN": {"a2": "truant", "a4": "hermes", "a7": "belfast", "a5": "renown", "m2": "southampton", "m5": "warspite", "sa3": "exeter", "ar7": "leander", "m8": "rodney", "sa5": "prince_of_wales", "sa8": "duke_of_york", "io5": "anson", "io8": "howe", "io7": "edinburgh", "ar5": "valiant", "ar8": "barham"},
+  "FR": {"a7": "dupleix", "a5": "dunkerque", "m2": "la_galissonniere", "m4": "algerie", "m5": "strasbourg", "sa8": "bretagne", "a8": "provence", "sa5": "jean_bart", "sa7": "lamotte_picquet", "io5": "lorraine", "io8": "primauguet", "io7": "suffren"},
+  "SU": {"b4": "kirov", "b7": "maxim_gorky", "b5": "marat", "bs4": "voroshilov", "bs5": "molotov", "ar7": "leningrad", "bs8": "oktyabrskaya_revolutsiya", "np5": "parizhskaya_kommuna", "np8": "kalinin", "np7": "kaganovich", "ar5": "moskva", "ar8": "kharkov"},
+  "RM": {"m2": "garibaldi", "m4": "zara", "m7": "trento", "m5": "conte_di_cavour", "io3": "alberto_di_giussano", "sa5": "andrea_doria", "a5": "littorio", "a8": "giulio_cesare", "a7": "fiume", "sa8": "roma", "sa7": "gorizia", "io5": "caio_duilio", "io8": "pola"}
 }

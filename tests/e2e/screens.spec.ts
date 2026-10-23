@@ -930,21 +930,21 @@ test.describe('screens', () => {
     const read = () => page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { builds: Array<{ shipId: string }>; ships: string[]; items: { fastBuild: number } });
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
-      const target = s.classShips().find((x) => x.id === 'etorofu');
+      const target = s.classShips().find((x) => x.id === 'mutsuki');
       s.build(target);
     });
     let np = await read();
-    expect(np.builds.map((b) => b.shipId)).toEqual(['etorofu']);
-    expect(np.ships).not.toContain('etorofu');
+    expect(np.builds.map((b) => b.shipId)).toEqual(['mutsuki']);
+    expect(np.ships).not.toContain('mutsuki');
     await page.waitForTimeout(300);
     await page.screenshot({ path: info.outputPath('shipyard-building.png') });
     // Tapping it again spends a 高速建造材 (migrated saves get two).
     await page.evaluate(() => {
       const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void; classShips(): Array<{ id: string }> };
-      s.build(s.classShips().find((x) => x.id === 'etorofu'));
+      s.build(s.classShips().find((x) => x.id === 'mutsuki'));
     });
     np = await read();
-    expect(np.ships).toContain('etorofu');
+    expect(np.ships).toContain('mutsuki');
     expect(np.items.fastBuild).toBe(1);
     await open(page, 'HomeScene');
     await page.screenshot({ path: info.outputPath('home-docks.png') });

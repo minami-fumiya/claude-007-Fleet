@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { filterAndSort, isHeavyCruiser, isLightCruiser, KindFilter, kindShort, matchesKind, ShipSort } from '@/systems/ShipKind';
+import { ALL_MID_CLASSES, ESCORT_COST_MUL, filterAndSort, isHeavyCruiser, isLightCruiser, KindFilter, kindShort, matchesKind, midClass, midLabel, midModifiers, midParent, midShort, ShipSort } from '@/systems/ShipKind';
+import { MID_BUILD_TECH } from '@/systems/ResearchSystem';
 import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
@@ -51,6 +52,39 @@ describe('ShipKind (#37)', () => {
   it('every cruiser in the data is either heavy or light', () => {
     const all = [ijn, usn, km, rn, fr, rm, su].flatMap((f) => f.ships as IShipData[]).filter((s) => s.shipClass === ShipClass.Cruiser);
     expect(all.length).toBeGreaterThan(20);
-    for (const s of all) expect([ShipSubtype.HeavyCruiser, ShipSubtype.LightCruiser], s.id).toContain(s.subtype);
+    // 防空巡洋艦 (#260) is the third kind; it counts as light for the cruiser filters.
+    for (const s of all) expect([ShipSubtype.HeavyCruiser, ShipSubtype.LightCruiser, ShipSubtype.AACruiser], s.id).toContain(s.subtype);
+  });
+});
+
+describe('3-level ship classification (#260)', () => {
+  const all = [ijn, usn, km, rn, fr, rm, su].flatMap((d) => d.ships as IShipData[]);
+
+  it("every ship's 中分類 belongs to its 大分類, and every 中分類 has names and a build research slot", () => {
+    for (const s of all) expect(midParent(midClass(s)), s.id).toBe(s.shipClass);
+    expect(new Set(ALL_MID_CLASSES).size).toBe(ALL_MID_CLASSES.length);
+    for (const m of ALL_MID_CLASSES) {
+      expect(midLabel(m), m).toBeTruthy();
+      expect(midShort(m), m).toBeTruthy();
+      expect(m in MID_BUILD_TECH, m).toBe(true);
+    }
+  });
+
+  it('the data uses most 中分類, each by more than one ship of some navy', () => {
+    const used = new Map<string, number>();
+    for (const s of all) used.set(midClass(s), (used.get(midClass(s)) ?? 0) + 1);
+    expect(used.size).toBeGreaterThanOrEqual(ALL_MID_CLASSES.length - 1);
+    for (const [m, n] of used) expect(n, m).toBeGreaterThan(1);
+  });
+
+  it('escorts hunt submarines and are cheap; AA ships shoot planes better', () => {
+    const escort = midModifiers({ shipClass: ShipClass.Destroyer, subtype: ShipSubtype.Escort });
+    const plain = midModifiers({ shipClass: ShipClass.Destroyer });
+    expect(plain).toEqual({});
+    expect(escort.sonarMul).toBeGreaterThan(1);
+    expect(escort.depthChargeMul).toBeGreaterThan(1);
+    expect(midModifiers({ shipClass: ShipClass.Destroyer, subtype: ShipSubtype.AADestroyer }).aaMul).toBeGreaterThan(1);
+    expect(midModifiers({ shipClass: ShipClass.Cruiser, subtype: ShipSubtype.AACruiser }).aaMul).toBeGreaterThan(1);
+    expect(ESCORT_COST_MUL).toBeLessThan(1);
   });
 });

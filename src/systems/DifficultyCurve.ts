@@ -32,7 +32,7 @@ export const LIGHT_ONLY_DEPTH = 2;
 export function allowedAtDepth(ship: Pick<IShipData, 'shipClass' | 'subtype'>, depth: number): boolean {
   if (depth > LIGHT_ONLY_DEPTH) return true;
   if (ship.shipClass === ShipClass.Battleship || ship.shipClass === ShipClass.Carrier) return false;
-  return !(ship.shipClass === ShipClass.Cruiser && ship.subtype !== ShipSubtype.LightCruiser);
+  return !(ship.shipClass === ShipClass.Cruiser && ship.subtype === ShipSubtype.HeavyCruiser);
 }
 
 /** One ship's weight in the strength sum. */

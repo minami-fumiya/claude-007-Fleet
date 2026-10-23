@@ -13,10 +13,14 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import {
   CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
 } from '@/systems/EncyclopediaSystem';
+import { combineModifiers } from '@/systems/CustomizationSystem';
+import { midClass, midLabel, midModifiers } from '@/systems/ShipKind';
 import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
 import { SKILL_COLOR } from '@/ui/SkillColors';
 import { nationCaptains } from '@/systems/CaptainRoster';
-import { rewardAreaOf } from '@/systems/ShipyardSystem';
+import { buildTechFor, gradeRankName, killNeed, killNeedText, rewardAreaOf, shipGrade } from '@/systems/ShipyardSystem';
+import { medalName, shipMedal } from '@/systems/MedalGate';
+import { FICTIONAL_TECH, TECH_TREE } from '@/systems/ResearchSystem';
 import { loadSave } from '@/utils/ProgressStore';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
@@ -372,8 +376,18 @@ export class EncyclopediaScene extends Phaser.Scene {
   private shipSource(ship: IShipData): string {
     const area = rewardAreaOf(ship);
     if (area) return `報酬限定艦 — 作戦「${AREA_NAMES[area] ?? area}」で S 評価を取ると入手`;
-    if (ship.fictional) return '工廠で建造 (研究「架空艦計画」が必要)';
-    return '工廠で建造 (研究と階級で建造できる艦が増えます)';
+    // The build conditions (#285), with how far the shared record is on the sinkings.
+    const tech = (id: string): string => TECH_TREE.find((n) => n.id === id)?.name ?? id;
+    const record = loadSave().record;
+    const lines = ['工廠で建造。条件:'];
+    const research = [buildTechFor(ship), ship.fictional ? FICTIONAL_TECH : undefined].filter((id): id is string => id !== undefined);
+    if (research.length > 0) lines.push(`・研究「${research.map(tech).join('」「')}」`);
+    if (shipGrade(ship) > 0) lines.push(`・階級 ${gradeRankName(shipGrade(ship))} 以上`);
+    const kills = killNeed(ship, record);
+    if (kills) lines.push(`・${killNeedText(kills)}${kills.have >= kills.count ? ' ✓' : ''}`);
+    const medal = shipMedal(ship, shipGrade(ship));
+    if (medal) lines.push(`・勲章「${medalName(medal)}」${record.medals.includes(medal) ? ' ✓' : ''}`);
+    return lines.join('\n');
   }
 
   private buildShipDetail(ship: IShipData, owned: boolean): void {
@@ -425,6 +439,9 @@ export class EncyclopediaScene extends Phaser.Scene {
       lines.push(`艦載機  戦闘機 ${a.fighters} / 艦爆 ${a.diveBombers} / 艦攻 ${a.torpedoBombers}`);
     }
     y = this.section(y, '兵装', lines.join('\n') || '—');
+    // 中分類の特性 (#260): escorts hunt submarines, AA ships shoot planes.
+    const kindMods = modifierLines(combineModifiers(midModifiers(ship)));
+    if (kindMods.length > 0) y = this.section(y, `艦種の特性 — ${midLabel(midClass(ship))}`, kindMods.join('・'), Css.cyan);
     // The class's other ships (#85): same performance, other names.
     // The class, its hull number (#246) and the other ships of it, by name once owned (#245).
     if (hull.of > 1) {
@@ -452,7 +469,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     y = this.section(y, `固有スキル「${owned ? inherentLabel(captain) : SKILL_LABEL[data.skill]}」`, `${modifierLines(skillModifiers(data.skill, SKILL_LEVEL_CAP, { night: true })).join('・')} (Lv${SKILL_LEVEL_CAP})\nLv10 で II (1.5 倍)、Lv50 で III (2 倍) に強化`, sc.css);
     y = this.section(y, '搭乗適性', CLASS_ORDER.map((c) => `${CLASS_JA[c].slice(0, 2)} ${aptitudeFor(data, c)}`).join('   '));
     if (!owned) {
-      this.section(y, '入手方法', '報酬艦のない海域で初めて S 評価を取る・昇進・S 評価の勝利 (低確率) で、まだ仲間になっていない艦長が加わります。', Css.gold);
+      this.section(y, '入手方法', '報酬艦のない深さ 3 以上の海域で初めて S 評価を取る・少佐以上への昇進・S 評価の勝利 (まれ) で、まだ仲間になっていない艦長が加わります。', Css.gold);
       return;
     }
     const earned = earnedTraits(np?.captainStats[data.id]);

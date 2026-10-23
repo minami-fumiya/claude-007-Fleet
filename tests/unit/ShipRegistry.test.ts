@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ShipRegistry } from '@/systems/ShipRegistry';
+import { midParent } from '@/systems/ShipKind';
 import { IShipData, ShipSubtype } from '@/types/Ship';
 import { IWeaponData } from '@/types/Weapon';
 import { Nation } from '@/types/Nation';
@@ -82,16 +83,9 @@ describe('ship data files', () => {
   });
 
   it('gives subtypes only to ships of the matching class', () => {
-    const CLASS_OF: Record<ShipSubtype, ShipClass> = {
-      [ShipSubtype.BattleCruiser]: ShipClass.Battleship,
-      [ShipSubtype.AviationBattleship]: ShipClass.Battleship,
-      [ShipSubtype.HeavyCruiser]: ShipClass.Cruiser,
-      [ShipSubtype.LightCruiser]: ShipClass.Cruiser,
-      [ShipSubtype.LightCarrier]: ShipClass.Carrier,
-      [ShipSubtype.EscortCarrier]: ShipClass.Carrier,
-      [ShipSubtype.Escort]: ShipClass.Destroyer,
-    };
-    const wrong = ALL.filter((s) => s.subtype && CLASS_OF[s.subtype] !== s.shipClass).map((s) => s.id);
+    // The 中分類 of the three-level classification (#260) under their 大分類.
+    const CLASS_OF = (t: ShipSubtype): ShipClass => midParent(t);
+    const wrong = ALL.filter((s) => s.subtype && CLASS_OF(s.subtype) !== s.shipClass).map((s) => s.id);
     expect(wrong).toEqual([]);
     for (const subtype of Object.values(ShipSubtype)) {
       expect(ALL.some((s) => s.subtype === subtype), subtype).toBe(true);

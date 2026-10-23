@@ -16,7 +16,10 @@ export const ALL_CAPTAINS = (captainData as { captains: ICaptainData[] }).captai
  * Chance an S-rank win brings a new captain: 5% → 8% with 30 captains per nation (#209), 10% since an area with a
  * reward ship no longer also brings a captain (#247).
  */
-export const CAPTAIN_DROP_CHANCE = 0.1;
+export const CAPTAIN_DROP_CHANCE = 0.03;
+/** Captains come slower since #285: an area's first S brings one from this depth on, a promotion from 少佐 (index 6). */
+export const CAPTAIN_MIN_DEPTH = 3;
+export const CAPTAIN_PROMOTION_RANK = 6;
 
 /**
  * The order captains join in (#159): destroyer specialists first, since a new nation owns only a destroyer; the
@@ -84,8 +87,8 @@ export function recruitCaptain(nation: string, owned: readonly string[], shipCla
 
 /** How captains join (#179; S ranks only since #215), in the words the screens use. */
 export const CAPTAIN_SOURCES: readonly string[] = [
-  '報酬艦のない作戦の海域で、初めて S 評価を取ると 1 名 (訓練海域は除く)',
-  '昇進するたびに 1 名',
+  `報酬艦のない深さ ${CAPTAIN_MIN_DEPTH} 以上の作戦の海域で、初めて S 評価を取ると 1 名 (訓練海域は除く)`,
+  '少佐以上に昇進するたびに 1 名',
   `S 評価で勝つと ${Math.round(CAPTAIN_DROP_CHANCE * 100)}% の確率で 1 名`,
   '一部のウィークリー任務・戦果任務の報酬で 1 名',
 ];

@@ -3,27 +3,53 @@ import { ShipClass } from './ShipClass';
 import { IAirWing } from './Aircraft';
 
 /**
- * Finer ship type for display and unlocks (#16). Mechanics still run on the 5 `ShipClass` values:
- * a battlecruiser fights as a Battleship, an escort as a Destroyer, a light carrier as a Carrier.
+ * Finer ship type: the 中分類 of the three-level classification (#260: 大分類 = `ShipClass`, 中分類 = this, 小分類 =
+ * the class of ships). Mechanics still run on the 5 `ShipClass` values: a battlecruiser fights as a Battleship, an
+ * escort as a Destroyer, a light carrier as a Carrier. A ship without one is its class's plain kind (戦艦・駆逐艦・
+ * 正規空母・潜水艦); `ShipKind.midClass` gives every ship its 中分類.
  */
 export enum ShipSubtype {
   BattleCruiser = 'BattleCruiser',
   AviationBattleship = 'AviationBattleship',
+  /** 高速戦艦 (#260): a battleship of 30 knots or more */
+  FastBattleship = 'FastBattleship',
   HeavyCruiser = 'HeavyCruiser',
   LightCruiser = 'LightCruiser',
+  /** 防空巡洋艦 (#260): Atlanta, Dido */
+  AACruiser = 'AACruiser',
+  /** 嚮導駆逐艦 (#260): the large destroyers that led flotillas (contre-torpilleurs, Tashkent, Porter) */
+  LeaderDestroyer = 'LeaderDestroyer',
+  /** 防空駆逐艦 (#260): Akizuki */
+  AADestroyer = 'AADestroyer',
+  /** 護衛駆逐艦 (#260): Matsu */
+  EscortDestroyer = 'EscortDestroyer',
   LightCarrier = 'LightCarrier',
   EscortCarrier = 'EscortCarrier',
+  /** 装甲空母 (#260): an armoured flight deck (Taiho, Illustrious, Midway) */
+  ArmoredCarrier = 'ArmoredCarrier',
   Escort = 'Escort',
+  /** 大型潜水艦 (#260): ocean-going boats with a seaplane (I-15, Surcouf) */
+  LargeSubmarine = 'LargeSubmarine',
+  /** 潜水空母 (#260): I-400 */
+  SubmarineCarrier = 'SubmarineCarrier',
 }
 
 export const SUBTYPE_JA: Record<ShipSubtype, string> = {
   [ShipSubtype.BattleCruiser]: '巡洋戦艦',
   [ShipSubtype.AviationBattleship]: '航空戦艦',
+  [ShipSubtype.FastBattleship]: '高速戦艦',
   [ShipSubtype.HeavyCruiser]: '重巡洋艦',
   [ShipSubtype.LightCruiser]: '軽巡洋艦',
+  [ShipSubtype.AACruiser]: '防空巡洋艦',
+  [ShipSubtype.LeaderDestroyer]: '嚮導駆逐艦',
+  [ShipSubtype.AADestroyer]: '防空駆逐艦',
+  [ShipSubtype.EscortDestroyer]: '護衛駆逐艦',
   [ShipSubtype.LightCarrier]: '軽空母',
   [ShipSubtype.EscortCarrier]: '護衛空母',
+  [ShipSubtype.ArmoredCarrier]: '装甲空母',
   [ShipSubtype.Escort]: '海防艦',
+  [ShipSubtype.LargeSubmarine]: '大型潜水艦',
+  [ShipSubtype.SubmarineCarrier]: '潜水空母',
 };
 
 export interface IShipData {

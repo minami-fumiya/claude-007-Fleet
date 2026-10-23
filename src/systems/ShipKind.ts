@@ -1,4 +1,5 @@
-import { IShipData, ShipSubtype } from '@/types/Ship';
+import { IShipData, ShipSubtype, SUBTYPE_JA } from '@/types/Ship';
+import { IShipModifiers } from '@/types/Modifiers';
 import { ShipClass } from '@/types/ShipClass';
 
 /**
@@ -9,12 +10,74 @@ import { ShipClass } from '@/types/ShipClass';
 export const SUBTYPE_SHORT: Record<ShipSubtype, string> = {
   [ShipSubtype.BattleCruiser]: '巡戦',
   [ShipSubtype.AviationBattleship]: '航戦',
+  [ShipSubtype.FastBattleship]: '高速戦艦',
   [ShipSubtype.HeavyCruiser]: '重巡',
   [ShipSubtype.LightCruiser]: '軽巡',
+  [ShipSubtype.AACruiser]: '防空巡',
+  [ShipSubtype.LeaderDestroyer]: '嚮導駆逐',
+  [ShipSubtype.AADestroyer]: '防空駆逐',
+  [ShipSubtype.EscortDestroyer]: '護衛駆逐',
   [ShipSubtype.LightCarrier]: '軽空母',
   [ShipSubtype.EscortCarrier]: '護衛空母',
+  [ShipSubtype.ArmoredCarrier]: '装甲空母',
   [ShipSubtype.Escort]: '海防艦',
+  [ShipSubtype.LargeSubmarine]: '大型潜',
+  [ShipSubtype.SubmarineCarrier]: '潜水空母',
 };
+
+// ---------------------------------------------------------------------------
+// The three levels (#260): 大分類 ShipClass → 中分類 MidClass → 小分類 the class of ships (ShipOrder.classKey)
+// ---------------------------------------------------------------------------
+
+/** 中分類: a subtype, or a class's plain kind for a ship without one. */
+export type MidClass = ShipSubtype | 'Battleship' | 'Destroyer' | 'FleetCarrier' | 'Submarine';
+
+/** Every 中分類 under its 大分類, in list order. */
+export const MID_CLASSES: Record<ShipClass, MidClass[]> = {
+  [ShipClass.Battleship]: ['Battleship', ShipSubtype.FastBattleship, ShipSubtype.BattleCruiser, ShipSubtype.AviationBattleship],
+  [ShipClass.Cruiser]: [ShipSubtype.HeavyCruiser, ShipSubtype.LightCruiser, ShipSubtype.AACruiser],
+  [ShipClass.Destroyer]: ['Destroyer', ShipSubtype.LeaderDestroyer, ShipSubtype.AADestroyer, ShipSubtype.EscortDestroyer, ShipSubtype.Escort],
+  [ShipClass.Carrier]: ['FleetCarrier', ShipSubtype.ArmoredCarrier, ShipSubtype.LightCarrier, ShipSubtype.EscortCarrier],
+  [ShipClass.Submarine]: ['Submarine', ShipSubtype.LargeSubmarine, ShipSubtype.SubmarineCarrier],
+};
+
+export const ALL_MID_CLASSES: MidClass[] = Object.values(MID_CLASSES).flat();
+
+const PLAIN_MID: Record<ShipClass, MidClass> = {
+  [ShipClass.Battleship]: 'Battleship',
+  // A cruiser without a subtype (the convoy freighter's data) counts as light.
+  [ShipClass.Cruiser]: ShipSubtype.LightCruiser,
+  [ShipClass.Destroyer]: 'Destroyer',
+  [ShipClass.Carrier]: 'FleetCarrier',
+  [ShipClass.Submarine]: 'Submarine',
+};
+
+/** The ship's 中分類 (#260): every ship has one. */
+export function midClass(ship: Pick<IShipData, 'shipClass' | 'subtype'>): MidClass {
+  return ship.subtype ?? PLAIN_MID[ship.shipClass];
+}
+
+/** The 大分類 a 中分類 belongs to. */
+export function midParent(mid: MidClass): ShipClass {
+  return (Object.keys(MID_CLASSES) as ShipClass[]).find((c) => MID_CLASSES[c].includes(mid))!;
+}
+
+const PLAIN_JA: Record<string, { ja: string; short: string }> = {
+  Battleship: { ja: '戦艦', short: '戦艦' },
+  Destroyer: { ja: '駆逐艦', short: '駆逐' },
+  FleetCarrier: { ja: '正規空母', short: '正規空母' },
+  Submarine: { ja: '潜水艦', short: '潜水' },
+};
+
+/** "高速戦艦", "正規空母" … */
+export function midLabel(mid: MidClass): string {
+  return PLAIN_JA[mid]?.ja ?? SUBTYPE_JA[mid as ShipSubtype];
+}
+
+/** The short form for chips: "高速戦艦", "防空巡" … */
+export function midShort(mid: MidClass): string {
+  return PLAIN_JA[mid]?.short ?? SUBTYPE_SHORT[mid as ShipSubtype];
+}
 
 export const CLASS_SHORT: Record<ShipClass, string> = {
   [ShipClass.Battleship]: '戦艦',
@@ -121,3 +184,22 @@ export function kindBreakdown(ships: Array<Pick<IShipData, 'shipClass' | 'subtyp
 export function hasCapitalShips(ships: Array<Pick<IShipData, 'shipClass' | 'subtype'>>): boolean {
   return ships.some((s) => kindRank(s) <= 2);
 }
+
+/**
+ * What a 中分類 is good at (#260): 海防艦 hunt submarines and guard convoys (sonar and depth charges 1.75×, AA 1.2×),
+ * 護衛駆逐艦 lean the same way, the 防空 kinds shoot down planes (AA 1.5×). Applied to the ship's own modifiers.
+ */
+export const MID_MODIFIERS: Partial<Record<MidClass, Partial<IShipModifiers>>> = {
+  [ShipSubtype.Escort]: { sonarMul: 1.75, depthChargeMul: 1.75, aaMul: 1.2 },
+  [ShipSubtype.EscortDestroyer]: { sonarMul: 1.3, depthChargeMul: 1.3 },
+  [ShipSubtype.AACruiser]: { aaMul: 1.5 },
+  [ShipSubtype.AADestroyer]: { aaMul: 1.5 },
+};
+
+export function midModifiers(ship: Pick<IShipData, 'shipClass' | 'subtype'>): Partial<IShipModifiers> {
+  return MID_MODIFIERS[midClass(ship)] ?? {};
+}
+
+/** 海防艦 (#260) cost 6 tenths of a destroyer to build and run, and build in half the time. */
+export const ESCORT_COST_MUL = 0.6;
+export const ESCORT_TIME_MUL = 0.5;

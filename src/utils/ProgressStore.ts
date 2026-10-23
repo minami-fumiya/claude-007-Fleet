@@ -11,7 +11,7 @@
 
 import { IDockJob, IItems, IResources, IWallet } from '@/types/Progression';
 import { BattleRank, isBattleRank } from '@/systems/BattleRank';
-import type { RankStat } from '@/systems/RankSystem';
+import { rankOf, type RankStat } from '@/systems/RankSystem';
 import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
 import { IBaseWork, nationBases } from '@/systems/BaseSystem';
@@ -39,7 +39,7 @@ export const STORAGE_KEY = 'ww2fleet.progress.v2';
 export const LEGACY_STORAGE_KEY = 'ww2fleet.progress.v1';
 export const SAVE_VERSION = LATEST_VERSION;
 /** A new nation starts with one of each time-saving item (#143). */
-export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1, captainBook: 0 };
+export const STARTING_ITEMS: IItems = { fastRepair: 1, fastBuild: 1, captainBook: 0, trainingManual: 0 };
 
 /** Everything one nation's admiral has built up. */
 export interface INationProgress {
@@ -208,7 +208,10 @@ export { finishBuilds };
 /** Writes a view back into its nation's slot (and the shared record). */
 export function withProgress(save: ISave, progress: IProgress): ISave {
   const { nation, record, wallet, ...np } = progress;
-  return { ...save, nations: { ...save.nations, [nation]: np }, record, wallet: wallet ?? save.wallet };
+  // A rank reached is kept (#261): its medal mission is read from the shared record, which a nation's own slot lacks.
+  const held = rankOf(progress).index;
+  const floor = held > (np.rankFloor ?? 0) ? { rankFloor: held } : {};
+  return { ...save, nations: { ...save.nations, [nation]: { ...np, ...floor } }, record, wallet: wallet ?? save.wallet };
 }
 
 /**
@@ -379,7 +382,7 @@ function stringMap(src: unknown): Record<string, string> {
 function parseItems(v: unknown): IItems {
   const o = isObject(v) ? v : {};
   const n = (x: unknown): number => (isNum(x) ? Math.max(0, Math.floor(x)) : 0);
-  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild), captainBook: n(o.captainBook) };
+  return { fastRepair: n(o.fastRepair), fastBuild: n(o.fastBuild), captainBook: n(o.captainBook), trainingManual: n(o.trainingManual) };
 }
 
 function parseSweepCharges(src: unknown): Record<string, ISweepCharge> {
