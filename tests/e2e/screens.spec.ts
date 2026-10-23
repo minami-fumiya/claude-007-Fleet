@@ -131,7 +131,9 @@ async function badLineStarts(page: Page, key: string): Promise<string[]> {
       lines.forEach((line, i) => {
         if (i === 0 || line.length === 0 || t.text.includes(`\n${line}`)) return;
         const end = lines[i - 1].slice(-1);
-        const midWord = (hira.test(end) && hira.test(line[0]) && !particles.includes(end)) || (kanji.test(end) && kanji.test(line[0]));
+        // A space in the text there is a fine place ("大火力章 | 三等").
+        const atSpace = t.text.includes(`${end} ${line[0]}`);
+        const midWord = !atSpace && ((hira.test(end) && hira.test(line[0]) && !particles.includes(end)) || (kanji.test(end) && kanji.test(line[0])));
         if (banned.includes(line[0]) || midWord) out.push(`${lines[i - 1]} | ${line}`);
       });
     };
