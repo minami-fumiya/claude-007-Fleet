@@ -138,3 +138,12 @@ export function exerciseEnemyFleet(
   }
   return fleet;
 }
+
+/**
+ * 訓練 (#343, the old 訓練海域 moved into 演習): `size` of the nation's weakest surface ships, smallest first, to
+ * try new ships and captains on.
+ */
+export function trainingEnemyFleet(registry: ShipRegistry, nation: Nation, size: number): IShipData[] {
+  const weak = registry.byNation(nation).filter((s) => !s.fictional && s.shipClass !== ShipClass.Submarine).sort((a, b) => a.hp - b.hp);
+  return weak.slice(0, exerciseEnemyCount(size));
+}

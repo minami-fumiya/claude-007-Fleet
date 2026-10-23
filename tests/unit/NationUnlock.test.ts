@@ -51,12 +51,10 @@ describe('nations open step by step (#134)', () => {
     expect(nationLocks({ RN: p(100) }, MEDALS).SU.progress).toBe('');
   });
 
-  it('a training area is no theater final: winning one opens nothing (#241)', () => {
-    const training = campaignData.areas.filter((a) => (a as { training?: boolean }).training).map((a) => a.id);
-    expect(training.length).toBeGreaterThan(0);
-    for (const t of campaignData.theaters) expect(training).not.toContain(theaterFinal(t.id));
-    expect(open(nationLocks({ IJN: p(100, training) }, MEDALS))).toEqual([Nation.IJN]);
-    expect(open(nationLocks({ RN: p(100, training) }, MEDALS))).toEqual([Nation.RN]);
+  it('a side sea is no theater final: winning one opens nothing (#241 #343)', () => {
+    const side = ['p10', 'a9', 'a10'];
+    for (const t of campaignData.theaters) expect(side).not.toContain(theaterFinal(t.id));
+    expect(open(nationLocks({ IJN: p(100, side) }, MEDALS))).toEqual([Nation.IJN]);
   });
 
   it('a nation already started is never locked (saves from before #134)', () => {

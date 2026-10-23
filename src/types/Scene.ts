@@ -7,6 +7,8 @@ import { Objective } from './Campaign';
 
 export interface IBattleInitData {
   playerFleet: IFleet;
+  /** 演習の訓練 (#343): a weak enemy, counted for the 訓練章 */
+  training?: boolean;
   enemyFleet: IFleet;
   mapKey: string;
   formation?: Formation;

@@ -6,7 +6,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
-import { exerciseEnemyCount, exerciseEnemyFleet, MAX_EXERCISE_ENEMIES } from '@/systems/EnemyFleetGenerator';
+import { exerciseEnemyCount, exerciseEnemyFleet, trainingEnemyFleet, MAX_EXERCISE_ENEMIES } from '@/systems/EnemyFleetGenerator';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
@@ -199,13 +199,15 @@ interface IExerciseChoices {
   weather: Choice<Weather>;
   time: Choice<TimeOfDay>;
   count: number;
+  /** 訓練 (#343) */
+  training?: boolean;
 }
 
 /** The standard exercise: the nation's first campaign opponent, a surface battle on a clear day, as many ships. */
 function standardExercise(nation: Nation): IExerciseChoices {
   const theater = (campaignData as ICampaignData).theaters.find((t) => (t.opponents as Partial<Record<Nation, Nation>>)[nation]);
   const foe = (theater?.opponents as Partial<Record<Nation, Nation>> | undefined)?.[nation] ?? PLAYABLE_NATIONS.find((n) => n !== nation) ?? RANDOM;
-  return { enemyNation: foe, mode: BattleMode.Surface, weather: Weather.Clear, time: TimeOfDay.Day, count: SAME_COUNT };
+  return { enemyNation: foe, mode: BattleMode.Surface, weather: Weather.Clear, time: TimeOfDay.Day, count: SAME_COUNT, training: false };
 }
 
 /** 全てランダム: every choice drawn at sortie (the enemy count stays as set). */
@@ -231,6 +233,8 @@ export interface ISelection {
   time?: Choice<TimeOfDay>;
   /** Free battle enemy count, SAME_COUNT = as many as the player (#78) */
   enemyCount?: number;
+  /** 敵の強さ: 訓練 (#343) */
+  training?: boolean;
 }
 
 /** The setup last used with `nation`'s fleet in this session. */
@@ -297,6 +301,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private slotCount = 1;
   /** Free battle enemy count (#78) */
   private enemyCount = SAME_COUNT;
+  /** 演習の訓練 (#343): the enemy's weakest ships */
+  private training = false;
   private formation: Formation = Formation.LineAhead;
   private nation: Nation = Nation.IJN;
   /** Captain id assigned to each slot */
@@ -385,6 +391,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const standard = standardExercise(this.nation);
     this.enemyNation = enemy && enemy !== this.nation ? enemy : standard.enemyNation;
     this.enemyCount = saved?.enemyCount ?? SAME_COUNT;
+    this.training = saved?.training ?? false;
     this.slotCount = fleetSlots(progress);
     this.costCap = costCap(rankOf(progress).index);
     this.rankIndex = rankOf(progress).index;
@@ -990,6 +997,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const count = this.enemyCount === SAME_COUNT ? fleetSize : this.enemyCount;
     groups.push(
       { key: 'enemy', title: '交戦相手', value: nationLabel(this.enemyNation), cols: 4, options: radio(foes, this.enemyNation, nationLabel, (c) => { this.enemyNation = c; }) },
+      // 訓練 (#343): the old 訓練海域 — the enemy's weakest ships, to try new ships and captains on.
+      { key: 'strength', title: '敵の強さ', value: this.training ? '訓練 (弱い敵)' : '標準', cols: 2, options: radio([false, true], this.training, (c) => (c ? '訓練 (弱い敵)' : '標準'), (c) => { this.training = c; }) },
       { key: 'mode', title: '戦闘の種類', value: choiceLabel(this.mode, MODE_LABEL), cols: p ? 4 : 2, options: radio(MODE_CHOICES, this.mode, (c) => choiceLabel(c, MODE_LABEL), (c) => { this.mode = c; }) },
       { key: 'weather', title: '天候', value: choiceLabel(this.weatherChoice, WEATHER_LABEL), cols: p ? 5 : 3, options: radio(WEATHER_CHOICES, this.weatherChoice, (c) => choiceLabel(c, WEATHER_LABEL), (c) => { this.weatherChoice = c; }) },
       { key: 'time', title: '時間', value: choiceLabel(this.timeChoice, TIME_LABEL), cols: 3, options: radio(TIME_CHOICES, this.timeChoice, (c) => choiceLabel(c, TIME_LABEL), (c) => { this.timeChoice = c; }) },
@@ -1088,6 +1097,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     if (c.weather !== undefined) this.weatherChoice = c.weather;
     if (c.time !== undefined) this.timeChoice = c.time;
     if (c.count !== undefined) this.enemyCount = c.count;
+    if (c.training !== undefined) this.training = c.training;
   }
 
   /** 全てランダム / 標準に戻す above the exercise settings. Returns the height used. */
@@ -1916,6 +1926,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       weather: this.weatherChoice,
       time: this.timeChoice,
       enemyCount: this.enemyCount,
+      training: this.training,
     };
     const all = (this.registry.get(SELECTION_KEY) as Partial<Record<Nation, ISelection>> | undefined) ?? {};
     this.registry.set(SELECTION_KEY, { ...all, [this.nation]: selection });
@@ -1949,7 +1960,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const count = exerciseEnemyCount(this.enemyCount === SAME_COUNT ? ships.length : this.enemyCount);
     const enemyShipsList = area
       ? enemyShips(area, this.shipRegistry, enemyNation)
-      : exerciseEnemyFleet(this.shipRegistry, enemyNation, mode, ships, count);
+      : this.training ? trainingEnemyFleet(this.shipRegistry, enemyNation, count) : exerciseEnemyFleet(this.shipRegistry, enemyNation, mode, ships, count);
     const enemyFleet = FleetSystem.createFleet('enemy-fleet', 'Enemy Fleet', enemyNation, enemyShipsList, 0);
 
     const initData: IBattleInitData = {
@@ -1962,6 +1973,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       time: area ? area.time : this.timeChoice === RANDOM ? randomTime() : this.timeChoice,
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
       areaId: area?.id,
+      training: !area && this.training,
       objective: area?.objective ?? Objective.Annihilate,
       support: support.map((g) => ({ ships: g.ships, captainIds: g.captainIds, mission: g.mission })),
     };

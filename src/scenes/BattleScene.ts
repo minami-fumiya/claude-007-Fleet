@@ -2080,7 +2080,7 @@ export class BattleScene extends Phaser.Scene {
       // Enemy planes shot down, by guns or fighters (#185).
       ['planesDown', this.enemyAir.totalLost()],
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
-      ['trainingWin', won(!!area?.training)],
+      ['trainingWin', won(this.exercise && this.battleData?.training === true)],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
       // A win under each kind of event counts for the イベント巡り章 (#218).

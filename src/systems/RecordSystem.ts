@@ -227,7 +227,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('med_war', '地中海従軍章', 'campaign', [10, 50], (g) => `地中海で ${g} 回勝利する`, (_r, c) => total(c, 'winMediterranean')),
   { id: 'blacksea', name: '黒海制覇章', description: '黒海戦域の全海域を攻略する', category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes('blacksea') ? 1 : 0), goal: 1 },
   ...ladder('blacksea_war', '黒海従軍章', 'campaign', [10, 50], (g) => `黒海で ${g} 回勝利する`, (_r, c) => total(c, 'winBlackSea')),
-  ...ladder('training', '訓練章', 'campaign', [5, 30], (g) => `訓練海域で ${g} 回勝利する`, (_r, c) => total(c, 'trainingWin')),
+  ...ladder('training', '訓練章', 'campaign', [5, 30], (g) => `演習の訓練で ${g} 回勝利する`, (_r, c) => total(c, 'trainingWin')),
   // 七つの海 (#250): each sea added in 0.0.35, its battles, and the seven together (the inland seas aside).
   ...([['north_pacific', '北太平洋', 'winNorthPacific'], ['south_atlantic', '南大西洋', 'winSouthAtlantic'], ['indian', 'インド洋', 'winIndian'], ['arctic', '北極海', 'winArctic']] as const).flatMap(([t, name, event]): IMedalRule[] => [
     { id: t, name: `${name}制覇章`, description: `${name}の全海域を攻略する`, category: 'campaign', value: (_r, c) => (c.clearedTheaters.includes(t) ? 1 : 0), goal: 1 },
