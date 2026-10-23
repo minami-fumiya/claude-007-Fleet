@@ -120,6 +120,8 @@ export interface INationProgress {
   baseWork: IBaseWork | null;
   /** 遠征 (#41): expeditions under way */
   expeditions: IExpeditionRun[];
+  /** 遠征用の編成 (#337): the ships last sent on each expedition, by its id */
+  expeditionGroups: Record<string, string[]>;
   /** 寮舎 (#57): ships and captains training */
   dorm: IDormEntry[];
   /** 支援艦隊 (#84): the saved setups chosen to sail with the main fleet, and their missions */
@@ -171,7 +173,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], dorm: [], support: [],
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
   };
 }
 
@@ -331,6 +333,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     expeditions: (Array.isArray(data.expeditions) ? data.expeditions : [])
       .filter((r): r is IExpeditionRun => isObject(r) && typeof r.id === 'string' && Array.isArray(r.shipIds) && isNum(r.endsAt))
       .map((r) => ({ id: r.id, shipIds: strings(r.shipIds), endsAt: r.endsAt })),
+    expeditionGroups: isObject(data.expeditionGroups)
+      ? Object.fromEntries(Object.entries(data.expeditionGroups).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, strings(v)]))
+      : {},
     dorm: (Array.isArray(data.dorm) ? data.dorm : [])
       .filter((e): e is IDormEntry => isObject(e) && (e.kind === 'ship' || e.kind === 'captain') && typeof e.id === 'string' && isNum(e.since))
       .map((e) => ({ kind: e.kind, id: e.id, since: e.since })),

@@ -57,7 +57,7 @@ export const QUEST_EVENTS = [
   // airfields destroyed (#83), superweapons sunk (#148)
   'airfieldDown', 'superweaponSunk',
   // 0.0.40: historical wins (#314), bases opened and docks built (#314), items used (#315)
-  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse', 'supplyUse', 'sparkleWin', 'expeditionStart', 'expeditionDone', 'dormHours', 'multiFleetWin', 'allyWin', 'eventQuestClaim',
+  'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse', 'supplyUse', 'sparkleWin', 'expeditionStart', 'expeditionDone', 'dormHours', 'multiFleetWin', 'allyWin', 'eventQuestClaim', 'expeditionPicked', 'expeditionRecall',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
