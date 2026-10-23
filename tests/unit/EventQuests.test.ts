@@ -13,13 +13,13 @@ describe('イベント限定任務 (#89)', () => {
     expect(activeQuests('event', T0)).toEqual(events);
   });
 
-  it('progress belongs to its 3-hour window and is gone in the next', () => {
+  it('progress belongs to its hour (#344) and is gone in the next', () => {
     const q = QUESTS.find((x) => x.id === 'e_steel')!;
-    let s = recordQuestEvent(emptyQuestState(), 'event_steel', T0, 3);
-    expect(questProgress(s, q)).toBe(3);
+    let s = recordQuestEvent(emptyQuestState(), 'event_steel', T0, 1);
+    expect(questProgress(s, q)).toBe(1);
     // Another event's wins don't count.
     s = recordQuestEvent(s, 'event_fuel', T0, 5);
-    expect(questProgress(s, q)).toBe(3);
+    expect(questProgress(s, q)).toBe(1);
     expect(gameWindow(T0 + EVENT_WINDOW)).toBe(gameWindow(T0) + 1);
     expect(nextReset('event', T0)).toBe(T0 + EVENT_WINDOW);
     s = recordQuestEvent(s, 'event_steel', T0 + EVENT_WINDOW, 1);

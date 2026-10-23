@@ -40,16 +40,19 @@ export interface IEventEffects {
 export const NO_EVENT: IEventEffects = { theaterRewardMul: 1, steelMul: 1, fuelMul: 1, ammoMul: 1, bauxiteMul: 1, xpMul: 1, repairMul: 1 };
 
 const HOUR = 3_600_000;
-export const EVENT_WINDOW_MS = 3 * HOUR;
-export const WINDOWS_PER_DAY = 8;
+/** One event an hour (#344; three hours before 0.0.45). */
+export const EVENT_WINDOW_MS = HOUR;
+export const WINDOWS_PER_DAY = 24;
 /** What a window can hold (#218: never nothing); 報酬 2 倍 is weighted but capped at MAX_DOUBLE a day. */
 const KINDS: EventKind[] = ['double', 'double', 'steel', 'steel', 'training', 'repair', 'fuel', 'ammo', 'bauxite', 'superweapon'];
-const OTHER_KINDS: EventKind[] = KINDS.filter((k) => k !== 'double' && k !== 'superweapon');
-export const MAX_DOUBLE = 2;
-/** 超兵器出現 (#148) at most once a day */
-export const MAX_SUPERWEAPON = 1;
-/** Windows of the day (from 0:00 JST, 3 hours each) when no superweapon appears (#279): 21:00〜6:00. */
-export const NIGHT_WINDOWS: readonly number[] = [0, 1, 7];
+export const MAX_DOUBLE = 6;
+/**
+ * 超兵器出現 (#148 #344): every SUPERWEAPON_EVERY-th hour, from an hour that moves day by day, so four or five a day
+ * and at night too (the user's call, 2026-10-23).
+ */
+export const SUPERWEAPON_EVERY = 5;
+export const MAX_SUPERWEAPON = Math.ceil(WINDOWS_PER_DAY / SUPERWEAPON_EVERY);
+export const MIN_SUPERWEAPON = Math.floor(WINDOWS_PER_DAY / SUPERWEAPON_EVERY);
 export const THEATERS = (campaignData as { theaters: Array<{ id: string; name: string }> }).theaters;
 
 export const EVENT_NAME: Record<EventKind, string> = {
@@ -71,23 +74,27 @@ function hash(n: number): number {
   return (t ^ (t >>> 14)) >>> 0;
 }
 
-/** Index of the three-hour window `now` is in, counted from the epoch's first game day. */
+/** Index of the hour-long window `now` is in, counted from the epoch's first game day. */
 export function windowIndex(now: number): number {
   return Math.floor((now - DAY_START_UTC) / EVENT_WINDOW_MS);
 }
 
-/** A game day's eight events, 00:00〜24:00 JST (#218): one per window, 報酬 2 倍 at most MAX_DOUBLE times. */
+/**
+ * A game day's events, 00:00〜24:00 JST, one an hour (#218 #344): 超兵器 every fifth hour, 報酬 2 倍 at most
+ * MAX_DOUBLE times, and never the same kind two hours running.
+ */
 export function daySchedule(day: number): IGameEvent[] {
   let doubles = 0;
-  let giants = 0;
+  const offset = hash(day * 7919) % SUPERWEAPON_EVERY;
   const out: IGameEvent[] = [];
   for (let i = 0; i < WINDOWS_PER_DAY; i++) {
     const w = day * WINDOWS_PER_DAY + i;
     const h = hash(w);
-    let kind = KINDS[h % KINDS.length];
-    if ((kind === 'double' && doubles >= MAX_DOUBLE) || (kind === 'superweapon' && (giants >= MAX_SUPERWEAPON || NIGHT_WINDOWS.includes(i)))) kind = OTHER_KINDS[(h >>> 4) % OTHER_KINDS.length];
+    const prev = out[i - 1]?.kind;
+    // The weighted kinds, less the hour before's (no kind two hours running) and 報酬 2 倍 once it has had its hours.
+    const pool = KINDS.filter((k) => k !== 'superweapon' && k !== prev && (k !== 'double' || doubles < MAX_DOUBLE));
+    const kind: EventKind = (i + offset) % SUPERWEAPON_EVERY === 0 ? 'superweapon' : pool[h % pool.length];
     if (kind === 'double') doubles++;
-    if (kind === 'superweapon') giants++;
     const startsAt = DAY_START_UTC + w * EVENT_WINDOW_MS;
     const event: IGameEvent = { kind, startsAt, endsAt: startsAt + EVENT_WINDOW_MS };
     if (kind === 'double' || kind === 'superweapon') event.theater = THEATERS[(h >>> 8) % THEATERS.length]?.id;
@@ -134,7 +141,7 @@ export function eventHelp(kind: EventKind): string {
     case 'bauxite': return `戦闘で得るボーキが ${pct(e.bauxiteMul)} 増える。`;
     case 'training': return `艦の熟練度と艦長の経験値が ${pct(e.xpMul)} 増える。`;
     case 'repair': return `入渠の時間と資源が ${pct(e.repairMul)} 減る。`;
-    case 'superweapon': return `1 つの戦域の主力艦隊に、その国の超兵器が加わる。撃沈するとゴールドが入る (夜 21:00〜6:00 は出ない)。`;
+    case 'superweapon': return `1 つの戦域の主力艦隊に、その国の超兵器が加わる。撃沈するとゴールドが入る (${SUPERWEAPON_EVERY} 時間ごと、1 日 ${MIN_SUPERWEAPON}〜${MAX_SUPERWEAPON} 回)。`;
   }
 }
 

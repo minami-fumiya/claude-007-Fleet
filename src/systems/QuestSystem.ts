@@ -138,8 +138,8 @@ export function gameHour(now: number): number {
   return Math.floor(now / HOUR);
 }
 
-/** Limited-time events run in 3-hour windows from the start of the game day (#89 #218). */
-export const EVENT_WINDOW = 3 * HOUR;
+/** Limited-time events run in hour-long windows from the start of the game day (#89 #218 #344). */
+export const EVENT_WINDOW = HOUR;
 
 export function gameWindow(now: number): number {
   return Math.floor((now - DAY_START_UTC) / EVENT_WINDOW);
