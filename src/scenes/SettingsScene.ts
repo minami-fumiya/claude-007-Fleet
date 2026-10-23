@@ -127,11 +127,19 @@ export class SettingsScene extends Phaser.Scene {
     y += BTN_H + 6;
     this.track(this.add.text(x, y, `作戦と演習の敵の強さ。報酬 ×${diff.rewardMul}・敵の耐久 ×${diff.hpMul} (史実は常に普通)`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += IS_PORTRAIT ? 36 : 32;
-
     if (!IS_PORTRAIT) {
       x = P.x + 28 + colW + COL_GAP;
       y = P.y + 24;
     }
+    // 動作情報 (#99): fps, objects and frame time over the battle.
+    this.track(this.add.text(x, y + BTN_H / 2, '動作情報 (戦闘中の fps)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    this.track(
+      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.showFps ? '表示' : '非表示', () => this.change({ showFps: !s.showFps }), {
+        variant: s.showFps ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
+      }),
+    );
+    y += BTN_H + (IS_PORTRAIT ? 24 : 20);
+
     this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
     this.track(this.add.text(x, y, `セーブコードで別の端末やブラウザへ進行状況を移せます。  (v${__APP_VERSION__})`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));

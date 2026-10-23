@@ -13,6 +13,7 @@
     "lint": "eslint src --ext ts",
     "test:e2e": "playwright test",
     "balance": "vite-node scripts/balance.ts",
+    "perf": "node scripts/perf.mjs",
     "sim": "node scripts/sim.mjs"
   },
   "dependencies": {

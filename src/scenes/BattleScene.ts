@@ -217,6 +217,10 @@ export class BattleScene extends Phaser.Scene {
   /** Name of the fleet the player steers now (第一艦隊 until a switch, #84) */
   private controlLabel = '第一艦隊';
   private switchBtn: UIButton | null = null;
+  /** 動作情報 (#99): fps, objects and the time one frame of battle logic takes */
+  private perfText: Phaser.GameObjects.Text | null = null;
+  private perfFrames: number[] = [];
+  private perfShownAt = 0;
   /** What enemy shells can hit and what land stops (arrays the colliders read in place, #64) */
   private friendlyTargets: BaseShip[] = [];
   private landColliders: BaseShip[] = [];
@@ -307,6 +311,9 @@ export class BattleScene extends Phaser.Scene {
     this.pendingAllies = [];
     this.controlLabel = '第一艦隊';
     this.switchBtn = null;
+    this.perfText = null;
+    this.perfFrames = [];
+    this.perfShownAt = 0;
     this.firesSet = 0;
     this.superweapon = null;
     this.seenByEnemy = new Set();
@@ -439,6 +446,25 @@ export class BattleScene extends Phaser.Scene {
 
   update(loopTime: number, delta: number): void {
     if (this.gameOver || this.paused) return;
+    const frameStart = this.perfText ? performance.now() : 0;
+    this.battleUpdate(loopTime, delta);
+    if (this.perfText) this.showPerf(performance.now() - frameStart);
+  }
+
+  /** 動作情報 (#99): fps, ships, projectiles and the battle logic's time per frame, refreshed twice a second. */
+  private showPerf(frameMs: number): void {
+    this.perfFrames.push(frameMs);
+    if (this.perfFrames.length > 60) this.perfFrames.shift();
+    const now = performance.now();
+    if (now - this.perfShownAt < 500) return;
+    this.perfShownAt = now;
+    const avg = this.perfFrames.reduce((a, b) => a + b, 0) / this.perfFrames.length;
+    const ships = [...this.playerSide(), ...this.enemies].filter((s) => s.active).length;
+    const shots = this.playerWeapons.projectiles.filter((p) => p.active).length + this.enemyWeapons.projectiles.filter((p) => p.active).length;
+    this.perfText?.setText(`fps ${Math.round(this.game.loop.actualFps)}  ·  艦 ${ships}  ·  弾 ${shots}  ·  処理 ${avg.toFixed(1)} ms`);
+  }
+
+  private battleUpdate(loopTime: number, delta: number): void {
     // Everything in the battle runs on the battle clock, which stands still while paused (#79).
     const time = loopTime - this.pausedMs;
     if (this.battleStartedAt < 0) this.battleStartedAt = time;
@@ -1609,6 +1635,9 @@ export class BattleScene extends Phaser.Scene {
     });
     this.switchBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     this.refreshSwitchBtn();
+    if (audio.settings.showFps || new URLSearchParams(window.location.search).has('fps')) {
+      this.perfText = this.add.text(20, CANVAS_H - (IS_PORTRAIT ? 300 : 70), '', textStyle(12, Css.cyan, { fontStyle: 'bold' })).setDepth(DEPTH_HUD + 3).setScrollFactor(0);
+    }
 
     if (this.isTouch) {
       const hint = addChip(this, 0, CANVAS_H - 36, '敵をタップ: 目標  /  海をタップ: 移動', Colors.cyan, Css.cyan);

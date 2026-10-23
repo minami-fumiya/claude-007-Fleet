@@ -20,9 +20,11 @@ export interface ISettings {
   lastSeenVersion: string;
   /** 難易度 (#100): campaign and exercise battles */
   difficulty: Difficulty;
+  /** 動作情報 (#99): fps, objects and frame time in battle */
+  showFps: boolean;
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal' };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false };
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -53,6 +55,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       customizeAll: typeof d.customizeAll === 'boolean' ? d.customizeAll : DEFAULT_SETTINGS.customizeAll,
       lastSeenVersion: typeof d.lastSeenVersion === 'string' ? d.lastSeenVersion : DEFAULT_SETTINGS.lastSeenVersion,
       difficulty: isDifficulty(d.difficulty) ? d.difficulty : DEFAULT_SETTINGS.difficulty,
+      showFps: typeof d.showFps === 'boolean' ? d.showFps : DEFAULT_SETTINGS.showFps,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };
