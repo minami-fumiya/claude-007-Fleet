@@ -275,7 +275,9 @@ export function needText(next: INextRank, progress?: IRankProgress): string {
     const [done, need] = progress ? examProgress(next.exam, progress) : [0, 0];
     parts.push(progress && need > 1 ? `${examText(next.exam)} (${done} / ${need})` : examText(next.exam));
   }
-  for (const m of next.missions) parts.push(progress ? missionText(m, progress) : m.text);
+  // Four missions a rank since #261: one open is named, more are counted (the 昇進 tab of the quests lists them).
+  if (next.missions.length === 1) parts.push(progress ? missionText(next.missions[0], progress) : next.missions[0].text);
+  else if (next.missions.length > 1) parts.push(`昇進任務 あと ${next.missions.length}`);
   return parts.join(' + ');
 }
 

@@ -112,7 +112,8 @@ describe('promotion missions (#142)', () => {
   it('merit alone stops at the first rank with an open mission', () => {
     expect(rankOf(fresh(100)).name).toBe('准尉');
     expect(nextRank(fresh(100))?.missions.map((m) => m.stat)).toEqual(['campaignWin', 'sink', 'areaClear', 'medal']);
-    expect(promotionText(fresh(100))).toBe('次の昇進: 少尉 (作戦で 1 回勝利 + 作戦で敵艦を 1 隻撃沈 + 作戦の海域を 1 か所攻略 + 勲章「初陣勝利章」を得る)');
+    expect(promotionText(fresh(100))).toBe('次の昇進: 少尉 (昇進任務 あと 4)');
+    expect(promotionText(addRankStats(fresh(100), { campaignWin: 1, sink: 1, areaClear: 1 }))).toBe('次の昇進: 少尉 (勲章「初陣勝利章」を得る)');
     const done = addRankStats(fresh(100), { campaignWin: 1, sink: 1, areaClear: 1 });
     expect(rankOf(done).name).toBe('准尉');
     expect(rankOf({ ...done, record: { medals: ['first_victory'] } }).name).toBe('少尉');
