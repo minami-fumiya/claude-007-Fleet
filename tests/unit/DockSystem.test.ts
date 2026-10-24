@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ShipClass } from '@/types/ShipClass';
 import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE } from '@/systems/RankSystem';
-import { buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MIN_REPAIR_MS, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
+import { fastRepairCost, FAST_REPAIR_COST, buildDock, completeRepairs, dockCount, MAX_DOCKS, nextDock, START_DOCKS, fastRepair, hpFraction, IDockState, isDocked, MIN_REPAIR_MS, MS_PER_HP, repairCost, repairTimeMs, setDamage, startRepair } from '@/systems/DockSystem';
 
 const empty = (): IDockState => ({ damage: {}, docks: [] });
 
@@ -85,5 +85,16 @@ describe('DockSystem', () => {
     expect(MAX_DOCKS).toBe(8);
     expect(nextDock(p)).toBeNull();
     expect(nextDock({ ...base, merit: 100, resources: { fuel: 0, ammo: 0, steel: 0, bauxite: 0 } })?.state).toBe('resources');
+  });
+});
+
+describe('高速修理を資材で (#356)', () => {
+  it('costs more the longer the repair has left, never less than the old flat price', () => {
+    expect(fastRepairCost(0)).toEqual(FAST_REPAIR_COST);
+    expect(fastRepairCost(30_000)).toEqual(FAST_REPAIR_COST);
+    const long = fastRepairCost(4 * 60_000);
+    expect(long.fuel).toBeGreaterThan(FAST_REPAIR_COST.fuel);
+    expect(long.steel).toBeGreaterThan(FAST_REPAIR_COST.steel);
+    expect(fastRepairCost(8 * 60_000).fuel).toBeGreaterThan(long.fuel);
   });
 });

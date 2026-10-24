@@ -60,6 +60,10 @@ export const QUEST_EVENTS = [
   'scenarioWin', 'baseOpened', 'dockBuilt', 'bookUse', 'fastRepairUse', 'fastBuildUse', 'manualUse', 'supplyUse', 'sparkleWin', 'expeditionStart', 'expeditionDone', 'dormHours', 'multiFleetWin', 'allyWin', 'eventQuestClaim', 'expeditionPicked',
   // 0.0.45: wins by formation (#345)
   'winLineAhead', 'winDoubleLine', 'winCircle', 'winEchelon', 'winLineAbreast', 'winVanguard',
+  // 高速修理を資材で (#356)
+  'fastRepairPaid',
+  // 自動編成 (#357)
+  'autoFleet',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

@@ -25,7 +25,9 @@ import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor 
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
-import { MORALE_WARN, moraleLabel, moraleMood, moraleOf } from '@/systems/MoraleSystem';
+import { MORALE_TIRED, MORALE_WARN, moraleLabel, moraleMood, moraleOf } from '@/systems/MoraleSystem';
+import { autoFleet } from '@/systems/AutoFleet';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
 import { HEAVY_DAMAGE } from '@/systems/SortieMapSystem';
@@ -48,7 +50,7 @@ import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES } from '@/systems/FleetPower';
 import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
-import { shipsAway } from '@/systems/ExpeditionSystem';
+import { EXPEDITIONS, shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
 import { enemyScale, fleetPower } from '@/systems/DifficultyCurve';
 
@@ -288,7 +290,7 @@ interface IListControls {
   sorts: UIButton[];
 }
 
-const SORTS = [ShipSort.Default, ShipSort.Hp, ShipSort.Speed];
+const SORTS = [ShipSort.Default, ShipSort.Hp, ShipSort.Speed, ShipSort.Morale];
 
 export class FleetBuilderScene extends Phaser.Scene {
   private shipRegistry!: ShipRegistry;
@@ -622,7 +624,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         onChange();
       }),
       // The sort row ends with a name search (#263).
-      sorts: row(y + h + rowGap, [...SORTS.map((k) => `並び: ${SORT_LABEL[k]}`), '名前で検索'], (i) => {
+      sorts: row(y + h + rowGap, [...SORTS.map((k, i) => (i === 0 ? `並び: ${SORT_LABEL[k]}` : SORT_LABEL[k])), '名前で検索'], (i) => {
         if (i < SORTS.length) this.sort = SORTS[i];
         else {
           void askShipName(this.query, shipSearchNames(this.ships)).then((query) => {
@@ -649,7 +651,10 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   /** The kind filter, the sort and the name search (#263) over `ships`. */
   private listed(ships: IShipData[]): IShipData[] {
-    return filterShips(filterAndSort(ships, this.kindFilter, this.sort), { ...NO_FILTER, query: this.query }, { owned: [], roster: this.shipRegistry.byNation(this.nation) });
+    // 士気順 (#357) reads the morale as it stands now.
+    const progress = loadProgress();
+    const now = Date.now();
+    return filterShips(filterAndSort(ships, this.kindFilter, this.sort, (id) => moraleOf(progress, id, now)), { ...NO_FILTER, query: this.query }, { owned: [], roster: this.shipRegistry.byNation(this.nation) });
   }
 
   private rebuildShipList(): void {
@@ -693,10 +698,13 @@ export class FleetBuilderScene extends Phaser.Scene {
    * One ship row for a list: icon, name and kind badge, HP / armour / speed meters and a + (or a 編成中 tag for a
    * ship already in the fleet, which can't be added twice, #76).
    */
-  private shipRow(ship: IShipData, w: number, itemH: number, tag: string | null): Phaser.GameObjects.Container {
+  private shipRow(ship: IShipData, w: number, itemH: number, tag: string | null, tagCss: string = Css.gold): Phaser.GameObjects.Container {
     const statX = IS_PORTRAIT ? 100 : 74;
     const plusR = IS_PORTRAIT ? 26 : 17;
-    const statSpacing = (w - statX - plusR * 2 - 30) / 3;
+    const plusX = w - plusR - 13;
+    // A tag takes the place of the + button; the stats make room for it (#357: a long tag ran over 速力).
+    const tagText = tag ? this.add.text(plusX + plusR, itemH / 2, tag, textStyle(IS_PORTRAIT ? 13 : 11, tagCss, { fontStyle: 'bold' })).setOrigin(1, 0.5) : null;
+    const statSpacing = (w - statX - Math.max(plusR * 2 + 30, (tagText?.width ?? 0) + 24)) / 3;
     const bg = drawPanel(this.add.graphics(), 0, 0, w, itemH, { radius: 16, fill: Colors.panelHi, fillAlpha: 0.55 });
     const hover = this.add.graphics();
     drawPanel(hover, 0, 0, w, itemH, { radius: 16, fill: Colors.cyan, fillAlpha: 0.08, rimAlpha: 0.7 });
@@ -730,10 +738,9 @@ export class FleetBuilderScene extends Phaser.Scene {
       drawMeter(meters, mx, itemH * 0.8, statSpacing - 12, IS_PORTRAIT ? 8 : 5, value / max, color);
     });
 
-    const plusX = w - plusR - 13;
     const end: Phaser.GameObjects.GameObject[] = [];
-    if (tag) {
-      end.push(this.add.text(plusX + plusR, itemH / 2, tag, textStyle(IS_PORTRAIT ? 13 : 11, Css.gold, { fontStyle: 'bold' })).setOrigin(1, 0.5));
+    if (tagText) {
+      end.push(tagText);
     } else {
       const plus = this.add.graphics();
       plus.fillStyle(Colors.cyan, 0.15);
@@ -834,8 +841,14 @@ export class FleetBuilderScene extends Phaser.Scene {
       const refits = loadProgress().refits;
       const heavy = at === -1 && !fitsCost(ship, fleet, this.costCap, refits, this.slots[this.pickerSlot]);
       const short = heavy ? fleetCost([...fleet.filter((s) => s.id !== this.slots[this.pickerSlot]?.id), ship], refits) - this.costCap : 0;
-      const tag = heavy ? `コストが ${short} 足りません` : at === -1 ? null : at === this.pickerSlot ? '選択中' : `${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
-      const card = this.shipRow(ship, w, itemH, tag).setY(i * (itemH + ITEM_GAP));
+      // Which group holds the ship (#357): this fleet in gold, an expedition in green with its name, the dorm in grey.
+      const progress = loadProgress();
+      const run = (progress.expeditions ?? []).find((r) => r.shipIds.includes(ship.id));
+      const dorm = inDorm(progress.dorm, 'ship', ship.id);
+      const elsewhere = run ? `遠征中: ${EXPEDITIONS.find((e) => e.id === run.id)?.name ?? '遠征'}` : dorm ? '寮舎で訓練中' : null;
+      const tag = heavy ? `コストが ${short} 足りません` : at === -1 ? elsewhere : at === this.pickerSlot ? '第 1 艦隊: 選択中' : `第 1 艦隊: ${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
+      const tagCss = at === -1 && !heavy && run ? Css.success : at === -1 && !heavy && dorm ? Css.muted : Css.gold;
+      const card = this.shipRow(ship, w, itemH, tag, tagCss).setY(i * (itemH + ITEM_GAP));
       if (heavy) card.setAlpha(0.5);
       else if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
       list.addItem(card, w, itemH, () => this.pickShip(ship));
@@ -1412,10 +1425,10 @@ export class FleetBuilderScene extends Phaser.Scene {
         .rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94)
         .setOrigin(0, 0)
         .setInteractive();
-      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.95 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
-      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 46, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 76 });
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 10, '', textStyle(13, Css.muted, { align: 'right', lineSpacing: 2, wordWrap: { width: f.w - 170, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
+      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 38, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 64 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn], 60);
       return;
     }
@@ -1437,12 +1450,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     });
     if (IS_PORTRAIT) {
       const bar = this.add.rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
-      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.95 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 10, '', textStyle(13, Css.muted, { align: 'right', lineSpacing: 2, wordWrap: { width: f.w - 170, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
       const bw = (f.w - 32 - 12) / 2;
-      this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 46, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 76, fontSize: 22 });
-      const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 46, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 76, fontSize: 22 });
+      this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 38, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 64, fontSize: 22 });
+      const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 38, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 64, fontSize: 22 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn, ex], 60);
       return;
     }
@@ -1513,6 +1526,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     });
   }
 
+  /** "士気 72 ★" as a chip coloured by mood (#357). */
+  private moraleChip(ship: IShipData, x: number, y: number): Phaser.GameObjects.Container {
+    const m = moraleOf(loadProgress(), ship.id, Date.now());
+    const mood = moraleMood(m);
+    const [color, css] = mood === 'high' ? [Colors.gold, Css.gold] : mood === 'tired' ? [Colors.danger, Css.danger] : [Colors.rim, Css.muted];
+    return addChip(this, x, y, moraleLabel(m), color, css);
+  }
+
   /** "41cm 連装砲 ×4": the ship's first (main) weapon. */
   private mainArmament(ship: IShipData): string {
     const first = summarizeWeapons(ship.weapons)[0];
@@ -1568,7 +1589,9 @@ export class FleetBuilderScene extends Phaser.Scene {
       }));
     }
     const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, tiny ? 80 : 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
-    return [icon, badge, name, ...texts, ...parts];
+    // The crew's morale under the ship (#357): gold when high, red when tired.
+    const morale = this.moraleChip(ship, 12, h - (p ? (tiny ? 16 : 20) : 14));
+    return [icon, morale, badge, name, ...texts, ...parts];
   }
 
   /** A two-column slot card (landscape, more than three slots): badge and name, short stats, captain and detail buttons. */
@@ -1755,13 +1778,16 @@ export class FleetBuilderScene extends Phaser.Scene {
       const weight = costText(fleetCost(ships, loadProgress().refits), this.costCap);
       const cost = `${weight}   消費  ${price}`;
       // 士気 (#54): a ship too tired still sails, with a warning.
-      const tired = ships.filter((s) => moraleOf(loadProgress(), s.id, Date.now()) < MORALE_WARN).map((s) => s.name.replace(/\s*\(.*\)\s*$/, ''));
+      const progress = loadProgress();
+      const morale = ships.map((s) => moraleOf(progress, s.id, Date.now()));
+      const tired = ships.filter((_, k) => morale[k] < MORALE_WARN).map((s) => s.name.replace(/\s*\(.*\)\s*$/, ''));
+      const avgMorale = Math.round(morale.reduce((a, m) => a + m, 0) / ships.length);
       const second = blockers.length > 0 ? `⚠ ${blockers.join(' / ')}` : tired.length > 0 ? `⚠ 士気が低い: ${tired.join('・')}  (出撃はできます)` : cost;
       this.summaryText
         .setText(
           IS_PORTRAIT
-            ? blockers.length > 0 ? second : `${this.powerLabel(ships)}\n${formation} · ${weight} · ${price}`
-            : `${this.powerLabel(ships)}   艦隊速力 ${minSpeed}   陣形 ${formation}\n${second}`,
+            ? blockers.length > 0 ? second : `${this.powerLabel(ships)}\n${tired.length > 0 ? `⚠ 士気が低い: ${tired.join('・')}` : `${formation} · ${weight} · ${price}`}`
+            : `${this.powerLabel(ships)}   艦隊速力 ${minSpeed}   陣形 ${formation}   士気 平均 ${avgMorale}\n${second}`,
         )
         .setColor(blockers.length > 0 ? Css.danger : Css.muted);
     }
@@ -1887,6 +1913,61 @@ export class FleetBuilderScene extends Phaser.Scene {
       .map((c) => withProgress(c, progress.captainXp[c.id] ?? 0));
   }
 
+  /** 自動編成 (#357): ships only, ships and captains, or captains only (#164). */
+  private openAutoSheet(): void {
+    this.closeDetail();
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(80);
+      this.detail.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive().on('pointerup', () => this.closeDetail()));
+    const w = IS_PORTRAIT ? CANVAS_W - 64 : 520;
+    const bh = IS_PORTRAIT ? 64 : 44;
+    const h = IS_PORTRAIT ? 470 : 330;
+    const x = (CANVAS_W - w) / 2;
+    const y = (CANVAS_H - h) / 2;
+    add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(x + 28, y + 22, '自動編成', eyebrowStyle(11, Css.cyan)));
+    add(this.add.text(x + 28, y + 46, '出撃できる艦から、コストの上限まで強い艦を選びます (遠征中・入渠中・疲労の艦は除く)。', textStyle(12, Css.muted, { wordWrap: { width: w - 56, useAdvancedWrap: true } })));
+    const choices: Array<[string, () => void]> = [
+      ['艦だけ', () => this.autoShips(false)],
+      ['艦と艦長', () => this.autoShips(true)],
+      ['艦長だけ', () => this.autoCaptains()],
+    ];
+    choices.forEach(([label, run], i) => {
+      add(new UIButton(this, x + w / 2, y + (IS_PORTRAIT ? 150 : 120) + i * (bh + 16), label, () => { this.closeDetail(); run(); }, {
+        variant: i === 1 ? 'gold' : 'secondary', width: w - 56, height: bh, fontSize: 16,
+      }).setScrollFactor(0).setDepth(81));
+    });
+    add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 40 : 28), '閉じる', () => this.closeDetail(), {
+      variant: 'secondary', width: IS_PORTRAIT ? 200 : 160, height: IS_PORTRAIT ? 48 : 34, fontSize: 14,
+    }).setScrollFactor(0).setDepth(81));
+  }
+
+  /** Fills the fleet with the strongest ships that can sail now (#357), then the captains when asked. */
+  private autoShips(captains: boolean): void {
+    const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
+    const now = Date.now();
+    const exercise = this.area === null;
+    const away = new Set([...sailingIds(progress.sortie), ...shipsAway(progress.expeditions)]);
+    const catalog = DataLoader.getUpgrades(this);
+    const candidates = this.ships
+      .filter((s) => !away.has(s.id) && !inDorm(progress.dorm, 'ship', s.id) && moraleOf(progress, s.id, now) >= MORALE_TIRED)
+      // An exercise sails at full HP; a campaign leaves the docked and the badly hurt at home.
+      .filter((s) => exercise || (!isDocked(progress, s.id) && hpFraction(progress, s.id) > 0.25))
+      .map((ship) => ({ ship, cost: shipCost(ship, progress.refits[ship.id] ?? 0), power: fleetPowerBreakdown([ship], progress, catalog, { now }).total }));
+    const fleet = autoFleet(candidates, this.slotCount, this.costCap, this.enemyPower());
+    if (fleet.length === 0) return;
+    this.slots = Array.from({ length: this.slotCount }, (_, i) => fleet[i] ?? null);
+    this.captainIds = Array.from({ length: this.slotCount }, () => null);
+    if (captains) this.captainIds = assignCaptains(this.slots.map((s) => s?.shipClass ?? null), this.ownedCaptains());
+    // 自動編成章 (#357).
+    saveProgress(withQuestEvents(loadProgress(), [['autoFleet', 1]], now));
+    this.refresh();
+  }
+
   /** 艦長を自動配属 (#164): the best-fitting captain for every ship, flagship first. */
   autoCaptains(): void {
     this.captainIds = assignCaptains(this.slots.map((s) => s?.shipClass ?? null), this.ownedCaptains());
@@ -1910,7 +1991,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       }),
       { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 14 : 12 },
     );
-    new UIButton(this, p.x + p.w - PANEL_PAD - bw * 1.5 - 8, p.y + (IS_PORTRAIT ? 42 : 32), IS_PORTRAIT ? '艦長を自動配属' : '艦長自動', this.onTap(() => this.autoCaptains()), {
+    new UIButton(this, p.x + p.w - PANEL_PAD - bw * 1.5 - 8, p.y + (IS_PORTRAIT ? 42 : 32), '自動編成', this.onTap(() => this.openAutoSheet()), {
       variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 14 : 12,
     });
   }

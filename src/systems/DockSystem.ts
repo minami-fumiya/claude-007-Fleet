@@ -46,7 +46,19 @@ export const INSTANT_REPAIR_FRACTION = 0.75;
 export const MIN_REPAIR_MS = 30_000;
 /** A ship sunk in battle comes home heavily damaged (大破) rather than being lost. */
 export const SUNK_HP_FRACTION = 0.1;
+/** The least a 高速修理 paid in resources costs (#143): a ship whose repair is almost over. */
 export const FAST_REPAIR_COST: IResources = { fuel: 40, ammo: 0, steel: 80, bauxite: 0 };
+/** Each minute of repair left adds this to it (#356: a battleship's long repair cost the same as a destroyer's). */
+export const FAST_REPAIR_PER_MINUTE: IResources = { fuel: 40, ammo: 0, steel: 60, bauxite: 0 };
+
+/** Resources that finish a repair with `msLeft` still to go, when no 高速修理材 is at hand (#356). */
+export function fastRepairCost(msLeft: number): IResources {
+  const minutes = Math.max(0, msLeft) / 60_000;
+  return resources({
+    fuel: Math.max(FAST_REPAIR_COST.fuel, Math.ceil(FAST_REPAIR_PER_MINUTE.fuel * minutes)),
+    steel: Math.max(FAST_REPAIR_COST.steel, Math.ceil(FAST_REPAIR_PER_MINUTE.steel * minutes)),
+  });
+}
 
 export interface IDockState {
   /** Ship id → HP fraction (0..1); absent = full health */

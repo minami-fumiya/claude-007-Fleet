@@ -11,6 +11,7 @@ import { IServiceRecord } from '@/types/Record';
 import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
 import { withQuestEvents } from './QuestSystem';
+import { classKey, hullNumber, shipClasses } from './ShipOrder';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -145,7 +146,18 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
-export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
+export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'sister' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
+
+/**
+ * 同型艦は若い番号から (#356): the sister laid down just before `ship` in its class, among the ships that can be built
+ * (reward and fictional ships stand outside the order); undefined for a lead or a ship of its own.
+ */
+export function sisterBefore(roster: readonly IShipData[], ship: IShipData): IShipData | undefined {
+  if (isRewardOnly(ship) || ship.fictional) return undefined;
+  const group = shipClasses(roster.filter((s) => classKey(s) === classKey(ship) && !isRewardOnly(s) && !s.fictional))[0];
+  const i = group ? group.ships.findIndex((s) => s.id === ship.id) : -1;
+  return i > 0 ? group!.ships[i - 1] : undefined;
+}
 
 /**
  * Sinkings each 中分類 asks before it can be built (#285): the kind of enemy the new kind of ship answers, from the
@@ -196,6 +208,9 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
+  // The sister before it must be built (or on the slip) first (#356).
+  const before = sisterBefore(roster, ship);
+  if (before && !isOwned(progress, roster, before.id) && !(progress.builds ?? []).some((b) => b.shipId === before.id)) return 'sister';
   const kills = killNeed(ship, progress.record);
   if (kills && kills.have < kills.count) return 'kills';
   // The biggest battleships and carriers, and the fictional designs, need a medal too (#169).
@@ -206,7 +221,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
 }
 
 /** Short label for a build state, e.g. "要研究: 巡洋艦建造" / "要階級: 少将" / "作戦報酬: 坊ノ岬沖". */
-export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>): string {
+export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>, roster: readonly IShipData[] = []): string {
   switch (state) {
     case 'owned': return '保有';
     case 'building': return '建造中';
@@ -221,6 +236,11 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
     }
     case 'fictional': return `要研究: ${techNames[FICTIONAL_TECH] ?? FICTIONAL_TECH}`;
     case 'rank': return `要階級: ${gradeRankName(shipGrade(ship))}`;
+    case 'sister': {
+      const before = sisterBefore(roster, ship);
+      // The earlier hull is not owned yet, so its name may still be hidden: only its number.
+      return before ? `要: ${hullNumber(roster, before).number}番艦の建造` : '要: 前の同型艦';
+    }
     case 'kills': {
       const need = killNeed(ship, record);
       return need ? `不足: ${killNeedText(need)}` : '';
