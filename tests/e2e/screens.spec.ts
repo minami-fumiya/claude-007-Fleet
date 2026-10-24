@@ -453,6 +453,38 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('自動編成 fills the fleet, the sheet and the footer fit, the picker sorts by morale (#357)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, seenHelp: ['FleetBuilderScene'] });
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { openAutoSheet(): void }).openAutoSheet());
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `auto sheet (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('auto-sheet.png') });
+    const filled = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { autoShips(c: boolean): void; closeDetail(): void; slots: Array<{ id: string } | null>; captainIds: Array<string | null> };
+      s.closeDetail();
+      s.autoShips(true);
+      return { ships: s.slots.filter((x) => x).length, captains: s.captainIds.filter((x) => x).length };
+    });
+    expect(filled.ships).toBeGreaterThan(0);
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `auto fleet (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'FleetBuilderScene'), `auto fleet overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('auto-fleet.png') });
+    // The picker with the morale sort: the sort row (five buttons now) fits.
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { sort: string; openPicker(i: number): void };
+      s.sort = 'Morale';
+      s.openPicker(1);
+    });
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `picker (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'FleetBuilderScene'), `picker overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('picker-morale.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('the fleet power breakdown opens from the footer and fits (#342)', async ({ page }, info) => {
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout);

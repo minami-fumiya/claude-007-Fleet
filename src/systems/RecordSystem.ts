@@ -312,6 +312,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('supply', '給糧章', 'growth', [3, 20, 60], (g) => `給糧艦を ${g} 隻使う`, (_r, c) => total(c, 'supplyUse')),
   ...ladder('sparkle', '意気軒昂章', 'battle', [5, 30, 100], (g) => `作戦の海域で、全艦の士気 70 以上で ${g} 回勝利する`, (_r, c) => total(c, 'sparkleWin')),
   ...ladder('fast_repair', '応急修理章', 'base', [10, 50, 200], (g) => `高速修理材を ${g} 個使う`, (_r, c) => total(c, 'fastRepairUse')),
+  // 自動編成 (#357): fleets the admiral had picked for them.
+  ...ladder('auto_fleet', '自動編成章', 'battle', [10, 100], (g) => `自動編成で艦隊を ${g} 回組む`, (_r, c) => total(c, 'autoFleet')),
   // 高速修理を資材で (#356): the price grows with the time left.
   ...ladder('rush_repair', '突貫修理章', 'base', [5, 50], (g) => `資材で高速修理を ${g} 回する`, (_r, c) => total(c, 'fastRepairPaid')),
   ...ladder('fast_build', '突貫建造章', 'base', [10, 50, 200], (g) => `高速建造材を ${g} 個使う (建造・軍港の工事)`, (_r, c) => total(c, 'fastBuildUse')),

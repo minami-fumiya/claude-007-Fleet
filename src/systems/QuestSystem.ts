@@ -62,6 +62,8 @@ export const QUEST_EVENTS = [
   'winLineAhead', 'winDoubleLine', 'winCircle', 'winEchelon', 'winLineAbreast', 'winVanguard',
   // 高速修理を資材で (#356)
   'fastRepairPaid',
+  // 自動編成 (#357)
+  'autoFleet',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

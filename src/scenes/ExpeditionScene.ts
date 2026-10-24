@@ -20,6 +20,7 @@ import { clock } from '@/utils/TimeFormat';
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
+import { selectedShipIds } from '@/utils/FleetSelection';
 import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -209,7 +210,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const y = (CANVAS_H - h) / 2;
     this.track(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive().setDepth(20));
     this.track(drawPanel(this.add.graphics(), x, y, w, h, { radius: 20, fillAlpha: 0.96 }).setDepth(20));
-    this.track(this.add.text(x + 24, y + 20, `遠征の編成: ${e.name}`, textStyle(17, Css.text, { fontStyle: 'bold' })).setDepth(21));
+    // Said big and in green (#357): this is an expedition's group, not the battle fleet.
+    this.track(this.add.text(x + 24, y + 20, `遠征の編成 — ${e.name}`, textStyle(17, Css.success, { fontStyle: 'bold' })).setDepth(21));
     this.track(this.add.text(x + 24, y + 52, `${e.ships} 隻${this.needsText(e)}  ·  選択 ${group.length} 隻`, textStyle(12, Css.muted)).setDepth(21));
     this.track(this.add.text(x + 24, y + 74, problem ?? 'この編成で送り出せます', textStyle(12, problem ? Css.danger : Css.success)).setDepth(21));
     const listTop = y + 104;
@@ -218,12 +220,17 @@ export class ExpeditionScene extends Phaser.Scene {
     list.setDepth(21);
     this.lists.push(list);
     const itemH = IS_PORTRAIT ? 52 : 36;
+    // Ships of the battle fleet (第 1 艦隊) are marked, so the two groups are told apart (#357).
+    const fleet = new Set(selectedShipIds(this.registry, p.nation));
     idle.forEach((s, i) => {
       const on = this.pickerIds.includes(s.id);
-      const card = this.add.container(0, i * (itemH + 4), [
-        drawPanel(this.add.graphics(), 0, 0, w - 52, itemH, { radius: 10, fillAlpha: on ? 0.7 : 0.4, rim: on ? Colors.gold : undefined, rimAlpha: on ? 0.8 : 0.15 }),
-        this.add.text(14, itemH / 2, `${on ? '✓  ' : '    '}${s.name.replace(/\s*\(.*\)\s*$/, '')}  ·  ${CLASS_JA[s.shipClass]}`, textStyle(14, on ? Css.gold : Css.text)).setOrigin(0, 0.5),
-      ]);
+      const parts: Phaser.GameObjects.GameObject[] = [
+        drawPanel(this.add.graphics(), 0, 0, w - 52, itemH, { radius: 10, fillAlpha: on ? 0.7 : 0.4, rim: on ? Colors.success : undefined, rimAlpha: on ? 0.8 : 0.15 }),
+        this.add.text(14, itemH / 2, `${on ? '✓  ' : '    '}${s.name.replace(/\s*\(.*\)\s*$/, '')}  ·  ${CLASS_JA[s.shipClass]}`, textStyle(14, on ? Css.success : Css.text)).setOrigin(0, 0.5),
+      ];
+      const tag = on ? '遠征に出す' : fleet.has(s.id) ? '第 1 艦隊に編成中' : '';
+      if (tag) parts.push(this.add.text(w - 52 - 14, itemH / 2, tag, textStyle(12, on ? Css.success : Css.gold, { fontStyle: 'bold' })).setOrigin(1, 0.5));
+      const card = this.add.container(0, i * (itemH + 4), parts);
       list.addItem(card, w - 52, itemH, () => {
         this.pickerIds = on ? this.pickerIds.filter((id) => id !== s.id) : [...this.pickerIds, s.id];
         this.draw();
