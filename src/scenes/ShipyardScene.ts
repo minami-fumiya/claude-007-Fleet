@@ -201,7 +201,12 @@ export class ShipyardScene extends Phaser.Scene {
     // Portrait: the rank line on top and the research button below it; landscape: side by side (#182).
     const bw = IS_PORTRAIT ? info.w - 32 : 440;
     const lineY = IS_PORTRAIT ? info.y + 26 : info.y + info.h / 2;
-    const line = add(this.add.text(info.x + 16, lineY, this.status || rankLine, textStyle(12, this.status ? Css.success : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })).setOrigin(0, 0.5));
+    // Every dock taken (#356): said in red where the eye is, with when the next one frees up.
+    const full = docksInUse(progress) >= buildDockCount(progress);
+    const ends = [...(progress.builds ?? []).map((b) => b.endsAt), ...progress.docks.map((d) => d.endsAt)].filter((e) => e > Date.now());
+    const fullLine = `ドック満杯 ${docksInUse(progress)} / ${buildDockCount(progress)}${ends.length > 0 ? `  ·  次の空き ${clock(Math.min(...ends) - Date.now())} 後` : ''}  ·  入渠か建造が終わると建造できます`;
+    const lineCss = this.status ? (this.status.startsWith('ドック') ? Css.danger : Css.success) : full ? Css.danger : Css.muted;
+    const line = add(this.add.text(info.x + 16, lineY, this.status || (full ? fullLine : rankLine), textStyle(12, lineCss, { fontStyle: this.status || full ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     const room = IS_PORTRAIT ? info.w - 32 : info.w - bw - 46;
     if (line.width > room) line.setScale(room / line.width);
     const buttonY = IS_PORTRAIT ? info.y + 76 : info.y + info.h / 2;
@@ -281,7 +286,7 @@ export class ShipyardScene extends Phaser.Scene {
     const hull = hullNumber(roster, ship);
     const title = shown ? ship.name : hiddenShipName(roster, ship, ownedList);
     const name = this.add.text(pad, 10, title, textStyle(15, lit ? Css.text : Css.dim, { fontStyle: 'bold' }));
-    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
+    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
     if (name.width > room) name.setScale(room / name.width);
@@ -343,6 +348,12 @@ export class ShipyardScene extends Phaser.Scene {
       if (!done) return;
       saveProgress(done);
       this.status = `高速建造材で ${short} が完成しました`;
+      this.refresh();
+      return;
+    }
+    if (buildState(progress, roster, ship) === 'dock') {
+      // A tap on a full yard says so rather than doing nothing (#356).
+      this.status = 'ドックが空いていません (入渠か建造が終わると建造できます)';
       this.refresh();
       return;
     }

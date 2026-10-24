@@ -312,6 +312,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('supply', '給糧章', 'growth', [3, 20, 60], (g) => `給糧艦を ${g} 隻使う`, (_r, c) => total(c, 'supplyUse')),
   ...ladder('sparkle', '意気軒昂章', 'battle', [5, 30, 100], (g) => `作戦の海域で、全艦の士気 70 以上で ${g} 回勝利する`, (_r, c) => total(c, 'sparkleWin')),
   ...ladder('fast_repair', '応急修理章', 'base', [10, 50, 200], (g) => `高速修理材を ${g} 個使う`, (_r, c) => total(c, 'fastRepairUse')),
+  // 高速修理を資材で (#356): the price grows with the time left.
+  ...ladder('rush_repair', '突貫修理章', 'base', [5, 50], (g) => `資材で高速修理を ${g} 回する`, (_r, c) => total(c, 'fastRepairPaid')),
   ...ladder('fast_build', '突貫建造章', 'base', [10, 50, 200], (g) => `高速建造材を ${g} 個使う (建造・軍港の工事)`, (_r, c) => total(c, 'fastBuildUse')),
   ...ladder('merchant', '資源商人章', 'base', [5, 50, 200], (g) => `ショップで資源を ${g} 回売る`, (_r, c) => total(c, 'shopSell')),
   ...ladder('shopper', '御用達章', 'base', [5, 30, 100], (g) => `ショップで ${g} 回買い物をする`, (_r, c) => total(c, 'shopBuy')),

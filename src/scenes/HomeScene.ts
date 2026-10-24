@@ -19,7 +19,7 @@ import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionLines, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
-import { buildDock, dockCount, FAST_REPAIR_COST, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
+import { buildDock, dockCount, fastRepairCost, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
@@ -474,9 +474,12 @@ export class HomeScene extends Phaser.Scene {
     };
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
     const rowH = IS_PORTRAIT ? 66 : 38;
-    const w = IS_PORTRAIT ? CANVAS_W - 32 : 900;
+    const w = IS_PORTRAIT ? CANVAS_W - 32 : 1180;
     const head = IS_PORTRAIT ? 120 : 88;
-    const h = head + rows.length * rowH + (IS_PORTRAIT ? 110 : 78);
+    // The next rank's row is taller: its promotion missions are read there, at a size that can be read (#355).
+    const nextExtra = IS_PORTRAIT ? 72 : 20;
+    const rowTop = (i: number): number => i * rowH + (rows.slice(0, i).some((r) => r.index === current.index + 1) ? nextExtra : 0);
+    const h = head + rows.length * rowH + nextExtra + (IS_PORTRAIT ? 110 : 70);
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(8, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
@@ -487,8 +490,9 @@ export class HomeScene extends Phaser.Scene {
     const labels = ['階級', '必要戦功', '出撃枠', '建造', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
     labels.forEach((l, i) => add(this.add.text(x + 24 + cols[i], hy, l, textStyle(11, Css.muted))));
     rows.forEach((r, i) => {
-      const ry = y + head + i * rowH;
+      const ry = y + head + rowTop(i);
       const here = r.index === current.index;
+      const next = r.index === current.index + 1;
       if (here) {
         const g = add(this.add.graphics());
         g.fillStyle(Colors.gold, 0.16);
@@ -509,12 +513,18 @@ export class HomeScene extends Phaser.Scene {
       const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
         const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
-        const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, extra, textStyle(11, missions.some((m) => m.startsWith('任務')) ? Css.cyan : css)));
         const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[4];
-        if (t.width > room) t.setScale(room / t.width);
+        const color = missions.some((m) => m.startsWith('任務')) ? Css.cyan : css;
+        if (next) {
+          // Wrapped over two lines rather than shrunk.
+          add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 4, extra, textStyle(IS_PORTRAIT ? 14 : 13, color, { lineSpacing: 2, wordWrap: { width: room, useAdvancedWrap: true } })));
+        } else {
+          const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, extra, textStyle(12, color)));
+          if (t.width > room) t.setScale(room / t.width);
+        }
       }
     });
-    add(this.add.text(x + 24, y + head + rows.length * rowH + 4, '* 士官候補生はチュートリアル実装後の開始階級です (今は准尉から始まります)。', textStyle(11, Css.dim)));
+    add(this.add.text(x + 24, y + head + rows.length * rowH + nextExtra + 4, '* 士官候補生はチュートリアル実装後の開始階級です (今は准尉から始まります)。', textStyle(11, Css.dim)));
     add(new UIButton(this, x + w / 2, y + h - (IS_PORTRAIT ? 40 : 28), '閉じる', () => this.closeNationPicker(), {
       variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: IS_PORTRAIT ? 56 : 40, fontSize: 15,
     }));
@@ -782,7 +792,11 @@ export class HomeScene extends Phaser.Scene {
     const damaged = Object.keys(progress.damage)
       .map((id) => this.registryShips.byId(id))
       .filter((s): s is IShipData => s !== undefined && !isDocked(all, s.id));
-    const note = add(this.add.text(d.x + pad, y, `${damaged.length > 0 ? `損傷艦 ${damaged.length} 隻 (タップで入渠)` : '損傷艦はありません'}  ·  高速修理: 高速修理材 1 個 (所持 ${progress.items.fastRepair})、なければ ${formatResources(FAST_REPAIR_COST)}`, textStyle(11, Css.dim, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
+    // What the dock list holds, in words (#355 #356): the repair's price and time grow with the HP lost.
+    const noteText = damaged.length > 0
+      ? `損傷艦 ${damaged.length} 隻。行をタップで入渠 (資材と時間は失った耐久で決まり、大きな艦ほど多い)`
+      : progress.docks.length > 0 ? '入渠中の艦は、行をタップで高速修理 (高速修理材 1 個、なければ資材)' : '修理が必要な艦はいません';
+    const note = add(this.add.text(d.x + pad, y, noteText, textStyle(11, Css.dim, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
     y += note.height + 8;
 
     const list = new ScrollList(this, { x: d.x + pad - 4, y, w: d.w - pad * 2 + 8, h: d.y + d.h - 12 - y });
@@ -819,14 +833,16 @@ export class HomeScene extends Phaser.Scene {
     };
     // Repairs: a 高速修理材 (#143) is used first; without one the repair is paid in resources.
     const items = progress.items.fastRepair;
-    const canRush = items > 0 || canAfford(progress.resources, FAST_REPAIR_COST);
     progress.docks.forEach((job, i) => {
       const ship = this.registryShips.byId(job.shipId);
       if (!ship) return;
+      // Without the item the price grows with the time left (#356).
+      const rush = fastRepairCost(job.endsAt - Date.now());
+      const canRush = items > 0 || canAfford(progress.resources, rush);
       addRow({
         tag: `入渠 ${i + 1}`, tagCss: Css.gold, name: ship.name,
         meter: { total: repairTimeMs(ship.hp, hpFraction(progress, ship.id), repairMul, ship.shipClass), endsAt: job.endsAt },
-        action: items > 0 ? `高速修理材 (${items})` : canRush ? '高速修理' : '資源不足', can: canRush, onTap: () => this.fastRepair(ship.id),
+        action: items > 0 ? `高速修理材 (${items})` : canRush ? `高速修理 ${formatResources(rush)}` : '資源不足', can: canRush, onTap: () => this.fastRepair(ship.id),
       });
     });
     // Builds (#264): a 高速建造材 finishes one at once.
@@ -886,9 +902,11 @@ export class HomeScene extends Phaser.Scene {
       this.refresh();
       return;
     }
-    const paid = pay(progress.resources, FAST_REPAIR_COST);
+    const job = progress.docks.find((d) => d.shipId === shipId);
+    const paid = job ? pay(progress.resources, fastRepairCost(job.endsAt - Date.now())) : null;
     if (!paid) return;
-    saveProgress({ ...progress, ...fastRepair(progress, shipId), resources: paid }, 'repair');
+    // 突貫修理章 (#356) counts the repairs rushed with resources.
+    saveProgress(withQuestEvents({ ...progress, ...fastRepair(progress, shipId), resources: paid }, [['fastRepairPaid', 1]], Date.now()), 'repair');
     this.refresh();
   }
 }

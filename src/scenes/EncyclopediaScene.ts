@@ -110,6 +110,8 @@ export class EncyclopediaScene extends Phaser.Scene {
   private back: { scene: string; data?: object } | null = null;
   /** Entry to bring into view once the list is built */
   private revealId = '';
+  /** Whether the list was made for the ships tab (taller tab rows above it) */
+  private listShips = true;
 
   constructor() {
     super({ key: SceneKeys.ENCYCLOPEDIA });
@@ -149,10 +151,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     addPanel(this, L.list.x, L.list.y, L.list.w, L.list.h, { radius: 24, fillAlpha: 0.5 });
     addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
     const { x, y, w, h } = L.list;
-    // Rows: what to look at, the nations, the ship classes and the filter bar (#263).
-    const top = y + PAD + (NATION_ROWS + 3) * (L.tabH + TAB_GAP) + 4;
-    // The list scrolls (#20); its right edge leaves a gutter for the scrollbar.
-    this.list = new ScrollList(this, { x: x + PAD, y: top, w: w - PAD * 2 + 4, h: y + h - PAD - COUNT_H - top });
+    this.makeList(false);
     this.countText = this.add.text(x + w / 2, y + h - PAD - COUNT_H / 2 + 2, '', textStyle(12, Css.muted)).setOrigin(0.5);
     this.list.setOffset(0);
     this.refresh();
@@ -161,6 +160,21 @@ export class EncyclopediaScene extends Phaser.Scene {
       const i = (this.ownedOnly ? all.filter((e) => e.owned) : all).findIndex((e) => e.id === this.revealId);
       if (i >= 0) this.list.reveal(Math.floor(i / L.cols) * (L.rowH + ROW_GAP), L.rowH);
     }
+  }
+
+  /**
+   * The scrolling list under the tabs (#20). Rows: what to look at, the nations, and for ships the classes and the
+   * filter bar (#263); the other tabs have no such rows, so their list starts higher (#355: it left a gap and showed
+   * four rows and a half).
+   */
+  private makeList(replace = true): void {
+    const { x, y, w, h } = L.list;
+    this.listShips = this.tab === 'ships';
+    const top = y + PAD + (NATION_ROWS + (this.listShips ? 3 : 1)) * (L.tabH + TAB_GAP) + 4;
+    // A restarted scene still holds the last run's list, already gone with it.
+    if (replace) this.list.destroy();
+    // Its right edge leaves a gutter for the scrollbar.
+    this.list = new ScrollList(this, { x: x + PAD, y: top, w: w - PAD * 2 + 4, h: y + h - PAD - COUNT_H - top });
   }
 
   private track<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -229,6 +243,7 @@ export class EncyclopediaScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private refresh(): void {
+    if ((this.tab === 'ships') !== this.listShips) this.makeList();
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
     const all = this.allEntries();
@@ -342,7 +357,10 @@ export class EncyclopediaScene extends Phaser.Scene {
       }
       const name = this.add.text(52, L.rowH / 2, e.name, textStyle(IS_PORTRAIT ? 16 : 14, on ? Css.text : e.owned ? Css.muted : Css.dim)).setOrigin(0, 0.5);
       const sub = this.add.text(colW - 12, L.rowH / 2, e.sub, eyebrowStyle(10, Css.dim)).setOrigin(1, 0.5);
-      const room = colW - 52 - sub.width - 12;
+      // A kind the name already says (零式水上偵察機 · 水上偵察機) is left out, and the name keeps a gap from the kind
+      // (#355: the two ran together as one word).
+      if (e.name.includes(e.sub)) sub.setText('');
+      const room = colW - 52 - (sub.text ? sub.width + 24 : 0) - 12;
       if (name.width > room) name.setScale(room / name.width);
       parts.push(name, sub);
       const card = this.add.container(col * (colW + 8), row * (L.rowH + ROW_GAP), parts);

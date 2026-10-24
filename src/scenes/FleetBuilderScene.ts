@@ -1412,10 +1412,10 @@ export class FleetBuilderScene extends Phaser.Scene {
         .rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94)
         .setOrigin(0, 0)
         .setInteractive();
-      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.95 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
-      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 46, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 76 });
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 10, '', textStyle(13, Css.muted, { align: 'right', lineSpacing: 2, wordWrap: { width: f.w - 170, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
+      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 38, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 64 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn], 60);
       return;
     }
@@ -1437,12 +1437,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     });
     if (IS_PORTRAIT) {
       const bar = this.add.rectangle(0, CANVAS_H - FOOTER_BAR_H, CANVAS_W, FOOTER_BAR_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
-      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.6 });
+      const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.95 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
-      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 20, '', textStyle(14, Css.muted, { align: 'right', wordWrap: { width: f.w - 190, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
+      this.summaryText = this.add.text(f.x + f.w - 24, f.y + 10, '', textStyle(13, Css.muted, { align: 'right', lineSpacing: 2, wordWrap: { width: f.w - 170, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
       const bw = (f.w - 32 - 12) / 2;
-      this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 46, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 76, fontSize: 22 });
-      const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 46, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 76, fontSize: 22 });
+      this.startBtn = new UIButton(this, f.x + 16 + bw / 2, f.y + f.h - 38, '作戦へ  ›', toCampaign, { variant: 'gold', width: bw, height: 64, fontSize: 22 });
+      const ex = new UIButton(this, f.x + f.w - 16 - bw / 2, f.y + f.h - 38, '演習へ  ›', toExercise, { variant: 'primary', width: bw, height: 64, fontSize: 22 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn, ex], 60);
       return;
     }
