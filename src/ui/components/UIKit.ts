@@ -202,6 +202,8 @@ export function drawPanel(
   h: number,
   opts: IPanelOptions = {},
 ): Phaser.GameObjects.Graphics {
+  // The frame is kept on the object so the screen tests can find text running out of its card (#355).
+  g.setData('panel', { x, y, w, h });
   const r = opts.radius ?? 20;
   const rim = opts.rim ?? Colors.rim;
   const glow = opts.glow ?? 0;

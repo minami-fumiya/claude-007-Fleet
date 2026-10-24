@@ -191,6 +191,48 @@ async function overlappingTexts(page: Page, key: string): Promise<string[]> {
   }, key);
 }
 
+/**
+ * Texts running out of the card they start in (#355): the gold card's "入手" ran past its bottom edge, a research card's
+ * conditions over its cost line. A card is a panel drawn by addPanel (it keeps its frame as data); a text belongs to the
+ * smallest card holding its top-left corner, on the same layer and scrolling the same way.
+ */
+async function textsOutOfCards(page: Page, key: string): Promise<string[]> {
+  return page.evaluate((k) => {
+    const g = (window as unknown as { game: Phaser.Game }).game;
+    const scene = g.scene.getScene(k);
+    type Frame = { x: number; y: number; w: number; h: number };
+    const out: string[] = [];
+    // Cards and texts are matched inside one parent (the scene or a container), in that parent's coordinates.
+    const check = (list: Phaser.GameObjects.GameObject[]): void => {
+      const cards: Array<Frame & { depth: number; sf: number }> = [];
+      const texts: Phaser.GameObjects.Text[] = [];
+      for (const o of list) {
+        const v = (o as unknown as { visible?: boolean }).visible !== false && ((o as unknown as { alpha?: number }).alpha ?? 1) > 0.05;
+        if (!v || (o as unknown as { mask?: unknown }).mask) continue;
+        if (o.type === 'Container') check((o as Phaser.GameObjects.Container).list);
+        const frame = o.type === 'Graphics' ? (o.getData('panel') as Frame | undefined) : undefined;
+        if (frame) {
+          const gr = o as Phaser.GameObjects.Graphics;
+          cards.push({ x: frame.x + gr.x, y: frame.y + gr.y, w: frame.w, h: frame.h, depth: gr.depth, sf: gr.scrollFactorY });
+        }
+        if (o.type === 'Text' && (o as Phaser.GameObjects.Text).text.trim() !== '') texts.push(o as Phaser.GameObjects.Text);
+      }
+      for (const t of texts) {
+        const left = t.x - t.displayOriginX;
+        const top = t.y - t.displayOriginY;
+        const right = left + t.displayWidth;
+        const bottom = top + t.displayHeight;
+        const home = cards
+          .filter((c) => c.sf === t.scrollFactorY && c.depth <= t.depth && left + 1 >= c.x && left + 1 <= c.x + c.w && top + 1 >= c.y && top + 1 <= c.y + c.h)
+          .sort((a, c) => a.w * a.h - c.w * c.h)[0];
+        if (home && (bottom > home.y + home.h + 3 || right > home.x + home.w + 3)) out.push(`${t.text.replace(/\n/g, ' ').slice(0, 24)} (${Math.round(bottom)} > ${Math.round(home.y + home.h)})`);
+      }
+    };
+    check(scene.children.list);
+    return out;
+  }, key);
+}
+
 test.describe('screens', () => {
   test('every menu screen opens without errors or text off the canvas', async ({ page }, info) => {
     // Fourteen screens, each checked for overflow and overlaps.
@@ -202,6 +244,7 @@ test.describe('screens', () => {
       expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
       expect(await overlappingTexts(page, key), `${key} overlaps (${layout})`).toEqual([]);
       expect(await badLineStarts(page, key), `${key} line breaks (${layout})`).toEqual([]);
+      expect(await textsOutOfCards(page, key), `${key} out of cards (${layout})`).toEqual([]);
       await page.screenshot({ path: info.outputPath(`${key}.png`) });
     }
     expect(errors).toEqual([]);
@@ -407,6 +450,38 @@ test.describe('screens', () => {
     const near = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theaters: Array<{ id: string }> }).theaters.map((t) => t.id));
     expect(near).toEqual(['baltic']);
     expect(await overflowingTexts(page, 'CampaignMapScene'), `SU first base (${layout})`).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('自動編成 fills the fleet, the sheet and the footer fit, the picker sorts by morale (#357)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout, { ...SAVE, seenHelp: ['FleetBuilderScene'] });
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { openAutoSheet(): void }).openAutoSheet());
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `auto sheet (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('auto-sheet.png') });
+    const filled = await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { autoShips(c: boolean): void; closeDetail(): void; slots: Array<{ id: string } | null>; captainIds: Array<string | null> };
+      s.closeDetail();
+      s.autoShips(true);
+      return { ships: s.slots.filter((x) => x).length, captains: s.captainIds.filter((x) => x).length };
+    });
+    expect(filled.ships).toBeGreaterThan(0);
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `auto fleet (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'FleetBuilderScene'), `auto fleet overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('auto-fleet.png') });
+    // The picker with the morale sort: the sort row (five buttons now) fits.
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { sort: string; openPicker(i: number): void };
+      s.sort = 'Morale';
+      s.openPicker(1);
+    });
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `picker (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'FleetBuilderScene'), `picker overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath('picker-morale.png') });
     expect(errors).toEqual([]);
   });
 
@@ -1138,6 +1213,7 @@ test.describe('screens', () => {
     await open(page, 'HomeScene');
     await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openRanks(): void }).openRanks());
     expect(await overflowingTexts(page, 'HomeScene'), `ranks (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'HomeScene'), `ranks overlaps (${layout})`).toEqual([]);
     await page.screenshot({ path: info.outputPath('ranks.png') });
     await open(page, 'SettingsScene');
     await page.evaluate(() => {

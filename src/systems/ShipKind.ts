@@ -138,18 +138,21 @@ export enum ShipSort {
   Default = 'Default',
   Hp = 'Hp',
   Speed = 'Speed',
+  /** Highest morale first (#357): the tired ones come last */
+  Morale = 'Morale',
 }
 
 export const SORT_LABEL: Record<ShipSort, string> = {
   [ShipSort.Default]: '標準',
   [ShipSort.Hp]: '耐久順',
   [ShipSort.Speed]: '速力順',
+  [ShipSort.Morale]: '士気順',
 };
 
 /** Filtered and sorted copy; ties keep roster order. */
-export function filterAndSort<T extends Pick<IShipData, 'shipClass' | 'subtype' | 'hp' | 'speed'>>(ships: T[], filter: KindFilter, sort: ShipSort): T[] {
+export function filterAndSort<T extends Pick<IShipData, 'id' | 'shipClass' | 'subtype' | 'hp' | 'speed'>>(ships: T[], filter: KindFilter, sort: ShipSort, morale: (id: string) => number = () => 0): T[] {
   const list = ships.map((s, i) => ({ s, i })).filter(({ s }) => matchesKind(s, filter));
-  const key = (s: T): number => (sort === ShipSort.Hp ? s.hp : sort === ShipSort.Speed ? s.speed : 0);
+  const key = (s: T): number => (sort === ShipSort.Hp ? s.hp : sort === ShipSort.Speed ? s.speed : sort === ShipSort.Morale ? morale(s.id) : 0);
   return list.sort((a, b) => key(b.s) - key(a.s) || a.i - b.i).map(({ s }) => s);
 }
 

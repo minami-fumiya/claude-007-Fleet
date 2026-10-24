@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   BUILD_TECH, killNeed, MID_KILLS, buildCost, buildShip, buildState, buildStateLabel, buildTechFor, grantShip, HEAVY_CRUISER_TECH, isBuildTech, isRewardOnly, ownedIds, ownedShips,
-  REWARD_SHIPS, rewardShipFor, shipGrade, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, docksInUse, fastBuild,
+  REWARD_SHIPS, rewardShipFor, shipGrade, sisterBefore, starterShip, buildTimeMs, startBuild, completeBuilds, buildDockCount, docksInUse, fastBuild,
 } from '@/systems/ShipyardSystem';
 import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE, RANKS } from '@/systems/RankSystem';
 import { currentBaseId } from '@/systems/BaseSystem';
@@ -315,5 +315,26 @@ describe('construction time (#143)', () => {
     const np = { builds: [{ shipId: 'a', endsAt: now }, { shipId: 'b', endsAt: now + 1 }], ships: ['x'] };
     expect(finishBuilds(np, now)).toEqual({ builds: [{ shipId: 'b', endsAt: now + 1 }], ships: ['x', 'a'] });
     expect(finishBuilds(np, now - 1)).toBe(np);
+  });
+});
+
+describe('同型艦は若い番号から順に建造する (#356)', () => {
+  const ready = (patch: Partial<IProgress> = {}): IProgress => player({ resources: rich, rankFloor: 13, research: (techTree.tech as ITechNode[]).map((n) => n.id), ...patch });
+
+  it('a sister waits for the hull before it; the lead and a ship of its own do not', () => {
+    expect(sisterBefore(IJN, byId('yamato'))).toBeUndefined();
+    expect(sisterBefore(IJN, byId('musashi'))?.id).toBe('yamato');
+    expect(buildState(ready(), IJN, byId('musashi'))).toBe('sister');
+    expect(buildStateLabel('sister', byId('musashi'), {}, {}, undefined, IJN)).toBe('要: 1番艦の建造');
+    expect(buildState(ready({ ships: ['fubuki', 'yamato'] }), IJN, byId('musashi'))).not.toBe('sister');
+  });
+
+  it('a hull on the slip counts as built for the next one', () => {
+    const p = ready({ builds: [{ shipId: 'yamato', base: currentBaseId(emptyProgress()), endsAt: Date.now() + 60_000 }] as IProgress['builds'] });
+    expect(buildState(p, IJN, byId('musashi'))).not.toBe('sister');
+  });
+
+  it('reward and fictional ships stand outside the order', () => {
+    for (const s of IJN.filter((x) => isRewardOnly(x) || x.fictional)) expect(sisterBefore(IJN, s), s.id).toBeUndefined();
   });
 });

@@ -1645,8 +1645,8 @@ export class BattleScene extends Phaser.Scene {
     this.switchBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     this.refreshSwitchBtn();
     if (audio.settings.showFps || new URLSearchParams(window.location.search).has('fps')) {
-      // At the top, under the weather and the objective (#336: it sat low among the controls).
-      this.perfText = this.add.text(20, IS_PORTRAIT ? 340 : 140, '', textStyle(12, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setDepth(DEPTH_HUD + 3).setScrollFactor(0);
+      // Beside the sound button, clear of the objective banner below it (#336, #355: it touched the banner).
+      this.perfText = this.add.text(140, IS_PORTRAIT ? 286 : 122, '', textStyle(12, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0, 0.5).setDepth(DEPTH_HUD + 3).setScrollFactor(0);
     }
 
     if (this.isTouch) {
