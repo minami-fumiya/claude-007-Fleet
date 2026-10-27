@@ -38,7 +38,8 @@ import { Minimap } from '@/ui/Minimap';
 import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
-import { BRIDGE_AIM_MUL, newlyBroken, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
+import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
+import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -213,6 +214,8 @@ export class BattleScene extends Phaser.Scene {
   /** 超兵器 (#148): whether the enemy brings one, and the one on the sea */
   private bringsSuperweapon = false;
   private superweapon: BaseShip | null = null;
+  /** 部位耐久 (#148): the giant's parts, over it */
+  private superweaponParts: Phaser.GameObjects.Text | null = null;
   /** Fleets fighting beside the one the player steers (#84 支援艦隊, #64 友軍艦隊), each ship with its own AI */
   private groups: IFleetGroup[] = [];
   /** 友軍艦隊 still to arrive (#64) */
@@ -319,6 +322,7 @@ export class BattleScene extends Phaser.Scene {
     this.perfShownAt = 0;
     this.firesSet = 0;
     this.superweapon = null;
+    this.superweaponParts = null;
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
     this.convoy = [];
@@ -451,7 +455,23 @@ export class BattleScene extends Phaser.Scene {
     if (this.gameOver || this.paused) return;
     const frameStart = this.perfText ? performance.now() : 0;
     this.battleUpdate(loopTime, delta);
+    this.updateSuperweaponParts();
     if (this.perfText) this.showPerf(performance.now() - frameStart);
+  }
+
+  /** 部位耐久 (#148): the giant's parts follow it while it is afloat and seen. */
+  private updateSuperweaponParts(): void {
+    const t = this.superweaponParts;
+    const giant = this.superweapon;
+    if (!t || !giant) return;
+    if (!giant.isAlive) {
+      t.destroy();
+      this.superweaponParts = null;
+      return;
+    }
+    t.setPosition(giant.x, giant.y - 80).setVisible(giant.visible);
+    const line = partsLine(giant.stats.currentHp / Math.max(1, giant.stats.maxHp));
+    if (t.text !== line) t.setText(line);
   }
 
   /** 動作情報 (#99): fps, ships, projectiles and the battle logic's time per frame, refreshed twice a second. */
@@ -939,6 +959,8 @@ export class BattleScene extends Phaser.Scene {
       if (giant && i === 0) {
         enemy.setScale(giant.scale);
         this.superweapon = enemy;
+        this.superweaponParts = this.add.text(enemy.x, enemy.y - 80, partsLine(1), textStyle(12, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
+          .setOrigin(0.5).setDepth(DEPTH_HUD - 3);
       }
       enemy.setAngle(placed ? placed.angle : 180);
       this.enemies.push(enemy);
@@ -2131,6 +2153,7 @@ export class BattleScene extends Phaser.Scene {
     } else if (this.exercise) {
       result.campaign = '演習: 損傷なし・資源報酬は半分';
     }
+    if (area && this.battleData?.swArea) result.campaign = `超兵器海域: ${area.name}  ${victory ? '勝利' : '敗北'}`;
     // Merit (戦功, #36): first clears count most; the rank (and slots, docks, ship grades) follow from it.
     const before = rankOf(progress);
     // Promotion missions (#142) count campaign battles; finishing one can promote as surely as merit.
@@ -2177,10 +2200,21 @@ export class BattleScene extends Phaser.Scene {
       progress = { ...progress, items: { ...progress.items, trainingManual: (progress.items.trainingManual ?? 0) + 1 } };
       recruitLines.push('訓練教範 +1 (改装の画面で艦の練度を上げられます)');
     }
+    // 部品と設計図 (#150): enemies sunk in a campaign battle leave pieces now and then; a superweapon always does.
+    if (area && !area.training && !this.exercise) {
+      const catalog = DataLoader.getUpgrades(this);
+      const enemyNation = this.battleData?.enemyFleet.nation ?? progress.nation;
+      const swArea = this.battleData?.swArea === true;
+      const drops = rollDrops(catalog, sunk.map((e) => ({ shipClass: e.stats.shipClass, nation: enemyNation })), rank, victory, { giantSunk, giantArea: swArea }, Math.random);
+      progress = withQuestEvents(applyDrops(progress, drops), [['partDrop', drops.parts.length], ['blueprint', drops.blueprints], ['swAreaWin', won(swArea)]], now);
+      const line = dropLine(catalog, drops, progress.blueprints);
+      if (line) recruitLines.push(line);
+    }
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);
-    // The sortie's battle is settled (#138): reopening the game offers the advance, not this battle again.
-    if (area) progress = markSortieFought(progress);
+    // The sortie's battle is settled (#138): reopening the game offers the advance, not this battle again. A
+    // superweapon sea (#148) is fought outside any sortie.
+    if (area && this.battleData?.swArea !== true) progress = markSortieFought(progress);
     // Nations opened by this battle (#134) are announced with the recruits.
     const locksBefore = nationLocks(loadSave().nations, loadSave().record);
     saveProgress(progress);

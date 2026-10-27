@@ -11,7 +11,7 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
 import { areaMode, enemyNationFor, enemyShips } from '@/systems/CampaignSystem';
-import { CAMPAIGN_AREA_KEY, OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
+import { CAMPAIGN_AREA_KEY, OBJECTIVE_LABEL, SW_AREA_KEY } from '@/scenes/CampaignMapScene';
 import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -312,6 +312,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private captainData: ICaptainData[] = [];
   /** Campaign operation being prepared (null = free battle) */
   private area: ICampaignArea | null = null;
+  /** 超兵器海域 (#148): the area is fought once against its giant, outside any sortie */
+  private swArea = false;
   private enemyNation: Choice<Nation> = RANDOM;
   private mode: Choice<BattleMode> = RANDOM;
   private weatherChoice: Choice<Weather> = RANDOM;
@@ -417,6 +419,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.captainData = DataLoader.getCaptains(this);
     const areaId = this.registry.get(CAMPAIGN_AREA_KEY) as string | undefined;
     this.area = (campaignData as ICampaignData).areas.find((a) => a.id === areaId) ?? null;
+    this.swArea = this.area !== null && this.registry.get(SW_AREA_KEY) === true;
     if (this.area) this.organizeOnly = false;
     this.keyBuffer = '';
     this.keyAt = 0;
@@ -1269,7 +1272,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // Enemy kinds first, then each kind's ships (#68).
     const lineup = kindGroups(enemy.map((s) => ({ ...s, name: shortName(s.name) }))).map((g) => `${g.kind} ${g.names.join('・')}`).join(' / ');
     const lines = [
-      `作戦  ${area.name}`,
+      this.swArea ? `超兵器海域  ${area.name}` : `作戦  ${area.name}`,
       `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[enemyNation].jaShort} ${enemy.length} 隻 — ${kindBreakdown(enemy)}`,
       lineup,
       `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
@@ -1284,6 +1287,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const by = p ? y + 8 + bh / 2 : this.L.settings.y + this.L.settings.h - 14 - bh / 2;
     objs.push(new UIButton(this, x + w / 2, by, '作戦を中止して演習にする', this.onTap(() => {
       this.registry.remove(CAMPAIGN_AREA_KEY);
+      this.registry.remove(SW_AREA_KEY);
       this.scene.restart();
     }), { variant: 'secondary', width: w, height: bh, fontSize: 12 }));
     return p ? by + bh / 2 + 8 : y;
@@ -2060,6 +2064,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     };
 
     emitTutorial('sortie', this.registry);
+    // 超兵器海域 (#148): one battle against the area's fleet and its giant, outside any sortie.
+    if (area && this.swArea) {
+      this.scene.start(SceneKeys.BATTLE, { ...initData, superweapon: true, swArea: true, objective: Objective.Annihilate });
+      return;
+    }
     // A campaign area is fought node by node (#53); the first battle may be its escorts.
     const sortie = area
       ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList,

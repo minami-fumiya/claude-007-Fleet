@@ -70,6 +70,8 @@ export interface IShipData {
   airWing?: IAirWing;
   /** Planned-only design: needs the 架空艦計画 research and never appears in enemy fleets */
   fictional?: boolean;
+  /** The nation's own superweapon (#148 #150): built from blueprint fragments taken from enemy superweapons */
+  blueprint?: boolean;
   /** Short history for the encyclopedia */
   description?: string;
   /** Year the ship (or its class) entered service (#85): ships of a class grow stronger with it */
