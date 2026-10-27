@@ -26,6 +26,8 @@ import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import ijnShips from '@/data/ships/ijn.json';
 import upgradesData from '@/data/upgrades.json';
 import type { IUpgradeData } from '@/types/Modifiers';
+import type { CarrierAircraft } from '@/types/Aircraft';
+import type { IPilot } from '@/systems/AircraftSystem';
 import { EXISTING_PLAYER_HELP, FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
@@ -64,6 +66,10 @@ export interface INationProgress {
   equipment: Record<string, number>;
   /** 設計図の断片 (#150): taken from superweapons sunk; enough of them lets the nation build its own (#148) */
   blueprints: number;
+  /** 航空機 (#87): models developed, each carrier's choice per kind, and its air group's pilots */
+  aircraftDev: string[];
+  airGroups: Record<string, Partial<Record<CarrierAircraft, string>>>;
+  pilots: Record<string, IPilot>;
   /** Ship id → refit stage (0 = original) */
   refits: Record<string, number>;
   /** Ship id → the branch chosen for its last remodel stage (#86); none = the standard stage */
@@ -177,7 +183,7 @@ export function walletOf(p: Pick<IProgress, 'wallet'>): IWallet {
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, equipment: {}, blueprints: 0, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
+    upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airGroups: {}, pilots: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
   };
@@ -307,6 +313,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     // A save from before #55 had every researched upgrade without limit: it starts with one of each in hand.
     equipment: isObject(data.equipment) ? numbers(data.equipment) : legacyEquipment(strings(data.research)),
     blueprints: isNum(data.blueprints) ? Math.max(0, Math.floor(data.blueprints)) : 0,
+    aircraftDev: [...new Set(strings(data.aircraftDev))],
+    airGroups: parseAirGroups(data.airGroups),
+    pilots: parsePilots(data.pilots),
     refits: numbers(data.refits),
     refitBranches: stringMap(data.refitBranches),
     proficiency: numbers(data.proficiency),
@@ -352,6 +361,30 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
       .map((c) => ({ preset: isNum(c.preset) ? c.preset : -1, mission: MISSIONS.find((m) => m === c.mission) ?? 'strike' }))
       .filter((c) => c.preset >= 0 && c.preset < PRESET_COUNT),
   };
+}
+
+const CARRIER_KINDS = new Set<string>(['Fighter', 'DiveBomber', 'TorpedoBomber']);
+
+function parseAirGroups(v: unknown): Record<string, Partial<Record<CarrierAircraft, string>>> {
+  const out: Record<string, Partial<Record<CarrierAircraft, string>>> = {};
+  if (!isObject(v)) return out;
+  for (const [ship, kinds] of Object.entries(v)) {
+    if (!isObject(kinds)) continue;
+    const row: Partial<Record<CarrierAircraft, string>> = {};
+    for (const [kind, id] of Object.entries(kinds)) if (CARRIER_KINDS.has(kind) && typeof id === 'string') row[kind as CarrierAircraft] = id;
+    out[ship] = row;
+  }
+  return out;
+}
+
+function parsePilots(v: unknown): Record<string, IPilot> {
+  const out: Record<string, IPilot> = {};
+  if (!isObject(v)) return out;
+  for (const [ship, p] of Object.entries(v)) {
+    if (!isObject(p)) continue;
+    out[ship] = { skill: isNum(p.skill) ? Math.max(0, Math.min(100, p.skill)) : 0, kills: isNum(p.kills) ? Math.max(0, Math.floor(p.kills)) : 0, ...(typeof p.ace === 'string' ? { ace: p.ace } : {}) };
+  }
+  return out;
 }
 
 /** One copy of every upgrade the research had opened (saves from before the stock, #55). */

@@ -19,6 +19,8 @@ import { IUpgradeData } from '@/types/Modifiers';
 import { IWeaponData } from '@/types/Weapon';
 import { researchOrder } from '@/systems/ResearchSystem';
 import { developable, heldCount, stockOf, toggleFit } from '@/systems/EquipmentSystem';
+import { carrierModel } from '@/systems/AircraftSystem';
+import { CARRIER_AIRCRAFT } from '@/types/Aircraft';
 import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch, switchCost } from '@/systems/RefitSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
@@ -522,6 +524,12 @@ export class CustomizationScene extends Phaser.Scene {
     const removed = loadout.filter((w) => !afterIds.includes(w.id)).map((w) => w.name);
     const added = this.loadout(afterIds.filter((id) => !ship.weapons.includes(id))).map((w) => w.name);
     if (removed.length > 0 || added.length > 0) extras.push(`兵装 ${removed.join('・') || '—'} → ${added.join('・') || '撤去'}`);
+    // 艦載機と搭乗員 (#87): chosen on the 工廠 › 開発 › 航空機 screen.
+    if (ship.airWing) {
+      const models = CARRIER_AIRCRAFT.map((t) => carrierModel(progress, ship.id, ship.nation, t)?.name).filter((n): n is string => !!n);
+      const pilot = progress.pilots[ship.id];
+      extras.push(`艦載機 ${models.join('・')}  ·  搭乗員 練度 ${Math.round(pilot?.skill ?? 0)}${pilot?.ace ? `・エース ${pilot.ace}` : ''}`);
+    }
     this.extrasText.setText(extras.join('  '));
     this.statsText.forEach((t, i) => t.setText(lines[i] ?? '').setColor(lines[i]?.includes('→') ? Css.text : Css.muted));
     this.shipName.setText(refitName(this.refitTable, ship.name, ship, stage, branch));

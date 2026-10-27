@@ -39,6 +39,7 @@ import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
+import { pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
 import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
@@ -459,6 +460,13 @@ export class BattleScene extends Phaser.Scene {
     if (this.perfText) this.showPerf(performance.now() - frameStart);
   }
 
+  /** 航空機と搭乗員 (#87): the models the carrier flies and its pilots; scenarios fly the base planes. */
+  private playerAirFor(data: IShipData): { perf?: ReturnType<typeof wingPerf>; pilot?: number } {
+    if (this.scenario || !data.airWing) return {};
+    const p = loadProgress();
+    return { perf: wingPerf(p, data.id, data.nation), pilot: pilotMul(p.pilots[data.id]) };
+  }
+
   /** 部位耐久 (#148): the giant's parts follow it while it is afloat and seen. */
   private updateSuperweaponParts(): void {
     const t = this.superweaponParts;
@@ -623,7 +631,7 @@ export class BattleScene extends Phaser.Scene {
       if (owned) {
         if (captain) this.captains.set(ship, captain);
         this.applyStartingDamage(ship);
-        this.playerAir.register(ship, AirOpsSystem.wingFor(data, ship.mods));
+        this.playerAir.register(ship, AirOpsSystem.wingFor(data, ship.mods, this.playerAirFor(data)));
       } else {
         ship.setTint(ALLY_TINT);
       }
@@ -903,7 +911,7 @@ export class BattleScene extends Phaser.Scene {
     this.flagship = this.spawnShip(flagshipData, spawn.x, spawn.y, this.playerModifiers(flagshipData, flagCaptain, true));
     if (flagCaptain) this.captains.set(this.flagship, flagCaptain);
     this.applyStartingDamage(this.flagship);
-    this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData, this.flagship.mods));
+    this.playerAir.register(this.flagship, AirOpsSystem.wingFor(flagshipData, this.flagship.mods, this.playerAirFor(flagshipData)));
     this.playerRecon.register(this.flagship);
     this.playerWeapon = primaryWeapon(this.flagship.loadout) ?? FALLBACK_WEAPON;
 
@@ -919,7 +927,7 @@ export class BattleScene extends Phaser.Scene {
       const escort = this.spawnShip(escortData, spawnPos.x, spawnPos.y, this.playerModifiers(escortData, captain, false));
       if (captain) this.captains.set(escort, captain);
       this.applyStartingDamage(escort);
-      this.playerAir.register(escort, AirOpsSystem.wingFor(escortData, escort.mods));
+      this.playerAir.register(escort, AirOpsSystem.wingFor(escortData, escort.mods, this.playerAirFor(escortData)));
       this.playerRecon.register(escort);
       this.escorts.push(escort);
       this.escortAISystems.push(new EscortAISystem(this.playerWeapons, offset, profile));
@@ -2199,6 +2207,20 @@ export class BattleScene extends Phaser.Scene {
     if (sWin && Math.random() < TRAINING_MANUAL_DROP_CHANCE) {
       progress = { ...progress, items: { ...progress.items, trainingManual: (progress.items.trainingManual ?? 0) + 1 } };
       recruitLines.push('訓練教範 +1 (改装の画面で艦の練度を上げられます)');
+    }
+    // 搭乗員 (#87): every carrier that flew grows its pilots; shooting enough planes down brings an ace.
+    if (!this.scenario) {
+      let pilots = progress.pilots;
+      const aces: string[] = [];
+      for (const ship of fleet) {
+        const wing = ship.dataId ? this.playerAir.wing(ship) : undefined;
+        if (!wing || !ship.dataId) continue;
+        const next = pilotAfterBattle(pilots[ship.dataId], { kills: this.playerAir.killsBy(ship), lost: wing.lost }, progress.nation, pilots);
+        pilots = { ...pilots, [ship.dataId]: next.pilot };
+        if (next.aceBorn) aces.push(`${next.aceBorn} (${ship.stats.name.replace(/\s*\(.*\)\s*$/, '')})`);
+      }
+      progress = withQuestEvents({ ...progress, pilots }, [['aceBorn', aces.length]], now);
+      if (aces.length > 0) recruitLines.push(`エース誕生: ${aces.join('・')}`);
     }
     // 部品と設計図 (#150): enemies sunk in a campaign battle leave pieces now and then; a superweapon always does.
     if (area && !area.training && !this.exercise) {
