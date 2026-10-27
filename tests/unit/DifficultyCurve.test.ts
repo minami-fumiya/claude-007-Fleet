@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allowedAtDepth, areaDepth, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve } from '@/systems/DifficultyCurve';
+import { allowedAtDepth, areaDepth, areaRankIndex, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve, writtenDepth } from '@/systems/DifficultyCurve';
 import { enemyShips, lockText, sevenSeasText, theatersFor } from '@/systems/CampaignSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { SEVEN_SEAS } from '@/systems/RecordSystem';
@@ -26,31 +26,53 @@ describe('the difficulty curve (#254)', () => {
     expect(targetPower(1)).toBe(250);
     expect(targetPower(2)).toBe(375);
     expect(targetPower(9)).toBe(Math.round(250 * 1.5 ** 8));
+    // Past 少将 the curve grows slower (#358): fleets stop growing about there.
+    expect(targetPower(10)).toBe(Math.round(250 * 1.5 ** 8 * 1.15));
     expect(recommendedRank(1).name).toBe('准尉');
     expect(recommendedRank(2).name).toBe('少尉');
+    // 中尉 has its own step (#358: no area was meant for it).
+    expect(recommendedRank(2.5).name).toBe('中尉');
     // Two ranks above the step from the third on (#293).
     expect(recommendedRank(3).name).toBe('大尉');
     expect(recommendedRank(7).name).toBe('大佐');
     expect(recommendedRank(20).name).toBe('元帥');
     expect(fleetPower([{ hp: 100, armor: 50 }, { hp: 200, armor: 0 }])).toBe(350);
-    expect(curveText(1560, 4)).toBe('1,560 (目安 844)  ·  推奨 准佐 (コスト 15)');
+    expect(curveText(1560, 4)).toBe('1,560 (目安 844)  ·  推奨 准佐 (コスト 15・総戦力 1,560)');
   });
 
-  it('depth: the chain inside the theater; the seas of 0.0.35 start a step in (#250)', () => {
-    expect(areaDepth(data, area('p1'))).toBe(1);
-    expect(areaDepth(data, area('p2'))).toBe(2);
-    expect(areaDepth(data, area('p6'))).toBe(8);
+  it('written depth: the chain inside the theater; the seas of 0.0.35 start a step in (#250)', () => {
+    expect(writtenDepth(data, area('p1'))).toBe(1);
+    expect(writtenDepth(data, area('p2'))).toBe(2);
+    expect(writtenDepth(data, area('p6'))).toBe(8);
     // 支線 (#343): a side sea is a step past the area it opens from.
-    expect(areaDepth(data, area('a9'))).toBe(areaDepth(data, area('a3')) + 1);
+    expect(writtenDepth(data, area('a9'))).toBe(writtenDepth(data, area('a3')) + 1);
     // np1 opens from another theater's third area, but its depth counts from its own sea.
-    expect(areaDepth(data, area('np1'))).toBe(2);
-    expect(areaDepth(data, area('np5'))).toBe(8);
+    expect(writtenDepth(data, area('np1'))).toBe(2);
+    expect(writtenDepth(data, area('np5'))).toBe(8);
+  });
+
+  it('a theater\'s ten areas take ten ranks in a row, never two the same, for every navy (#358 案 A)', () => {
+    const out: string[] = [];
+    for (const nation of PLAYABLE_NATIONS) {
+      for (const t of theatersFor(data, nation)) {
+        const ranks = data.areas.filter((a) => a.theater === t.id && !a.training).map((a) => areaRankIndex(data, a, nation)).sort((x, y) => x - y);
+        const start = Math.min(1 + (theaterStep(nation, t.id) ?? 0), 4);
+        const want = ranks.map((_, i) => start + i);
+        if (ranks.join() !== want.join()) out.push(`${nation} ${t.id}: ${ranks.join(' ')}`);
+      }
+    }
+    expect(out).toEqual([]);
+    // Japan's first sea runs 准尉 to 少将, its farthest 大尉 to 元帥; 中尉 is somebody's recommended rank now.
+    const names = (t: string) => data.areas.filter((a) => a.theater === t).map((a) => areaRankIndex(data, a, 'IJN')).sort((x, y) => x - y).map((i) => RANKS[i].name);
+    expect(names('pacific')).toEqual(['准尉', '少尉', '中尉', '大尉', '准佐', '少佐', '中佐', '大佐', '准将', '少将']);
+    expect(names('mediterranean')[0]).toBe('大尉');
+    expect(names('mediterranean')[9]).toBe('元帥');
   });
 
   it('every area\'s enemy sits inside the band, for the navy it was written for and for every navy that fights there', () => {
     const out: string[] = [];
     for (const a of data.areas.filter((x) => !x.training)) {
-      const depth = areaDepth(data, a);
+      const depth = writtenDepth(data, a);
       const written = fleetPower(enemyShips(a, registry));
       if (!withinCurve(written, depth)) out.push(`${a.id} d${depth}: ${written} vs ${targetPower(depth)}`);
       // The fleet swapped for another navy (#76) stays within twice the band's ends.
@@ -69,31 +91,43 @@ describe('the further the sea, the harder (#293)', () => {
     expect(['pacific', 'north_pacific', 'indian', 'mediterranean'].map((t) => theaterStep('IJN', t))).toEqual([0, 1, 2, 3]);
     expect(theaterStep('IJN', 'arctic')).toBeUndefined();
     const last = (t: string) => data.areas.filter((a) => a.theater === t && !a.training).pop()!;
-    const depths = ['pacific', 'north_pacific', 'indian', 'mediterranean'].map((t) => areaDepth(data, area(data.areas.find((a) => a.theater === t)!.id), 'IJN'));
-    expect(depths).toEqual([1, 2, 3, 4]);
+    const ranks = ['pacific', 'north_pacific', 'indian', 'mediterranean'].map((t) => areaRankIndex(data, area(data.areas.find((a) => a.theater === t)!.id), 'IJN'));
+    // 准尉, 少尉, 中尉, 大尉: a far sea starts higher, but never above 大尉 (#358).
+    expect(ranks).toEqual([1, 2, 3, 4]);
     expect(areaDepth(data, last('mediterranean'), 'IJN')).toBeGreaterThan(areaDepth(data, last('pacific'), 'IJN'));
     // Italy and France meet the Mediterranean first: as written.
     expect(areaDepth(data, area('m1'), 'RM')).toBe(areaDepth(data, area('m1')));
   });
 
-  it('the enemy grows by the curve for each step further than written; hit points and firepower share it', () => {
+  it('the enemy keeps its share of the target at the depth of its recommended rank; hit points and firepower share it', () => {
     expect(enemyScale(data, area('m1'), 'RM')).toBe(1);
-    expect(enemyScale(data, area('m1'), 'IJN')).toBeCloseTo(1.5 ** 3);
+    // Japan meets m1 at 大尉 (depth 3), two steps past where it was written.
+    expect(enemyScale(data, area('m1'), 'IJN')).toBeCloseTo(targetPower(3) / targetPower(1));
     expect(enemyScale(data, area('m1'))).toBe(1);
     const k = scaleModifiers(enemyScale(data, area('m1'), 'IJN'));
-    expect(k.hpMul! * k.gunPowerMul!).toBeCloseTo(1.5 ** 3);
+    expect(k.hpMul! * k.gunPowerMul!).toBeCloseTo(targetPower(3) / targetPower(1));
     expect(k.airPowerMul).toBeUndefined();
     expect(scaleModifiers(1)).toEqual({});
-    // Every navy meets a sea no easier than written, and every area stays inside the band at its depth for that navy.
+    // Every area stays inside the band at its depth for every navy that fights there.
     const out: string[] = [];
     for (const a of data.areas.filter((x) => !x.training)) {
       const theater = data.theaters.find((t) => t.id === a.theater)!;
       for (const n of Object.keys(theater.opponents)) {
-        const scale = enemyScale(data, a, n);
-        if (scale < 1) out.push(`${a.id} ${n}: ${scale}`);
-        const power = fleetPower(enemyShips(a, registry)) * scale;
-        if (!withinCurve(power, areaDepth(data, a, n)) && withinCurve(fleetPower(enemyShips(a, registry)), areaDepth(data, a))) out.push(`${a.id} ${n}: ${Math.round(power)}`);
+        const power = fleetPower(enemyShips(a, registry)) * enemyScale(data, a, n);
+        if (!withinCurve(power, areaDepth(data, a, n))) out.push(`${a.id} ${n}: ${Math.round(power)} vs ${targetPower(areaDepth(data, a, n))}`);
       }
+    }
+    expect(out).toEqual([]);
+  });
+
+  it('no area is suddenly much harder than the one before it in its theater (#358: 南太平洋 4 was 1.9× its target after 1.0×)', () => {
+    const out: string[] = [];
+    for (const t of data.theaters) {
+      const ratios = data.areas.filter((a) => a.theater === t.id && !a.training)
+        .sort((x, y) => areaRankIndex(data, x) - areaRankIndex(data, y))
+        .map((a) => ({ id: a.id, r: fleetPower(enemyShips(a, registry)) / targetPower(writtenDepth(data, a)) }));
+      // The opening area is one ship by design (#25), so the step after it is not counted.
+      ratios.forEach((x, i) => { if (i > 1 && x.r - ratios[i - 1].r > 0.6) out.push(`${x.id} ${x.r.toFixed(2)} after ${ratios[i - 1].id} ${ratios[i - 1].r.toFixed(2)}`); });
     }
     expect(out).toEqual([]);
   });
@@ -105,7 +139,7 @@ describe('the opening (#268)', () => {
     expect(withinCurve(targetPower(4) * 2.4, 4)).toBe(true);
     const out: string[] = [];
     for (const a of data.areas.filter((x) => !x.training)) {
-      const depth = areaDepth(data, a);
+      const depth = writtenDepth(data, a);
       if (depth > EARLY_DEPTH) continue;
       const theater = data.theaters.find((t) => t.id === a.theater)!;
       for (const n of new Set([a.enemy.nation, ...Object.values(theater.opponents)])) {

@@ -35,14 +35,14 @@
     {
       "id": "p4", "theater": "pacific", "name": "海峡夜戦", "description": "夜陰に乗じ、海峡を通過する敵艦隊を迎え撃て。",
       "x": 0.46, "y": 0.42, "requires": ["p3"],
-      "enemy": { "nation": "USN", "ships": ["atlanta", "baltimore", "fletcher", "gearing"] },
+      "enemy": { "nation": "USN", "ships": ["atlanta", "fletcher", "gearing", "sumner"] },
       "objective": "Annihilate", "map": "strait", "weather": "Clear", "time": "Night",
       "reward": { "fuel": 500, "ammo": 600, "steel": 600, "bauxite": 200 }, "rewardShip": "Cruiser"
     },
     {
       "id": "p5", "theater": "pacific", "name": "機動部隊決戦", "description": "敵空母機動部隊を捕捉、撃滅せよ。",
       "x": 0.58, "y": 0.62, "requires": [], "requiresAny": ["p4", "p7"],
-      "enemy": { "nation": "USN", "ships": ["essex", "atlanta", "cleveland", "fletcher", "gearing"] },
+      "enemy": { "nation": "USN", "ships": ["essex", "atlanta", "fletcher", "gearing", "sumner"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Overcast", "time": "Day",
       "reward": { "fuel": 600, "ammo": 500, "steel": 600, "bauxite": 500 }, "rewardShip": "Carrier"
     },
@@ -190,7 +190,7 @@
     {
       "id": "m4", "theater": "mediterranean", "name": "カラブリア沖海戦", "description": "地中海の中央で、敵の戦艦部隊と砲火を交えよ。",
       "x": 0.62, "y": 0.62, "requires": [], "requiresAny": ["m3", "m6"],
-      "enemy": { "nation": "RN", "ships": ["warspite", "southampton", "javelin", "cossack"] },
+      "enemy": { "nation": "RN", "ships": ["warspite", "javelin", "cossack"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Clear", "time": "Day",
       "reward": { "fuel": 700, "ammo": 500, "steel": 700, "bauxite": 600 }, "rewardShip": "Carrier"
     },
@@ -395,7 +395,7 @@
     {
       "id": "np3", "theater": "north_pacific", "name": "コマンドルスキー沖海戦", "description": "霧の中で重巡同士が撃ち合った北の海戦。敵の巡洋艦隊を撃滅せよ。",
       "x": 0.48, "y": 0.4, "requires": ["np2"],
-      "enemy": { "nation": "USN", "ships": ["pensacola", "northampton", "omaha", "fletcher"] },
+      "enemy": { "nation": "USN", "ships": ["pensacola", "omaha", "fletcher", "gato"] },
       "objective": "Annihilate", "map": "open-sea", "weather": "Fog", "time": "Day",
       "reward": { "fuel": 700, "ammo": 800, "steel": 900, "bauxite": 250 }, "rewardShip": "Cruiser"
     },
