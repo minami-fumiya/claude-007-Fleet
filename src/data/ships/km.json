@@ -73,6 +73,25 @@
       "classOf": "scharnhorst"
     },
     {
+      "id": "o_class",
+      "no": 1302003,
+      "name": "O級巡洋戦艦 (O-class)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 660,
+      "armor": 50,
+      "speed": 185,
+      "weapons": [
+        "38cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "o_class",
+      "fictional": true,
+      "description": "Z計画で通商破壊用に計画された巡洋戦艦。38cm砲6門と高速を持つ予定だったが、起工されなかった (架空艦)。",
+      "year": 1945
+    },
+    {
       "id": "h39",
       "no": 1301003,
       "name": "H級 (H-39)",
@@ -90,6 +109,25 @@
       "fictional": true,
       "description": "Z計画で起工された戦艦。40.6cm砲8門を搭載する予定だったが、開戦により建造は中止された (架空艦)。",
       "year": 1944
+    },
+    {
+      "id": "h41",
+      "no": 1301004,
+      "name": "H級 (H-41)",
+      "nation": "KM",
+      "shipClass": "Battleship",
+      "subtype": "FastBattleship",
+      "hp": 860,
+      "armor": 66,
+      "speed": 150,
+      "weapons": [
+        "40_6cm_skc34",
+        "15cm_skc28"
+      ],
+      "spriteKey": "h41",
+      "fictional": true,
+      "description": "H-39 を拡大し、主砲を42cmに強化する計画の戦艦。設計のみで起工されなかった (架空艦)。",
+      "year": 1945
     },
     {
       "id": "prinz_eugen",
@@ -127,6 +165,26 @@
       "spriteKey": "admiral_hipper",
       "description": "アドミラル・ヒッパー級重巡洋艦1番艦。ノルウェー侵攻や大西洋での通商破壊に参加した。",
       "year": 1939
+    },
+    {
+      "id": "seydlitz",
+      "no": 1304007,
+      "name": "ザイドリッツ (Seydlitz)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 400,
+      "armor": 40,
+      "speed": 176,
+      "weapons": [
+        "20cm_skc34",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "seydlitz",
+      "classOf": "admiral_hipper",
+      "fictional": true,
+      "description": "アドミラル・ヒッパー級重巡洋艦4番艦。ほぼ完成していたが空母への改装が決まり、未完成のまま終戦を迎えた (架空艦)。",
+      "year": 1942
     },
     {
       "id": "deutschland",
