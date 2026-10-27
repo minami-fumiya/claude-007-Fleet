@@ -24,6 +24,8 @@ import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
 import { IServiceRecord } from '@/types/Record';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import ijnShips from '@/data/ships/ijn.json';
+import upgradesData from '@/data/upgrades.json';
+import type { IUpgradeData } from '@/types/Modifiers';
 import { EXISTING_PLAYER_HELP, FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
@@ -58,6 +60,10 @@ export interface INationProgress {
   ships: string[];
   /** Ship id → fitted upgrade ids */
   upgrades: Record<string, string[]>;
+  /** 装備 (#55): upgrade id → copies held and not fitted */
+  equipment: Record<string, number>;
+  /** 設計図の断片 (#150): taken from superweapons sunk; enough of them lets the nation build its own (#148) */
+  blueprints: number;
   /** Ship id → refit stage (0 = original) */
   refits: Record<string, number>;
   /** Ship id → the branch chosen for its last remodel stage (#86); none = the standard stage */
@@ -171,7 +177,7 @@ export function walletOf(p: Pick<IProgress, 'wallet'>): IWallet {
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
+    upgrades: {}, equipment: {}, blueprints: 0, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
   };
@@ -298,6 +304,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     research: strings(data.research),
     ships: [...new Set(strings(data.ships))],
     upgrades,
+    // A save from before #55 had every researched upgrade without limit: it starts with one of each in hand.
+    equipment: isObject(data.equipment) ? numbers(data.equipment) : legacyEquipment(strings(data.research)),
+    blueprints: isNum(data.blueprints) ? Math.max(0, Math.floor(data.blueprints)) : 0,
     refits: numbers(data.refits),
     refitBranches: stringMap(data.refitBranches),
     proficiency: numbers(data.proficiency),
@@ -343,6 +352,13 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
       .map((c) => ({ preset: isNum(c.preset) ? c.preset : -1, mission: MISSIONS.find((m) => m === c.mission) ?? 'strike' }))
       .filter((c) => c.preset >= 0 && c.preset < PRESET_COUNT),
   };
+}
+
+/** One copy of every upgrade the research had opened (saves from before the stock, #55). */
+function legacyEquipment(research: string[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const u of (upgradesData as { upgrades: IUpgradeData[] }).upgrades) if (u.requires && research.includes(u.requires)) out[u.id] = 1;
+  return out;
 }
 
 /** A stored sortie when it has the parts the flow needs; anything else counts as none. */

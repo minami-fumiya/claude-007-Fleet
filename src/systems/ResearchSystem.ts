@@ -144,7 +144,8 @@ export function researchModifiers(tree: ITechNode[], done: string[]): IShipModif
 
 /** Upgrades the player may fit: those without a requirement, or whose research is done. */
 export function unlockedUpgrades(catalog: IUpgradeData[], done: string[]): IUpgradeData[] {
-  return catalog.filter((u) => !u.requires || done.includes(u.requires));
+  // Parts taken from enemies (#150) are never opened by research.
+  return catalog.filter((u) => !u.dropFrom && (!u.requires || done.includes(u.requires)));
 }
 
 /** Research that unlocks the fictional (planned-only) ships. */

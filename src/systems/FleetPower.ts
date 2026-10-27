@@ -5,7 +5,7 @@ import { Formation } from '@/types/Formation';
 import { combineModifiers, upgradeModifiers, upgradeSlots } from './CustomizationSystem';
 import { fleetPower, shipPower } from './DifficultyCurve';
 import { REFIT_TABLE, refitModifiers } from './RefitSystem';
-import { researchModifiers, TECH_TREE, unlockedUpgrades } from './ResearchSystem';
+import { researchModifiers, TECH_TREE } from './ResearchSystem';
 import { captainModifiers, ICaptainStats } from './CaptainSystem';
 import { formationModifiers } from './FormationRules';
 import { moraleModifiers, moraleOf } from './MoraleSystem';
@@ -31,7 +31,8 @@ export interface IFleetPowerProgress {
 
 /** The fleet's strength with what the admiral has done to its ships. */
 export function ownFleetPower(ships: readonly IShipData[], progress: IFleetPowerProgress, catalog: IUpgradeData[]): number {
-  const parts = unlockedUpgrades(catalog, progress.research);
+  // Every fitted copy counts (#55), researched or taken from an enemy.
+  const parts = catalog;
   const research = researchModifiers(TECH_TREE, progress.research);
   return fleetPower(ships.map((s) => {
     const stage = progress.refits[s.id] ?? 0;
@@ -79,7 +80,8 @@ export function fleetPowerBreakdown(
   ships: readonly IShipData[], progress: IFleetPowerProgress, catalog: IUpgradeData[],
   opts: { captains?: readonly (ICaptain | null)[]; formation?: Formation; now?: number } = {},
 ): IPowerBreakdown {
-  const parts = unlockedUpgrades(catalog, progress.research);
+  // Every fitted copy counts (#55), researched or taken from an enemy.
+  const parts = catalog;
   const research = researchModifiers(TECH_TREE, progress.research);
   const now = opts.now ?? Date.now();
   const per = ships.map((s, i) => {

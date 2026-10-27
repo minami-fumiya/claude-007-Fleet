@@ -21,6 +21,7 @@ export enum NoCategory {
   Ground = 4,
   Weapon = 5,
   Item = 6,
+  Equipment = 7,
   Other = 9,
 }
 
@@ -90,6 +91,9 @@ export const WEAPON_TYPE_CODE: Record<WeaponType, number> = {
 };
 
 export const ITEM_TYPE_CODE = 1;
+
+/** 装備 (#55): 01 developed in the arsenal (the nation digit is the navy that makes it, 0 for every navy), 02 parts taken from enemies (#150). */
+export const EQUIPMENT_TYPE_CODE = { developed: 1, part: 2 } as const;
 
 /**
  * The 中分類 added in 0.0.42 (#260) number with the kind they were filed under before, so no ship's number changes:

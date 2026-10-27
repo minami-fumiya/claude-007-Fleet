@@ -33,6 +33,8 @@ import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { baseOfProgress, fleetBuildTimeMul, researchMultiplier, scaleCost } from '@/systems/BaseSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
+import { SCRAP_BLOCK_LABEL, scrapBlock, scrapRefund, scrapShip } from '@/systems/ScrapSystem';
+import { selectedShipIds } from '@/utils/FleetSelection';
 
 const TREE = techTree.tech as ITechNode[];
 const TECH_NAMES: Record<string, string> = Object.fromEntries(TREE.map((n) => [n.id, n.name]));
@@ -58,6 +60,10 @@ export class ShipyardScene extends Phaser.Scene {
   private shipClass: ShipClass = ShipClass.Destroyer;
   private page = 0;
   private status = '';
+  /** Status in red (a refusal or a pending scrap) rather than green */
+  private statusBad = false;
+  /** 解体 (#42): the ship the next tap scraps (the first tap only asks) */
+  private scrapArmed: string | null = null;
   private tabs: UIButton[] = [];
   private layer: Phaser.GameObjects.GameObject[] = [];
   /** Countdown lines of ships under construction (#143), updated every frame */
@@ -205,7 +211,7 @@ export class ShipyardScene extends Phaser.Scene {
     const full = docksInUse(progress) >= buildDockCount(progress);
     const ends = [...(progress.builds ?? []).map((b) => b.endsAt), ...progress.docks.map((d) => d.endsAt)].filter((e) => e > Date.now());
     const fullLine = `ドック満杯 ${docksInUse(progress)} / ${buildDockCount(progress)}${ends.length > 0 ? `  ·  次の空き ${clock(Math.min(...ends) - Date.now())} 後` : ''}  ·  入渠か建造が終わると建造できます`;
-    const lineCss = this.status ? (this.status.startsWith('ドック') ? Css.danger : Css.success) : full ? Css.danger : Css.muted;
+    const lineCss = this.status ? (this.statusBad || this.status.startsWith('ドック') ? Css.danger : Css.success) : full ? Css.danger : Css.muted;
     const line = add(this.add.text(info.x + 16, lineY, this.status || (full ? fullLine : rankLine), textStyle(12, lineCss, { fontStyle: this.status || full ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     const room = IS_PORTRAIT ? info.w - 32 : info.w - bw - 46;
     if (line.width > room) line.setScale(room / line.width);
@@ -293,7 +299,8 @@ export class ShipyardScene extends Phaser.Scene {
     const lineH = IS_PORTRAIT ? 30 : 22;
     // The class and hull number (#246) once the name is known: "長門型 2 番艦".
     const classLine = `${shown && ship.no ? `${formatNo(ship.no)} · ` : ''}${shown && hull.of > 1 ? `${hull.className} ${hull.number} 番艦 · ` : ''}`;
-    const costLine = owned ? '保有中'
+    // An owned ship can be scrapped (#42): the card says what it gives back.
+    const costLine = owned ? (this.scrapArmed === ship.id ? 'もう一度タップで解体' : `保有中  ·  タップで解体 (返却 ${formatResources(scrapRefund(ship, progress.refits[ship.id] ?? 0, progress.refitBranches[ship.id]))})`)
       : state === 'reward' ? '報酬限定艦 — 作戦の S 評価で入手'
         : !shown ? ''
           // Short of resources (#262): what is missing, in red.
@@ -342,6 +349,12 @@ export class ShipyardScene extends Phaser.Scene {
     const progress = loadProgress();
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
     const short = ship.name.replace(/\s*\(.*\)\s*$/, '');
+    this.statusBad = false;
+    if (ownedIds(progress, roster).includes(ship.id)) {
+      this.scrap(ship, short);
+      return;
+    }
+    this.scrapArmed = null;
     if (progress.builds.some((b) => b.shipId === ship.id)) {
       // Tapping a ship under construction spends a 高速建造材 (#143).
       const done = fastBuild(progress, roster, ship.id, Date.now());
@@ -365,6 +378,35 @@ export class ShipyardScene extends Phaser.Scene {
     this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship, fleetBuildTimeMul(progress)))})`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();
+  }
+
+  /** 解体 (#42): the first tap says what it returns (or why it can't), the second scraps. */
+  private scrap(ship: IShipData, short: string): void {
+    const progress = loadProgress();
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    const flagship = selectedShipIds(this.registry, progress.nation)[0];
+    const block = scrapBlock(progress, roster, ship, flagship);
+    if (block) {
+      this.scrapArmed = null;
+      this.statusBad = true;
+      this.status = `${short}: ${SCRAP_BLOCK_LABEL[block]}`;
+      this.refresh();
+      return;
+    }
+    if (this.scrapArmed !== ship.id) {
+      this.scrapArmed = ship.id;
+      this.statusBad = true;
+      const fitted = (progress.upgrades[ship.id] ?? []).length;
+      this.status = `${short} を解体しますか? もう一度タップで解体 (返却 ${formatResources(scrapRefund(ship, progress.refits[ship.id] ?? 0, progress.refitBranches[ship.id]))}${fitted > 0 ? `・装備 ${fitted} 個は倉庫へ` : ''})`;
+      this.refresh();
+      return;
+    }
+    this.scrapArmed = null;
+    const done = scrapShip(progress, roster, ship, Date.now(), flagship);
+    if (!done) return;
+    saveProgress(done.progress);
+    this.status = `${short} を解体しました (${formatResources(done.refund)})`;
+    this.refresh();
   }
 
   private research(node: ITechNode): void {

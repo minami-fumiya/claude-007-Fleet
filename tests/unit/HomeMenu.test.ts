@@ -27,7 +27,7 @@ describe('first-visit help (#61)', () => {
 
   it('an existing player from before 0.0.14 has seen every screen that had help then', () => {
     // Screens added later explain themselves to everyone once.
-    const added = ['CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'SettingsScene', 'ResultsScene', 'MainMenuScene'];
+    const added = ['CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'SettingsScene', 'ResultsScene', 'MainMenuScene', 'DevelopScene'];
     for (const h of SCREEN_HELP.filter((x) => !added.includes(x.id))) expect(EXISTING_PLAYER_HELP, h.id).toContain(h.id);
     for (const id of added) expect(EXISTING_PLAYER_HELP).not.toContain(id);
   });

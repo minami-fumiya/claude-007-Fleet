@@ -1,3 +1,5 @@
+import type { IResources } from './Progression';
+
 /** Multipliers / bonuses applied to one ship at battle start (upgrades, research, refits and its captain). */
 export interface IShipModifiers {
   hpMul: number;
@@ -60,4 +62,14 @@ export interface IUpgradeData {
   effects: Partial<IShipModifiers>;
   /** Research id that unlocks this upgrade (always available when absent) */
   requires?: string;
+  /** 通し番号 (#249) */
+  no?: number;
+  /** Navies that develop it (#251: 酸素魚雷 is Japan's); every navy when absent. A copy taken from an enemy fits any ship. */
+  nations?: string[];
+  /** Year it entered service */
+  year?: number;
+  /** Resources to develop one copy (#55); EquipmentSystem.DEFAULT_DEVELOP_COST when absent */
+  cost?: Partial<IResources>;
+  /** 回収部品 (#150): only taken from enemies of these kinds ('Superweapon' for the giants), never developed */
+  dropFrom?: string[];
 }

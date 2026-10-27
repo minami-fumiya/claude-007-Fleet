@@ -12,19 +12,18 @@ import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { askShipName } from '@/ui/components/FilterBar';
 import { shipSearchNames } from '@/utils/SearchHistory';
-import { applyToStats, applyToWeapons, combineModifiers, customizeShips, describeModifiers, toggleUpgrade, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
+import { applyToStats, applyToWeapons, combineModifiers, customizeShips, describeModifiers, upgradeModifiers, upgradeSlots } from '@/systems/CustomizationSystem';
 import { primaryWeapon, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { IShipData, IShipStats } from '@/types/Ship';
 import { IUpgradeData } from '@/types/Modifiers';
 import { IWeaponData } from '@/types/Weapon';
-import { ITechNode } from '@/types/Progression';
-import { researchOrder, unlockedUpgrades } from '@/systems/ResearchSystem';
-import techTree from '@/data/tech-tree.json';
+import { researchOrder } from '@/systems/ResearchSystem';
+import { developable, heldCount, stockOf, toggleFit } from '@/systems/EquipmentSystem';
 import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch, switchCost } from '@/systems/RefitSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { actionVariant, addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { actionVariant, addBackdrop, addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -63,7 +62,6 @@ export class CustomizationScene extends Phaser.Scene {
   /** 訓練教範 (#305): proficiency +10 for the selected ship */
   private manualBtn!: UIButton;
   private readonly refitTable = REFIT_TABLE;
-  private readonly tech = techTree.tech as ITechNode[];
   private selected = 0;
   private catalog: IUpgradeData[] = [];
   private pickerName?: Phaser.GameObjects.Text;
@@ -75,8 +73,8 @@ export class CustomizationScene extends Phaser.Scene {
   private sheetList?: ScrollList;
   /** Name search over the ship list sheet (#263) */
   private query = '';
-  private cardFrames: Phaser.GameObjects.Graphics[] = [];
-  private cardMarks: Phaser.GameObjects.Text[] = [];
+  /** 装備 (#55): the cards scroll, the stock counts on each */
+  private cardList?: ScrollList;
   private statsText: Phaser.GameObjects.Text[] = [];
   private slotText!: Phaser.GameObjects.Text;
   private shipName!: Phaser.GameObjects.Text;
@@ -85,7 +83,6 @@ export class CustomizationScene extends Phaser.Scene {
 
   /** Scene the back button returns to (the Fleet Builder or the home port) */
   private returnTo: string = SceneKeys.FLEET_BUILDER;
-  private unlocked = new Set<string>();
   /** Ship to open on (#178: from the 図鑑) */
   private startShipId?: string;
 
@@ -119,13 +116,11 @@ export class CustomizationScene extends Phaser.Scene {
     }
     // In the order research opens them (#340): 射撃指揮装置 (after 射撃管制) no longer heads the list.
     this.catalog = [...DataLoader.getUpgrades(this)].sort((a, b) => (a.requires ? researchOrder(a.requires) : 0) - (b.requires ? researchOrder(b.requires) : 0));
-    this.unlocked = new Set(unlockedUpgrades(this.catalog, loadProgress().research).map((u) => u.id));
     this.selected = Math.max(0, this.ships.findIndex((s) => s.id === this.startShipId));
     this.pickerName = undefined;
     this.sheet = [];
     this.sheetList = undefined;
-    this.cardFrames = [];
-    this.cardMarks = [];
+    this.cardList = undefined;
     this.statsText = [];
 
     addBackdrop(this, 'menu');
@@ -297,25 +292,53 @@ export class CustomizationScene extends Phaser.Scene {
   }
 
   private cardRect(i: number): IRect {
-    const cw = (L.grid.w - L.gap * (L.cols - 1)) / L.cols;
+    const cw = (L.grid.w - 12 - L.gap * (L.cols - 1)) / L.cols;
     const col = i % L.cols;
     const row = Math.floor(i / L.cols);
-    return { x: L.grid.x + col * (cw + L.gap), y: L.grid.y + row * (L.cardH + L.gap), w: cw, h: L.cardH };
+    return { x: col * (cw + L.gap), y: row * (L.cardH + L.gap), w: cw, h: L.cardH };
   }
 
   private buildCards(): void {
-    this.catalog.forEach((u, i) => {
+    this.cardList = new ScrollList(this, { x: L.grid.x, y: L.grid.y, w: L.grid.w, h: CANVAS_H - 16 - L.grid.y });
+  }
+
+  /**
+   * The equipment shown (#55): what the admiral holds, then what the arsenal can develop (none in hand yet), in research
+   * order. Other navies' gear and parts not taken yet stay out of the list.
+   */
+  private shownCatalog(): IUpgradeData[] {
+    const progress = loadProgress();
+    const open = new Set(developable(this.catalog, progress.research, progress.nation).map((u) => u.id));
+    const held = this.catalog.filter((u) => heldCount(progress, u.id) > 0);
+    return [...held, ...this.catalog.filter((u) => open.has(u.id) && !held.includes(u))];
+  }
+
+  private drawCards(fitted: string[], slots: number): void {
+    const list = this.cardList;
+    if (!list) return;
+    const keep = list.offset;
+    list.clear();
+    const progress = loadProgress();
+    const shown = this.shownCatalog();
+    shown.forEach((u, i) => {
       const r = this.cardRect(i);
-      const frame = this.add.graphics();
-      const mark = this.add.text(r.w - 20, r.h / 2, '', textStyle(18, Css.cyan, { fontStyle: 'bold' })).setOrigin(1, 0.5);
-      const name = this.add.text(18, IS_PORTRAIT ? 12 : 18, u.name, textStyle(16, Css.text, { fontStyle: 'bold' }));
-      const desc = this.add.text(18, IS_PORTRAIT ? 44 : 54, u.description, textStyle(12, Css.muted));
-      const card = this.add.container(r.x, r.y, [frame, name, desc, mark]);
-      makeClickable(card, r.w, r.h);
-      card.on('pointerup', () => this.toggle(u.id));
-      this.cardFrames.push(frame);
-      this.cardMarks.push(mark);
+      const on = fitted.includes(u.id);
+      const stock = stockOf(progress, u.id);
+      const full = !on && fitted.length >= slots;
+      const frame = drawPanel(this.add.graphics(), 0, 0, r.w, r.h, {
+        radius: 16, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.85 : 0.2, glow: on ? 1 : 0,
+      });
+      const name = this.add.text(18, IS_PORTRAIT ? 10 : 14, u.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
+      const desc = this.add.text(18, IS_PORTRAIT ? 40 : 46, u.description, textStyle(11, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } }));
+      const markText = on ? '装備中' : stock === 0 ? '工廠で開発' : slots === 0 ? '要改造' : full ? '—' : '+';
+      const mark = this.add.text(r.w - 18, r.h / 2 - 10, markText, textStyle(stock === 0 || slots === 0 || on ? 12 : 18, on ? Css.gold : stock === 0 ? Css.dim : Css.cyan, { fontStyle: 'bold' })).setOrigin(1, 0.5);
+      const count = this.add.text(r.w - 18, r.h / 2 + 16, `所持 ${stock}`, textStyle(11, stock > 0 ? Css.muted : Css.dim)).setOrigin(1, 0.5);
+      if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
+      list.addItem(this.add.container(r.x, r.y, [frame, name, desc, mark, count]), r.w, r.h, () => this.toggle(u.id));
     });
+    const rows = Math.ceil(shown.length / L.cols);
+    list.setContentHeight(Math.max(0, rows * (L.cardH + L.gap) - L.gap));
+    list.setOffset(keep);
   }
 
   private fitted(): string[] {
@@ -332,13 +355,14 @@ export class CustomizationScene extends Phaser.Scene {
     return sailingIds(loadProgress().sortie).includes(shipId);
   }
 
+  /** Fits a copy from the stock, or takes the fitted one off back into it (#55). */
   private toggle(upgradeId: string): void {
-    if (!this.unlocked.has(upgradeId)) return;
     const ship = this.ships[this.selected];
     if (this.away(ship.id)) return;
     const progress = loadProgress();
-    const next = toggleUpgrade(progress.upgrades[ship.id] ?? [], upgradeId, this.slots());
-    saveProgress({ ...progress, upgrades: { ...progress.upgrades, [ship.id]: next } });
+    const next = toggleFit(progress, ship.id, upgradeId, this.slots());
+    if (!next) return;
+    saveProgress(next);
     this.refresh();
   }
 
@@ -445,25 +469,7 @@ export class CustomizationScene extends Phaser.Scene {
     }
     const fitted = this.fitted();
     const slots = this.slots();
-    this.catalog.forEach((u, i) => {
-      const r = this.cardRect(i);
-      const on = fitted.includes(u.id);
-      const full = !on && fitted.length >= slots;
-      this.cardFrames[i].clear();
-      drawPanel(this.cardFrames[i], 0, 0, r.w, r.h, {
-        radius: 16,
-        fill: on ? Colors.panelHi : Colors.panel,
-        fillAlpha: on ? 0.9 : 0.5,
-        rimAlpha: on ? 0.85 : 0.2,
-        glow: on ? 1 : 0,
-      });
-      const locked = !this.unlocked.has(u.id);
-      const required = this.tech.find((t) => t.id === u.requires)?.name ?? '';
-      this.cardMarks[i]
-        .setText(on ? '装備中' : locked ? `要研究: ${required}` : slots === 0 ? '要改造' : full ? '—' : '+')
-        .setColor(on ? Css.gold : locked ? Css.dim : Css.cyan)
-        .setFontSize(locked || slots === 0 ? 12 : 18);
-    });
+    this.drawCards(fitted, slots);
     this.refreshStats(fitted, slots);
   }
 

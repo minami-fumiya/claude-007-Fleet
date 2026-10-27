@@ -75,7 +75,7 @@ import { battleRank, betterRank, RANK_MERIT_MUL, RANK_REWARD_MUL, rankBreakdown,
 import { NATION_INFO } from '@/config/NationInfo';
 import { isExercise, openSweeps, settleBattle, startingHp } from '@/systems/ProgressionSystem';
 import { grantShip, ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
-import { researchModifiers, TECH_TREE, unlockedUpgrades } from '@/systems/ResearchSystem';
+import { researchModifiers, TECH_TREE } from '@/systems/ResearchSystem';
 import { addResources, formatResources, gainResources, lostNote } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
@@ -832,7 +832,8 @@ export class BattleScene extends Phaser.Scene {
     const formation = combineModifiers(formationModifiers(this.formation, isFlagship), midModifiers(shipData));
     if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx, [], undefined, shipData.shipClass), formation);
     const progress = loadProgress();
-    const catalog = unlockedUpgrades(DataLoader.getUpgrades(this), progress.research);
+    // Every copy fitted counts (#55): a part taken from an enemy needs no research.
+    const catalog = DataLoader.getUpgrades(this);
     const fitted = progress.upgrades[shipData.id] ?? [];
     const stage = progress.refits[shipData.id] ?? 0;
     return combineModifiers(
