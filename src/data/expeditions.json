@@ -1,14 +1,18 @@
 {
-  "_comment": "遠征 (#41): ships not in battle go out for `minutes` and bring back `reward` (up to the holding cap). `needs` are ship classes the group must include; `rank` the rank index needed.",
+  "_comment": "遠征 (#41): ships not in battle go out for `minutes` and bring back `reward` (up to the holding cap). `needs` are ship classes the group must include; `rank` the rank index needed — one new expedition a rank, 准尉 to 元帥 (#359). About half as long as 0.0.46's, paying the same an hour.",
   "expeditions": [
-    { "id": "ex_drill", "name": "練習航海", "minutes": 15, "ships": 1, "needs": {}, "rank": 1, "reward": { "fuel": 60, "ammo": 60 } },
-    { "id": "ex_long", "name": "長距離練習航海", "minutes": 30, "ships": 2, "needs": {}, "rank": 1, "reward": { "ammo": 40, "steel": 150 } },
-    { "id": "ex_patrol", "name": "警備任務", "minutes": 45, "ships": 2, "needs": { "Destroyer": 2 }, "rank": 2, "reward": { "fuel": 130, "ammo": 130, "steel": 60 } },
-    { "id": "ex_asw", "name": "対潜警戒任務", "minutes": 60, "ships": 3, "needs": { "Destroyer": 2 }, "rank": 3, "reward": { "ammo": 220, "steel": 160 } },
-    { "id": "ex_escort", "name": "海上護衛任務", "minutes": 90, "ships": 3, "needs": { "Cruiser": 1, "Destroyer": 2 }, "rank": 4, "reward": { "fuel": 320, "ammo": 160, "steel": 120 } },
-    { "id": "ex_ore", "name": "鉱石輸送", "minutes": 120, "ships": 4, "needs": { "Cruiser": 1, "Destroyer": 2 }, "rank": 6, "reward": { "steel": 640 } },
-    { "id": "ex_aircraft", "name": "航空機輸送", "minutes": 120, "ships": 4, "needs": { "Carrier": 1, "Destroyer": 2 }, "rank": 7, "reward": { "fuel": 120, "bauxite": 320 } },
-    { "id": "ex_oil", "name": "油田護衛", "minutes": 180, "ships": 5, "needs": { "Cruiser": 2, "Destroyer": 2 }, "rank": 8, "reward": { "fuel": 900, "ammo": 220 } },
-    { "id": "ex_support", "name": "艦隊決戦支援", "minutes": 240, "ships": 6, "needs": { "Battleship": 1, "Cruiser": 1, "Destroyer": 2 }, "rank": 10, "reward": { "fuel": 600, "ammo": 900, "steel": 600, "bauxite": 200 } }
+    {"id": "ex_drill", "name": "練習航海", "minutes": 10, "ships": 1, "needs": {}, "rank": 1, "reward": {"fuel": 40, "ammo": 40}},
+    {"id": "ex_long", "name": "長距離練習航海", "minutes": 15, "ships": 2, "needs": {}, "rank": 2, "reward": {"ammo": 20, "steel": 75}},
+    {"id": "ex_patrol", "name": "警備任務", "minutes": 20, "ships": 2, "needs": {"Destroyer": 2}, "rank": 3, "reward": {"fuel": 60, "ammo": 60, "steel": 25}},
+    {"id": "ex_asw", "name": "対潜警戒任務", "minutes": 30, "ships": 3, "needs": {"Destroyer": 2}, "rank": 4, "reward": {"ammo": 110, "steel": 80}},
+    {"id": "ex_escort", "name": "海上護衛任務", "minutes": 45, "ships": 3, "needs": {"Cruiser": 1, "Destroyer": 2}, "rank": 5, "reward": {"fuel": 160, "ammo": 80, "steel": 60}},
+    {"id": "ex_ore", "name": "鉱石輸送", "minutes": 60, "ships": 4, "needs": {"Cruiser": 1, "Destroyer": 2}, "rank": 6, "reward": {"steel": 320}},
+    {"id": "ex_aircraft", "name": "航空機輸送", "minutes": 60, "ships": 4, "needs": {"Carrier": 1, "Destroyer": 2}, "rank": 7, "reward": {"fuel": 60, "bauxite": 160}},
+    {"id": "ex_oil", "name": "油田護衛", "minutes": 90, "ships": 5, "needs": {"Cruiser": 2, "Destroyer": 2}, "rank": 8, "reward": {"fuel": 450, "ammo": 110}},
+    {"id": "ex_bauxite", "name": "ボーキサイト輸送", "minutes": 90, "ships": 4, "needs": {"Cruiser": 1, "Destroyer": 2}, "rank": 9, "reward": {"steel": 120, "bauxite": 240}},
+    {"id": "ex_support", "name": "艦隊決戦支援", "minutes": 120, "ships": 6, "needs": {"Battleship": 1, "Cruiser": 1, "Destroyer": 2}, "rank": 10, "reward": {"fuel": 300, "ammo": 450, "steel": 300, "bauxite": 100}},
+    {"id": "ex_far_convoy", "name": "遠洋船団護衛", "minutes": 120, "ships": 5, "needs": {"Cruiser": 2, "Destroyer": 2}, "rank": 11, "reward": {"fuel": 500, "ammo": 300, "steel": 300}},
+    {"id": "ex_raid", "name": "敵泊地強襲", "minutes": 150, "ships": 6, "needs": {"Battleship": 1, "Carrier": 1, "Destroyer": 2}, "rank": 12, "reward": {"fuel": 350, "ammo": 500, "steel": 350, "bauxite": 250}},
+    {"id": "ex_long_patrol", "name": "長期哨戒", "minutes": 360, "ships": 6, "needs": {"Cruiser": 1, "Destroyer": 2}, "rank": 13, "reward": {"fuel": 1000, "ammo": 1000, "steel": 1000, "bauxite": 300}}
   ]
 }

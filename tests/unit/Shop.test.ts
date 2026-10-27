@@ -33,7 +33,7 @@ describe('shop (#183)', () => {
   it('buys a pack for gold, counts the day and stops at its limit; the next day starts over', () => {
     const e = SHOP_ENTRIES.find((x) => x.id === 'fuel_s')!;
     let w = rich;
-    for (let i = 0; i < e.daily; i++) {
+    for (let i = 0; i < e.daily!; i++) {
       const r = buy(w, e, HAVE, CAP, NOW)!;
       expect(r.give.fuel).toBe(500);
       expect(r.wallet.gold).toBe(w.gold - priceOf(e, NOW));
@@ -82,7 +82,7 @@ describe('shop (#183)', () => {
 
   it("a day's buying to every limit stays under a day of battle income, in every resource and stage", () => {
     const most = resources();
-    for (const e of SHOP_ENTRIES) for (const k of RESOURCE_KEYS) most[k] += (e.give?.[k] ?? 0) * e.daily;
+    for (const e of SHOP_ENTRIES) for (const k of RESOURCE_KEYS) most[k] += (e.give?.[k] ?? 0) * (e.daily ?? 0);
     for (const phase of ECONOMY.phases) {
       const battle = hourBudget(phase).income.battle;
       for (const k of RESOURCE_KEYS) expect(most[k], `${phase.id} ${k}`).toBeLessThanOrEqual(battle[k] * ECONOMY.playHoursPerDay);
@@ -99,5 +99,16 @@ describe('items (#184)', () => {
       expect(i.scene).toMatch(/Scene$/);
     }
     expect(ITEM_LABEL).toEqual({ fastRepair: '高速修理材', fastBuild: '高速建造材', trainingManual: '訓練教範', supplyShip: '給糧艦', captainBook: '艦長教本' });
+  });
+});
+
+describe('給糧艦は何隻でも買える (#359)', () => {
+  it('has no daily limit', () => {
+    const e = SHOP_ENTRIES.find((x) => x.id === 'supply_ship')!;
+    expect(e.daily).toBeUndefined();
+    let w = { ...rich, gold: 100_000 };
+    for (let i = 0; i < 5; i++) w = buy(w, e, HAVE, CAP, NOW)!.wallet;
+    expect(boughtToday(w, e.id, NOW)).toBe(5);
+    expect(canBuy(w, e, HAVE, CAP, NOW)).toBeNull();
   });
 });

@@ -143,6 +143,8 @@ export interface IMedalContext {
   farthestSea?: number;
   /** Classes (lead + sisters, #85) one nation owns every ship of, best nation */
   classesComplete?: number;
+  /** Different expeditions one nation has sent (#359), best nation */
+  expeditionKinds?: number;
   /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
   shipTypes?: number;
   /** Kinds of ship by 中分類 (#260: 高速戦艦・防空駆逐艦 …) one nation owns, best nation */
@@ -306,10 +308,12 @@ export const MEDALS: IMedalRule[] = [
   // 遠征 (#41) and 寮舎 (#57)
   ...ladder('expedition', '遠征章', 'growth', [5, 50, 300], (g) => `遠征から ${g} 回帰還する`, (_r, c) => total(c, 'expeditionDone')),
   ...ladder('dorm', '寮舎章', 'growth', [10, 100, 500], (g) => `寮舎で延べ ${g} 時間訓練する`, (_r, c) => total(c, 'dormHours')),
+  // 遠征先 (#359): one new expedition a rank, 13 in all.
+  ...ladder('expedition_kinds', '遠征先章', 'growth', [5, 13], (g) => (g >= 13 ? 'すべての遠征先 (13 か所) に艦を送る' : `${g} か所の遠征先に艦を送る`), (_r, c) => c.expeditionKinds ?? 0),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.
   ...ladder('expedition_pick', '遠征編成章', 'growth', [3, 30], (g) => `艦を選んで遠征を ${g} 回送り出す`, (_r, c) => total(c, 'expeditionPicked')),
   // 士気 (#54)
-  ...ladder('supply', '給糧章', 'growth', [3, 20, 60], (g) => `給糧艦を ${g} 隻使う`, (_r, c) => total(c, 'supplyUse')),
+  ...ladder('supply', '給糧章', 'growth', [3, 20, 60, 150], (g) => `給糧艦を ${g} 隻使う`, (_r, c) => total(c, 'supplyUse')),
   ...ladder('sparkle', '意気軒昂章', 'battle', [5, 30, 100], (g) => `作戦の海域で、全艦の士気 70 以上で ${g} 回勝利する`, (_r, c) => total(c, 'sparkleWin')),
   ...ladder('fast_repair', '応急修理章', 'base', [10, 50, 200], (g) => `高速修理材を ${g} 個使う`, (_r, c) => total(c, 'fastRepairUse')),
   // 自動編成 (#357): fleets the admiral had picked for them.

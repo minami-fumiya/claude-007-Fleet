@@ -17,8 +17,8 @@ export interface IShopEntry {
   give?: Partial<IResources>;
   items?: Partial<IItems>;
   price: number;
-  /** Purchases a game day */
-  daily: number;
+  /** Purchases a game day; none for no limit (給糧艦, #359) */
+  daily?: number;
 }
 
 interface IShopData {
@@ -71,7 +71,7 @@ export type ShopRefusal = 'gold' | 'limit' | 'cap' | null;
 
 /** Why `entry` can't be bought now, or null when it can. A resource pack must fit under the holding cap. */
 export function canBuy(w: IWallet, entry: IShopEntry, have: IResources, cap: IResources, now: number): ShopRefusal {
-  if (boughtToday(w, entry.id, now) >= entry.daily) return 'limit';
+  if (entry.daily !== undefined && boughtToday(w, entry.id, now) >= entry.daily) return 'limit';
   if (w.gold < priceOf(entry, now)) return 'gold';
   if (entry.give) {
     const lost = gainResources(have, entry.give, cap).lost;

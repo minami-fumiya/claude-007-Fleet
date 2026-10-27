@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { collectExpeditions, EXPEDITIONS, expeditionSlots, expeditionState, groupProblem, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition } from '@/systems/ExpeditionSystem';
+import { collectExpeditions, EXPEDITIONS, expeditionsAt, shownExpeditions, expeditionSlots, expeditionState, groupProblem, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition } from '@/systems/ExpeditionSystem';
 import { collectDorm, DORM_PROFICIENCY_CAP, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { resources } from '@/systems/ResourceSystem';
@@ -42,12 +42,12 @@ describe('遠征 (#41)', () => {
     expect(group.map((s) => s.id)).not.toContain('yamato');
     expect(pickShips(escort, [byId('yamato'), byId('fubuki')])).toBeNull();
     expect(expeditionState(escort, [], 1, idle)).toBe('rank');
-    expect(expeditionState(escort, [], 4, idle)).toBe('ready');
-    expect(expeditionState(escort, [], 4, [byId('fubuki')])).toBe('ships');
-    const runs = startExpedition([], escort, 4, idle, T0)!;
-    expect(expeditionState(escort, runs, 4, idle)).toBe('busy');
+    expect(expeditionState(escort, [], 5, idle)).toBe('ready');
+    expect(expeditionState(escort, [], 5, [byId('fubuki')])).toBe('ships');
+    const runs = startExpedition([], escort, 5, idle, T0)!;
+    expect(expeditionState(escort, runs, 5, idle)).toBe('busy');
     const drill = EXPEDITIONS.find((e) => e.id === 'ex_drill')!;
-    expect(expeditionState(drill, runs, 4, idle)).toBe('slots');
+    expect(expeditionState(drill, runs, 5, idle)).toBe('slots');
   });
 
   it('ships are away until back; the reward comes home under the cap', () => {
@@ -81,10 +81,10 @@ describe('遠征の編成と呼び戻し (#337)', () => {
     expect(groupProblem(e, [byId('sendai'), byId('yukikaze')])).toContain('あと 1 隻');
     expect(groupProblem(e, [byId('yamato'), byId('fubuki'), byId('yukikaze')])).not.toBeNull();
     expect(groupProblem(e, [...mine, byId('yamato')])).toContain('多すぎる');
-    const runs = startExpedition([], e, 4, idle, T0, mine)!;
+    const runs = startExpedition([], e, 5, idle, T0, mine)!;
     expect(runs[0].shipIds).toEqual(mine.map((s) => s.id));
     // A group that doesn't fit falls back to the picked ships.
-    expect(startExpedition([], e, 4, idle, T0, [byId('yamato')])![0].shipIds).not.toContain('yamato');
+    expect(startExpedition([], e, 5, idle, T0, [byId('yamato')])![0].shipIds).not.toContain('yamato');
   });
 
   it('the group sent last time is kept for the next, while its ships are free', () => {
@@ -96,7 +96,7 @@ describe('遠征の編成と呼び戻し (#337)', () => {
   });
 
   it('recalling frees the ships at once, without the reward', () => {
-    const runs = startExpedition([], escort(), 4, idle, T0)!;
+    const runs = startExpedition([], escort(), 5, idle, T0)!;
     const back = recallExpedition(runs, 'ex_escort');
     expect(back).toEqual([]);
     expect(collectExpeditions(resources(), back, CAP, T0 + 999 * HOUR).done).toBe(0);
@@ -137,5 +137,25 @@ describe('寮舎 (#57)', () => {
     expect(np.expeditions).toEqual([]);
     expect(np.dorm).toEqual([]);
     for (const id of ['expedition', 'expedition_3', 'dorm', 'dorm_3']) expect(MEDALS.some((m) => m.id === id), id).toBe(true);
+  });
+});
+
+describe('遠征は階級ごとに 1 つずつ (#359)', () => {
+  it('each rank from 准尉 to 元帥 opens exactly one expedition, shorter than 0.0.46', () => {
+    for (let r = 1; r < RANKS.length; r++) expect(expeditionsAt(r).length, RANKS[r].name).toBe(1);
+    expect(Math.min(...EXPEDITIONS.map((e) => e.minutes))).toBeLessThanOrEqual(10);
+    // One or two long ones stay, to send before sleeping.
+    const long = EXPEDITIONS.filter((e) => e.minutes >= 120).length;
+    expect(long).toBeGreaterThanOrEqual(1);
+  });
+
+  it('the list shows the opened ones newest first, after the next one as a goal', () => {
+    const shown = shownExpeditions(3);
+    expect(shown[0].rank).toBe(4);
+    expect(shown.slice(1).map((e) => e.rank)).toEqual([3, 2, 1]);
+    // At 元帥 every one is open and none is waiting.
+    expect(shownExpeditions(13)).toHaveLength(EXPEDITIONS.length);
+    // An expedition out stays listed even if the rank no longer reaches it.
+    expect(shownExpeditions(1, [{ id: 'ex_support', shipIds: [], endsAt: 0 }]).some((e) => e.id === 'ex_support')).toBe(true);
   });
 });

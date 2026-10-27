@@ -68,7 +68,7 @@ export class ShopScene extends Phaser.Scene {
       const isDeal = e.id === deal.id;
       this.track(drawPanel(this.add.graphics(), x, y, CARD_W, L.cardH, { radius: 14, fillAlpha: 0.6, rim: isDeal ? Colors.gold : undefined, rimAlpha: isDeal ? 0.8 : 0.2 }));
       this.track(this.add.text(x + 14, y + 10, e.name, textStyle(15, Css.text, { fontStyle: 'bold' })));
-      this.track(this.add.text(x + CARD_W - 14, y + 12, `本日 ${boughtToday(w, e.id, now)} / ${e.daily}`, textStyle(11, Css.muted)).setOrigin(1, 0));
+      this.track(this.add.text(x + CARD_W - 14, y + 12, e.daily !== undefined ? `本日 ${boughtToday(w, e.id, now)} / ${e.daily}` : `本日 ${boughtToday(w, e.id, now)}`, textStyle(11, Css.muted)).setOrigin(1, 0));
       const what = e.give ? formatResources(e.give) : formatItems(e.items ?? {});
       this.track(this.add.text(x + 14, y + 34, what, textStyle(12, Css.muted)));
       const price = priceOf(e, now);

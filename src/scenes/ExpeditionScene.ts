@@ -4,7 +4,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { collectExpeditions, EXPEDITIONS, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition } from '@/systems/ExpeditionSystem';
+import { collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions } from '@/systems/ExpeditionSystem';
 import { DORM_PROFICIENCY_CAP, DORM_PROFICIENCY_PER_HOUR, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
@@ -47,6 +47,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private pickerIds: string[] = [];
   /** The expedition whose 呼び戻す was pressed once (a second press recalls it) */
   private recallArmed: string | null = null;
+  /** Page of the expedition list (#359: one expedition a rank no longer fits one screen) */
+  private page = 0;
 
   constructor() {
     super({ key: SceneKeys.EXPEDITION });
@@ -120,7 +122,21 @@ export class ExpeditionScene extends Phaser.Scene {
     this.track(this.add.text(L.left, L.top - 30, `遠征 ${p.expeditions.length} / ${expeditionSlots(rank)}  ·  出せる艦 ${idle.length} 隻 (「編成」で艦を選べます)`, eyebrowStyle(11, Css.gold)));
     const roster = DataLoader.getRegistry(this).byNation(p.nation);
     const short = (id: string): string => roster.find((s) => s.id === id)?.name.replace(/\s*\(.*\)\s*$/, '') ?? id;
-    EXPEDITIONS.forEach((e, i) => {
+    // One expedition a rank (#359): the opened ones and the next, a page at a time.
+    const rows = Math.floor((CANVAS_H - L.top + L.gap) / (L.cardH + L.gap));
+    const shown = shownExpeditions(rank, p.expeditions);
+    const size = shown.length > rows * L.cols ? (rows - 1) * L.cols : rows * L.cols;
+    const pages = Math.max(1, Math.ceil(shown.length / size));
+    this.page = Math.min(this.page, pages - 1);
+    if (pages > 1) {
+      const py = L.top + (rows - 1) * (L.cardH + L.gap) + L.cardH / 2;
+      const bh = IS_PORTRAIT ? 56 : 36;
+      const turn = (step: number): void => { this.page = Math.max(0, Math.min(pages - 1, this.page + step)); this.draw(); };
+      this.track(new UIButton(this, CANVAS_W / 2 - 110, py, '‹', () => turn(-1), { variant: 'secondary', width: 80, height: bh, fontSize: 18 })).setEnabled(this.page > 0);
+      this.track(new UIButton(this, CANVAS_W / 2 + 110, py, '›', () => turn(1), { variant: 'secondary', width: 80, height: bh, fontSize: 18 })).setEnabled(this.page < pages - 1);
+      this.track(this.add.text(CANVAS_W / 2, py, `${this.page + 1} / ${pages}`, textStyle(13, Css.muted)).setOrigin(0.5));
+    }
+    shown.slice(this.page * size, (this.page + 1) * size).forEach((e, i) => {
       const x = L.left + (i % L.cols) * (CARD_W + L.gap);
       const y = L.top + Math.floor(i / L.cols) * (L.cardH + L.gap);
       const run = p.expeditions.find((r) => r.id === e.id);
@@ -143,7 +159,7 @@ export class ExpeditionScene extends Phaser.Scene {
         }));
         return;
       }
-      const label = state === 'rank' ? `要階級: ${RANKS[e.rank].name}` : state === 'slots' ? '遠征枠がいっぱい' : state === 'ships' ? '艦が足りない' : '送り出す';
+      const label = state === 'rank' ? `${RANKS[e.rank].name}で解禁` : state === 'slots' ? '遠征枠がいっぱい' : state === 'ships' ? '艦が足りない' : '送り出す';
       const pickW = state === 'rank' ? 0 : IS_PORTRAIT ? 96 : 80;
       if (pickW > 0) {
         this.track(new UIButton(this, x + 14 + pickW / 2, by, '編成', () => this.openPicker(e), { variant: 'primary', width: pickW, height: bh, fontSize: 13 }));
