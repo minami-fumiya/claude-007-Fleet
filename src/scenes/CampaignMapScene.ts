@@ -309,7 +309,7 @@ export class CampaignMapScene extends Phaser.Scene {
       // 超兵器出現 (#148 #89): the main fleet here brings its giant while the event runs.
       ...(giantHere ? [['超兵器', `${giantHere.name} が主力艦隊に加わる (撃沈でゴールド +${SUPERWEAPON_GOLD})`] as [string, string]] : []),
       // 超兵器海域 (#148): the theater's final area, once won, can be fought again against the giant.
-      ...(swOpen ? [['超兵器海域', `${superweaponOf(enemyNation)?.name ?? '超兵器'} と何度でも戦える  ·  撃沈で設計図の断片 +${BLUEPRINT_PER_GIANT_AREA} (${Math.min(progress.blueprints, BLUEPRINT_NEED)} / ${BLUEPRINT_NEED})・超兵器の機関`] as [string, string]] : []),
+      ...(swOpen ? [['超兵器海域', `${superweaponOf(enemyNation)?.name ?? '超兵器'} と何度でも  ·  設計図 +${BLUEPRINT_PER_GIANT_AREA} (${Math.min(progress.blueprints, BLUEPRINT_NEED)} / ${BLUEPRINT_NEED})`] as [string, string]] : []),
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
       // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.

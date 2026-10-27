@@ -42,7 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
-  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene',
+  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'DevelopScene',
 ];
 
 /** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */
@@ -1264,6 +1264,12 @@ function maxSave(): object {
         docksOwned: 8,
         basesOpen: bases,
         items: { fastRepair: 99, fastBuild: 99, captainBook: 99 },
+        // 0.0.48: every upgrade in hand, every carrier model, an ace, the blueprints and every ground weapon destroyed.
+        equipment: Object.fromEntries((read('upgrades.json').upgrades as Array<{ id: string }>).map((u) => [u.id, 99])),
+        aircraftDev: (read('aircraft.json').aircraft as Array<{ id: string }>).map((a) => a.id),
+        pilots: { akagi: { skill: 100, kills: 999, ace: '岩本徹三' } },
+        blueprints: 99,
+        groundKills: Object.fromEntries((read('ground-weapons.json').groundWeapons as Array<{ id: string }>).map((g) => [g.id, 9])),
       },
     },
   };
@@ -1293,5 +1299,56 @@ test('量が最大のセーブ: every screen fits with every ship, captain and r
   await open(page, 'CaptainScene');
   await page.screenshot({ path: info.outputPath('max-captain.png') });
   expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('装備と資材 (0.0.48): development, carrier models, scrapping and the superweapon sea (#55 #87 #42 #148)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  const save = {
+    ...SAVE, version: 7, seenHelp: SCREENS,
+    nations: { IJN: { ...SAVE.nations.IJN, research: [...SAVE.nations.IJN.research, 'torpedo_3', 'aviation_3', 'radar_1', 'armor_1'], ships: [...SAVE.nations.IJN.ships, 'kongo'], equipment: {} } },
+  };
+  const errors = await boot(page, layout, save);
+  type Develop = { mode: string; draw(): void; developRandom(): void };
+  // 装備: the arsenal makes one, the stock holds it.
+  await open(page, 'DevelopScene');
+  await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('DevelopScene') as unknown as Develop).developRandom());
+  await page.waitForTimeout(300);
+  const stock = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.equipment as Record<string, number>);
+  expect(Object.values(stock).reduce((a, b) => a + b, 0), `one copy made (${layout})`).toBe(1);
+  expect(await overflowingTexts(page, 'DevelopScene'), `equipment (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'DevelopScene'), `equipment overlaps (${layout})`).toEqual([]);
+  // 航空機: the carrier's models and the navy's list.
+  await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('DevelopScene') as unknown as Develop;
+    s.mode = 'aircraft';
+    s.draw();
+  });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: info.outputPath('develop-aircraft.png') });
+  expect(await overflowingTexts(page, 'DevelopScene'), `aircraft (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'DevelopScene'), `aircraft overlaps (${layout})`).toEqual([]);
+  expect(await textsOutOfCards(page, 'DevelopScene'), `aircraft cards (${layout})`).toEqual([]);
+  // 解体: the first tap asks, the second scraps.
+  await open(page, 'ShipyardScene');
+  const left = await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ShipyardScene') as unknown as { build(ship: unknown): void };
+    const kongo = { id: 'kongo', name: '金剛 (Kongo)', nation: 'IJN', shipClass: 'Battleship', hp: 0, armor: 0, speed: 0, weapons: [], spriteKey: 'kongo' };
+    s.build(kongo);
+    s.build(kongo);
+    return JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.ships as string[];
+  });
+  expect(left, `kongo scrapped (${layout})`).not.toContain('kongo');
+  expect(await overflowingTexts(page, 'ShipyardScene'), `shipyard after scrapping (${layout})`).toEqual([]);
+  // 超兵器海域: the final area's sortie row holds three buttons that fit.
+  const finalSave = { ...save, nations: { IJN: { ...save.nations.IJN, campaign: ['p1', 'p2', 'p3', 'p4', 'p5', 'p7', 'p10', 'p8', 'p9', 'p6'], perfect: ['p6'] } } };
+  await boot(page, layout, finalSave);
+  await open(page, 'CampaignMapScene');
+  await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { selectArea(id: string): void }).selectArea('p6'));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: info.outputPath('superweapon-sea.png') });
+  expect(await overflowingTexts(page, 'CampaignMapScene'), `superweapon sea (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'CampaignMapScene'), `superweapon sea overlaps (${layout})`).toEqual([]);
   expect(errors).toEqual([]);
 });
