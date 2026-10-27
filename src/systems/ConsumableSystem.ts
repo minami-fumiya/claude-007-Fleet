@@ -118,7 +118,8 @@ export function aiConsumable(slots: readonly IConsumableSlot[], s: IConsumableSi
   if (ready('smoke') && s.seen && s.foesNear && s.hpFraction < 0.6) return 'smoke';
   if (ready('aa') && s.raidNear) return 'aa';
   if (ready('radar') && s.hiddenFoes) return 'radar';
-  if (ready('boost') && (s.foesNear ? s.hpFraction < 0.35 : !s.seen)) return 'boost';
+  // Full power to get away when badly hurt (rushing in with it broke the line and ran into torpedoes).
+  if (ready('boost') && s.foesNear && s.hpFraction < 0.35) return 'boost';
   return null;
 }
 
