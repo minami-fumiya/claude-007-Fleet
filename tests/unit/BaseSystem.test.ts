@@ -56,15 +56,15 @@ describe('bases (#88)', () => {
     expect(baseState(light, at(0, '', false))).toBe('locked');
     // The rank alone is not enough (#293): three areas of the previous base's theater too.
     expect(baseState(light, { ...p, campaign: ['p1', 'p2'] })).toBe('locked');
-    expect(baseWorkOf(light)).toEqual({ cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 20 });
+    expect(baseWorkOf(light)).toEqual({ cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 10 });
     const started = startBaseWork(p, light, T0)!;
     expect(started.resources.steel).toBe(rich.steel - 1000);
     expect(baseState(light, started)).toBe('building');
     // One base at a time.
     expect(baseState(cruiser, started)).toBe('busy');
     expect(startBaseWork(started, cruiser, T0)).toBeNull();
-    expect(finishBaseWork(started, T0 + 19 * 60_000)).toBe(started);
-    const done = finishBaseWork(started, T0 + 20 * 60_000);
+    expect(finishBaseWork(started, T0 + 9 * 60_000)).toBe(started);
+    const done = finishBaseWork(started, T0 + 10 * 60_000);
     expect(isBaseOpen(light, done)).toBe(true);
     expect(done.baseWork).toBeNull();
     expect(openBaseCount(Nation.IJN, done)).toBe(2);

@@ -12,6 +12,7 @@ import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, 
 import { EscortAISystem } from '@/systems/EscortAISystem';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
 import { FORMATION_ORDER, FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
+import { EXPEDITIONS } from '@/systems/ExpeditionSystem';
 import { aaGuns, AirOpsSystem } from '@/systems/AirOpsSystem';
 import { airfieldRearmMs, REARM_MS } from '@/systems/AirWingSystem';
 import { AircraftType } from '@/types/Aircraft';
@@ -2150,7 +2151,9 @@ export class BattleScene extends Phaser.Scene {
     const promoted = { promotedTo: after.index > before.index ? after : null };
     // A formation that comes with the new rank (#345) is named with the promotion.
     const newFormations = promoted.promotedTo ? FORMATION_ORDER.filter((f) => FORMATION_RULES[f].minRank > before.index && FORMATION_RULES[f].minRank <= after.index).map((f) => FORMATION_RULES[f].ja) : [];
-    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}${newFormations.length > 0 ? `  ·  新しい陣形: ${newFormations.join('・')}` : ''}`;
+    // And the expeditions it opens (#359).
+    const newExpeditions = promoted.promotedTo ? EXPEDITIONS.filter((e) => e.rank > before.index && e.rank <= after.index).map((e) => e.name) : [];
+    if (merit > 0 || promoted.promotedTo) result.merit = `戦功 +${merit}${promoted.promotedTo ? `  ·  昇進: ${before.name} → ${promoted.promotedTo.name}` : ''}${newFormations.length > 0 ? `  ·  新しい陣形: ${newFormations.join('・')}` : ''}${newExpeditions.length > 0 ? `  ·  新しい遠征: ${newExpeditions.join('・')}` : ''}`;
     // New captains (#44, S ranks only since #215): an area's first S, each promotion, now and then an S win.
     const sWin = victory && rank === 'S';
     // At most one a battle (#303: an area's first S that also promoted brought two, three with the random one).

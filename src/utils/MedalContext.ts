@@ -58,7 +58,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, shipTypes: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, shipTypes: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -85,6 +85,8 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     ctx.supplyLevel = Math.max(ctx.supplyLevel, Math.min(...supply));
     ctx.basesOpen = Math.max(ctx.basesOpen, openBaseCount(nation, { ...np, nation }));
     ctx.classesComplete = Math.max(ctx.classesComplete, (CLASSES[nation] ?? []).filter((ids) => ids.every((id) => np.ships.includes(id))).length);
+    // Expeditions sent remember their group (#337), one entry an expedition.
+    ctx.expeditionKinds = Math.max(ctx.expeditionKinds, Object.keys(np.expeditionGroups ?? {}).length);
     ctx.shipTypes = Math.max(ctx.shipTypes, new Set(np.ships.map((id) => SHIP_TYPE.get(id)).filter((t) => t !== undefined)).size);
     ctx.midClasses = Math.max(ctx.midClasses, new Set(np.ships.map((id) => SHIP_MID.get(id)).filter((t) => t !== undefined)).size);
     ctx.escortsOwned = Math.max(ctx.escortsOwned, np.ships.filter((id) => ESCORTS.has(id)).length);

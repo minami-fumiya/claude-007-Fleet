@@ -191,13 +191,13 @@ export function baseLockText(base: IBase, progress?: Pick<IRankProgress, 'campai
 // Building a base (#217)
 // ---------------------------------------------------------------------------
 
-/** Price and minutes of the nation's 2nd to 6th base (by their order in bases.json). */
+/** Price and minutes of the nation's 2nd to 6th base (by their order in bases.json); half of 0.0.46's minutes (#359). */
 export const BASE_WORKS: ReadonlyArray<{ cost: IResources; minutes: number }> = [
-  { cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 20 },
-  { cost: { fuel: 1000, ammo: 500, steel: 2000, bauxite: 0 }, minutes: 40 },
-  { cost: { fuel: 1500, ammo: 1000, steel: 3000, bauxite: 300 }, minutes: 60 },
-  { cost: { fuel: 2000, ammo: 1500, steel: 4000, bauxite: 500 }, minutes: 80 },
-  { cost: { fuel: 2500, ammo: 2000, steel: 5000, bauxite: 800 }, minutes: 100 },
+  { cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 10 },
+  { cost: { fuel: 1000, ammo: 500, steel: 2000, bauxite: 0 }, minutes: 20 },
+  { cost: { fuel: 1500, ammo: 1000, steel: 3000, bauxite: 300 }, minutes: 30 },
+  { cost: { fuel: 2000, ammo: 1500, steel: 4000, bauxite: 500 }, minutes: 40 },
+  { cost: { fuel: 2500, ammo: 2000, steel: 5000, bauxite: 800 }, minutes: 50 },
 ];
 
 /** What building `base` takes (the last entry for any further base). */
