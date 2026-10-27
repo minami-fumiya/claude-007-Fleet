@@ -33,6 +33,7 @@ import { addBackdrop, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/comp
 import { ScrollList } from '@/ui/components/ScrollList';
 import campaignData from '@/data/campaign.json';
 import aircraftData from '@/data/aircraft.json';
+import { GROUND_KINDS, groundWeaponsOf, isGroundWeapon } from '@/systems/GroundSystem';
 import specialData from '@/data/special.json';
 import superweaponData from '@/data/superweapons.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -230,8 +231,10 @@ export class EncyclopediaScene extends Phaser.Scene {
       case 'ground': {
         // A superweapon stays ？？？ until one has been sunk (#315, like unseen ships #245).
         const seen = this.giantsSunk();
-        return GROUND.map((g) => {
-          const hidden = g.kind === '超兵器' && !seen;
+        // 地上兵器 (#251): the nation's shore defences, each ？？？ until one of it has been destroyed.
+        const destroyed = this.groundDestroyed();
+        return [...GROUND, ...this.groundWeaponEntries()].map((g) => {
+          const hidden = (g.kind === '超兵器' && !seen) || (isGroundWeapon(g.id) && !destroyed.has(g.id));
           return { id: g.id, name: hidden ? HIDDEN_NAME : g.name, sub: g.kind ?? (g.id === 'convoy_ship' ? '支援' : '地上'), icon: hidden ? '' : g.spriteKey, owned: !hidden };
         });
       }
@@ -262,7 +265,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     if (this.tab === 'ships') this.buildShipDetail(DataLoader.getRegistry(this).byId(entry.id)!, entry.owned);
     else if (this.tab === 'captains') this.buildCaptainDetail(nationCaptains(this.nation).find((c) => c.id === entry.id)!, entry.owned);
     else if (this.tab === 'aircraft') this.buildAircraftDetail(AIRCRAFT.find((a) => a.id === entry.id)!, entry.owned);
-    else this.buildGroundDetail(GROUND.find((g) => g.id === entry.id)!);
+    else this.buildGroundDetail([...GROUND, ...this.groundWeaponEntries()].find((g) => g.id === entry.id)!);
   }
 
   private buildFilters(): void {
@@ -529,7 +532,25 @@ export class EncyclopediaScene extends Phaser.Scene {
     return Object.values(loadSave().nations).some((np) => (np?.quests.totals.superweaponSunk ?? 0) > 0);
   }
 
+  /** 地上兵器 (#251): the book's nation's shore defences. */
+  private groundWeaponEntries(): IGroundEntry[] {
+    return groundWeaponsOf(this.nation).map((g) => ({
+      id: g.id, no: g.no, name: g.name, spriteKey: g.spriteKey, hp: g.hp, armor: g.armor, kind: GROUND_KINDS[g.kind],
+      description: `${g.description}${g.year ? ` (${g.year} 年)` : ''} 作戦「対地攻撃」で${NATION_INFO[this.nation].ja}の島に置かれる。`,
+    }));
+  }
+
+  /** Ground weapons destroyed by any nation's admiral (#251). */
+  private groundDestroyed(): Set<string> {
+    return new Set(Object.values(loadSave().nations).flatMap((np) => Object.keys(np?.groundKills ?? {})));
+  }
+
   private buildGroundDetail(g: IGroundEntry): void {
+    if (isGroundWeapon(g.id) && !this.groundDestroyed().has(g.id)) {
+      const y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.kind ?? '地上兵器'}`, HIDDEN_NAME);
+      this.section(y, '解説', '作戦「対地攻撃」の島に置かれる地上兵器。1 度破壊すると、ここに載る。', Css.muted);
+      return;
+    }
     if (g.kind === '超兵器' && !this.giantsSunk()) {
       const y = this.detailHeader(`${formatNo(g.no)}  ·  超兵器`, HIDDEN_NAME);
       this.section(y, '解説', '超兵器出現のイベント中、戦域の主力艦隊に現れる。1 隻沈めると、すべての超兵器がここに載る。', Css.muted);

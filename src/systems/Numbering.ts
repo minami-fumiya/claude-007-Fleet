@@ -73,12 +73,20 @@ export const AIRCRAFT_TYPE_CODE: Record<AircraftType, number> = {
   [AircraftType.Recon]: 4,
 };
 
-/** Ground targets (#83): 01 transports, 02 coastal guns, 03 harbours, 04 airfields; more kinds to come (#251). */
+/** Ground targets (#83): 01 transports, 02 coastal guns, 03 harbours, 04 airfields; the navies' ground weapons below (#251). */
 export const GROUND_TYPE_CODE: Record<string, number> = {
   convoy_ship: 1,
   land_battery: 2,
   land_harbor: 3,
   land_airfield: 4,
+};
+
+/**
+ * 地上兵器 (#251), numbered under their navy: fortress and coastal guns share 02 with the shared battery, then 05 AA
+ * sites, 06 torpedo boat bases, 07 radar stations, 08 railway guns.
+ */
+export const GROUND_WEAPON_TYPE_CODE: Record<string, number> = {
+  heavy_battery: 2, battery: 2, aa: 5, torpedo_base: 6, radar: 7, railway: 8,
 };
 
 export const WEAPON_TYPE_CODE: Record<WeaponType, number> = {

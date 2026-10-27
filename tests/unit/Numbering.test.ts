@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  AIRCRAFT_TYPE_CODE, CAPTAIN_TYPE_CODE, COMMON_NATION, composeNo, EQUIPMENT_TYPE_CODE, formatNo, GROUND_TYPE_CODE, ITEM_TYPE_CODE, NATION_CODE, nextNo, NoCategory,
+  AIRCRAFT_TYPE_CODE, CAPTAIN_TYPE_CODE, COMMON_NATION, composeNo, EQUIPMENT_TYPE_CODE, GROUND_WEAPON_TYPE_CODE, formatNo, GROUND_TYPE_CODE, ITEM_TYPE_CODE, NATION_CODE, nextNo, NoCategory,
   parseNo, SHIP_TYPE_CODE, shipTypeCode, WEAPON_TYPE_CODE,
 } from '@/systems/Numbering';
 import { shipClasses } from '@/systems/ShipOrder';
@@ -23,6 +23,7 @@ import items from '@/data/items.json';
 import special from '@/data/special.json';
 import superweapons from '@/data/superweapons.json';
 import upgrades from '@/data/upgrades.json';
+import groundWeapons from '@/data/ground-weapons.json';
 
 const SHIPS = [ijn, usn, km, rn, fr, su, rm].flatMap((f) => f.ships) as unknown as IShipData[];
 type Entry = { id: string; no?: number };
@@ -35,6 +36,7 @@ const ALL: Array<{ what: string; entry: Entry; category: number; nation: number;
   ...[special.convoy, ...special.landTargets].map((g) => ({ what: 'ground', entry: g, category: NoCategory.Ground, nation: COMMON_NATION, type: GROUND_TYPE_CODE[g.id] })),
   ...weapons.weapons.map((w) => ({ what: 'weapon', entry: w, category: NoCategory.Weapon, nation: COMMON_NATION, type: WEAPON_TYPE_CODE[w.type as WeaponType] })),
   ...items.items.map((i) => ({ what: 'item', entry: i, category: NoCategory.Item, nation: COMMON_NATION, type: ITEM_TYPE_CODE })),
+  ...groundWeapons.groundWeapons.map((g) => ({ what: 'ground weapon', entry: g, category: NoCategory.Ground, nation: NATION_CODE[g.nation as Nation], type: GROUND_WEAPON_TYPE_CODE[g.kind] })),
   ...(upgrades.upgrades as Array<Entry & { nations?: string[]; dropFrom?: string[] }>).map((u) => ({
     what: 'equipment', entry: u, category: NoCategory.Equipment,
     nation: u.nations?.length ? NATION_CODE[u.nations[0] as Nation] : COMMON_NATION,

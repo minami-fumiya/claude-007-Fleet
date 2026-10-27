@@ -70,6 +70,8 @@ export interface INationProgress {
   aircraftDev: string[];
   airGroups: Record<string, Partial<Record<CarrierAircraft, string>>>;
   pilots: Record<string, IPilot>;
+  /** 地上兵器 (#251): ground weapon id → times destroyed */
+  groundKills: Record<string, number>;
   /** Ship id → refit stage (0 = original) */
   refits: Record<string, number>;
   /** Ship id → the branch chosen for its last remodel stage (#86); none = the standard stage */
@@ -183,7 +185,7 @@ export function walletOf(p: Pick<IProgress, 'wallet'>): IWallet {
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airGroups: {}, pilots: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
+    upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
   };
@@ -316,6 +318,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     aircraftDev: [...new Set(strings(data.aircraftDev))],
     airGroups: parseAirGroups(data.airGroups),
     pilots: parsePilots(data.pilots),
+    groundKills: numbers(data.groundKills),
     refits: numbers(data.refits),
     refitBranches: stringMap(data.refitBranches),
     proficiency: numbers(data.proficiency),

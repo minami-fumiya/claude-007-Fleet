@@ -39,6 +39,7 @@ import { ShipTrails } from '@/entities/effects/ShipTrails';
 import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
+import { addGroundKills, bombardLineup, GROUND_WEAPONS } from '@/systems/GroundSystem';
 import { pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
 import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
@@ -781,10 +782,14 @@ export class BattleScene extends Phaser.Scene {
       const a = (i / all.length) * Math.PI * 2;
       return { x: core.x + Math.cos(a) * core.r * 0.55, y: core.y + Math.sin(a) * core.r * 0.55 };
     });
-    special.bombardLayout.forEach((id, i) => {
-      const data = special.landTargets.find((t) => t.id === id) as IShipData | undefined;
+    // 地上兵器 (#251): the batteries are the enemy navy's own shore defences, heavier in the deeper seas.
+    const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
+    const depth = area ? areaDepth(campaignData as ICampaignData, area, loadProgress().nation) : 0;
+    bombardLineup(special.bombardLayout, area?.id ?? '', this.enemyNation, depth).forEach((id, i) => {
+      const weapon = GROUND_WEAPONS.find((g) => g.id === id);
+      const data = (weapon ?? special.landTargets.find((t) => t.id === id)) as IShipData | undefined;
       if (!data) return;
-      const target = this.spawnShip(data, spots[i].x, spots[i].y, NO_MODIFIERS, false);
+      const target = this.spawnShip(data, spots[i].x, spots[i].y, weapon?.mods ? combineModifiers(weapon.mods) : NO_MODIFIERS, false);
       target.isLand = true;
       target.setTint(0xffb0a0);
       (target.body as Phaser.Physics.Arcade.Body).setImmovable(true);
@@ -2208,6 +2213,9 @@ export class BattleScene extends Phaser.Scene {
       progress = { ...progress, items: { ...progress.items, trainingManual: (progress.items.trainingManual ?? 0) + 1 } };
       recruitLines.push('訓練教範 +1 (改装の画面で艦の練度を上げられます)');
     }
+    // 地上兵器 (#251): the shore defences destroyed, by kind, for the book and the medals.
+    const groundDown = this.landTargets.filter((t) => !t.isAlive).map((t) => t.dataId);
+    if (!this.scenario && groundDown.length > 0) progress = { ...progress, groundKills: addGroundKills(progress.groundKills, groundDown) };
     // 搭乗員 (#87): every carrier that flew grows its pilots; shooting enough planes down brings an ace.
     if (!this.scenario) {
       let pilots = progress.pilots;
