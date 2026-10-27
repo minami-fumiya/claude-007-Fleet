@@ -31,6 +31,21 @@ export interface IExpeditionRun {
 
 export const EXPEDITIONS = expeditionData.expeditions as IExpedition[];
 
+/**
+ * The expeditions the list shows (#359): those the rank has opened, newest first, after the one the next rank opens
+ * (shown locked, as a goal). Expeditions out keep their card whatever the rank.
+ */
+export function shownExpeditions(rankIndex: number, runs: readonly IExpeditionRun[] = [], all: readonly IExpedition[] = EXPEDITIONS): IExpedition[] {
+  const open = all.filter((e) => e.rank <= rankIndex || runs.some((r) => r.id === e.id)).sort((a, b) => b.rank - a.rank);
+  const next = all.filter((e) => e.rank > rankIndex && !open.includes(e)).sort((a, b) => a.rank - b.rank)[0];
+  return next ? [next, ...open] : open;
+}
+
+/** The expeditions `rankIndex` opens (#359): shown on the promotion and in the rank list. */
+export function expeditionsAt(rankIndex: number, all: readonly IExpedition[] = EXPEDITIONS): IExpedition[] {
+  return all.filter((e) => e.rank === rankIndex);
+}
+
 /** Expeditions out at once by rank index: one, a second at 少佐, a third at 准将. */
 export function expeditionSlots(rankIndex: number): number {
   return 1 + (rankIndex >= 6 ? 1 : 0) + (rankIndex >= 9 ? 1 : 0);

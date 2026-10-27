@@ -72,6 +72,25 @@
       "year": 1938
     },
     {
+      "id": "chapayev",
+      "no": 1605007,
+      "name": "チャパエフ (Chapayev)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 390,
+      "armor": 34,
+      "speed": 175,
+      "weapons": [
+        "152mm_b38",
+        "53_38_torpedo"
+      ],
+      "spriteKey": "chapayev",
+      "fictional": true,
+      "description": "チャパエフ級巡洋艦1番艦。15.2cm砲12門を持つ。1939年に起工されたが独ソ戦で工事が止まり、完成は戦後になった (架空艦)。",
+      "year": 1945
+    },
+    {
       "id": "maxim_gorky",
       "no": 1605003,
       "name": "マクシム・ゴーリキー (Maxim Gorky)",

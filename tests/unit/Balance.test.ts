@@ -21,7 +21,8 @@ const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships
 /** Historical ships, one per class (sister ships share their lead's performance, #85); fictional ones are a research reward and are checked separately. */
 const ALL = EVERY.filter((s) => !s.fictional && !s.sisterOf);
 /** Fictional battleships; fictional carriers (USSR, Italy) only have to keep the hull order. */
-const FICTIONAL = EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Battleship);
+// A planned battlecruiser (O 級, #352) is weighed with the battlecruisers, not against the designed battleships.
+const FICTIONAL = EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Battleship && s.subtype !== ShipSubtype.BattleCruiser);
 /** Navies whose newest historical battleship is from 1920 or before: their designed one stands in for it (#319). */
 const OLD_ONLY = Object.values(Nation).filter((n) => {
   const own = ALL.filter((s) => s.nation === n && s.shipClass === ShipClass.Battleship);
@@ -158,7 +159,7 @@ describe('balance', () => {
   });
 
   it('keeps the fictional battleships even with each other', () => {
-    expect(FICTIONAL.length).toBe(5);
+    expect(FICTIONAL.length).toBe(6);
     for (const a of FICTIONAL) {
       for (const b of FICTIONAL) {
         if (a === b) continue;

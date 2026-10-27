@@ -110,8 +110,9 @@ export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
   3: [win(5), sink(10), areas(3)],
   4: [areas(5), sink(40), objective(1), medal('veteran')],
   5: [win(15), night(1), sweep(5), medal('perfect')],
-  6: [carrier(1), objective(3), night(3), medal('fleet_2')],
-  7: [bigS(1), sink(100), sub(3), medal('operations')],
+  // 空母 waits for 中佐 (#358): with a rank a sea, the US Navy's first carrier comes at 中佐.
+  6: [sub(3), objective(3), night(3), medal('fleet_2')],
+  7: [bigS(1), sink(100), carrier(1), medal('operations')],
   8: [bigS(3), battleship(2), win(40), medal('flawless')],
   9: [sub(10), battleship(5), sweep(15), medal('science_3')],
   10: [sink(250), areas(25), night(10), medal('victor_2')],

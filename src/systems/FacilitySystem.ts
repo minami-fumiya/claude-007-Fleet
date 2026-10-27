@@ -59,10 +59,9 @@ export function facilityCost(id: FacilityId, level: number): IResources {
   return resources({ fuel: 200 * n, ammo: 100 * n, steel: 300 * n, bauxite: id === 'airBase' ? 100 * n : 0 });
 }
 
-/** Minutes to raise a facility to `level`. */
-/** Minutes to raise a facility to `level`: about half of 0.0.20's (#212). */
+/** Minutes to raise a facility to `level`: about half of 0.0.20's (#212), cut again by 2/5 in #359. */
 export function facilityMinutes(id: FacilityId, level: number): number {
-  return (id === 'unique' ? 15 : 5) * Math.max(1, level);
+  return (id === 'unique' ? 10 : 3) * Math.max(1, level);
 }
 
 /** Facilities a base can raise at once (#216): two, three once its own facility is Lv2. */

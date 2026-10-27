@@ -179,7 +179,7 @@ describe('reward-only ships (#39)', () => {
 
   it('every reward ship exists in its nation, in an area that nation plays; planned ships only where history runs out (#331)', () => {
     // Germany and the Soviet Union have no sister ships left for some seas: their planned designs fill them.
-    const planned = new Set(['h39', 'sovetsky_soyuz', 'project71']);
+    const planned = new Set(['h39', 'h41', 'o_class', 'seydlitz', 'sovetsky_soyuz', 'project71', 'chapayev']);
     for (const [nation, byArea] of Object.entries(REWARD_SHIPS)) {
       const theaters = campaignData.theaters.filter((t) => (t.opponents as Record<string, string | undefined>)[nation]).map((t) => t.id);
       for (const [area, shipId] of Object.entries(byArea ?? {})) {
