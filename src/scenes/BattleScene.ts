@@ -40,6 +40,9 @@ import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
 import { addGroundKills, bombardLineup, GROUND_WEAPONS } from '@/systems/GroundSystem';
+import {
+  AA_BARRAGE, aiConsumable, BOOST_SPEED, ConsumableKind, hiddenBySmoke, IConsumableSlot, isActive, ISmokeCloud, RADAR_VISION, repairPerSec, shipConsumables, slotLabel, SMOKE_RADIUS, useConsumable,
+} from '@/systems/ConsumableSystem';
 import { pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
 import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
@@ -218,6 +221,14 @@ export class BattleScene extends Phaser.Scene {
   private superweapon: BaseShip | null = null;
   /** 部位耐久 (#148): the giant's parts, over it */
   private superweaponParts: Phaser.GameObjects.Text | null = null;
+  /** 消耗品 (#47): each ship's slots, its vision and AA before any effect, the smoke at sea and the flagship's buttons */
+  private consumables = new Map<BaseShip, IConsumableSlot[]>();
+  private baseVision = new Map<BaseShip, { vision: number; aa: number }>();
+  private smoke: ISmokeCloud[] = [];
+  private smokeGfx: Phaser.GameObjects.Graphics | null = null;
+  private consumableBtns: UIButton[] = [];
+  private consumableLabels: string[] = [];
+  private consumableUses = 0;
   /** Fleets fighting beside the one the player steers (#84 支援艦隊, #64 友軍艦隊), each ship with its own AI */
   private groups: IFleetGroup[] = [];
   /** 友軍艦隊 still to arrive (#64) */
@@ -325,6 +336,13 @@ export class BattleScene extends Phaser.Scene {
     this.firesSet = 0;
     this.superweapon = null;
     this.superweaponParts = null;
+    this.consumables = new Map();
+    this.baseVision = new Map();
+    this.smoke = [];
+    this.smokeGfx = null;
+    this.consumableBtns = [];
+    this.consumableLabels = [];
+    this.consumableUses = 0;
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
     this.convoy = [];
@@ -403,6 +421,7 @@ export class BattleScene extends Phaser.Scene {
     this.spawnEnemyFleet(enemyFleet);
     if (this.objective === Objective.Convoy) this.spawnConvoy();
     if (this.objective === Objective.Bombard) this.spawnLandTargets();
+    this.setupConsumables();
     const startAngle = this.scenarioSetup?.player.positions[0]?.angle;
     if (startAngle !== undefined) for (const s of this.friendlies()) s.setAngle(startAngle);
     this.drawObjectiveZone();
@@ -517,6 +536,7 @@ export class BattleScene extends Phaser.Scene {
     this.updateSubmarines(dtSec);
     this.playerRecon.update(time, delta, aaGuns(this.enemies), this.enemies);
     this.enemyRecon.update(time, delta, aaGuns(this.playerSide()), this.playerSide());
+    this.updateConsumables(this.battleNow(), dtSec);
     this.updateDetection();
     const playerView = this.playerSide().map((s) => ({
       ...shipView(s, this.seenByEnemy.has(s)),
@@ -1122,17 +1142,18 @@ export class BattleScene extends Phaser.Scene {
 
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
+      // 消耗品 (#47): smoke hides a ship from all but the closest; searching finds a boat under water.
       const seen = enemy.submerged
-        ? isDetected(enemy, playerHunters)
-        : isVisible(enemy.x, enemy.y, playerSight) || this.flashed(enemy, this.enemyWeapons, this.playerSide());
+        ? isDetected(enemy, playerHunters) || this.heardBySearch(enemy, this.playerSide())
+        : (isVisible(enemy.x, enemy.y, playerSight) && !this.inSmoke(enemy, this.playerSide())) || this.flashed(enemy, this.enemyWeapons, this.playerSide());
       if (seen) this.seenByPlayer.add(enemy);
       enemy.setVisible(seen).setAlpha(enemy.submerged ? SUBMERGED_ALPHA : 1);
     }
     for (const ship of this.playerSide()) {
       if (!ship.isAlive) continue;
       const seen = ship.submerged
-        ? isDetected(ship, enemyHunters)
-        : isVisible(ship.x, ship.y, enemySight) || this.flashed(ship, this.playerWeapons, this.enemies);
+        ? isDetected(ship, enemyHunters) || this.heardBySearch(ship, this.enemies)
+        : (isVisible(ship.x, ship.y, enemySight) && !this.inSmoke(ship, this.enemies)) || this.flashed(ship, this.playerWeapons, this.enemies);
       if (seen) this.seenByEnemy.add(ship);
       ship.setAlpha(ship.submerged ? SUBMERGED_ALPHA : 1);
     }
@@ -1333,6 +1354,9 @@ export class BattleScene extends Phaser.Scene {
     kb.on('keydown-Q', () => !this.paused && this.toggleDive());
     kb.on('keydown-E', () => !this.paused && this.fireTorpedoes());
     kb.on('keydown-F', () => !this.paused && this.launchPlayerStrike());
+    // 消耗品 (#47): the flagship's two slots.
+    kb.on('keydown-ONE', () => !this.paused && this.useFlagshipConsumable(0));
+    kb.on('keydown-TWO', () => !this.paused && this.useFlagshipConsumable(1));
     kb.on('keydown-P', () => this.setPaused(!this.paused));
     kb.on('keydown-ESC', () => this.setPaused(!this.paused));
     // Leaving the tab or locking the phone pauses the battle (#79).
@@ -1739,7 +1763,121 @@ export class BattleScene extends Phaser.Scene {
         .setDepth(DEPTH_HUD + 2)
         .setScrollFactor(0);
       if (keyHint) this.diveBtn.setLabel('潜航  [Q]');
+      y -= a.h + a.gap;
     }
+    // 消耗品 (#47): the flagship's slots, above the other actions.
+    const slots = this.consumables.get(this.flagship) ?? [];
+    for (let i = 0; i < 2; i++) {
+      const btn = new UIButton(this, x, y, '', () => this.useFlagshipConsumable(i), { ...opts, fontSize: 14 });
+      btn.setDepth(DEPTH_HUD + 2).setScrollFactor(0).setVisible(i < slots.length);
+      this.consumableBtns.push(btn);
+      y -= a.h + a.gap;
+    }
+    this.refreshConsumableUi();
+  }
+
+  /** 消耗品 (#47): slots for every warship — the player's by research, the enemy's one charge each. */
+  private setupConsumables(): void {
+    const research = this.scenario ? [] : loadProgress().research;
+    for (const ship of this.friendlies()) if (!ship.isConvoy) this.consumables.set(ship, shipConsumables(ship.stats.shipClass, research));
+    for (const ship of this.enemies) if (!ship.isLand && !ship.isConvoy) this.consumables.set(ship, shipConsumables(ship.stats.shipClass, 'enemy'));
+    for (const ship of this.consumables.keys()) this.baseVision.set(ship, { vision: ship.visionMul, aa: ship.aaMul });
+    this.smokeGfx = this.add.graphics().setDepth(DEPTH_SHIPS + 1);
+  }
+
+  private useFlagshipConsumable(i: number): void {
+    const slot = this.consumables.get(this.flagship)?.[i];
+    if (slot && this.useSlot(this.flagship, slot.kind)) this.consumableUses++;
+    this.refreshConsumableUi();
+  }
+
+  /** Uses one of the ship's slots now; false when it can't. */
+  private useSlot(ship: BaseShip, kind: ConsumableKind): boolean {
+    const slots = this.consumables.get(ship);
+    const now = this.battleNow();
+    const i = slots?.findIndex((x) => x.kind === kind) ?? -1;
+    const used = i >= 0 ? useConsumable(slots![i], now) : null;
+    if (!slots || !used) return false;
+    slots[i] = used;
+    if (kind === 'repair') ship.status = {};
+    if (kind === 'smoke') this.smoke.push({ x: ship.x, y: ship.y, until: used.activeUntil });
+    if (ship.visible) {
+      const t = this.add.text(ship.x, ship.y - 60, slotLabel(used, now).split(' ')[0], textStyle(14, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
+        .setOrigin(0.5).setDepth(DEPTH_HUD - 2);
+      this.tweens.add({ targets: t, y: t.y - 36, alpha: 0, duration: 1400, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
+    }
+    return true;
+  }
+
+  /** Effects that run (repair, full power, AA barrage, search) and the AI's choices. */
+  private updateConsumables(now: number, dtSec: number): void {
+    const playerSide = this.playerSide();
+    const raids = (enemySide: boolean): Array<{ alive: boolean; x: number; y: number }> => (enemySide ? this.playerAir.squadrons : this.enemyAir.squadrons);
+    for (const [ship, slots] of this.consumables) {
+      if (!ship.isAlive) continue;
+      const enemySide = this.enemies.includes(ship);
+      // The steered flagship uses its own from the buttons, unless on AUTO or touch AUTO fire.
+      if (ship !== this.flagship || this.autoMode) {
+        const foes = enemySide ? playerSide : this.enemies;
+        const kind = aiConsumable(slots, {
+          hpFraction: ship.stats.currentHp / Math.max(1, ship.stats.maxHp),
+          seen: enemySide ? this.seenByPlayer.has(ship) : this.seenByEnemy.has(ship),
+          raidNear: raids(enemySide).some((q) => q.alive && Math.hypot(q.x - ship.x, q.y - ship.y) < 400),
+          hiddenFoes: foes.some((f) => f.isAlive && (f.submerged || !(enemySide ? this.seenByEnemy.has(f) : this.seenByPlayer.has(f)))),
+          foesNear: foes.some((f) => f.isAlive && Math.hypot(f.x - ship.x, f.y - ship.y) < 600),
+          burning: Object.keys(ship.status).length > 0,
+        }, now);
+        if (kind && this.useSlot(ship, kind) && !enemySide) this.consumableUses++;
+      }
+      if (isActive(slots, 'repair', now)) ship.stats.currentHp = Math.min(ship.stats.maxHp, ship.stats.currentHp + repairPerSec(ship.stats.maxHp) * dtSec);
+      ship.boostMul = isActive(slots, 'boost', now) ? BOOST_SPEED : 1;
+      const base = this.baseVision.get(ship);
+      if (base) {
+        ship.aaMul = base.aa * (isActive(slots, 'aa', now) ? AA_BARRAGE : 1);
+        ship.visionMul = base.vision * (isActive(slots, 'radar', now) ? RADAR_VISION : 1);
+      }
+    }
+    this.smoke = this.smoke.filter((c) => c.until > now);
+    const g = this.smokeGfx;
+    if (g) {
+      g.clear();
+      for (const c of this.smoke) {
+        g.fillStyle(0xb8c0c8, 0.35 * Math.min(1, (c.until - now) / 4000));
+        g.fillCircle(c.x, c.y, SMOKE_RADIUS);
+      }
+    }
+    this.refreshConsumableUi();
+  }
+
+  /** A ship hidden in smoke from `viewers` (#47); a viewer searching with radar sees in. */
+  private inSmoke(ship: BaseShip, viewers: BaseShip[]): boolean {
+    if (this.smoke.length === 0) return false;
+    const now = this.battleNow();
+    if (viewers.some((v) => v.isAlive && isActive(this.consumables.get(v) ?? [], 'radar', now))) return false;
+    return hiddenBySmoke(ship.x, ship.y, this.smoke, viewers.filter((v) => v.isAlive), now);
+  }
+
+  /** A submerged boat found by a ship searching with hydrophones (#47). */
+  private heardBySearch(boat: BaseShip, hunters: BaseShip[]): boolean {
+    const now = this.battleNow();
+    return hunters.some((h) => h.isAlive && isActive(this.consumables.get(h) ?? [], 'radar', now) && Math.hypot(h.x - boat.x, h.y - boat.y) <= 450);
+  }
+
+  private refreshConsumableUi(): void {
+    const slots = this.consumables.get(this.flagship) ?? [];
+    const now = this.battleNow();
+    const keys = !this.isTouch;
+    this.consumableBtns.forEach((btn, i) => {
+      const slot = slots[i];
+      btn.setVisible(!!slot);
+      if (!slot) return;
+      const label = `${slotLabel(slot, now)}${keys ? `  [${i + 1}]` : ''}`;
+      if (this.consumableLabels[i] !== label) {
+        this.consumableLabels[i] = label;
+        btn.setLabel(label);
+      }
+      btn.setEnabled(slot.left > 0 && now >= slot.readyAt && now >= slot.activeUntil);
+    });
   }
 
   /** Red arrows on the screen border pointing at enemies the camera can't see. */
@@ -2125,6 +2263,8 @@ export class BattleScene extends Phaser.Scene {
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
       ['planesDown', this.enemyAir.totalLost()],
+      // 消耗品 (#47): used by the player's ships.
+      ['consumableUse', this.consumableUses],
       ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['trainingWin', won(this.exercise && this.battleData?.training === true)],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
