@@ -129,8 +129,15 @@ export function writtenDepth(data: Pick<ICampaignData, 'areas' | 'theaters'>, ar
  */
 export function enemyScale(data: Pick<ICampaignData, 'areas' | 'theaters'>, area: ICampaignArea, nation?: string): number {
   if (area.training) return 1;
-  return targetPower(areaDepth(data, area, nation)) / targetPower(writtenDepth(data, area));
+  return (targetPower(areaDepth(data, area, nation)) / targetPower(writtenDepth(data, area))) * (nation ? NAVY_ENEMY_SCALE[nation] ?? 1 : 1);
 }
+
+/**
+ * Navies whose ships are weaker rank for rank (#352): the Soviet fleet met its seas at three to six times its strength
+ * where the others met two to three, and won 55% of the simulated battles against 90% and up. Their enemies sail at
+ * this share of the curve.
+ */
+export const NAVY_ENEMY_SCALE: Readonly<Record<string, number>> = { SU: 0.6 };
 
 /**
  * The enemy's modifiers for a scale: hit points and gun and torpedo power each take its square root, so their product

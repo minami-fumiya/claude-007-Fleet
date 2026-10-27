@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allowedAtDepth, areaDepth, areaRankIndex, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve, writtenDepth } from '@/systems/DifficultyCurve';
+import { allowedAtDepth, areaDepth, areaRankIndex, NAVY_ENEMY_SCALE, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve, writtenDepth } from '@/systems/DifficultyCurve';
 import { enemyShips, lockText, sevenSeasText, theatersFor } from '@/systems/CampaignSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { SEVEN_SEAS } from '@/systems/RecordSystem';
@@ -208,5 +208,14 @@ describe('promotion missions and the curve (#339)', () => {
         for (const rank of asked) expect(rank, `${nation} ${stat}: ${RANKS[rank].name} < ${recommendedRank(first).name}`).toBeGreaterThanOrEqual(recommendedRank(first).index);
       }
     }
+  });
+});
+
+describe('a weaker navy meets weaker seas (#352)', () => {
+  it('the Soviet navy meets its enemies at 0.6 of the curve; the others as the curve says', () => {
+    expect(NAVY_ENEMY_SCALE.SU).toBe(0.6);
+    // b1 is written for the Soviet navy's first sea: only the navy's share changes it.
+    expect(enemyScale(data, area('b1'), 'SU')).toBeCloseTo(0.6);
+    expect(enemyScale(data, area('b1'), 'KM')).toBeCloseTo(enemyScale(data, area('b1')));
   });
 });
