@@ -1352,3 +1352,27 @@ test('装備と資材 (0.0.48): development, carrier models, scrapping and the s
   expect(await overlappingTexts(page, 'CampaignMapScene'), `superweapon sea overlaps (${layout})`).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('音 (0.0.49): every settings tab fits, the sound settings save (#105 #107)', async ({ page }, info) => {
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS });
+  await open(page, 'SettingsScene');
+  for (const tab of ['sound', 'play', 'data']) {
+    await page.evaluate((t) => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('SettingsScene') as unknown as { tab: string; refresh(): void };
+      s.tab = t;
+      s.refresh();
+    }, tab);
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: info.outputPath(`settings-${tab}.png`) });
+    expect(await overflowingTexts(page, 'SettingsScene'), `${tab} (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'SettingsScene'), `${tab} overlaps (${layout})`).toEqual([]);
+  }
+  await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('SettingsScene') as unknown as { change(p: object): void };
+    s.change({ commentaryOn: false, shake: 'off', nationalBgm: false });
+  });
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.settings.v1')!) as Record<string, unknown>);
+  expect(stored).toMatchObject({ commentaryOn: false, shake: 'off', nationalBgm: false });
+  expect(errors).toEqual([]);
+});
