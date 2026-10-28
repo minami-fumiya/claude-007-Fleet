@@ -1,0 +1,54 @@
+{
+  "_comment": "戦闘実況とナレーション (#106). `battle` is said during a battle, `narration` around it. A navy's own lines replace the common ones ({name} {class} {area} {objective} {rank} {ship} are filled in).",
+  "battle": {
+    "common": {
+      "start": "全艦、戦闘配置につけ",
+      "contact": "敵艦隊発見、方位 {bearing}",
+      "enemySunk": "敵{class} {name}、撃沈",
+      "enemyHeavy": "敵{class}、大破炎上中",
+      "ownHit": "{name} 被弾",
+      "ownHeavy": "{name} 大破",
+      "flagshipDanger": "旗艦が危険です、退避を",
+      "ownSunk": "{name} 沈没",
+      "torpedoWarning": "雷跡接近、回避せよ",
+      "airRaid": "敵機来襲",
+      "reconContact": "偵察機、敵艦隊に触接",
+      "winning": "戦況、我に有利",
+      "losing": "戦況、我に不利",
+      "victory": "敵艦隊を撃滅、我らの勝利です",
+      "defeat": "作戦失敗、撤退する"
+    },
+    "IJN": {
+      "start": "皇国の興廃この一戦にあり、各員一層奮励努力せよ",
+      "enemySunk": "敵{class} {name}、撃沈確認",
+      "contact": "敵艦隊見ゆ、方位 {bearing}",
+      "victory": "敵艦隊撃滅、我が方の勝利"
+    },
+    "USN": {
+      "start": "総員配置、戦闘開始",
+      "enemySunk": "敵{class} {name}、撃沈を確認",
+      "airRaid": "敵機多数、対空戦闘用意"
+    },
+    "KM": {
+      "start": "全艦、戦闘準備",
+      "enemySunk": "敵{class} {name}、撃沈"
+    },
+    "RN": {
+      "start": "英国は各員がその義務を果たすことを期待する",
+      "enemySunk": "敵{class} {name}、撃沈を確認"
+    },
+    "FR": { "start": "全艦、戦闘配置" },
+    "RM": { "start": "全艦、戦闘配置" },
+    "SU": { "start": "同志諸君、戦闘配置につけ" }
+  },
+  "narration": {
+    "areaStart": "{area}。{objective}",
+    "victory": "勝利。評価 {rank}",
+    "defeat": "敗北",
+    "promotion": "{rank}に昇進しました",
+    "firstClear": "{area}を攻略しました",
+    "rewardShip": "{ship}が艦隊に加わりました",
+    "researchDone": "研究が完了しました",
+    "buildDone": "{ship}が竣工しました"
+  }
+}

@@ -15,6 +15,9 @@ import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { baseOfProgress, researchMultiplier } from '@/systems/BaseSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
+import { audio } from '@/systems/AudioSystem';
+import { voice } from '@/systems/VoiceSystem';
+import { narrationLine } from '@/systems/CommentarySystem';
 
 const L = IS_PORTRAIT
   ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, view: { x: 16, y: 282, w: CANVAS_W - 32, h: CANVAS_H - 282 - 24 } }
@@ -66,6 +69,9 @@ export class ArsenalScene extends Phaser.Scene {
     if (!result) return;
     saveProgress(withQuestEvents({ ...progress, research: result.done, resources: result.resources }, [['research', 1]], Date.now()), 'research');
     if (emitTutorial('research', this.registry).advanced) this.guide.refresh();
+    // 研究完了 (#104 #106)
+    audio.play('notify');
+    voice.say(narrationLine('researchDone'), 'narration');
     this.bar.refresh(result.resources, holdCap(progress.facilities));
     this.view.refresh();
   }

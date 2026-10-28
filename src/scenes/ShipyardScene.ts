@@ -33,6 +33,9 @@ import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { baseOfProgress, fleetBuildTimeMul, researchMultiplier, scaleCost } from '@/systems/BaseSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
+import { audio } from '@/systems/AudioSystem';
+import { voice } from '@/systems/VoiceSystem';
+import { narrationLine } from '@/systems/CommentarySystem';
 import { SCRAP_BLOCK_LABEL, scrapBlock, scrapRefund, scrapShip } from '@/systems/ScrapSystem';
 import { selectedShipIds } from '@/utils/FleetSelection';
 
@@ -140,6 +143,9 @@ export class ShipyardScene extends Phaser.Scene {
       saveProgress(built.progress);
       const names = built.done.map((id) => roster.find((s) => s.id === id)?.name ?? id).map((n) => n.replace(/\s*\(.*\)\s*$/, ''));
       this.status = `${names.join('・')} が竣工しました`;
+      // 通知音とナレーション (#104 #106)
+      audio.play('notify');
+      voice.say(narrationLine('buildDone', { ship: names.join('・') }), 'narration');
       this.refresh();
       return;
     }
