@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BASES, baseBonusLines, baseLockText, baseRankMet, baseState, baseWorkOf, buildMultiplier, finishBaseWork, openBaseCount, rushBaseWork, startBaseWork, currentBase, isBaseOpen, nationBases, repairTimeMultiplier, researchMultiplier } from '@/systems/BaseSystem';
+import { BASES, baseBonusLines, baseLockText, baseRankMet, baseState, baseWorkOf, buildMultiplier, finishBaseWork, forwardBaseFor, openBaseCount, rushBaseWork, startBaseWork, currentBase, isBaseOpen, nationBases, repairTimeMultiplier, researchMultiplier } from '@/systems/BaseSystem';
 import { scaleCost } from '@/systems/ResourceSystem';
 import { buildCost, buildCostAt, buildShip, buildState, isRewardOnly, shipGrade } from '@/systems/ShipyardSystem';
 import { canResearch, research } from '@/systems/ResearchSystem';
@@ -36,8 +36,11 @@ describe('bases (#88)', () => {
   it('opens more bases on promotion and falls back to the first for an unknown or locked one', () => {
     const [home, light] = nationBases(Nation.IJN);
     expect(isBaseOpen(light, at(0))).toBe(false);
-    expect(baseLockText(light)).toBe('少尉に昇進・南太平洋で 3 海域を攻略で着工');
-    expect(baseLockText(light, { campaign: ['p1'] })).toBe('少尉に昇進・南太平洋で 3 海域を攻略 (1 / 3) で着工');
+    // A port waits for its rank only; the forward base of the next sea also for 3 areas of the sea before (#293 #373).
+    expect(baseLockText(light)).toBe('少尉に昇進で着工');
+    const north = forwardBaseFor(Nation.IJN, 'north_pacific')!;
+    expect(baseLockText(north)).toBe('少尉に昇進・南太平洋で 3 海域を攻略で着工');
+    expect(baseLockText(north, { campaign: ['p1'] })).toBe('少尉に昇進・南太平洋で 3 海域を攻略 (1 / 3) で着工');
     expect(currentBase(Nation.IJN, at(0, light.id))?.id).toBe(home.id);
     expect(currentBase(Nation.IJN, at(0, 'nope'))?.id).toBe(home.id);
     // The stored base is still read by old save steps; moving between bases is gone (#281).
@@ -54,8 +57,11 @@ describe('bases (#88)', () => {
     expect(baseState(light, p)).toBe('ready');
     expect(baseState(light, { ...p, resources: { fuel: 0, ammo: 0, steel: 0, bauxite: 0 } })).toBe('resources');
     expect(baseState(light, at(0, '', false))).toBe('locked');
-    // The rank alone is not enough (#293): three areas of the previous base's theater too.
-    expect(baseState(light, { ...p, campaign: ['p1', 'p2'] })).toBe('locked');
+    // A forward base needs more than the rank (#293): three areas of the sea before it too.
+    const north = forwardBaseFor(Nation.IJN, 'north_pacific')!;
+    expect(baseState(north, { ...p, campaign: ['p1', 'p2'] })).toBe('locked');
+    expect(baseState(north, p)).toBe('ready');
+    expect(baseWorkOf(north).minutes).toBeLessThan(baseWorkOf(light).minutes);
     expect(baseWorkOf(light)).toEqual({ cost: { fuel: 500, ammo: 0, steel: 1000, bauxite: 0 }, minutes: 10 });
     const started = startBaseWork(p, light, T0)!;
     expect(started.resources.steel).toBe(rich.steel - 1000);

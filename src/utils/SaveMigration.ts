@@ -10,7 +10,7 @@
 import { ALL_CAPTAINS, nationCaptains } from '@/systems/CaptainRoster';
 import { CaptainSkill } from '@/types/Captain';
 import { examPassed, finalAreas, RANKS, rankOf } from '@/systems/RankSystem';
-import { currentBase, nationBases } from '@/systems/BaseSystem';
+import { currentBase, nationBases, nationPorts } from '@/systems/BaseSystem';
 
 export type RawSave = Record<string, unknown>;
 /** Turns a raw save of version `n` into version `n + 1` (the version field is set by the runner). */
@@ -253,7 +253,62 @@ export const MIGRATIONS: MigrationStep[] = [
     const rankStats = { ...stats, areaClear: Math.max(num(stats.areaClear), new Set(campaign).size) };
     return { ...nation, rankStats, ...(held > num(nation.rankFloor) ? { rankFloor: held } : {}) };
   }),
+  // v22 → v23 (0.0.50, #373): ports and forward bases apart. A port no longer opens a far sea; the forward base in that
+  // sea does. Every sea a navy had open stays open: its forward base counts as built. The four ports that were forward
+  // already (アイスランド・ラ・パリス・ペナン・トリンコマリー) become forward bases: their common facilities move to the
+  // navy's ports (up to each one's top level), and the dock they gave goes to the home port.
+  (data) => mapNations(data, (nation, key) => {
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const prefix = key.toLowerCase();
+    const rename = (id: string): string => RENAMED_BASES[id] ?? id;
+    const opened = Array.isArray(nation.basesOpen) ? (nation.basesOpen as unknown[]).filter((b): b is string => typeof b === 'string') : [];
+    const seas = opened.map((id) => LEGACY_PORT_SEA[id]).filter((t): t is string => t !== undefined).map((t) => `${prefix}_fb_${t}`);
+    const basesOpen = [...new Set([...opened.map(rename), ...seas])];
+    const work = nation.baseWork as { base?: unknown; endsAt?: unknown } | null | undefined;
+    const baseWork = work && typeof work.base === 'string' ? { ...work, base: rename(work.base) } : work ?? null;
+    const ports = nationPorts(key).map((b) => b.id);
+    const home = ports[0];
+    const before = (typeof nation.facilities === 'object' && nation.facilities !== null ? nation.facilities : {}) as Record<string, Record<string, unknown>>;
+    const facilities: Record<string, Record<string, number>> = {};
+    for (const [b, levels] of Object.entries(before)) if (!RENAMED_BASES[b]) facilities[b] = { ...(levels as Record<string, number>) };
+    for (const [old] of Object.entries(RENAMED_BASES).filter(([id]) => before[id])) {
+      for (const [id, lv] of Object.entries(before[old])) {
+        if (id === 'unique') continue;
+        let left = num(lv);
+        // Fill the ports in order, never past a facility's top level (Lv5).
+        for (const port of ports) {
+          if (left <= 0) break;
+          const have = num(facilities[port]?.[id]);
+          const add = Math.min(left, 5 - have);
+          if (add > 0) facilities[port] = { ...(facilities[port] ?? {}), [id]: have + add };
+          left -= Math.max(0, add);
+        }
+      }
+    }
+    const jobs = Array.isArray(nation.facilityJobs) ? (nation.facilityJobs as Array<Record<string, unknown>>) : [];
+    const facilityJobs = jobs.filter((j) => !(typeof j.base === 'string' && RENAMED_BASES[j.base] && j.id === 'unique'))
+      .map((j) => (typeof j.base === 'string' && RENAMED_BASES[j.base] && home ? { ...j, base: home } : j));
+    const docks = (typeof nation.baseDocks === 'object' && nation.baseDocks !== null ? nation.baseDocks : {}) as Record<string, unknown>;
+    const moved = Object.keys(RENAMED_BASES).filter((id) => opened.includes(id)).reduce((sum, id) => sum + Math.max(1, num(docks[id])), 0);
+    // Docks belong to ports only (#373): forward ids that older steps listed carry none.
+    const baseDocks = Object.fromEntries(Object.entries(docks).filter(([id]) => !RENAMED_BASES[id] && !id.includes('_fb_')));
+    if (home && moved > 0) baseDocks[home] = Math.max(1, num(docks[home])) + moved;
+    return { ...nation, basesOpen, baseWork, facilities, facilityJobs, baseDocks };
+  }),
 ];
+
+/** The ports that were forward bases before 0.0.50 (#373): their ids as forward bases. */
+const RENAMED_BASES: Record<string, string> = { usn_iceland: 'usn_fb_arctic', km_lapallice: 'km_fb_south_atlantic', km_penang: 'km_fb_indian', rn_trinco: 'rn_fb_indian' };
+/** The far sea each port opened before 0.0.50 (#373). */
+const LEGACY_PORT_SEA: Record<string, string> = {
+  ijn_light: 'north_pacific', ijn_cruiser: 'indian', ijn_heavy: 'mediterranean',
+  usn_light: 'north_pacific', usn_cruiser: 'pacific', usn_heavy: 'south_atlantic',
+  km_light: 'atlantic', km_cruiser: 'arctic', km_heavy: 'mediterranean',
+  rn_light: 'arctic', rn_cruiser: 'mediterranean', rn_heavy: 'south_atlantic',
+  fr_light: 'atlantic', fr_cruiser: 'south_atlantic', fr_heavy: 'indian',
+  rm_light: 'atlantic', rm_cruiser: 'south_atlantic', rm_heavy: 'indian',
+  su_light: 'north_pacific', su_cruiser: 'blacksea', su_heavy: 'arctic',
+};
 
 /** The merit of each rank before 0.0.42 (#322) */
 const OLD_MIN_MERIT = [0, 30, 80, 150, 250, 350, 500, 650, 850, 1000, 1300, 1650, 2050, 2500];

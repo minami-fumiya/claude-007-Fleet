@@ -20,7 +20,12 @@ export interface IExpedition {
   /** Rank index needed */
   rank: number;
   reward: Partial<IResources>;
+  /** A sea's expedition (#373): opened by the 前進遠征拠点 of the navy's forward base there, not by the rank */
+  theater?: string;
 }
+
+/** What a sea's expedition pays at its base's 前進遠征拠点 Lv2 (#373). */
+export const OUTPOST_REWARD_MUL = 1.2;
 
 /** An expedition under way: its ships and when they are back. */
 export interface IExpeditionRun {
@@ -35,15 +40,18 @@ export const EXPEDITIONS = expeditionData.expeditions as IExpedition[];
  * The expeditions the list shows (#359): those the rank has opened, newest first, after the one the next rank opens
  * (shown locked, as a goal). Expeditions out keep their card whatever the rank.
  */
-export function shownExpeditions(rankIndex: number, runs: readonly IExpeditionRun[] = [], all: readonly IExpedition[] = EXPEDITIONS): IExpedition[] {
-  const open = all.filter((e) => e.rank <= rankIndex || runs.some((r) => r.id === e.id)).sort((a, b) => b.rank - a.rank);
-  const next = all.filter((e) => e.rank > rankIndex && !open.includes(e)).sort((a, b) => a.rank - b.rank)[0];
-  return next ? [next, ...open] : open;
+export function shownExpeditions(rankIndex: number, runs: readonly IExpeditionRun[] = [], all: readonly IExpedition[] = EXPEDITIONS, seas: ReadonlySet<string> = new Set()): IExpedition[] {
+  // The seas' expeditions (#373) come first when their base's 前進遠征拠点 opens them.
+  const out = (e: IExpedition): boolean => runs.some((r) => r.id === e.id);
+  const sea = all.filter((e) => e.theater && (seas.has(e.theater) || out(e)));
+  const open = all.filter((e) => !e.theater && (e.rank <= rankIndex || out(e))).sort((a, b) => b.rank - a.rank);
+  const next = all.filter((e) => !e.theater && e.rank > rankIndex && !open.includes(e)).sort((a, b) => a.rank - b.rank)[0];
+  return [...(next ? [next] : []), ...sea, ...open];
 }
 
 /** The expeditions `rankIndex` opens (#359): shown on the promotion and in the rank list. */
 export function expeditionsAt(rankIndex: number, all: readonly IExpedition[] = EXPEDITIONS): IExpedition[] {
-  return all.filter((e) => e.rank === rankIndex);
+  return all.filter((e) => !e.theater && e.rank === rankIndex);
 }
 
 /** Expeditions out at once by rank index: one, a second at 少佐, a third at 准将. */
@@ -129,7 +137,9 @@ export function rememberedGroup(groups: Readonly<Record<string, string[]>> | und
  * Takes home every expedition that is back by `now`: the reward (under the cap) and the runs left out. `done` counts
  * the expeditions that came back.
  */
-export function collectExpeditions(have: IResources, runs: readonly IExpeditionRun[], cap: IResources, now: number): { resources: IResources; lost: IResources; runs: IExpeditionRun[]; done: number; gained: IResources } {
+export function collectExpeditions(
+  have: IResources, runs: readonly IExpeditionRun[], cap: IResources, now: number, rewardMul: (exp: IExpedition) => number = () => 1,
+): { resources: IResources; lost: IResources; runs: IExpeditionRun[]; done: number; gained: IResources } {
   let res = resources(have);
   const lost = resources();
   const gained = resources();
@@ -137,11 +147,14 @@ export function collectExpeditions(have: IResources, runs: readonly IExpeditionR
   for (const r of runs.filter((x) => x.endsAt <= now)) {
     const exp = EXPEDITIONS.find((e) => e.id === r.id);
     if (!exp) continue;
-    const g = gainResources(res, exp.reward, cap);
+    // 前進遠征拠点 Lv2 (#373): a sea's expedition pays more.
+    const mul = rewardMul(exp);
+    const reward: Partial<IResources> = Object.fromEntries(Object.entries(exp.reward).map(([k, v]) => [k, Math.round((v ?? 0) * mul)]));
+    const g = gainResources(res, reward, cap);
     res = g.resources;
     for (const k of Object.keys(lost) as Array<keyof IResources>) {
       lost[k] += g.lost[k];
-      gained[k] += exp.reward[k] ?? 0;
+      gained[k] += reward[k] ?? 0;
     }
     done++;
   }

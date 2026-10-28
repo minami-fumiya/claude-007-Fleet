@@ -110,11 +110,11 @@ export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
   3: [win(5), sink(10), areas(3)],
   4: [areas(5), sink(40), objective(1), medal('veteran')],
   5: [win(15), night(1), sweep(5), medal('perfect')],
-  // 空母 waits for 中佐 (#358): with a rank a sea, the US Navy's first carrier comes at 中佐.
+  // 空母 waits for 准将 (#358 #373): the Royal Navy meets its first carrier in a sea of its own only at 准将.
   6: [sub(3), objective(3), night(3), medal('fleet_2')],
-  7: [bigS(1), sink(100), carrier(1), medal('operations')],
+  7: [bigS(1), sink(100), sub(10), medal('operations')],
   8: [bigS(3), battleship(2), win(40), medal('flawless')],
-  9: [sub(10), battleship(5), sweep(15), medal('science_3')],
+  9: [carrier(1), battleship(5), sweep(15), medal('science_3')],
   10: [sink(250), areas(25), night(10), medal('victor_2')],
   11: [battleship(10), bigS(8), carrier(10), medal('s_rank_2')],
   12: [sweep(30), sub(25), win(120), medal('explorer_3')],
@@ -200,10 +200,13 @@ export function finalAreas(nation?: string): string[] {
     .filter((id): id is string => id !== undefined);
 }
 
-/** Every campaign area of the nation's examined theaters, training areas aside (元帥's exam since #304). */
+/**
+ * Every campaign area of every theater the nation fights in, training areas aside (元帥's exam since #304; every
+ * theater, the later seas too, since #373 — no admiral loses the rank they hold).
+ */
 export function examAreas(nation?: string): string[] {
   const data = campaignData as unknown as { theaters: ITheaterAreas[]; areas: Array<{ id: string; theater: string; training?: boolean }> };
-  const theaters = new Set(data.theaters.filter((t) => t.exam !== false && (!nation || t.opponents[nation] !== undefined)).map((t) => t.id));
+  const theaters = new Set(data.theaters.filter((t) => !nation || t.opponents[nation] !== undefined).map((t) => t.id));
   return data.areas.filter((a) => theaters.has(a.theater) && !a.training).map((a) => a.id);
 }
 

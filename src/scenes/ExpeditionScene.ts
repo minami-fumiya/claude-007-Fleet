@@ -4,7 +4,8 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
-import { collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions } from '@/systems/ExpeditionSystem';
+import { theaterFacility, nationForwardBases } from '@/systems/BaseSystem';
+import { OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions } from '@/systems/ExpeditionSystem';
 import { DORM_PROFICIENCY_CAP, DORM_PROFICIENCY_PER_HOUR, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
@@ -82,7 +83,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const now = Date.now();
     const p = loadProgress();
     if (!p.expeditions.some((r) => r.endsAt <= now)) return;
-    const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now);
+    // 前進遠征拠点 Lv2 (#373): a sea's expedition pays more.
+    const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now, (e) => (e.theater && theaterFacility(p, e.theater, 'outpost') >= 2 ? OUTPOST_REWARD_MUL : 1));
     const ledger = recordLedger(recordLedger(p.ledger, 'expedition', addResources(c.gained, c.lost, -1), now), 'overflow', c.lost, now);
     saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger }, [['expeditionDone', c.done]], now));
     this.status = `遠征から帰還 (${c.done}): ${formatResources(c.gained)}`;
@@ -124,7 +126,9 @@ export class ExpeditionScene extends Phaser.Scene {
     const short = (id: string): string => roster.find((s) => s.id === id)?.name.replace(/\s*\(.*\)\s*$/, '') ?? id;
     // One expedition a rank (#359): the opened ones and the next, a page at a time.
     const rows = Math.floor((CANVAS_H - L.top + L.gap) / (L.cardH + L.gap));
-    const shown = shownExpeditions(rank, p.expeditions);
+    // 前進遠征拠点 (#373): the seas whose forward base opened an expedition.
+    const seas = new Set(nationForwardBases(p.nation).flatMap((b) => b.theaters ?? []).filter((t) => theaterFacility(p, t, 'outpost') >= 1));
+    const shown = shownExpeditions(rank, p.expeditions, undefined, seas);
     const size = shown.length > rows * L.cols ? (rows - 1) * L.cols : rows * L.cols;
     const pages = Math.max(1, Math.ceil(shown.length / size));
     this.page = Math.min(this.page, pages - 1);

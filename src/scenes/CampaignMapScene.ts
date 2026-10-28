@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { recordLedger } from '@/systems/LedgerSystem';
-import { baseOfProgress, baseReaches, basesFor, baseState, nationBases } from '@/systems/BaseSystem';
+import { baseOfProgress, baseReaches, basesFor, baseState, nationBases, supplyMul } from '@/systems/BaseSystem';
 import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -142,7 +142,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const hidden = all.filter((t) => !this.theaters.includes(t));
     if (hidden.length > 0) {
       const names = IS_PORTRAIT ? '' : ` (${hidden.map((t) => t.name).join('・')})`;
-      const note = this.add.text(L.map.x + 18, L.map.y + L.map.h - 14, `ほか ${hidden.length} 戦域${names}は、軍港を開くと出撃できます`, textStyle(12, Css.dim)).setOrigin(0, 1).setDepth(2);
+      const note = this.add.text(L.map.x + 18, L.map.y + L.map.h - 14, `ほか ${hidden.length} 戦域${names}は、基地を開くと出撃できます`, textStyle(12, Css.dim)).setOrigin(0, 1).setDepth(2);
       if (note.width > L.map.w - 36) note.setScale((L.map.w - 36) / note.width);
     }
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
@@ -347,7 +347,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const left = sweepsLeft(progress, a.id, Date.now());
     const wait = nextSweepMs(progress.sweepCharges[a.id], Date.now());
     const sweepNote = sweepable
-      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復 ${clock(wait)}` : '満タン'}・1 時間に 1 回)  ·  ${formatResources(sweepCost(a, enemy)) || '無料'}で戦闘を省略・報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復 ${clock(wait)}` : '満タン'}・1 時間に 1 回)  ·  ${formatResources(sweepCost(a, enemy, supplyMul(progress, a.theater))) || '無料'}で戦闘を省略・報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
     const buttonTop = by - (IS_PORTRAIT ? 76 : 60) / 2;
@@ -386,10 +386,10 @@ export class CampaignMapScene extends Phaser.Scene {
     const bw = (d.w - 48 - 12 * (count - 1)) / count;
     const bx = (i: number): number => d.x + 24 + i * (bw + 12) + bw / 2;
     const bh = IS_PORTRAIT ? 76 : 60;
-    // Sorties leave from a base that reaches the theater (#145).
+    // Sorties leave from a base that reaches the theater (#145): the home port or the sea's forward base (#373).
     const reach = baseReaches(baseOfProgress(progress), a.theater);
     const from = basesFor(progress.nation, a.theater).map((b) => b.name).join('・');
-    const label = !open ? '前の海域を攻略してください' : reach ? (count > 2 ? '出撃準備 ›' : '出撃準備  ›') : `${from}を開港すると出撃可`;
+    const label = !open ? '前の海域を攻略してください' : reach ? (count > 2 ? '出撃準備 ›' : '出撃準備  ›') : `${from}を開くと出撃可`;
     const btn = add(
       new UIButton(this, bx(0), by, label, () => this.prepare(a), {
         variant: open && reach ? 'gold' : 'secondary', width: bw, height: bh, fontSize: open && reach ? (count > 2 ? 17 : 20) : 14,
@@ -404,7 +404,7 @@ export class CampaignMapScene extends Phaser.Scene {
     if (sweepable) {
       add(new UIButton(this, bx(count - 1), by, '掃討', () => this.sweep(a), {
         variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 17 : 20,
-      })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
+      })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy, supplyMul(progress, a.theater))));
     }
   }
 

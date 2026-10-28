@@ -22,6 +22,7 @@ import { askShipName } from '@/ui/components/FilterBar';
 import { shipSearchNames } from '@/utils/SearchHistory';
 import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
+import { supplyMul } from '@/systems/BaseSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
@@ -1778,7 +1779,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       const opts = this.sortieOptions();
       const all = this.allShips(ships);
       const blockers = sortieBlockers(loadProgress(), all, Date.now(), this.sortieOptions(ships));
-      const price = isFreeSortie(opts) ? (opts.exercise ? '無料 (演習)' : '無料 (最初の海域)') : formatResources(sortieCostFor(all, opts));
+      const depot = (opts.supply ?? 1) < 1 ? ` (補給 −${Math.round((1 - (opts.supply ?? 1)) * 100)}%)` : '';
+      const price = isFreeSortie(opts) ? (opts.exercise ? '無料 (演習)' : '無料 (最初の海域)') : `${formatResources(sortieCostFor(all, opts))}${depot}`;
       // The fleet's cost against the rank's cap (#306), then what the sortie spends.
       const weight = costText(fleetCost(ships, loadProgress().refits), this.costCap);
       const cost = `${weight}   消費  ${price}`;
@@ -1822,7 +1824,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** With the main fleet's ships, also the fleets for the cost check (#306): the main one and each 支援艦隊 (#84). */
   private sortieOptions(ships?: IShipData[]): ISortieOptions {
     const fleets = ships ? [ships, ...this.supportFleets().map((g) => g.ships)] : undefined;
-    return { exercise: this.area === null, area: this.area, fleets };
+    // 補給廠 (#373): the forward base of the area's sea makes the sortie cheaper.
+    return { exercise: this.area === null, area: this.area, fleets, supply: supplyMul(loadProgress(), this.area?.theater) };
   }
 
   /** The main fleet's ships and those of its 支援艦隊 (#84). */
