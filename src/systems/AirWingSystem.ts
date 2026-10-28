@@ -1,4 +1,5 @@
 import { CARRIER_AIRCRAFT, CarrierAircraft, IAirWing, AircraftType } from '@/types/Aircraft';
+import type { IAircraftPerf } from './AircraftSystem';
 
 /**
  * A carrier's air wing (pure): how many planes of each type are on deck and ready, how many are
@@ -25,19 +26,25 @@ export interface IAirWingState {
   lost: number;
   /** Re-arm time of this wing (aviation research / refits shorten it); REARM_MS when absent */
   rearmMs?: number;
+  /** The models flown (#87): each kind's performance; the base plane when absent */
+  perf?: Partial<Record<CarrierAircraft, IAircraftPerf>>;
+  /** The air group's pilots (#87): how much better they fight and aim (1 = green) */
+  pilot?: number;
 }
 
 function counts(f = 0, d = 0, t = 0): Counts {
   return { [AircraftType.Fighter]: f, [AircraftType.DiveBomber]: d, [AircraftType.TorpedoBomber]: t };
 }
 
-export function createAirWing(wing: IAirWing, rearmMs: number = REARM_MS): IAirWingState {
+export function createAirWing(wing: IAirWing, rearmMs: number = REARM_MS, air: { perf?: Partial<Record<CarrierAircraft, IAircraftPerf>>; pilot?: number } = {}): IAirWingState {
   return {
     ready: counts(wing.fighters, wing.diveBombers, wing.torpedoBombers),
     aloft: counts(),
     rearming: [],
     lost: 0,
     rearmMs,
+    ...(air.perf ? { perf: air.perf } : {}),
+    ...(air.pilot !== undefined ? { pilot: air.pilot } : {}),
   };
 }
 

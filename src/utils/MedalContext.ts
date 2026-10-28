@@ -25,6 +25,10 @@ import { awardMedals, IMedalContext, newMedals } from '@/systems/RecordSystem';
 import type { ISave } from './ProgressStore';
 import { IWallet } from '@/types/Progression';
 import { addGold, GOLD_PER_MEDAL } from '@/systems/GoldSystem';
+import { ownSuperweapons } from '@/systems/SuperweaponSystem';
+import { AIRCRAFT, isDeveloped } from '@/systems/AircraftSystem';
+import { groundKillStats } from '@/systems/GroundSystem';
+import { AircraftType } from '@/types/Aircraft';
 
 const CAMPAIGN = campaignData as ICampaignData;
 /** Carrier ids of every navy, for the 機動部隊編成章 (#204) */
@@ -47,6 +51,7 @@ for (const d of [ijn, usn, km, rn, fr, su, rm]) {
     if (s.subtype === 'Escort' || s.subtype === 'EscortDestroyer') ESCORTS.add(s.id);
   }
 }
+const OWN_SUPERWEAPONS = new Set(ownSuperweapons().map((s) => s.id));
 const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships as IShipData[]).filter((s) => s.shipClass === ShipClass.Carrier).map((s) => s.id)));
 
 /**
@@ -57,8 +62,9 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const nations = Object.entries(save.nations).filter(([, np]) => np !== undefined);
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
+  const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, shipTypes: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -90,6 +96,15 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     ctx.shipTypes = Math.max(ctx.shipTypes, new Set(np.ships.map((id) => SHIP_TYPE.get(id)).filter((t) => t !== undefined)).size);
     ctx.midClasses = Math.max(ctx.midClasses, new Set(np.ships.map((id) => SHIP_MID.get(id)).filter((t) => t !== undefined)).size);
     ctx.escortsOwned = Math.max(ctx.escortsOwned, np.ships.filter((id) => ESCORTS.has(id)).length);
+    // 0.0.48: equipment held (#55), the own superweapon (#148), every carrier model (#87), ground weapons (#251).
+    const fitted = Object.values(np.upgrades ?? {}).flat();
+    ctx.equipmentKinds = Math.max(ctx.equipmentKinds, new Set([...Object.keys(np.equipment ?? {}).filter((id) => (np.equipment[id] ?? 0) > 0), ...fitted]).size);
+    ctx.ownSuperweapon = Math.max(ctx.ownSuperweapon, np.ships.some((id) => OWN_SUPERWEAPONS.has(id)) ? 1 : 0);
+    const models = AIRCRAFT.filter((a) => a.nation === nation && a.type !== AircraftType.Recon);
+    ctx.aircraftComplete = Math.max(ctx.aircraftComplete, models.length > 0 && models.every((m) => isDeveloped({ aircraftDev: np.aircraftDev ?? [] }, m)) ? 1 : 0);
+    const ground = groundKillStats(np.groundKills ?? {});
+    ctx.groundTotal += ground.total;
+    for (const id of Object.keys(np.groundKills ?? {})) groundSeen.add(id);
     ctx.researchTop = Math.max(ctx.researchTop, TOP_RESEARCH.filter((id) => np.research.includes(id)).length);
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
@@ -99,6 +114,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     for (const levels of Object.values(np.facilities ?? {})) for (const lv of Object.values(levels ?? {})) ctx.facilityLevels += lv ?? 0;
     ctx.rankIndex = Math.max(ctx.rankIndex, rankOf({ ...np, nation }).index);
   }
+  ctx.groundKinds = groundKillStats(Object.fromEntries([...groundSeen].map((id) => [id, 1]))).kinds;
   return { ...ctx, totals, clearedTheaters: [...theaters], goldEarned: save.wallet?.earned ?? 0 };
 }
 

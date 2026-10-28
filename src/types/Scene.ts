@@ -22,6 +22,8 @@ export interface IBattleInitData {
   objective?: Objective;
   /** The enemy brings its superweapon (#148), whatever the event */
   superweapon?: boolean;
+  /** 超兵器海域 (#148): the theater's final area fought again against its giant, outside any sortie */
+  swArea?: boolean;
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */

@@ -12,6 +12,7 @@ import rewardShipData from '@/data/reward-ships.json';
 import { hasMedal, medalName, shipMedal } from './MedalGate';
 import { withQuestEvents } from './QuestSystem';
 import { classKey, hullNumber, shipClasses } from './ShipOrder';
+import { BLUEPRINT_NEED } from './SuperweaponSystem';
 
 /**
  * Ship ownership and the shipyard (建造, #18 / #29, pure). A nation owns ships; the Fleet Builder only offers owned
@@ -72,13 +73,15 @@ const COST_PER_HP: Record<ShipClass, IResources> = {
 };
 const ARMOR_HP = 5;
 const FICTIONAL_COST_MUL = 1.3;
+/** The own superweapon (#148) costs half again as much as its size says. */
+const BLUEPRINT_COST_MUL = 1.5;
 /** Light cruisers are cheaper to build than heavy ones (#37). */
 const LIGHT_CRUISER_COST_MUL = 0.85;
 
 /** Build cost from the ship's class, HP and armour (rounded to tens). */
 export function buildCost(ship: IShipData): IResources {
   const k = COST_PER_HP[ship.shipClass] ?? COST_PER_HP[ShipClass.Cruiser];
-  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_COST_MUL : 1);
+  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (ship.blueprint ? BLUEPRINT_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_COST_MUL : 1);
   const size = { fuel: ship.hp, ammo: ship.hp, steel: ship.hp + ship.armor * ARMOR_HP, bauxite: ship.hp };
   const out = resources();
   for (const key of RESOURCE_KEYS) out[key] = Math.round((k[key] * size[key] * mul) / 10) * 10;
@@ -146,7 +149,7 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
-export type BuildState = 'owned' | 'building' | 'reward' | 'research' | 'fictional' | 'rank' | 'sister' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
+export type BuildState = 'owned' | 'building' | 'reward' | 'blueprint' | 'research' | 'fictional' | 'rank' | 'sister' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
 
 /**
  * 同型艦は若い番号から (#356): the sister laid down just before `ship` in its class, among the ships that can be built
@@ -204,6 +207,8 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if (isOwned(progress, roster, ship.id)) return 'owned';
   if ((progress.builds ?? []).some((b) => b.shipId === ship.id)) return 'building';
   if (isRewardOnly(ship)) return 'reward';
+  // The own superweapon (#148) waits for its blueprint fragments (#150).
+  if (ship.blueprint && (progress.blueprints ?? 0) < BLUEPRINT_NEED) return 'blueprint';
   const tech = buildTechFor(ship);
   if (tech && !progress.research.includes(tech)) return 'research';
   if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
@@ -221,7 +226,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
 }
 
 /** Short label for a build state, e.g. "要研究: 巡洋艦建造" / "要階級: 少将" / "作戦報酬: 坊ノ岬沖". */
-export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>, roster: readonly IShipData[] = []): string {
+export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>, roster: readonly IShipData[] = [], blueprints = 0): string {
   switch (state) {
     case 'owned': return '保有';
     case 'building': return '建造中';
@@ -230,6 +235,7 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
       const area = rewardAreaOf(ship) ?? '';
       return `作戦報酬: ${areaNames[area] ?? area}`;
     }
+    case 'blueprint': return `要設計図: ${Math.min(blueprints, BLUEPRINT_NEED)} / ${BLUEPRINT_NEED}`;
     case 'research': {
       const id = buildTechFor(ship) ?? '';
       return `要研究: ${techNames[id] ?? id}`;

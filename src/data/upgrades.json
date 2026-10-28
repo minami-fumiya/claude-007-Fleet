@@ -1,78 +1,30 @@
 {
+  "_comment": "装備 (#55): every upgrade is an item held in a stock. `cost` develops one copy in the arsenal; `nations` limits who develops it (#251); `dropFrom` marks parts that only come from enemies sunk (#150).",
   "upgrades": [
-    {
-      "id": "fire_director",
-      "name": "射撃指揮装置",
-      "description": "主砲・副砲の装填 -10%",
-      "effects": {
-        "gunReloadMul": 0.9
-      },
-      "requires": "fire_control"
-    },
-    {
-      "id": "heavy_shells",
-      "name": "強装薬",
-      "description": "砲の火力 +12%、装填 +5%",
-      "effects": {
-        "gunPowerMul": 1.12,
-        "gunReloadMul": 1.05
-      },
-      "requires": "gunnery_1"
-    },
-    {
-      "id": "torpedo_mod",
-      "name": "魚雷改良",
-      "description": "魚雷の火力 +15%",
-      "effects": {
-        "torpedoPowerMul": 1.15
-      },
-      "requires": "torpedo_1"
-    },
-    {
-      "id": "extra_armor",
-      "name": "追加装甲",
-      "description": "装甲 +8、速力 -5%",
-      "effects": {
-        "armorAdd": 8,
-        "speedMul": 0.95
-      },
-      "requires": "armor_1"
-    },
-    {
-      "id": "boiler",
-      "name": "機関強化",
-      "description": "速力 +8%",
-      "effects": {
-        "speedMul": 1.08
-      },
-      "requires": "engine_1"
-    },
-    {
-      "id": "damage_control",
-      "name": "応急修理班",
-      "description": "耐久 +10%",
-      "effects": {
-        "hpMul": 1.1
-      },
-      "requires": "damage_control_1"
-    },
-    {
-      "id": "radar",
-      "name": "水上レーダー",
-      "description": "視界 +20%",
-      "effects": {
-        "visionMul": 1.2
-      },
-      "requires": "radar_1"
-    },
-    {
-      "id": "aa_guns",
-      "name": "対空機銃増設",
-      "description": "対空火力 +40%",
-      "effects": {
-        "aaMul": 1.4
-      },
-      "requires": "aa_1"
-    }
+    {"id": "fire_director", "name": "射撃指揮装置", "description": "主砲・副砲の装填 -10%", "effects": {"gunReloadMul": 0.9}, "requires": "fire_control", "no": 7001001, "cost": {"ammo": 150, "steel": 150, "bauxite": 50}},
+    {"id": "heavy_shells", "name": "強装薬", "description": "砲の火力 +12%、装填 +5%", "effects": {"gunPowerMul": 1.12, "gunReloadMul": 1.05}, "requires": "gunnery_1", "no": 7001002, "cost": {"ammo": 250, "steel": 100}},
+    {"id": "torpedo_mod", "name": "魚雷改良", "description": "魚雷の火力 +15%", "effects": {"torpedoPowerMul": 1.15}, "requires": "torpedo_1", "no": 7001003, "cost": {"fuel": 100, "ammo": 200, "steel": 100}},
+    {"id": "extra_armor", "name": "追加装甲", "description": "装甲 +8、速力 -5%", "effects": {"armorAdd": 8, "speedMul": 0.95}, "requires": "armor_1", "no": 7001004, "cost": {"steel": 300}},
+    {"id": "boiler", "name": "機関強化", "description": "速力 +8%", "effects": {"speedMul": 1.08}, "requires": "engine_1", "no": 7001005, "cost": {"fuel": 200, "steel": 150}},
+    {"id": "damage_control", "name": "応急修理班", "description": "耐久 +10%", "effects": {"hpMul": 1.1}, "requires": "damage_control_1", "no": 7001006, "cost": {"fuel": 150, "steel": 200}},
+    {"id": "radar", "name": "水上レーダー", "description": "視界 +20%", "effects": {"visionMul": 1.2}, "requires": "radar_1", "no": 7001007, "cost": {"steel": 150, "bauxite": 200}},
+    {"id": "aa_guns", "name": "対空機銃増設", "description": "対空火力 +40%", "effects": {"aaMul": 1.4}, "requires": "aa_1", "no": 7001008, "cost": {"ammo": 200, "bauxite": 100}},
+    {"id": "sonar_mod", "name": "改良型ソナー", "description": "ソナーの探知距離 +30%", "effects": {"sonarMul": 1.3}, "requires": "asw_1", "no": 7001009, "cost": {"fuel": 100, "ammo": 100, "steel": 100}},
+    {"id": "oxygen_torpedo", "name": "九三式酸素魚雷", "description": "航跡が見えにくく射程の長い日本の魚雷。魚雷の火力 +30%", "effects": {"torpedoPowerMul": 1.3}, "requires": "torpedo_3", "nations": ["IJN"], "year": 1935, "no": 7101001, "cost": {"fuel": 200, "ammo": 400, "steel": 150}},
+    {"id": "rocket_aa", "name": "12cm 28 連装噴進砲", "description": "大戦末期の日本艦が積んだ対空ロケット弾。対空火力 +30%", "effects": {"aaMul": 1.3}, "requires": "aa_2", "nations": ["IJN"], "year": 1944, "no": 7101002, "cost": {"ammo": 300, "bauxite": 100}},
+    {"id": "vt_fuze", "name": "近接信管 (VT 信管)", "description": "敵機の近くで炸裂する米国の砲弾。対空火力 +60%", "effects": {"aaMul": 1.6}, "requires": "aa_4", "nations": ["USN"], "year": 1943, "no": 7201001, "cost": {"ammo": 500, "steel": 100, "bauxite": 200}},
+    {"id": "sg_radar", "name": "SG 水上レーダー", "description": "夜の海でも敵を捉えた米国のレーダー。視界 +30%、夜間視界 +20%", "effects": {"visionMul": 1.3, "nightVisionMul": 1.2}, "requires": "radar_2", "nations": ["USN"], "year": 1942, "no": 7201002, "cost": {"steel": 200, "bauxite": 300}},
+    {"id": "fritz_x", "name": "誘導爆弾 フリッツ X", "description": "無線で誘導するドイツの徹甲爆弾。航空攻撃 +25%", "effects": {"airPowerMul": 1.25}, "requires": "aviation_3", "nations": ["KM"], "year": 1943, "no": 7301001, "cost": {"ammo": 300, "steel": 200, "bauxite": 300}},
+    {"id": "hedgehog", "name": "ヘッジホッグ", "description": "前方へ投射する英国の対潜爆雷。爆雷 +50%", "effects": {"depthChargeMul": 1.5}, "requires": "asw_2", "nations": ["RN", "USN"], "year": 1942, "no": 7401001, "cost": {"fuel": 100, "ammo": 300, "steel": 100}},
+    {"id": "type271", "name": "271 型レーダー", "description": "英国の水上見張りレーダー。視界 +25%、夜間照準誤差 -15%", "effects": {"visionMul": 1.25, "nightAimMul": 0.85}, "requires": "radar_2", "nations": ["RN"], "year": 1941, "no": 7401002, "cost": {"steel": 200, "bauxite": 250}},
+    {"id": "rm_rangefinder", "name": "精密測距儀", "description": "イタリア艦の遠距離射撃を支えた測距儀。砲火力 +6%、装填 -5%", "effects": {"gunPowerMul": 1.06, "gunReloadMul": 0.95}, "requires": "gunnery_2", "nations": ["RM"], "year": 1937, "no": 7501001, "cost": {"ammo": 200, "steel": 200}},
+    {"id": "su_engine", "name": "高温高圧缶", "description": "ソ連の駆逐艦・巡洋艦を速くした缶。速力 +10%", "effects": {"speedMul": 1.1}, "requires": "engine_2", "nations": ["SU"], "year": 1938, "no": 7601001, "cost": {"fuel": 300, "steel": 200}},
+    {"id": "fr_armor", "name": "分割式装甲", "description": "フランス戦艦の集中防御。装甲 +10、耐久 +4%", "effects": {"armorAdd": 10, "hpMul": 1.04}, "requires": "armor_2", "nations": ["FR"], "year": 1937, "no": 7701001, "cost": {"steel": 400, "fuel": 100}},
+    {"id": "big_gun_sight", "name": "大口径砲の照準装置", "description": "沈めた敵戦艦から回収した照準装置。砲火力 +8%、装填 -5%", "effects": {"gunPowerMul": 1.08, "gunReloadMul": 0.95}, "dropFrom": ["Battleship"], "no": 7002001},
+    {"id": "spare_torpedoes", "name": "予備魚雷", "description": "沈めた敵巡洋艦から回収した魚雷。魚雷の火力 +12%", "effects": {"torpedoPowerMul": 1.12}, "dropFrom": ["Cruiser"], "no": 7002002},
+    {"id": "high_pressure_boiler", "name": "高圧缶", "description": "沈めた敵駆逐艦から回収した缶。速力 +6%", "effects": {"speedMul": 1.06}, "dropFrom": ["Destroyer"], "no": 7002003},
+    {"id": "deck_elevator", "name": "飛行甲板の昇降機", "description": "沈めた敵空母から回収した昇降機。再装備 -15%", "effects": {"rearmMul": 0.85}, "dropFrom": ["Carrier"], "no": 7002004},
+    {"id": "hydrophone", "name": "聴音機", "description": "沈めた敵潜水艦から回収した聴音機。ソナー +25%、爆雷 +10%", "effects": {"sonarMul": 1.25, "depthChargeMul": 1.1}, "dropFrom": ["Submarine"], "no": 7002005},
+    {"id": "superweapon_core", "name": "超兵器の機関", "description": "超兵器の残骸から回収した機関。速力 +8%、耐久 +8%", "effects": {"speedMul": 1.08, "hpMul": 1.08}, "dropFrom": ["Superweapon"], "no": 7002006}
   ]
 }

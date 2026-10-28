@@ -10,7 +10,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { enemyFormation } from '@/systems/EnemyFormation';
-import { SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
+import { BLUEPRINT_NEED, BLUEPRINT_PER_GIANT_AREA, SUPERWEAPON_GOLD, superweaponOf, superweaponSeaOpen } from '@/systems/SuperweaponSystem';
 import { TimeOfDay } from '@/types/Weather';
 import { FORMATION_RULES } from '@/systems/FormationRules';
 import { GOLD_SWEEP } from '@/systems/GoldSystem';
@@ -40,6 +40,8 @@ import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
 export const CAMPAIGN_AREA_KEY = 'campaign.area';
+/** Registry key: the area is sortied to as its superweapon sea (#148) */
+export const SW_AREA_KEY = 'campaign.swArea';
 
 const DATA = campaignData as ICampaignData;
 
@@ -296,6 +298,7 @@ export class CampaignMapScene extends Phaser.Scene {
     // 総戦力 (#342): refits, research, crews and morale too (the captains and formation are picked in the builder).
     const ownPower = ownShips.length > 0 ? fleetPowerBreakdown(ownShips, progress, DataLoader.getUpgrades(this)).total : 0;
     const tone = powerTone(ownPower, enemyPower);
+    const swOpen = superweaponSeaOpen(DATA, a, cleared) && superweaponOf(enemyNation) !== undefined;
     const giantEvent = activeEvent();
     const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [
@@ -305,6 +308,8 @@ export class CampaignMapScene extends Phaser.Scene {
       ['敵', `${NATION_INFO[enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}  ·  ${FORMATION_RULES[enemyFormation({ nation: enemyNation, enemy: enemy.map((e) => e.shipClass), player: [], night: a.time === TimeOfDay.Night, named: a.enemy.formation })].ja}${IS_PORTRAIT ? '' : `\n${lineup}`}`],
       // 超兵器出現 (#148 #89): the main fleet here brings its giant while the event runs.
       ...(giantHere ? [['超兵器', `${giantHere.name} が主力艦隊に加わる (撃沈でゴールド +${SUPERWEAPON_GOLD})`] as [string, string]] : []),
+      // 超兵器海域 (#148): the theater's final area, once won, can be fought again against the giant.
+      ...(swOpen ? [['超兵器海域', `${superweaponOf(enemyNation)?.name ?? '超兵器'} と何度でも  ·  設計図 +${BLUEPRINT_PER_GIANT_AREA} (${Math.min(progress.blueprints, BLUEPRINT_NEED)} / ${BLUEPRINT_NEED})`] as [string, string]] : []),
       ['海域', `${map.name}  ·  ${WEATHER_LABEL[a.weather]}  ·  ${TIME_LABEL[a.time]}${isFreeArea(a) ? '  ·  出撃無料' : ''}`],
       // Nodes of the sortie (#53): skirmish, supply cache / whirlpool, main fleet.
       // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.
@@ -376,20 +381,29 @@ export class CampaignMapScene extends Phaser.Scene {
       }, { variant: 'secondary', width: half, height: bh, fontSize: 17 }));
       return;
     }
-    const bw = sweepable ? (d.w - 48 - 12) / 2 : d.w - 48;
+    // The sortie, the superweapon sea (#148) and the sweep share the row.
+    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0);
+    const bw = (d.w - 48 - 12 * (count - 1)) / count;
+    const bx = (i: number): number => d.x + 24 + i * (bw + 12) + bw / 2;
+    const bh = IS_PORTRAIT ? 76 : 60;
     // Sorties leave from a base that reaches the theater (#145).
     const reach = baseReaches(baseOfProgress(progress), a.theater);
     const from = basesFor(progress.nation, a.theater).map((b) => b.name).join('・');
-    const label = !open ? '前の海域を攻略してください' : reach ? '出撃準備  ›' : `${from}を開港すると出撃可`;
+    const label = !open ? '前の海域を攻略してください' : reach ? (count > 2 ? '出撃準備 ›' : '出撃準備  ›') : `${from}を開港すると出撃可`;
     const btn = add(
-      new UIButton(this, d.x + 24 + bw / 2, by, label, () => this.prepare(a), {
-        variant: open && reach ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: open && reach ? 20 : 14,
+      new UIButton(this, bx(0), by, label, () => this.prepare(a), {
+        variant: open && reach ? 'gold' : 'secondary', width: bw, height: bh, fontSize: open && reach ? (count > 2 ? 17 : 20) : 14,
       }),
     );
     btn.setEnabled(open && reach);
+    if (swOpen) {
+      add(new UIButton(this, bx(1), by, '超兵器海域', () => this.prepare(a, true), {
+        variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
+      })).setEnabled(reach);
+    }
     if (sweepable) {
-      add(new UIButton(this, d.x + d.w - 24 - bw / 2, by, '掃討', () => this.sweep(a), {
-        variant: 'primary', width: bw, height: IS_PORTRAIT ? 76 : 60, fontSize: 20,
+      add(new UIButton(this, bx(count - 1), by, '掃討', () => this.sweep(a), {
+        variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 17 : 20,
       })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
     }
   }
@@ -419,9 +433,12 @@ export class CampaignMapScene extends Phaser.Scene {
     this.drawDetail();
   }
 
-  private prepare(a: ICampaignArea): void {
+  /** To the fleet builder for the area; `giant`: its superweapon sea (#148). */
+  private prepare(a: ICampaignArea, giant = false): void {
     if (!isUnlocked(a, loadProgress().campaign)) return;
     this.registry.set(CAMPAIGN_AREA_KEY, a.id);
+    if (giant) this.registry.set(SW_AREA_KEY, true);
+    else this.registry.remove(SW_AREA_KEY);
     this.scene.start(SceneKeys.FLEET_BUILDER);
   }
 }

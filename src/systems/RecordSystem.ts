@@ -145,6 +145,15 @@ export interface IMedalContext {
   classesComplete?: number;
   /** Different expeditions one nation has sent (#359), best nation */
   expeditionKinds?: number;
+  /** Kinds of equipment one nation holds, fitted or in the stock (#55), best nation */
+  equipmentKinds?: number;
+  /** 1 when some nation owns its own superweapon (#148) */
+  ownSuperweapon?: number;
+  /** 1 when some nation has developed every carrier model of its navy (#87) */
+  aircraftComplete?: number;
+  /** Ground weapons destroyed in all, and how many different ones (#251) */
+  groundTotal?: number;
+  groundKinds?: number;
   /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
   shipTypes?: number;
   /** Kinds of ship by 中分類 (#260: 高速戦艦・防空駆逐艦 …) one nation owns, best nation */
@@ -310,6 +319,21 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('dorm', '寮舎章', 'growth', [10, 100, 500], (g) => `寮舎で延べ ${g} 時間訓練する`, (_r, c) => total(c, 'dormHours')),
   // 遠征先 (#359): one new expedition a rank, 13 in all.
   ...ladder('expedition_kinds', '遠征先章', 'growth', [5, 13], (g) => (g >= 13 ? 'すべての遠征先 (13 か所) に艦を送る' : `${g} か所の遠征先に艦を送る`), (_r, c) => c.expeditionKinds ?? 0),
+  // 0.0.48 装備と資材: scrapping (#42), equipment (#55), parts and blueprints (#150), the superweapon sea (#148), aircraft and
+  // aces (#87), ground weapons (#251), consumables (#47).
+  ...ladder('scrap', '解体章', 'base', [1, 10, 50], (g) => `艦を ${g} 隻解体する`, (_r, c) => total(c, 'scrap')),
+  ...ladder('develop', '装備開発章', 'base', [5, 30, 100], (g) => `工廠で装備を ${g} 個開発する`, (_r, c) => total(c, 'develop')),
+  ...ladder('equipment_kinds', '装備収集章', 'base', [5, 15, 25], (g) => `${g} 種類の装備を持つ (付けている分も数える)`, (_r, c) => c.equipmentKinds ?? 0),
+  ...ladder('part_drop', '部品回収章', 'battle', [1, 20, 100], (g) => `沈めた敵から部品を ${g} 個回収する`, (_r, c) => total(c, 'partDrop')),
+  ...ladder('blueprint', '設計図章', 'special', [1, 5, 20], (g) => `超兵器の設計図の断片を ${g} 枚集める`, (_r, c) => total(c, 'blueprint')),
+  ...ladder('own_superweapon', '超兵器建造章', 'special', [1], () => '設計図から自国の超兵器を建造する', (_r, c) => c.ownSuperweapon ?? 0),
+  ...ladder('superweapon_sea', '超兵器海域章', 'campaign', [1, 10, 30], (g) => `超兵器海域で ${g} 回勝利する`, (_r, c) => total(c, 'swAreaWin')),
+  ...ladder('aircraft_dev', '航空機開発章', 'base', [1, 5, 10], (g) => `新しい艦載機を ${g} 機種開発する`, (_r, c) => total(c, 'aircraftDev')),
+  ...ladder('aircraft_complete', '全機種配備章', 'base', [1], () => '自国の艦載機をすべて開発する', (_r, c) => c.aircraftComplete ?? 0),
+  ...ladder('air_ace', 'エース章', 'growth', [1, 3, 6], (g) => `空母の航空隊に ${g} 人のエースを迎える`, (_r, c) => total(c, 'aceBorn')),
+  ...ladder('ground_weapon', '地上兵器撃破章', 'battle', [10, 50, 200], (g) => `国ごとの地上兵器 (要塞砲・高射砲陣地など) を ${g} 個破壊する`, (_r, c) => c.groundTotal ?? 0),
+  ...ladder('ground_kinds', '地上兵器図鑑章', 'battle', [6, 21, 42], (g) => (g >= 42 ? 'すべての地上兵器 (42 種) を破壊する' : `${g} 種類の地上兵器を破壊する`), (_r, c) => c.groundKinds ?? 0),
+  ...ladder('consumable', '消耗品章', 'battle', [10, 100, 500], (g) => `消耗品 (応急修理・煙幕など) を ${g} 回使う`, (_r, c) => total(c, 'consumableUse')),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.
   ...ladder('expedition_pick', '遠征編成章', 'growth', [3, 30], (g) => `艦を選んで遠征を ${g} 回送り出す`, (_r, c) => total(c, 'expeditionPicked')),
   // 士気 (#54)

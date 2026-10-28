@@ -32,6 +32,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   isConvoy = false;
   /** Sea state (storms slow every ship) */
   envSpeedMul = 1;
+  /** 機関全開 (#47) while it runs */
+  boostMul = 1;
   /** Turns a wanted heading away from land (set by the battle when the map has islands) */
   avoid: ((x: number, y: number, headingDeg: number) => number) | null = null;
   /** Component damage (expiry times, on `clock`) */
@@ -71,7 +73,7 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
 
   /** Top speed right now (submerged boats and damaged engines are slower). */
   get currentSpeed(): number {
-    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul * statusSpeedMul(this.status, this.clock()) * this.envSpeedMul;
+    return this.stats.speed * (this.sub ? speedFactor(this.sub) : 1) * this.critEffects().speedMul * statusSpeedMul(this.status, this.clock()) * this.envSpeedMul * this.boostMul;
   }
 
   /** Turns toward the requested heading at `turnRateDeg` and moves along the bow at the throttle. */

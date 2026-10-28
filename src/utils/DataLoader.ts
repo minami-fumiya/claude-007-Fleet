@@ -2,6 +2,7 @@ import { IShipData } from '@/types/Ship';
 import { IWeaponData } from '@/types/Weapon';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { ShipRegistry } from '@/systems/ShipRegistry';
+import { ownSuperweapons } from '@/systems/SuperweaponSystem';
 import { ICaptainData } from '@/types/Captain';
 import { IUpgradeData } from '@/types/Modifiers';
 import { IMapData } from '@/types/Map';
@@ -27,7 +28,9 @@ export class DataLoader {
 
   /** All playable nations' ships from the JSON cache (loaded in PreloadScene). */
   static getRegistry(scene: Phaser.Scene): ShipRegistry {
-    return new ShipRegistry(PLAYABLE_NATIONS.flatMap((n) => DataLoader.getShips(scene, NATION_INFO[n].dataKey)));
+    // The navies' own superweapons (#148) are built from blueprints; they join each roster.
+    const own = ownSuperweapons();
+    return new ShipRegistry(PLAYABLE_NATIONS.flatMap((n) => [...DataLoader.getShips(scene, NATION_INFO[n].dataKey), ...own.filter((s) => s.nation === n)]));
   }
 
   static getCaptains(scene: Phaser.Scene): ICaptainData[] {

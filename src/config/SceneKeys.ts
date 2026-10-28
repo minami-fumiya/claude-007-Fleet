@@ -20,6 +20,7 @@ export const SceneKeys = {
   SHOP: 'ShopScene',
   ITEMS: 'ItemScene',
   EXPEDITION: 'ExpeditionScene',
+  DEVELOP: 'DevelopScene',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];
