@@ -15,6 +15,7 @@ import { EVENT_NAME, EventKind, eventHelp } from '@/systems/EventSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
+import { ScrollList } from '@/ui/components/ScrollList';
 
 const P = IS_PORTRAIT ? { x: 16, y: 240, w: CANVAS_W - 32, h: CANVAS_H - 256 } : { x: 140, y: 150, w: 1000, h: 550 };
 const TABS_Y = IS_PORTRAIT ? 166 : 118;
@@ -67,8 +68,13 @@ const BATTLE_HELP: Array<[string, string]> = [
   ['火災・浸水', '榴弾は火災、魚雷は浸水を起こしやすい。燃えている間・浸水している間は耐久が減り続ける'],
   ['大破', '耐久 25% 以下。全艦が大破すると、作戦は進撃できずに終わる。入渠で直す'],
   ['飛行場', '対地攻撃の海域にある。攻撃隊を出してくるので、先に壊すと楽になる'],
-  ['超兵器', '超兵器出現のイベント中に、戦域の主力艦隊に現れる巨大艦。主砲・機関・艦橋を壊すと弱る'],
+  ['超兵器', '超兵器出現のイベント中と、戦域の最後の海域の先にある超兵器海域に現れる巨大艦。主砲・機関・艦橋を壊すと弱る。沈めると設計図の断片を落とす'],
   ['敵の陣形', '敵も陣形を組む。海域の詳細に、予想される陣形が出る'],
+  ['消耗品', '艦種ごとに 2 つあり、研究で開く (応急修理・煙幕・機関全開・対空弾幕・索敵)。使える回数と待ち時間がある。敵も 1 回ずつ使う'],
+  ['士気', '50 が基準。出撃で下がり、勝つと上がり、時間で戻る。70 以上は回避が上がり装填が速く、30 未満はその逆'],
+  ['支援艦隊・友軍', '少佐から、編成 2・3 の艦隊を任務付きで一緒に出せる。決まった海域では、途中で友軍が来援する'],
+  ['地上兵器', '対地攻撃の島には、敵の国の要塞砲・高射砲陣地・魚雷艇基地などが並ぶ。壊すと図鑑の「特殊」に載る'],
+  ['実況と字幕', '戦闘の様子を声と字幕で伝える。音量・頻度・字幕は設定の「音」で変えられる。結果の画面の「戦闘ログ」で見返せる'],
 ];
 
 type Tab = 'controls' | 'classes' | 'formations' | 'objectives' | 'ranks' | 'battle' | 'events';
@@ -80,6 +86,8 @@ const TABS: Array<[Tab, string]> = [
 export class HelpScene extends Phaser.Scene {
   private tab: Tab = 'controls';
   private dynamic: Phaser.GameObjects.GameObject[] = [];
+  /** The tab's rows scroll when they are taller than the panel (portrait, the battle tab) */
+  private list: ScrollList | null = null;
 
   constructor() {
     super({ key: SceneKeys.HELP });
@@ -108,6 +116,8 @@ export class HelpScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
+    this.list?.destroy();
+    this.list = null;
     // Seven tabs (#316): one row in landscape, two in portrait.
     const perRow = IS_PORTRAIT ? 4 : TABS.length;
     const bw = (P.w - 8 * (perRow - 1)) / perRow;
@@ -138,14 +148,18 @@ export class HelpScene extends Phaser.Scene {
     const x = P.x + 28;
     const w = P.w - 56;
     const labelW = IS_PORTRAIT ? 0 : 150;
-    let y = P.y + 24;
+    const top = P.y + 24;
+    const list = new ScrollList(this, { x, y: top, w, h: P.y + P.h - 16 - top });
+    this.list = list;
+    let y = 0;
     for (const [label, text] of rows) {
-      const l = this.add.text(x, y, label, eyebrowStyle(IS_PORTRAIT ? 12 : 13, Css.gold));
-      const t = this.add.text(x + labelW, IS_PORTRAIT ? y + 24 : y, text, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, {
-        wordWrap: { width: w - labelW, useAdvancedWrap: true }, lineSpacing: 4,
+      const l = this.add.text(0, y, label, eyebrowStyle(IS_PORTRAIT ? 12 : 13, Css.gold));
+      const t = this.add.text(labelW, IS_PORTRAIT ? y + 24 : y, text, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, {
+        wordWrap: { width: w - labelW - 12, useAdvancedWrap: true }, lineSpacing: 4,
       }));
-      this.dynamic.push(l, t);
+      list.add(l).add(t);
       y = t.y + t.height + (IS_PORTRAIT ? 22 : 16);
     }
+    list.setContentHeight(y);
   }
 }

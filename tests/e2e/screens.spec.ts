@@ -641,6 +641,7 @@ test.describe('screens', () => {
         s.refresh();
       }, tab);
       await page.waitForTimeout(200);
+      await page.screenshot({ path: info.outputPath(`help-${tab}.png`) });
       expect(await overflowingTexts(page, 'HelpScene'), tab).toEqual([]);
       expect(await overlappingTexts(page, 'HelpScene'), tab).toEqual([]);
     }
