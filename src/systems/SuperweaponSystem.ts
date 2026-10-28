@@ -81,7 +81,8 @@ export function ownSuperweapon(nation: Nation): IShipData | undefined {
     ...ship,
     id: `${sw.id}_own`,
     no: sw.no !== undefined ? sw.no + 1 : undefined,
-    name: sw.name.replace(/^超(巨大|高速)/, '').trim(),
+    // 「超巨大戦艦 紀伊」 → 「紀伊」
+    name: sw.name.replace(/^超(巨大|高速)(戦艦|空母)\s*/, '').trim(),
     hp: Math.round(sw.hp * OWN_SUPERWEAPON_HP),
     armor: sw.armor - OWN_SUPERWEAPON_ARMOR,
     airWing: sw.airWing ? { fighters: Math.round(sw.airWing.fighters / 2), diveBombers: Math.round(sw.airWing.diveBombers / 2), torpedoBombers: Math.round(sw.airWing.torpedoBombers / 2) } : undefined,
