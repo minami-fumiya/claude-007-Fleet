@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DEPTH_EFFECTS } from '@/config/GameConstants';
 import { AircraftType, CarrierAircraft } from '@/types/Aircraft';
+import { BASE_PERF, IAircraftPerf } from '@/systems/AircraftSystem';
 import { BaseShip } from '@/entities/ships/BaseShip';
 
 export enum SquadronState {
@@ -44,6 +45,10 @@ export class Squadron extends Phaser.GameObjects.Container {
   returnAt = Infinity;
   /** Patrol orbit position (radians) */
   orbit = Math.random() * Math.PI * 2;
+  /** The model flown (#87) */
+  perf: IAircraftPerf = BASE_PERF;
+  /** The pilots' edge (#87): dogfights and aim */
+  pilot = 1;
   private icons: Phaser.GameObjects.Image[] = [];
 
   constructor(
@@ -70,7 +75,7 @@ export class Squadron extends Phaser.GameObjects.Container {
   }
 
   get speed(): number {
-    return PLANE_SPEED[this.type];
+    return PLANE_SPEED[this.type] * this.perf.speed;
   }
 
   get alive(): boolean {

@@ -3,16 +3,18 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { UIButton } from '@/ui/components/UIKit';
 
-export type ArsenalTab = 'research' | 'build';
+export type ArsenalTab = 'research' | 'build' | 'develop';
 
 const TABS: Array<{ id: ArsenalTab; label: string; scene: string }> = [
   { id: 'research', label: '研究', scene: SceneKeys.ARSENAL },
   { id: 'build', label: '建造', scene: SceneKeys.SHIPYARD },
+  // 装備の開発 (#55)
+  { id: 'develop', label: '開発', scene: SceneKeys.DEVELOP },
 ];
 
-/** 研究 / 建造 tabs in the top-right corner of the arsenal screens; each tab is its own scene. */
+/** 研究 / 建造 / 開発 tabs in the top-right corner of the arsenal screens; each tab is its own scene. */
 export function addArsenalTabs(scene: Phaser.Scene, active: ArsenalTab): UIButton[] {
-  const w = IS_PORTRAIT ? 116 : 110;
+  const w = IS_PORTRAIT ? 96 : 100;
   const h = IS_PORTRAIT ? 60 : 44;
   const gap = 8;
   const y = IS_PORTRAIT ? 46 : 44;

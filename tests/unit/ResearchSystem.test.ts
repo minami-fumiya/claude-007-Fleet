@@ -59,9 +59,9 @@ describe('ResearchSystem', () => {
 
   it('locks upgrades behind their research', () => {
     const catalog = upgrades.upgrades as IUpgradeData[];
-    // Every upgrade needs its research; nothing can be fitted before any research is done (#72).
+    // Every upgrade the arsenal makes needs its research (#72); parts taken from enemies (#150) need none and are never opened by it.
     expect(unlockedUpgrades(catalog, [])).toEqual([]);
-    expect(catalog.every((u) => typeof u.requires === 'string')).toBe(true);
+    expect(catalog.every((u) => typeof u.requires === 'string' || (u.dropFrom?.length ?? 0) > 0)).toBe(true);
     expect(unlockedUpgrades(catalog, ['gunnery_1']).map((u) => u.id)).toEqual(['heavy_shells']);
     expect(unlockedUpgrades(catalog, ['radar_1']).map((u) => u.id)).toContain('radar');
   });
@@ -224,7 +224,7 @@ describe('tech tree breadth (Sprint 12)', () => {
 
 describe('the order research opens things (#340)', () => {
   it('refits follow it: 射撃指揮装置 (after 射撃管制) comes after the first-level ones', () => {
-    const upgrades = (upgradesData as { upgrades: Array<{ id: string; requires?: string }> }).upgrades;
+    const upgrades = (upgradesData as { upgrades: Array<{ id: string; requires?: string; nations?: string[]; dropFrom?: string[] }> }).upgrades.filter((u) => !u.nations && !u.dropFrom);
     const sorted = [...upgrades].sort((a, b) => researchOrder(a.requires ?? '') - researchOrder(b.requires ?? ''));
     expect(sorted[0].id).toBe('heavy_shells');
     expect(sorted.findIndex((u) => u.id === 'fire_director')).toBeGreaterThan(sorted.findIndex((u) => u.id === 'aa_guns'));
