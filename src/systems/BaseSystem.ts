@@ -4,7 +4,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { CLASS_JA } from './EncyclopediaSystem';
 export { scaleCost } from './ResourceSystem';
 import { RANKS, rankOf, IRankProgress } from './RankSystem';
-import { boostedBase, Facilities, facilityLevel } from './FacilitySystem';
+import { boostedBase, Facilities, facilityLevel, forwardTotal } from './FacilitySystem';
 import { canAfford, pay } from './ResourceSystem';
 import { IResources } from '@/types/Progression';
 import { dockCount, IDockState, MAX_DOCKS, START_DOCKS } from './DockSystem';
@@ -15,6 +15,11 @@ import { dockCount, IDockState, MAX_DOCKS, START_DOCKS } from './DockSystem';
  * them: every open base counts at once — their discounts add up (to a cap), their docks pool, their seas join.
  * Since #293 each base opens one new theater, the nearest sea first: a base is built once the rank of its place in the
  * order is reached and BASE_PREV_CLEARS areas of the previous base's theater are won, the same for every navy.
+ *
+ * Since #373 the ports and the seas are apart: a navy's four ports (本国の軍港) keep the discounts, the docks and
+ * their facilities, and only the first (本拠地) opens a sea, the home one. Every other sea is opened by a forward
+ * base (基地, `kind: 'forward'`) in that sea, in the order the ports used to open them, at the same ranks. A forward
+ * base has its own facilities (補給廠 and the rest, FacilitySystem) that help in its sea.
  */
 
 export interface IBase {
@@ -31,14 +36,43 @@ export interface IBase {
   research?: number;
   /** Repairs take this many times as long */
   repairTime?: number;
-  /** The theater this base opens (#145; one since #293); all of the nation's when absent */
+  /** The theater this base opens (#145; one since #293); all of the nation's when absent. Only the home port and the forward bases open one (#373) */
   theaters?: string[];
+  /** A forward base (基地, #373) rather than a home port */
+  kind?: 'forward';
+  /** Where a forward base is and what it was (#373) */
+  note?: string;
 }
 
 export const BASES = (baseData as { bases: IBase[] }).bases;
 
 export function nationBases(nation: string): IBase[] {
   return BASES.filter((b) => b.nation === nation);
+}
+
+/** Whether a base is a forward base (基地, #373). */
+export function isForward(base: Pick<IBase, 'kind'>): boolean {
+  return base.kind === 'forward';
+}
+
+/** A navy's home ports (軍港, #373), the 本拠地 first. */
+export function nationPorts(nation: string): IBase[] {
+  return nationBases(nation).filter((b) => !isForward(b));
+}
+
+/** A navy's forward bases (基地, #373), in the order they open. */
+export function nationForwardBases(nation: string): IBase[] {
+  return nationBases(nation).filter(isForward);
+}
+
+/** The order a navy's seas open (#293 #373): the home port's, then each forward base's. */
+export function theaterOrder(nation: string): string[] {
+  return nationBases(nation).flatMap((b) => b.theaters ?? []);
+}
+
+/** The forward base that opens `theater` for `nation` (#373); none for the home sea. */
+export function forwardBaseFor(nation: string, theater: string): IBase | undefined {
+  return nationForwardBases(nation).find((b) => b.theaters?.includes(theater));
 }
 
 /** What a nation records about its bases (#217): the ones built, and the one under construction. */
@@ -96,8 +130,10 @@ export function combinedBase(progress: IRankProgress & IBaseWorks & { nation: st
     const off = open.reduce((sum, b) => sum + (b.build?.classes.includes(c) ? 1 - b.build.mul : 0), 0);
     if (off > 0) buildByClass[c] = mul(off, DISCOUNT_CAP.build);
   }
-  const research = open.reduce((sum, b) => sum + (1 - (b.research ?? 1)), 0);
-  const repair = open.reduce((sum, b) => sum + (1 - (b.repairTime ?? 1)), 0);
+  // 前線工作所 (#373): every open forward base's levels add 2% off research and 3% off repairs, under the same caps.
+  const shop = forwardTotal(progress.facilities ?? {}, 'frontShop', openBases(progress).filter(isForward).map((b) => b.id));
+  const research = open.reduce((sum, b) => sum + (1 - (b.research ?? 1)), 0) + FRONT_SHOP.research * shop;
+  const repair = open.reduce((sum, b) => sum + (1 - (b.repairTime ?? 1)), 0) + FRONT_SHOP.repair * shop;
   const theaters = open.some((b) => !b.theaters) ? undefined : [...new Set(open.flatMap((b) => b.theaters ?? []))];
   return {
     ...first,
@@ -107,6 +143,26 @@ export function combinedBase(progress: IRankProgress & IBaseWorks & { nation: st
     repairTime: repair > 0 ? mul(repair, DISCOUNT_CAP.repair) : undefined,
     theaters,
   };
+}
+
+/** What one level of 前線工作所 takes off (#373). */
+export const FRONT_SHOP = { research: 0.02, repair: 0.03 } as const;
+
+/** 補給廠 (#373): what each level of a forward base's supply depot takes off a sortie into its sea. */
+export const SUPPLY_OFF: readonly number[] = [0, 0.1, 0.15, 0.2];
+
+/** The share of a sortie's (or sweep's) fuel and ammo paid in `theater` (#373): 1 without an open base's depot. */
+export function supplyMul(progress: IRankProgress & IBaseWorks & { nation: string; facilities?: Facilities }, theater: string | undefined): number {
+  if (!theater) return 1;
+  const base = forwardBaseFor(progress.nation, theater);
+  if (!base || !isBaseOpen(base, progress)) return 1;
+  return 1 - (SUPPLY_OFF[facilityLevel(progress.facilities ?? {}, base.id, 'supply')] ?? 0);
+}
+
+/** A forward facility's level at the base of `theater`, 0 when it has none or it is not open (#373). */
+export function theaterFacility(progress: IRankProgress & IBaseWorks & { nation: string; facilities?: Facilities }, theater: string | undefined, id: 'supply' | 'anchorage' | 'baseAir' | 'frontShop' | 'outpost'): number {
+  const base = theater ? forwardBaseFor(progress.nation, theater) : undefined;
+  return base && isBaseOpen(base, progress) ? facilityLevel(progress.facilities ?? {}, base.id, id) : 0;
 }
 
 /** The bases of a progress view as one (#281): what building, research, repairs and sorties use. */
@@ -151,11 +207,12 @@ export function baseBonusLines(base: IBase): string[] {
 /** Areas of the previous base's theater to win before the next base can be built (#293). */
 export const BASE_PREV_CLEARS = 3;
 
-/** The theater the base before this one opens (undefined for a nation's first base). */
+/** The sea opened before the one this forward base opens (#293 #373); none for a home port. */
 export function previousTheater(base: IBase): string | undefined {
-  const list = nationBases(base.nation);
-  const i = list.findIndex((b) => b.id === base.id);
-  return i > 0 ? list[i - 1].theaters?.[0] : undefined;
+  if (!isForward(base)) return undefined;
+  const order = theaterOrder(base.nation);
+  const i = order.indexOf(base.theaters?.[0] ?? '');
+  return i > 0 ? order[i - 1] : undefined;
 }
 
 /** Areas won in `theater`, training areas aside. */
@@ -200,9 +257,23 @@ export const BASE_WORKS: ReadonlyArray<{ cost: IResources; minutes: number }> = 
   { cost: { fuel: 2500, ammo: 2000, steel: 5000, bauxite: 800 }, minutes: 50 },
 ];
 
-/** What building `base` takes (the last entry for any further base). */
+/** Price and minutes of a navy's 1st to 6th forward base (#373): shorter and cheaper than a port. */
+export const FORWARD_WORKS: ReadonlyArray<{ cost: IResources; minutes: number }> = [
+  { cost: { fuel: 300, ammo: 200, steel: 500, bauxite: 0 }, minutes: 5 },
+  { cost: { fuel: 600, ammo: 400, steel: 1000, bauxite: 0 }, minutes: 8 },
+  { cost: { fuel: 900, ammo: 600, steel: 1500, bauxite: 100 }, minutes: 10 },
+  { cost: { fuel: 1200, ammo: 800, steel: 2000, bauxite: 200 }, minutes: 12 },
+  { cost: { fuel: 1500, ammo: 1000, steel: 2500, bauxite: 300 }, minutes: 15 },
+  { cost: { fuel: 1800, ammo: 1200, steel: 3000, bauxite: 400 }, minutes: 18 },
+];
+
+/** What building `base` takes (the last entry for any further base): a port by its place among the ports, a forward base among the forward bases. */
 export function baseWorkOf(base: IBase): { cost: IResources; minutes: number } {
-  const i = Math.max(0, nationBases(base.nation).findIndex((b) => b.id === base.id) - 1);
+  if (isForward(base)) {
+    const i = Math.max(0, nationForwardBases(base.nation).findIndex((b) => b.id === base.id));
+    return FORWARD_WORKS[Math.min(i, FORWARD_WORKS.length - 1)];
+  }
+  const i = Math.max(0, nationPorts(base.nation).findIndex((b) => b.id === base.id) - 1);
   return BASE_WORKS[Math.min(i, BASE_WORKS.length - 1)];
 }
 
@@ -275,9 +346,9 @@ function docksAt(progress: { baseDocks?: Record<string, number> }, baseId: strin
   return Math.max(START_DOCKS, progress.baseDocks?.[baseId] ?? START_DOCKS);
 }
 
-/** 全軍港のドック (#281): every open base's docks together, up to MAX_DOCKS. Opening a base adds its dock. */
+/** 全軍港のドック (#281): every open port's docks together, up to MAX_DOCKS. Opening a port adds its dock; forward bases have none (#373). */
 export function dockTotal(progress: IRankProgress & IBaseWorks & { nation: string; baseDocks?: Record<string, number> }): number {
-  return Math.min(MAX_DOCKS, openBases(progress).reduce((sum, b) => sum + docksAt(progress, b.id), 0));
+  return Math.min(MAX_DOCKS, openBases(progress).filter((b) => !isForward(b)).reduce((sum, b) => sum + docksAt(progress, b.id), 0));
 }
 
 /** The pooled docks as one dock state: every repair, whichever base it was started at, and the total. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BASES, baseOfProgress, baseReaches, basesFor, buildMultiplier, currentBaseId, DISCOUNT_CAP, dockTotal, fleetBuildTimeMul, fleetDockView, mergeFleetDocks, nationBases, researchMultiplier, repairTimeMultiplier } from '@/systems/BaseSystem';
+import { BASES, baseOfProgress, baseReaches, basesFor, buildMultiplier, currentBaseId, DISCOUNT_CAP, dockTotal, fleetBuildTimeMul, fleetDockView, mergeFleetDocks, forwardBaseFor, nationBases, nationForwardBases, nationPorts, researchMultiplier, repairTimeMultiplier, theaterOrder } from '@/systems/BaseSystem';
 import { buildDock, MAX_DOCKS, dockCount, startRepair, setDamage } from '@/systems/DockSystem';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { buildsHere, startBuild } from '@/systems/ShipyardSystem';
@@ -85,19 +85,25 @@ describe('ships, docks and builds by base (#145)', () => {
     expect(buildsHere({ ...p, builds: [...p.builds, { shipId: 'kongo', endsAt: T0, base: 'ijn_light' }] })).toHaveLength(2);
   });
 
-  it('each base opens one theater of its navy, none twice, every theater by some base (#293)', () => {
+  it('the home port opens the home sea and each forward base one more, none twice, every theater once (#293 #373)', () => {
     for (const nation of PLAYABLE_NATIONS) {
       const theaters = campaign.theaters.filter((t) => (t.opponents as Record<string, string | undefined>)[nation]).map((t) => t.id);
-      const bases = nationBases(nation);
-      for (const b of bases) expect(b.theaters, b.id).toHaveLength(1);
-      const opened = bases.map((b) => b.theaters![0]);
+      const ports = nationPorts(nation);
+      const forward = nationForwardBases(nation);
+      expect(ports, nation).toHaveLength(4);
+      expect(ports[0].theaters, nation).toHaveLength(1);
+      for (const b of ports.slice(1)) expect(b.theaters, b.id).toEqual([]);
+      for (const b of forward) expect(b.theaters, b.id).toHaveLength(1);
+      const opened = theaterOrder(nation);
       expect(new Set(opened).size, nation).toBe(opened.length);
       expect([...opened].sort(), nation).toEqual([...theaters].sort());
-      // The same rank for the same place in every navy's order.
-      expect(bases.map((b) => b.unlockRank), nation).toEqual([0, 2, 6, 8, 10, 11].slice(0, bases.length));
+      // Ports keep the ranks they had; a forward base opens at the rank of its place in the navy's order.
+      expect(ports.map((b) => b.unlockRank), nation).toEqual([0, 2, 6, 8]);
+      expect(forward.map((b) => b.unlockRank), nation).toEqual([2, 6, 8, 10, 11, 12].slice(0, forward.length));
+      for (const b of forward) expect(b.note, b.id).toBeTruthy();
     }
-    expect(basesFor('IJN', 'mediterranean').map((b) => b.id)).toEqual(['ijn_heavy']);
-    expect(BASES.every((b) => b.theaters?.length)).toBe(true);
+    expect(basesFor('IJN', 'mediterranean').map((b) => b.id)).toEqual(['ijn_fb_mediterranean']);
+    expect(forwardBaseFor('IJN', 'pacific')).toBeUndefined();
   });
 
   it('an old save puts every ship, dock and job at the base in use', () => {
@@ -108,6 +114,8 @@ describe('ships, docks and builds by base (#145)', () => {
     expect(out.nations.IJN.shipBases).toEqual({ fubuki: 'ijn_light', nagato: 'ijn_light' });
     // 3 docks, plus the one building slip it had (#211: builds share the docks since v14).
     expect(out.nations.IJN.baseDocks).toEqual({ ijn_light: 4 });
+    // A port that opened a sea before 0.0.50 keeps the sea through its forward base (#373).
+    expect((out.nations.IJN as unknown as { basesOpen: string[] }).basesOpen).toContain('ijn_fb_north_pacific');
     expect(out.nations.IJN.docks[0].base).toBe('ijn_light');
     expect(out.nations.IJN.builds[0].base).toBe('ijn_light');
   });

@@ -790,7 +790,7 @@ test.describe('screens', () => {
   test('the encyclopedia shows every tab, owned-only and everything (#43 #44 #91)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'EncyclopediaScene');
-    for (const tab of ['ships', 'captains', 'aircraft', 'ground']) {
+    for (const tab of ['ships', 'captains', 'aircraft', 'equipment', 'ground']) {
       for (const ownedOnly of [true, false]) {
         await page.evaluate(([t, o]) => {
           const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('EncyclopediaScene') as unknown as { tab: string; ownedOnly: boolean; selectedId: string; refresh(): void };
@@ -802,6 +802,29 @@ test.describe('screens', () => {
         expect(await overflowingTexts(page, 'EncyclopediaScene'), `${tab} ${ownedOnly}`).toEqual([]);
       }
       await page.screenshot({ path: info.outputPath(`encyclopedia-${tab}.png`) });
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('軍港と基地 (0.0.50): the forward bases tab, a base with facilities and a locked one fit (#373)', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const save = {
+      ...SAVE, version: 23, seenHelp: ['HomeScene', 'BaseScene'],
+      nations: { IJN: { ...SAVE.nations.IJN, merit: 900, rankFloor: 8, campaign: ['p1', 'p2', 'p3', 'np1', 'np2', 'np3'], basesOpen: ['ijn_light', 'ijn_fb_north_pacific'], baseWork: null, facilities: { ijn_fb_north_pacific: { supply: 2, baseAir: 1 } }, facilityJobs: [] } },
+    };
+    const errors = await boot(page, layout, save);
+    await open(page, 'BaseScene');
+    for (const id of ['ijn_fb_north_pacific', 'ijn_fb_mediterranean']) {
+      await page.evaluate((b) => {
+        const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BaseScene') as unknown as { tab: string; selectedId: string; refresh(): void };
+        s.tab = 'forward';
+        s.selectedId = b;
+        s.refresh();
+      }, id);
+      await page.waitForTimeout(200);
+      expect(await overflowingTexts(page, 'BaseScene'), `${id} (${layout})`).toEqual([]);
+      expect(await overlappingTexts(page, 'BaseScene'), `${id} overlaps (${layout})`).toEqual([]);
+      await page.screenshot({ path: info.outputPath(`forward-${id}.png`) });
     }
     expect(errors).toEqual([]);
   });

@@ -335,6 +335,10 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('ground_kinds', '地上兵器図鑑章', 'battle', [6, 21, 42], (g) => (g >= 42 ? 'すべての地上兵器 (42 種) を破壊する' : `${g} 種類の地上兵器を破壊する`), (_r, c) => c.groundKinds ?? 0),
   // 0.0.49 音: the battle log after a fight (#106).
   ...ladder('battle_log', '戦闘記録章', 'battle', [1, 10, 50], (g) => `結果画面で戦闘ログを ${g} 回読む`, (_r, c) => total(c, 'logView')),
+  // 0.0.50: forward bases (#373)
+  ...ladder('forward_base', '基地開設章', 'base', [1, 3, 5], (g) => `基地を ${g} つ開く`, (_r, c) => total(c, 'forwardBaseOpened')),
+  ...ladder('front_works', '前線整備章', 'base', [5, 15, 30], (g) => `基地の施設を ${g} 回作る・強化する`, (_r, c) => total(c, 'forwardFacility')),
+  ...ladder('base_air', '基地航空隊章', 'battle', [3, 15, 50], (g) => `基地航空隊の攻撃隊を ${g} 回送る`, (_r, c) => total(c, 'baseAirStrike')),
   ...ladder('consumable', '消耗品章', 'battle', [10, 100, 500], (g) => `消耗品 (応急修理・煙幕など) を ${g} 回使う`, (_r, c) => total(c, 'consumableUse')),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.
   ...ladder('expedition_pick', '遠征編成章', 'growth', [3, 30], (g) => `艦を選んで遠征を ${g} 回送り出す`, (_r, c) => total(c, 'expeditionPicked')),

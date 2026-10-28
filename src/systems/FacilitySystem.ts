@@ -9,7 +9,10 @@ import { facilityMedal } from './MedalGate';
  * facilities, so a player without any facility regenerates exactly as before.
  */
 
-export type FacilityId = 'fuelTank' | 'ammoDepot' | 'steelMill' | 'airBase' | 'workshop' | 'unique';
+export type FacilityId = 'fuelTank' | 'ammoDepot' | 'steelMill' | 'airBase' | 'workshop' | 'unique' | ForwardFacilityId;
+
+/** 基地の施設 (#373): a forward base's own facilities, none of the ports'. */
+export type ForwardFacilityId = 'supply' | 'anchorage' | 'baseAir' | 'frontShop' | 'outpost';
 
 export interface IFacility {
   id: FacilityId;
@@ -28,6 +31,34 @@ export const COMMON_FACILITIES: IFacility[] = [
   { id: 'workshop', name: '工作部', effect: '研究費・建造時間 −5% (全軍港で合算)', maxLevel: 5 },
 ];
 
+/**
+ * 基地の施設 (#373): what a forward base can build, each from Lv0. All but 前線工作所 help only in the base's own
+ * theater; 前線工作所 adds up over every base like a port's workshop.
+ */
+export const FORWARD_FACILITIES: ReadonlyArray<IFacility & { id: ForwardFacilityId }> = [
+  { id: 'supply', name: '補給廠', effect: 'この戦域への出撃・掃討の燃料・弾薬 −10% / −15% / −20%', maxLevel: 3 },
+  { id: 'anchorage', name: '泊地修理所', effect: 'この戦域の作戦で、途中の戦闘の後に全艦の耐久 +5% / +10% / +15%', maxLevel: 3 },
+  { id: 'baseAir', name: '基地航空隊', effect: 'この戦域の戦闘で、敵艦隊の位置が分かる / 攻撃隊が 1 回来援 / 2 回来援', maxLevel: 3 },
+  { id: 'frontShop', name: '前線工作所', effect: '研究費 −2%・修理時間 −3% (全基地で合算)', maxLevel: 3 },
+  { id: 'outpost', name: '前進遠征拠点', effect: 'この海の遠征先が 1 つ開く / その遠征の報酬 +20%', maxLevel: 2 },
+];
+
+/** Whether a base id is a forward base's (#373): their ids read `<navy>_fb_<theater>`. */
+export function isForwardBaseId(base: string): boolean {
+  return base.includes('_fb_');
+}
+
+/** What each forward facility costs per level (#373): a little under a port's, the air group needing bauxite. */
+const FORWARD_COST: Record<ForwardFacilityId, IResources> = {
+  supply: { fuel: 150, ammo: 150, steel: 150, bauxite: 0 },
+  anchorage: { fuel: 200, ammo: 0, steel: 300, bauxite: 0 },
+  baseAir: { fuel: 200, ammo: 0, steel: 200, bauxite: 200 },
+  frontShop: { fuel: 150, ammo: 100, steel: 250, bauxite: 0 },
+  outpost: { fuel: 100, ammo: 100, steel: 200, bauxite: 0 },
+};
+const FORWARD_MINUTES: Record<ForwardFacilityId, number> = { supply: 3, anchorage: 5, baseAir: 5, frontShop: 4, outpost: 4 };
+const isForwardFacility = (id: FacilityId): id is ForwardFacilityId => id in FORWARD_COST;
+
 /** The base's own facility: its bonus grows by half again per level above 1 (up to 3). */
 export const UNIQUE_MAX_LEVEL = 3;
 
@@ -45,27 +76,45 @@ export interface IFacilityJob {
 
 export function facilityLevel(facilities: Facilities, base: string, id: FacilityId): number {
   const lv = facilities[base]?.[id];
-  return lv ?? (id === 'unique' ? 1 : 0);
+  // A forward base has no unique facility (#373).
+  return lv ?? (id === 'unique' && !isForwardBaseId(base) ? 1 : 0);
 }
 
 export function maxLevelOf(id: FacilityId): number {
-  return id === 'unique' ? UNIQUE_MAX_LEVEL : COMMON_FACILITIES.find((f) => f.id === id)?.maxLevel ?? 0;
+  if (id === 'unique') return UNIQUE_MAX_LEVEL;
+  return [...COMMON_FACILITIES, ...FORWARD_FACILITIES].find((f) => f.id === id)?.maxLevel ?? 0;
+}
+
+/** The facilities a base can build (#373): a port's common ones and its own, or a forward base's. */
+export function facilitiesOf(base: string): FacilityId[] {
+  return isForwardBaseId(base) ? FORWARD_FACILITIES.map((f) => f.id) : ['unique', ...COMMON_FACILITIES.map((f) => f.id)];
+}
+
+/** Every forward base's level of a facility added up (#373), e.g. 前線工作所 over all of a navy's bases. */
+export function forwardTotal(facilities: Facilities, id: ForwardFacilityId, bases?: readonly string[]): number {
+  return Object.keys(facilities).filter((b) => isForwardBaseId(b) && (!bases || bases.includes(b))).reduce((sum, b) => sum + facilityLevel(facilities, b, id), 0);
 }
 
 /** Cost of raising a facility to `level`: grows with the level. */
 export function facilityCost(id: FacilityId, level: number): IResources {
   const n = Math.max(1, level);
+  if (isForwardFacility(id)) {
+    const c = FORWARD_COST[id];
+    return resources({ fuel: c.fuel * n, ammo: c.ammo * n, steel: c.steel * n, bauxite: c.bauxite * n });
+  }
   if (id === 'unique') return resources({ fuel: 600 * n, ammo: 300 * n, steel: 900 * n, bauxite: 150 * n });
   return resources({ fuel: 200 * n, ammo: 100 * n, steel: 300 * n, bauxite: id === 'airBase' ? 100 * n : 0 });
 }
 
 /** Minutes to raise a facility to `level`: about half of 0.0.20's (#212), cut again by 2/5 in #359. */
 export function facilityMinutes(id: FacilityId, level: number): number {
+  if (isForwardFacility(id)) return FORWARD_MINUTES[id] * Math.max(1, level);
   return (id === 'unique' ? 10 : 3) * Math.max(1, level);
 }
 
-/** Facilities a base can raise at once (#216): two, three once its own facility is Lv2. */
+/** Facilities a base can raise at once (#216): two, three once its own facility is Lv2; a forward base one (#373). */
 export function facilitySlots(facilities: Facilities, base: string): number {
+  if (isForwardBaseId(base)) return 1;
   return facilityLevel(facilities, base, 'unique') >= 2 ? 3 : 2;
 }
 
@@ -77,7 +126,7 @@ export type FacilityState = 'max' | 'busy' | 'medal' | 'resources' | 'ready';
  */
 export function facilityState(facilities: Facilities, jobs: readonly IFacilityJob[], base: string, id: FacilityId, have: IResources, medals?: readonly string[]): FacilityState {
   const lv = facilityLevel(facilities, base, id);
-  if (lv >= maxLevelOf(id)) return 'max';
+  if (!facilitiesOf(base).includes(id) || lv >= maxLevelOf(id)) return 'max';
   const here = jobs.filter((j) => j.base === base);
   if (here.some((j) => j.id === id) || here.length >= facilitySlots(facilities, base)) return 'busy';
   const need = facilityMedal(base, id, lv + 1);
@@ -184,6 +233,7 @@ export function regenBreakdown(facilities: Facilities, baseName: (id: string) =>
 
 /** How much stronger the base's own bonus is at its unique facility's level: ×1, ×1.5, ×2. */
 export function uniqueStrength(facilities: Facilities, base: string): number {
+  if (isForwardBaseId(base)) return 1;
   return 1 + 0.5 * (facilityLevel(facilities, base, 'unique') - 1);
 }
 

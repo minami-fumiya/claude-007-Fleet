@@ -1,11 +1,11 @@
 {
   "theaters": [
-    { "id": "pacific", "name": "南太平洋", "en": "SOUTH PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN"} },
+    { "id": "pacific", "name": "南太平洋", "en": "SOUTH PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN", "RN": "IJN", "FR": "IJN"} },
     { "id": "atlantic", "name": "北大西洋", "en": "NORTH ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM", "RM": "RN"} },
     { "id": "mediterranean", "name": "地中海", "en": "MEDITERRANEAN", "opponents": {"IJN": "RN", "RN": "RM", "RM": "RN", "FR": "RM", "KM": "RN"} },
     { "id": "baltic", "name": "バルト海", "en": "BALTIC", "opponents": {"SU": "KM", "KM": "SU"}, "inland": true },
     { "id": "blacksea", "name": "黒海", "en": "BLACK SEA", "opponents": {"SU": "KM"}, "exam": false, "inland": true },
-    { "id": "north_pacific", "name": "北太平洋", "en": "NORTH PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN", "SU": "IJN"}, "exam": false, "tier": 1 },
+    { "id": "north_pacific", "name": "北太平洋", "en": "NORTH PACIFIC", "opponents": {"IJN": "USN", "USN": "IJN", "SU": "IJN", "RN": "IJN"}, "exam": false, "tier": 1 },
     { "id": "south_atlantic", "name": "南大西洋", "en": "SOUTH ATLANTIC", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "FR": "KM", "RM": "RN"}, "exam": false, "tier": 1 },
     { "id": "indian", "name": "インド洋", "en": "INDIAN OCEAN", "opponents": {"IJN": "RN", "RN": "IJN", "KM": "RN", "RM": "RN", "FR": "IJN"}, "exam": false, "tier": 1 },
     { "id": "arctic", "name": "北極海", "en": "ARCTIC OCEAN", "opponents": {"RN": "KM", "KM": "RN", "USN": "KM", "SU": "KM"}, "exam": false, "tier": 1 }

@@ -1,8 +1,8 @@
 import { IDockJob } from '@/types/Progression';
 import { completeRepairs } from './DockSystem';
 import { finishBaseWork, IBaseWork } from './BaseSystem';
-import { Facilities, finishFacilities, IFacilityJob } from './FacilitySystem';
-import { IQuestState, withQuestEvents } from './QuestSystem';
+import { Facilities, finishFacilities, IFacilityJob, isForwardBaseId } from './FacilitySystem';
+import { IQuestState, QuestEvent, withQuestEvents } from './QuestSystem';
 
 /**
  * Everything that ends with time, in one place (#310, pure): repairs, builds, facility jobs and base construction.
@@ -59,7 +59,10 @@ export function completeTimers<T extends ITimerState>(progress: T, now: number):
   next = finishBaseWork(next, now);
   // 竣工章 (#264) counts the ships that come out of the yard, wherever the build is noticed.
   if (builds.length > 0) next = withQuestEvents(next, [['buildDone', builds.length]], now);
-  if (base !== null) next = withQuestEvents(next, [['baseOpened', 1]], now);
+  if (base !== null) next = withQuestEvents(next, [['baseOpened', 1], ...(isForwardBaseId(base) ? [['forwardBaseOpened', 1] as [QuestEvent, number]] : [])], now);
+  // 前線整備章 (#373): every level a forward base's facility reaches.
+  const forwardDone = progress.facilityJobs.filter((j) => j.endsAt <= now && isForwardBaseId(j.base)).length;
+  if (forwardDone > 0) next = withQuestEvents(next, [['forwardFacility', forwardDone]], now);
   return { progress: next, done };
 }
 

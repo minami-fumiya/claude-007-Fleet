@@ -51,9 +51,9 @@ export function fleetPower(ships: ReadonlyArray<Pick<IShipData, 'hp' | 'armor'>>
 
 const BASES = (baseData as { bases: Array<{ nation: string; theaters?: string[] }> }).bases;
 
-/** Where `theater` comes in `nation`'s order (#293): the place of the base that opens it, 0 for the first. */
+/** Where `theater` comes in `nation`'s order (#293): 0 for the home port's sea, then each forward base's in turn (#373). */
 export function theaterStep(nation: string, theater: string): number | undefined {
-  const i = BASES.filter((b) => b.nation === nation).findIndex((b) => b.theaters?.includes(theater));
+  const i = BASES.filter((b) => b.nation === nation && (b.theaters?.length ?? 0) > 0).findIndex((b) => b.theaters?.includes(theater));
   return i < 0 ? undefined : i;
 }
 

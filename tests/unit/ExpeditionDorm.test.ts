@@ -153,8 +153,13 @@ describe('遠征は階級ごとに 1 つずつ (#359)', () => {
     const shown = shownExpeditions(3);
     expect(shown[0].rank).toBe(4);
     expect(shown.slice(1).map((e) => e.rank)).toEqual([3, 2, 1]);
-    // At 元帥 every one is open and none is waiting.
-    expect(shownExpeditions(13)).toHaveLength(EXPEDITIONS.length);
+    // At 元帥 every one the rank opens is open and none is waiting; a sea's expedition waits for its base (#373).
+    const byRank = EXPEDITIONS.filter((e) => !e.theater);
+    expect(shownExpeditions(13)).toHaveLength(byRank.length);
+    const seas = shownExpeditions(13, [], undefined, new Set(['arctic']));
+    expect(seas.map((e) => e.id)).toContain('ex_sea_arctic');
+    expect(seas).toHaveLength(byRank.length + 1);
+    expect(expeditionsAt(0).some((e) => e.theater)).toBe(false);
     // An expedition out stays listed even if the rank no longer reaches it.
     expect(shownExpeditions(1, [{ id: 'ex_support', shipIds: [], endsAt: 0 }]).some((e) => e.id === 'ex_support')).toBe(true);
   });

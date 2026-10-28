@@ -8,7 +8,8 @@ import { ISortieState } from '@/types/Sortie';
 import { Nation } from '@/types/Nation';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { areaMode } from '@/systems/CampaignSystem';
-import { hpFraction } from '@/systems/DockSystem';
+import { hpFraction, setDamage } from '@/systems/DockSystem';
+import { theaterFacility } from '@/systems/BaseSystem';
 import { formatResources, gainResources, lostNote, pay } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { battleNodes, ISortieNode, NODE_LABEL, nextBattleIndex, nodesBetween, shipsForNextNode, sortieRoute } from '@/systems/SortieMapSystem';
@@ -167,6 +168,9 @@ function passNodes<T extends ReturnType<typeof loadProgress>>(start: T, nodes: I
   return { progress, notes };
 }
 
+/** What each level of a forward base's 泊地修理所 restores between the battles of a sortie (#373). */
+export const ANCHORAGE_REPAIR = 0.05;
+
 /**
  * 進撃: passes any supply cache / whirlpool on the way (their resources are applied now), drops 大破 ships and
  * returns the next battle. Null when no ship can go on or there is no next battle.
@@ -175,8 +179,16 @@ export function advanceSortie(scene: Phaser.Scene): { init: IBattleInitData; not
   const s = currentSortie();
   const preview = previewAdvance(scene);
   if (!s || !preview || preview.continuing.length === 0) return null;
-  const { progress, notes } = passNodes(loadProgress(), nodesBetween(s.route, s.at));
+  const passed = passNodes(loadProgress(), nodesBetween(s.route, s.at));
+  let progress = passed.progress;
+  const notes = passed.notes;
   const keep = s.shipIds.map((id, i) => ({ id, c: s.captainIds[i] ?? null })).filter((x) => preview.continuing.includes(x.id));
+  // 泊地修理所 (#373): the forward base of the area's sea patches up every ship going on, 5% of its HP a level.
+  const repair = ANCHORAGE_REPAIR * theaterFacility(progress, areaById(s.areaId)?.theater, 'anchorage');
+  if (repair > 0) {
+    for (const x of keep) progress = { ...progress, ...setDamage(progress, x.id, Math.min(1, hpFraction(progress, x.id) + repair)) };
+    notes.push(`泊地修理所: 全艦の耐久 +${Math.round(repair * 100)}%`);
+  }
   const next: ISortieState = { ...s, at: nextBattleIndex(s.route, s.at + 1), shipIds: keep.map((x) => x.id), captainIds: keep.map((x) => x.c), fought: false };
   saveProgress({ ...progress, sortie: next });
   scene.registry.set(NOTES_KEY, notes);

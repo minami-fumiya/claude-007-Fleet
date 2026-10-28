@@ -37,6 +37,9 @@ import { GROUND_KINDS, groundWeaponsOf, isGroundWeapon } from '@/systems/GroundS
 import specialData from '@/data/special.json';
 import superweaponData from '@/data/superweapons.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
+import { heldCount, madeBy } from '@/systems/EquipmentSystem';
+import { CONSUMABLES, ConsumableKind } from '@/systems/ConsumableSystem';
+import { IUpgradeData } from '@/types/Modifiers';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -228,6 +231,16 @@ export class EncyclopediaScene extends Phaser.Scene {
         return AIRCRAFT.filter((a) => a.nation === this.nation).map((a) => ({
           id: a.id, name: this.aircraftKnown(a.type) ? a.name : HIDDEN_NAME, sub: AIRCRAFT_TYPE_JA[a.type], icon: AIRCRAFT_TEXTURE[a.type], owned: this.aircraftKnown(a.type),
         }));
+      case 'equipment': {
+        // 装備 (#373): what the navy can develop or take from enemies, then the consumables (#47).
+        const np = loadSave().nations[this.nation];
+        const research = np?.research ?? [];
+        const gear = this.equipmentOf().map((u) => ({
+          id: u.id, name: u.name, sub: u.dropFrom ? '回収部品' : u.nations ? '国の装備' : '装備', icon: '', owned: np ? heldCount(np, u.id) > 0 : false,
+        }));
+        const cons = (Object.values(CONSUMABLES)).map((c) => ({ id: `consumable_${c.kind}`, name: c.name, sub: '消耗品', icon: '', owned: research.includes(c.requires) }));
+        return [...gear, ...cons];
+      }
       case 'ground': {
         // A superweapon stays ？？？ until one has been sunk (#315, like unseen ships #245).
         const seen = this.giantsSunk();
@@ -265,6 +278,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     if (this.tab === 'ships') this.buildShipDetail(DataLoader.getRegistry(this).byId(entry.id)!, entry.owned);
     else if (this.tab === 'captains') this.buildCaptainDetail(nationCaptains(this.nation).find((c) => c.id === entry.id)!, entry.owned);
     else if (this.tab === 'aircraft') this.buildAircraftDetail(AIRCRAFT.find((a) => a.id === entry.id)!, entry.owned);
+    else if (this.tab === 'equipment') this.buildEquipmentDetail(entry.id);
     else this.buildGroundDetail([...GROUND, ...this.groundWeaponEntries()].find((g) => g.id === entry.id)!);
   }
 
@@ -525,6 +539,34 @@ export class EncyclopediaScene extends Phaser.Scene {
     y = this.section(y, '役割', AIRCRAFT_ROLE[a.type]);
     y = this.section(y, '搭載', a.type === AircraftType.Recon ? '戦艦・巡洋艦 (偵察機 1 機)' : '空母の航空隊');
     if (owned) this.section(y, '解説', a.description, Css.muted);
+  }
+
+  /** The equipment of the book's navy (#373): what it develops, and the parts taken from enemies. */
+  private equipmentOf(): IUpgradeData[] {
+    return DataLoader.getUpgrades(this).filter((u) => madeBy(u, this.nation) || u.dropFrom);
+  }
+
+  /** 装備 (#373): what a piece of equipment or a consumable does, how it is had, and how many the navy holds. */
+  private buildEquipmentDetail(id: string): void {
+    const np = loadSave().nations[this.nation];
+    if (id.startsWith('consumable_')) {
+      const c = CONSUMABLES[id.slice('consumable_'.length) as ConsumableKind];
+      let y = this.detailHeader('消耗品', c.name);
+      y = this.section(y, '効果', `${c.note}。使える回数 ${c.charges} 回・待ち時間 ${Math.round(c.cooldownMs / 1000)} 秒`);
+      const tech = (key: string): string => TECH_TREE.find((t) => t.id === key)?.name ?? key;
+      y = this.section(y, '入手方法', `研究「${tech(c.requires)}」で使えるようになり、研究「${tech(c.extraChargeAt)}」で 1 回増える。艦種ごとに 2 つ`, Css.gold);
+      this.section(y, '状態', np?.research.includes(c.requires) ? '使える' : 'まだ使えない', Css.muted);
+      return;
+    }
+    const u = this.equipmentOf().find((x) => x.id === id);
+    if (!u) return;
+    let y = this.detailHeader(`${formatNo(u.no)}  ·  ${u.dropFrom ? '回収部品' : u.nations ? `${NATION_INFO[this.nation].ja}の装備` : '共通の装備'}`, u.name);
+    y = this.section(y, '効果', u.description);
+    const how = u.dropFrom
+      ? '沈めた敵から手に入る部品。開発はできない (どの国の艦にも付けられる)'
+      : `工廠の「開発」で作る${u.requires ? ` (研究「${TECH_TREE.find((t) => t.id === u.requires)?.name ?? u.requires}」が要る)` : ''}`;
+    y = this.section(y, '入手方法', how, Css.gold);
+    this.section(y, '所持数', `${np ? heldCount(np, u.id) : 0} 個 (艦に付けている分を含む)${u.year ? `  ·  ${u.year} 年` : ''}`, Css.muted);
   }
 
   /** Whether any nation has sunk a superweapon (#315). */
