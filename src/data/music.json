@@ -1,0 +1,42 @@
+{
+  "_comment": "国別 BGM (#93): melodies of public-domain naval music, played by the WebAudio synth (no recordings). Each note is \"pitch:beats\" (R = rest). The rights and sources are in docs/specs/systems/audio.md. These are short arrangements of the opening phrases, not full scores.",
+  "tunes": [
+    {
+      "id": "ijn", "nation": "IJN", "title": "軍艦行進曲", "composer": "瀬戸口藤吉 (1868–1941)", "year": 1897, "bpm": 112,
+      "notes": ["G4:1", "G4:1", "G4:1", "C5:1", "E5:2", "D5:1", "C5:1", "G4:2", "R:2", "A4:1", "A4:1", "A4:1", "D5:1", "F5:2", "E5:1", "D5:1", "C5:3", "R:1",
+        "E5:1", "E5:1", "D5:1", "C5:1", "D5:2", "G4:2", "C5:1", "B4:1", "A4:1", "B4:1", "C5:3", "R:1"]
+    },
+    {
+      "id": "usn", "nation": "USN", "title": "錨を上げて (Anchors Aweigh)", "composer": "Charles A. Zimmermann (1861–1916)", "year": 1906, "bpm": 116,
+      "notes": ["C5:2", "B4:1", "A4:1", "G4:2", "E4:1", "G4:1", "A4:2", "G4:1", "E4:1", "D4:3", "R:1", "G4:2", "C5:1", "D5:1", "E5:2", "D5:1", "C5:1", "A4:2", "B4:1", "C5:1", "D5:3", "R:1",
+        "C5:2", "B4:1", "A4:1", "G4:2", "E4:1", "G4:1", "C5:2", "B4:1", "A4:1", "G4:3", "R:1"]
+    },
+    {
+      "id": "rn", "nation": "RN", "title": "樫の心 (Heart of Oak)", "composer": "William Boyce (1711–1779)", "year": 1759, "bpm": 104,
+      "notes": ["D4:1", "G4:2", "G4:1", "G4:2", "A4:1", "B4:2", "A4:1", "G4:2", "B4:1", "D5:3", "R:1", "D5:1", "E5:2", "D5:1", "C5:2", "B4:1", "A4:2", "G4:1", "A4:2", "B4:1", "A4:3", "R:1",
+        "D4:1", "G4:2", "B4:1", "D5:2", "B4:1", "C5:2", "A4:1", "B4:2", "G4:1", "A4:2", "F#4:1", "G4:3", "R:1"]
+    },
+    {
+      "id": "km", "nation": "KM", "title": "旧友 (Alte Kameraden)", "composer": "Carl Teike (1864–1922)", "year": 1889, "bpm": 112,
+      "notes": ["C5:1", "C5:1", "E5:1", "G5:1", "G5:2", "E5:2", "F5:1", "E5:1", "D5:1", "C5:1", "D5:3", "R:1", "D5:1", "D5:1", "F5:1", "A5:1", "A5:2", "F5:2", "G5:1", "F5:1", "E5:1", "D5:1", "E5:3", "R:1",
+        "E5:1", "G5:1", "C6:2", "B5:1", "A5:1", "G5:2", "F5:1", "E5:1", "D5:2", "G4:2", "C5:3", "R:1"]
+    },
+    {
+      "id": "fr", "nation": "FR", "title": "ラ・マルセイエーズ", "composer": "Claude Joseph Rouget de Lisle (1760–1836)", "year": 1792, "bpm": 104,
+      "notes": ["D4:0.5", "D4:0.5", "D4:0.5", "G4:2", "G4:2", "A4:2", "A4:2", "D5:3", "B4:1", "G4:1.5", "G4:0.5", "B4:1", "G4:1", "E4:2", "C5:4", "A4:1.5", "F#4:0.5", "G4:4", "R:2",
+        "G4:1", "A4:1", "B4:2", "B4:2", "B4:2", "C5:1", "B4:1", "B4:2", "A4:2", "R:2"]
+    },
+    {
+      "id": "rm", "nation": "RM", "title": "王室行進曲 (Marcia Reale)", "composer": "Giuseppe Gabetti (1796–1862)", "year": 1831, "bpm": 112,
+      "notes": ["C5:1", "R:0.5", "C5:0.5", "C5:1", "E5:1", "G5:2", "E5:1", "C5:1", "D5:1", "R:0.5", "D5:0.5", "D5:1", "F5:1", "A5:2", "F5:1", "D5:1",
+        "E5:1", "G5:1", "C6:2", "B5:1", "A5:1", "G5:1", "F5:1", "E5:2", "D5:2", "C5:3", "R:1"]
+    },
+    {
+      "id": "su", "nation": "SU", "title": "ヴォルガの舟歌 (Эй, ухнем)", "composer": "ロシア民謡 (作者不詳、1866 年に採譜)", "year": 1866, "bpm": 72,
+      "notes": ["A3:1", "C4:1", "D4:1", "R:1", "A3:1", "C4:1", "D4:1", "R:1", "F4:1", "E4:1", "D4:1", "C4:1", "A3:2", "R:2",
+        "D4:1", "D4:1", "F4:1", "A4:2", "G4:1", "F4:1", "E4:2", "D4:1", "C4:1", "A3:3", "R:1"]
+    }
+  ],
+  "fanfare": ["C5:0.5", "C5:0.5", "C5:0.5", "G5:3"],
+  "_fanfare": "勝利のファンファーレは本作のための短い音型 (パブリックドメインの曲ではない)"
+}

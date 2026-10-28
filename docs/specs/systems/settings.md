@@ -9,6 +9,17 @@ Implementation: `SettingsSystem.ts` and `SaveCodec.ts` (pure, tested), `AudioSys
 | BGM volume | 0–100 (steps of 10 with −/+, or tap the bar for steps of 5) | 80 |
 | SFX volume | 0–100 | 80 |
 | Mute | on / off (also the in-battle 音 button and `M`) | off |
+| Narration / commentary volume (#105) | 0–100 | 80 |
+| BGM / SFX / narration / commentary on (#105) | on / off each | on |
+| 国別 BGM (#93) | the navy's tune / the old chord bed | the navy's tune |
+| Commentary rate (#106) | 多い / 普通 / 少ない | 普通 |
+| Subtitles (#106) | on / off | on |
+| Screen shake (#107) | 弱 / 強 / なし | 弱 |
+| Vibration (#107) | on / off | on |
+
+Since 0.0.49 the screen has three tabs: 音 (the four channels, the music and commentary), 操作・表示 (stick, builder
+defaults, difficulty, fps, shake and vibration) and データ (save codes, help, ledger, resets, backups). Every new
+field is read with its default, so older settings keep working. The sounds themselves: `docs/specs/systems/audio.md`.
 
 Channel gain = base × volume / 100, or 0 when muted. The bases were raised so the default 80 sounds as loud as the
 game did before volume settings. The old `ww2fleet.audio.muted` flag is read once as the initial mute.

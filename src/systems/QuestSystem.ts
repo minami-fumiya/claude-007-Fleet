@@ -67,6 +67,8 @@ export const QUEST_EVENTS = [
   // 0.0.48: ships scrapped (#42), equipment developed (#55), parts and blueprint fragments taken (#150), superweapon areas
   // won (#148), aircraft developed and aces born (#87), consumables used (#47)
   'scrap', 'develop', 'partDrop', 'blueprint', 'swAreaWin', 'aircraftDev', 'aceBorn', 'consumableUse',
+  // 0.0.49: battle logs read (#106)
+  'logView',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

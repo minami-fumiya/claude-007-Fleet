@@ -6,7 +6,8 @@ import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { clampVolume, frameLimitLabel, ISettings, nextFrameLimit, stepVolume } from '@/systems/SettingsSystem';
+import { clampVolume, COMMENTARY_RATE_LABEL, COMMENTARY_RATES, frameLimitLabel, ISettings, nextChoice, nextFrameLimit, SHAKE_LABEL, SHAKE_LEVELS, stepVolume } from '@/systems/SettingsSystem';
+import { voice } from '@/systems/VoiceSystem';
 import { applyFrameLimit } from '@/utils/FrameLimit';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
 import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
@@ -23,6 +24,11 @@ const ROW_H = IS_PORTRAIT ? 80 : 64;
 const BTN_H = IS_PORTRAIT ? 64 : 48;
 
 /** 設定: sound volumes and mute, and save data transfer / reset. */
+type SettingsTab = 'sound' | 'play' | 'data';
+const TAB_LABEL: Record<SettingsTab, string> = { sound: '音', play: '操作・表示', data: 'データ' };
+const TABS: SettingsTab[] = ['sound', 'play', 'data'];
+const TAB_H = IS_PORTRAIT ? 56 : 40;
+
 /** Sheets drawn over the settings (nation reset). */
 const SHEET_DEPTH = 300;
 
@@ -38,13 +44,16 @@ export class SettingsScene extends Phaser.Scene {
   private nationResetArmed: Nation | null = null;
   private status = '';
   private statusCss: string = Css.muted;
+  /** 音・操作・データ (#105): the page shown */
+  private tab: SettingsTab = 'sound';
 
   constructor() {
     super({ key: SceneKeys.SETTINGS });
   }
 
-  init(data?: { returnTo?: string }): void {
+  init(data?: { returnTo?: string; tab?: SettingsTab }): void {
     this.returnTo = data?.returnTo ?? SceneKeys.HOME;
+    this.tab = data?.tab ?? 'sound';
   }
 
   create(): void {
@@ -73,86 +82,126 @@ export class SettingsScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
-    const colW = IS_PORTRAIT ? P.w - 56 : (P.w - 56 - COL_GAP) / 2;
-    let x = P.x + 28;
-    let w = colW;
+    // The tabs (#105): sound, controls and display, save data.
+    const tw = (P.w - 56 - 12 * (TABS.length - 1)) / TABS.length;
+    TABS.forEach((t, i) => {
+      this.track(new UIButton(this, P.x + 28 + i * (tw + 12) + tw / 2, P.y + 20 + TAB_H / 2, TAB_LABEL[t], () => {
+        this.tab = t;
+        this.status = '';
+        this.resetArmed = false;
+        this.refresh();
+      }, { variant: this.tab === t ? 'primary' : 'secondary', width: tw, height: TAB_H, fontSize: 15 }));
+    });
+    const top = P.y + 20 + TAB_H + (IS_PORTRAIT ? 24 : 18);
+    if (this.tab === 'sound') this.drawSound(top);
+    else if (this.tab === 'play') this.drawPlay(top);
+    else this.drawData(top);
+  }
+
+  /** A label on the left and a toggle-style button on the right. */
+  private toggleRow(x: number, y: number, w: number, label: string, value: string, on: boolean, onTap: () => void): void {
+    const bw = IS_PORTRAIT ? 200 : 170;
+    this.track(this.add.text(x, y + BTN_H / 2, label, textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    this.track(new UIButton(this, x + w - bw / 2, y + BTN_H / 2, value, onTap, { variant: on ? 'primary' : 'secondary', width: bw, height: BTN_H, fontSize: 15 }));
+  }
+
+  private note(x: number, y: number, w: number, text: string): number {
+    const t = this.track(this.add.text(x, y, text, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    return t.height;
+  }
+
+  /** 音 (#105): the four channels, each with its volume and on / off; then the music and the commentary. */
+  private drawSound(top: number): void {
     const s = audio.settings;
-    let y = P.y + 24;
-
-    this.track(this.add.text(x, y, 'サウンド', eyebrowStyle(11)));
-    y += 34;
-    this.volumeRow(x, y, w, 'BGM', s.bgm, (v) => audio.update({ bgm: v }));
-    y += ROW_H;
-    this.volumeRow(x, y, w, '効果音', s.sfx, (v) => audio.update({ sfx: v }));
-    y += ROW_H;
-    this.track(this.add.text(x, y + BTN_H / 2, 'ミュート', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
-    const muteW = IS_PORTRAIT ? 220 : 180;
-    this.track(
-      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.muted ? '音 OFF' : '音 ON', () => this.change({ muted: !s.muted }), {
-        variant: s.muted ? 'secondary' : 'primary', width: muteW, height: BTN_H, fontSize: 16,
-      }),
-    );
-    y += BTN_H + (IS_PORTRAIT ? 30 : 32);
-
-    this.track(this.add.text(x, y, '操作', eyebrowStyle(11)));
-    y += 34;
-    this.track(this.add.text(x, y + BTN_H / 2, '移動スティック (タッチ)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
-    this.track(
-      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.joystick ? '表示' : '非表示', () => this.change({ joystick: !s.joystick }), {
-        variant: s.joystick ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
-      }),
-    );
+    const x = P.x + 28;
+    const w = P.w - 56;
+    const colW = IS_PORTRAIT ? w : (w - COL_GAP) / 2;
+    let y = top;
+    const rowH = IS_PORTRAIT ? ROW_H : ROW_H - 6;
+    this.volumeRow(x, y, colW, 'BGM', s.bgm, (v) => audio.update({ bgm: v }), s.bgmOn, () => this.change({ bgmOn: !s.bgmOn }));
+    y += rowH;
+    this.volumeRow(x, y, colW, '効果音', s.sfx, (v) => audio.update({ sfx: v }), s.sfxOn, () => this.change({ sfxOn: !s.sfxOn }));
+    y += rowH;
+    this.volumeRow(x, y, colW, 'ナレーション', s.voice, (v) => audio.update({ voice: v }), s.voiceOn, () => this.change({ voiceOn: !s.voiceOn }));
+    y += rowH;
+    this.volumeRow(x, y, colW, '戦闘実況', s.commentary, (v) => audio.update({ commentary: v }), s.commentaryOn, () => this.change({ commentaryOn: !s.commentaryOn }));
+    y += rowH + 4;
+    this.toggleRow(x, y, colW, 'ミュート (全部)', s.muted ? '音 OFF' : '音 ON', !s.muted, () => this.change({ muted: !s.muted }));
+    y += BTN_H + (IS_PORTRAIT ? 24 : 18);
+    let x2 = x;
+    if (!IS_PORTRAIT) {
+      x2 = x + colW + COL_GAP;
+      y = top;
+    }
+    this.toggleRow(x2, y, colW, 'BGM の曲', s.nationalBgm ? '国別の海軍の曲' : '従来の曲', s.nationalBgm, () => this.change({ nationalBgm: !s.nationalBgm }));
     y += BTN_H + 6;
-    this.track(this.add.text(x, y, '非表示にすると、海面のタップと AUTO で移動します。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
-    y += IS_PORTRAIT ? 36 : 32;
-
-    this.track(this.add.text(x, y, '編成', eyebrowStyle(11)));
-    y += 34;
-    this.track(this.add.text(x, y + BTN_H / 2, '演習の設定を引き継ぐ', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
-    this.track(
-      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, s.keepExercise ? '引き継ぐ' : '毎回 標準', () => this.change({ keepExercise: !s.keepExercise }), {
-        variant: s.keepExercise ? 'primary' : 'secondary', width: muteW, height: BTN_H, fontSize: 16,
-      }),
-    );
+    y += this.note(x2, y, colW, '国別: 鎮守府と戦闘で、遊んでいる国の海軍の曲 (著作権の切れた行進曲など) を流します。タイトルは共通の曲です。') + (IS_PORTRAIT ? 18 : 14);
+    this.toggleRow(x2, y, colW, '実況の頻度', COMMENTARY_RATE_LABEL[s.commentaryRate], s.commentaryRate !== 'few', () => this.change({ commentaryRate: nextChoice(COMMENTARY_RATES, s.commentaryRate) }));
+    y += BTN_H + (IS_PORTRAIT ? 14 : 12);
+    this.toggleRow(x2, y, colW, '字幕', s.subtitles ? '表示' : '非表示', s.subtitles, () => this.change({ subtitles: !s.subtitles }));
     y += BTN_H + 6;
-    this.track(this.add.text(x, y, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回 標準」にすると、編成画面を開くたびに標準 (戦域の相手国・水上戦・晴天・昼・同数) から始まります。', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
-    y += IS_PORTRAIT ? 84 : 32;
+    y += this.note(x2, y, colW, 'ナレーションと実況を画面の下にも文字で出します。声は端末の音声合成を使い、日本語の声が無い端末では字幕だけになります。') + (IS_PORTRAIT ? 14 : 10);
+    this.track(new UIButton(this, x2 + colW / 2, y + BTN_H / 2, '声を試す', () => voice.say('敵艦隊見ゆ。全艦、戦闘配置につけ', 'narration'), {
+      variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: BTN_H, fontSize: 15,
+    }));
+  }
+
+  /** 操作・表示: the stick, the builder's defaults, difficulty, fps, and the shake and buzz (#107). */
+  private drawPlay(top: number): void {
+    const s = audio.settings;
+    const x = P.x + 28;
+    const w = P.w - 56;
+    const colW = IS_PORTRAIT ? w : (w - COL_GAP) / 2;
+    let y = top;
+    this.toggleRow(x, y, colW, '移動スティック (タッチ)', s.joystick ? '表示' : '非表示', s.joystick, () => this.change({ joystick: !s.joystick }));
+    y += BTN_H + 6;
+    y += this.note(x, y, colW, '非表示にすると、海面のタップと AUTO で移動します。') + (IS_PORTRAIT ? 18 : 14);
+    this.toggleRow(x, y, colW, '演習の設定を引き継ぐ', s.keepExercise ? '引き継ぐ' : '毎回 標準', s.keepExercise, () => this.change({ keepExercise: !s.keepExercise }));
+    y += BTN_H + 6;
+    y += this.note(x, y, colW, '交戦相手・戦闘の種類・天候・時間・敵の数。「毎回 標準」にすると、編成画面を開くたびに標準 (戦域の相手国・水上戦・晴天・昼・同数) から始まります。') + (IS_PORTRAIT ? 18 : 14);
     // 難易度 (#100): taps cycle 易しい → 普通 → 難しい.
     const diff = DIFFICULTIES[s.difficulty];
-    this.track(this.add.text(x, y + BTN_H / 2, '難易度', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
-    this.track(
-      new UIButton(this, x + w - muteW / 2, y + BTN_H / 2, diff.label, () => this.change({ difficulty: nextDifficulty(s.difficulty) }), {
-        variant: s.difficulty === 'normal' ? 'secondary' : 'primary', width: muteW, height: BTN_H, fontSize: 16,
-      }),
-    );
+    this.toggleRow(x, y, colW, '難易度', diff.label, s.difficulty !== 'normal', () => this.change({ difficulty: nextDifficulty(s.difficulty) }));
     y += BTN_H + 6;
-    this.track(this.add.text(x, y, `作戦と演習の敵の強さ。報酬 ×${diff.rewardMul}・敵の耐久 ×${diff.hpMul} (史実は常に普通)`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
-    y += IS_PORTRAIT ? 36 : 32;
+    y += this.note(x, y, colW, `作戦と演習の敵の強さ。報酬 ×${diff.rewardMul}・敵の耐久 ×${diff.hpMul} (史実は常に普通)`) + (IS_PORTRAIT ? 18 : 14);
+    let x2 = x;
     if (!IS_PORTRAIT) {
-      x = P.x + 28 + colW + COL_GAP;
-      y = P.y + 24;
+      x2 = x + colW + COL_GAP;
+      y = top;
     }
     // 動作情報 (#99): fps, objects and frame time over the battle; and the frame limit (#336), 30 to save the battery.
     const fpsW = IS_PORTRAIT ? 170 : 130;
-    this.track(this.add.text(x, y + BTN_H / 2, '動作情報 (fps)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    this.track(this.add.text(x2, y + BTN_H / 2, '動作情報 (fps)', textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
     this.track(
-      new UIButton(this, x + w - fpsW * 1.5 - 10, y + BTN_H / 2, frameLimitLabel(s.frameLimit), () => {
+      new UIButton(this, x2 + colW - fpsW * 1.5 - 10, y + BTN_H / 2, frameLimitLabel(s.frameLimit), () => {
         const frameLimit = nextFrameLimit(s.frameLimit);
         this.change({ frameLimit });
         applyFrameLimit(this.game, frameLimit);
       }, { variant: s.frameLimit === 0 ? 'secondary' : 'primary', width: fpsW, height: BTN_H, fontSize: 15 }),
     );
     this.track(
-      new UIButton(this, x + w - fpsW / 2, y + BTN_H / 2, s.showFps ? '表示' : '非表示', () => this.change({ showFps: !s.showFps }), {
+      new UIButton(this, x2 + colW - fpsW / 2, y + BTN_H / 2, s.showFps ? '表示' : '非表示', () => this.change({ showFps: !s.showFps }), {
         variant: s.showFps ? 'primary' : 'secondary', width: fpsW, height: BTN_H, fontSize: 16,
       }),
     );
-    y += BTN_H + (IS_PORTRAIT ? 16 : 20);
+    y += BTN_H + (IS_PORTRAIT ? 24 : 18);
+    // 画面の揺れとスマホの振動 (#107)
+    this.toggleRow(x2, y, colW, '画面の揺れ', SHAKE_LABEL[s.shake], s.shake !== 'off', () => this.change({ shake: nextChoice(SHAKE_LEVELS, s.shake) }));
+    y += BTN_H + 6;
+    y += this.note(x2, y, colW, '大きな艦の撃沈や自分の艦の大破で画面が揺れます。酔いやすい時は「なし」に。') + (IS_PORTRAIT ? 18 : 14);
+    this.toggleRow(x2, y, colW, '振動 (スマホ)', s.vibrate ? 'ON' : 'OFF', s.vibrate, () => this.change({ vibrate: !s.vibrate }));
+    y += BTN_H + 6;
+    this.note(x2, y, colW, '自分の艦の被弾・大破・撃沈で短く振動します (対応している端末だけ。iPhone は振動しません)。');
+  }
 
+  /** データ: save codes, help, the ledger, resets and backups. */
+  private drawData(top: number): void {
+    const x = P.x + 28;
+    const w = P.w - 56;
+    let y = top;
     this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
-    this.track(this.add.text(x, y, `セーブコードで別の端末やブラウザへ進行状況を移せます。  (v${__APP_VERSION__})`, textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
-    y += IS_PORTRAIT ? 48 : 30;
+    y += this.note(x, y, w, `セーブコードで別の端末やブラウザへ進行状況を移せます。  (v${__APP_VERSION__})`) + (IS_PORTRAIT ? 18 : 14);
     const buttons: Array<[string, () => void, 'primary' | 'secondary' | 'danger']> = [
       ['セーブコードをコピー', () => this.exportSave(), 'primary'],
       ['セーブコードを読み込む', () => void this.importSave(), 'secondary'],
@@ -167,8 +216,7 @@ export class SettingsScene extends Phaser.Scene {
       }, 'secondary'],
       [this.resetArmed ? 'もう一度押すと全部リセット' : '全部リセット', () => this.resetSave(), this.resetArmed ? 'danger' : 'secondary'],
     ];
-    // Three per row on a phone so the section fits (and the backups below it), two in the landscape column.
-    const cols = IS_PORTRAIT ? 3 : 2;
+    const cols = IS_PORTRAIT ? 2 : 3;
     const gap = 12;
     const bw = (w - gap * (cols - 1)) / cols;
     buttons.forEach(([label, fn, variant], i) => {
@@ -191,22 +239,26 @@ export class SettingsScene extends Phaser.Scene {
     if (this.status) this.track(this.add.text(x, y, this.status, textStyle(14, this.statusCss, { wordWrap: { width: w, useAdvancedWrap: true } })));
   }
 
-  private volumeRow(x: number, y: number, w: number, label: string, value: number, set: (v: number) => void): void {
-    const btn = IS_PORTRAIT ? 64 : 48;
-    const labelW = IS_PORTRAIT ? 110 : 120;
-    const valueW = 56;
-    const meterX = x + labelW + btn + 12;
-    const meterW = w - labelW - btn * 2 - 24 - valueW;
+  /** −, a bar to tap, +, the value and (#105) the channel's on / off. */
+  private volumeRow(x: number, y: number, w: number, label: string, value: number, set: (v: number) => void, on = true, toggle?: () => void): void {
+    const btn = IS_PORTRAIT ? 56 : 44;
+    const labelW = IS_PORTRAIT ? 150 : 128;
+    const valueW = 44;
+    const onW = toggle ? (IS_PORTRAIT ? 84 : 64) : 0;
+    const meterX = x + labelW + btn + 10;
+    const meterW = w - labelW - btn * 2 - 20 - valueW - (onW ? onW + 10 : 0);
     const cy = y + btn / 2;
-    this.track(this.add.text(x, cy, label, textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    const name = this.track(this.add.text(x, cy, label, textStyle(16, on ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 0.5));
+    if (name.width > labelW - 8) name.setScale((labelW - 8) / name.width);
     this.track(new UIButton(this, x + labelW + btn / 2, cy, '−', () => this.setVolume(set, stepVolume(value, -1)), { variant: 'secondary', width: btn, height: btn, fontSize: 20 }));
-    this.track(new UIButton(this, meterX + meterW + 12 + btn / 2, cy, '+', () => this.setVolume(set, stepVolume(value, 1)), { variant: 'secondary', width: btn, height: btn, fontSize: 20 }));
+    this.track(new UIButton(this, meterX + meterW + 10 + btn / 2, cy, '+', () => this.setVolume(set, stepVolume(value, 1)), { variant: 'secondary', width: btn, height: btn, fontSize: 20 }));
     const g = this.track(this.add.graphics());
-    drawMeter(g, meterX, cy - 6, meterW, 12, value / 100, Colors.cyan);
+    drawMeter(g, meterX, cy - 6, meterW, 12, value / 100, on ? Colors.cyan : Colors.dim);
     // Tap anywhere on the bar to jump there (in steps of 5).
     const hit = this.track(this.add.zone(meterX + meterW / 2, cy, meterW, btn).setInteractive({ useHandCursor: true }));
     hit.on('pointerup', (p: Phaser.Input.Pointer) => this.setVolume(set, clampVolume(Math.round(((p.x - meterX) / meterW) * 20) * 5)));
-    this.track(this.add.text(x + w, cy, String(value), textStyle(16, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0.5));
+    this.track(this.add.text(meterX + meterW + 10 + btn + 8 + valueW, cy, String(value), textStyle(15, on ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(1, 0.5));
+    if (toggle) this.track(new UIButton(this, x + w - onW / 2, cy, on ? 'ON' : 'OFF', toggle, { variant: on ? 'primary' : 'secondary', width: onW, height: btn, fontSize: 14 }));
   }
 
   private setVolume(set: (v: number) => void, v: number): void {

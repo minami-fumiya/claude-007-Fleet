@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
+import { audio } from '@/systems/AudioSystem';
 
 // ---------------------------------------------------------------------------
 // Canvas-drawn textures (gradients and glows work in both WebGL and Canvas renderers)
@@ -408,6 +409,8 @@ export class UIButton extends Phaser.GameObjects.Container {
       if (!this.enabledState || !this.pressed) return;
       this.pressed = false;
       this.setScale(1);
+      // タップ音 (#104): 戻る・閉じる sound apart from the rest.
+      audio.play(/^‹|戻る|閉じる|キャンセル/.test(this.label.text) ? 'uiBack' : 'ui');
       onClick();
     });
 

@@ -1,6 +1,6 @@
 import { Difficulty, isDifficulty } from './DifficultySystem';
 
-/** Player settings (pure): sound volumes and mute, touch controls and Fleet Builder defaults, kept apart from game progress. */
+/** Player settings (pure): the four sound channels (#105) and mute, touch controls and Fleet Builder defaults, kept apart from game progress. */
 
 export interface ISettings {
   /** 0..100 */
@@ -24,6 +24,36 @@ export interface ISettings {
   showFps: boolean;
   /** フレームの上限 (#336): 0 = the screen's own rate, else 30 or 60 (30 saves the battery) */
   frameLimit: FrameLimit;
+  /** 音の 4 系統 (#105): narration and battle commentary volumes 0..100, and each channel on or off */
+  voice: number;
+  commentary: number;
+  bgmOn: boolean;
+  sfxOn: boolean;
+  voiceOn: boolean;
+  commentaryOn: boolean;
+  /** 国別 BGM (#93); off plays the old chord bed */
+  nationalBgm: boolean;
+  /** How often the battle is called (#106) */
+  commentaryRate: CommentaryRate;
+  /** Narration and commentary as text too (#106) */
+  subtitles: boolean;
+  /** 画面の揺れ (#107): weak by default (motion sickness) */
+  shake: ShakeLevel;
+  /** スマホの振動 (#107) */
+  vibrate: boolean;
+}
+
+export type CommentaryRate = 'few' | 'normal' | 'many';
+export const COMMENTARY_RATES: CommentaryRate[] = ['normal', 'many', 'few'];
+export const COMMENTARY_RATE_LABEL: Record<CommentaryRate, string> = { few: '少ない', normal: '普通', many: '多い' };
+
+export type ShakeLevel = 'off' | 'weak' | 'strong';
+export const SHAKE_LEVELS: ShakeLevel[] = ['weak', 'strong', 'off'];
+export const SHAKE_LABEL: Record<ShakeLevel, string> = { off: 'なし', weak: '弱', strong: '強' };
+
+/** The next of a list of choices (the settings buttons cycle). */
+export function nextChoice<T>(list: readonly T[], current: T): T {
+  return list[(list.indexOf(current) + 1) % list.length];
 }
 
 export type FrameLimit = 0 | 30 | 60;
@@ -39,7 +69,9 @@ export function nextFrameLimit(limit: FrameLimit): FrameLimit {
   return FRAME_LIMITS[(FRAME_LIMITS.indexOf(limit) + 1) % FRAME_LIMITS.length];
 }
 
-export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false, frameLimit: 0 };
+export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false, frameLimit: 0,
+  voice: 80, commentary: 80, bgmOn: true, sfxOn: true, voiceOn: true, commentaryOn: true, nationalBgm: true, commentaryRate: 'normal', subtitles: true, shake: 'weak', vibrate: true,
+};
 export const VOLUME_STEP = 10;
 
 export function clampVolume(v: number): number {
@@ -50,9 +82,9 @@ export function stepVolume(v: number, steps: number): number {
   return clampVolume(v + steps * VOLUME_STEP);
 }
 
-/** Gain for a channel: its base level scaled by the volume, silent when muted. */
-export function channelGain(base: number, volume: number, muted: boolean): number {
-  return muted ? 0 : base * (clampVolume(volume) / 100);
+/** Gain for a channel: its base level scaled by the volume, silent when muted or the channel is off (#105). */
+export function channelGain(base: number, volume: number, muted: boolean, on = true): number {
+  return muted || !on ? 0 : base * (clampVolume(volume) / 100);
 }
 
 /** Tolerant parse; `legacyMuted` is the pre-settings mute flag. */
@@ -72,6 +104,18 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       difficulty: isDifficulty(d.difficulty) ? d.difficulty : DEFAULT_SETTINGS.difficulty,
       showFps: typeof d.showFps === 'boolean' ? d.showFps : DEFAULT_SETTINGS.showFps,
       frameLimit: FRAME_LIMITS.includes(d.frameLimit as FrameLimit) ? (d.frameLimit as FrameLimit) : DEFAULT_SETTINGS.frameLimit,
+      // 0.0.49 (#105 #106 #107): read with defaults, so older settings keep working.
+      voice: typeof d.voice === 'number' ? clampVolume(d.voice) : DEFAULT_SETTINGS.voice,
+      commentary: typeof d.commentary === 'number' ? clampVolume(d.commentary) : DEFAULT_SETTINGS.commentary,
+      bgmOn: typeof d.bgmOn === 'boolean' ? d.bgmOn : DEFAULT_SETTINGS.bgmOn,
+      sfxOn: typeof d.sfxOn === 'boolean' ? d.sfxOn : DEFAULT_SETTINGS.sfxOn,
+      voiceOn: typeof d.voiceOn === 'boolean' ? d.voiceOn : DEFAULT_SETTINGS.voiceOn,
+      commentaryOn: typeof d.commentaryOn === 'boolean' ? d.commentaryOn : DEFAULT_SETTINGS.commentaryOn,
+      nationalBgm: typeof d.nationalBgm === 'boolean' ? d.nationalBgm : DEFAULT_SETTINGS.nationalBgm,
+      commentaryRate: COMMENTARY_RATES.includes(d.commentaryRate as CommentaryRate) ? (d.commentaryRate as CommentaryRate) : DEFAULT_SETTINGS.commentaryRate,
+      subtitles: typeof d.subtitles === 'boolean' ? d.subtitles : DEFAULT_SETTINGS.subtitles,
+      shake: SHAKE_LEVELS.includes(d.shake as ShakeLevel) ? (d.shake as ShakeLevel) : DEFAULT_SETTINGS.shake,
+      vibrate: typeof d.vibrate === 'boolean' ? d.vibrate : DEFAULT_SETTINGS.vibrate,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

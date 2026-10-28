@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { channelGain, DEFAULT_SETTINGS, parseSettings, stepVolume } from '@/systems/SettingsSystem';
+import { channelGain, COMMENTARY_RATES, DEFAULT_SETTINGS, nextChoice, parseSettings, SHAKE_LEVELS, stepVolume } from '@/systems/SettingsSystem';
 import { decodeSave, encodeSave, SAVE_PREFIX } from '@/systems/SaveCodec';
 import { emptyProgress, emptySave, withProgress } from '@/utils/ProgressStore';
 import { Nation } from '@/types/Nation';
@@ -14,12 +14,21 @@ describe('SettingsSystem', () => {
   it('scales channel gain by volume and mute', () => {
     expect(channelGain(0.5, 50, false)).toBeCloseTo(0.25);
     expect(channelGain(0.5, 100, true)).toBe(0);
+    expect(channelGain(0.5, 100, false, false)).toBe(0);
+  });
+
+  it('reads the 0.0.49 sound settings with defaults from older data (#105 #106 #107)', () => {
+    const old = parseSettings('{"bgm":50,"sfx":60,"muted":false}');
+    expect(old).toMatchObject({ voice: 80, commentary: 80, bgmOn: true, sfxOn: true, voiceOn: true, commentaryOn: true, nationalBgm: true, commentaryRate: 'normal', subtitles: true, shake: 'weak', vibrate: true });
+    expect(parseSettings('{"voiceOn":false,"commentary":130,"commentaryRate":"many","shake":"huge","vibrate":false}')).toMatchObject({ voiceOn: false, commentary: 100, commentaryRate: 'many', shake: 'weak', vibrate: false });
+    expect(nextChoice(SHAKE_LEVELS, 'off')).toBe('weak');
+    expect(nextChoice(COMMENTARY_RATES, 'few')).toBe('normal');
   });
 
   it('parses stored settings tolerantly and keeps the old mute flag', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings(null, true).muted).toBe(true);
-    expect(parseSettings('{"bgm":140,"sfx":"x"}')).toEqual({ bgm: 100, sfx: DEFAULT_SETTINGS.sfx, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false, frameLimit: 0 });
+    expect(parseSettings('{"bgm":140,"sfx":"x"}')).toEqual({ ...DEFAULT_SETTINGS, bgm: 100 });
     expect(parseSettings('{"frameLimit":30}').frameLimit).toBe(30);
     expect(parseSettings('{"frameLimit":45}').frameLimit).toBe(0);
     expect(parseSettings('{"showFps":true}').showFps).toBe(true);

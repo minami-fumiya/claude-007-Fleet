@@ -40,6 +40,10 @@ import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
 import { addGroundKills, bombardLineup, GROUND_WEAPONS } from '@/systems/GroundSystem';
+import { battleLine, bearingWord, CommentaryKind, emptyCommentary, ICommentaryState, logLines, narrationLine, next as nextCommentary, raise } from '@/systems/CommentarySystem';
+import { voice } from '@/systems/VoiceSystem';
+import { FeedbackEvent, shakeFor, vibrateFor } from '@/systems/FeedbackRules';
+import { shipSize, sinkSound } from '@/systems/SoundRules';
 import {
   AA_BARRAGE, aiConsumable, BOOST_SPEED, ConsumableKind, hiddenBySmoke, IConsumableSlot, isActive, ISmokeCloud, RADAR_VISION, repairPerSec, shipConsumables, slotLabel, SMOKE_RADIUS, useConsumable,
 } from '@/systems/ConsumableSystem';
@@ -123,6 +127,10 @@ const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 
 const ACTION_BUTTON = IS_PORTRAIT ? { w: 172, h: 64, gap: 14, bottom: 120 } : { w: 150, h: 46, gap: 10, bottom: 90 };
 /** The sea is a 3200 px square in both orientations; the camera follows the flagship. */
 const WORLD = BATTLE_WORLD;
+/** Class words for the commentary (#106): 戦艦・巡洋艦 … */
+const CLASS_JA_SHORT: Partial<Record<ShipClass, string>> = {
+  [ShipClass.Battleship]: '戦艦', [ShipClass.Cruiser]: '巡洋艦', [ShipClass.Destroyer]: '駆逐艦', [ShipClass.Carrier]: '空母', [ShipClass.Submarine]: '潜水艦',
+};
 const WORLD_BOUNDS = { width: WORLD.w, height: WORLD.h };
 const CAMERA_LERP = 0.12;
 /** Ships spawn at least this far apart (line-ahead spacing is 90 px). */
@@ -229,6 +237,17 @@ export class BattleScene extends Phaser.Scene {
   private consumableBtns: UIButton[] = [];
   private consumableLabels: string[] = [];
   private consumableUses = 0;
+  /** 戦闘実況 (#106): the queue, the subtitle line, who was alive last frame and who was already called 大破 */
+  private commentary: ICommentaryState = emptyCommentary();
+  private subtitle: Phaser.GameObjects.Text | null = null;
+  private subtitleUntil = 0;
+  private aliveLastFrame = new Set<BaseShip>();
+  private calledHeavy = new Set<BaseShip>();
+  private flagshipHpSeen = 1;
+  private sonarPhase = 0;
+  /** Enemy planes down so far, for the 撃墜 sound */
+  private planesDownSeen = 0;
+  private contactCalled = false;
   /** Fleets fighting beside the one the player steers (#84 支援艦隊, #64 友軍艦隊), each ship with its own AI */
   private groups: IFleetGroup[] = [];
   /** 友軍艦隊 still to arrive (#64) */
@@ -317,6 +336,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
+    audio.setNation(this.battleData?.playerFleet?.nation);
     audio.music('battle');
     this.gameOver = false;
     // Phaser reuses the scene instance: per-battle logs must be cleared here, not at declaration.
@@ -343,6 +363,15 @@ export class BattleScene extends Phaser.Scene {
     this.consumableBtns = [];
     this.consumableLabels = [];
     this.consumableUses = 0;
+    this.commentary = emptyCommentary();
+    this.subtitle = null;
+    this.subtitleUntil = 0;
+    this.aliveLastFrame = new Set();
+    this.calledHeavy = new Set();
+    this.flagshipHpSeen = 1;
+    this.contactCalled = false;
+    this.sonarPhase = 0;
+    this.planesDownSeen = 0;
     this.seenByEnemy = new Set();
     this.seenByPlayer = new Set();
     this.convoy = [];
@@ -388,14 +417,19 @@ export class BattleScene extends Phaser.Scene {
     const bomb = DataLoader.getWeaponById(this, 'aerial_bomb') ?? FALLBACK_WEAPON;
     const aerialTorpedo = DataLoader.getWeaponById(this, 'aerial_torpedo') ?? FALLBACK_WEAPON;
     const onBomb = (target: BaseShip, weapon: IWeaponData, dmg: number): void => {
+      this.sound3d('bombDrop', target.x, target.y);
       this.explosion.play(target.x, target.y);
       this.sound3d('explosion', target.x, target.y);
       this.rollCritical(target, weapon, dmg);
     };
     this.playerAir = new AirOpsSystem(this, false, this.playerWeapons, bomb, aerialTorpedo, onBomb);
     this.enemyAir = new AirOpsSystem(this, true, this.enemyWeapons, bomb, aerialTorpedo, onBomb);
-    this.playerAir.onLaunch = (x, y) => this.sound3d('plane', x, y);
-    this.enemyAir.onLaunch = (x, y) => this.sound3d('plane', x, y);
+    // 発艦 (#104); the enemy's raid is called too (#106).
+    this.playerAir.onLaunch = (x, y) => this.sound3d('launch', x, y);
+    this.enemyAir.onLaunch = (x, y) => {
+      this.sound3d('plane', x, y);
+      this.comment('airRaid', {});
+    };
     this.playerRecon = new ReconSystem(this, false);
     this.enemyRecon = new ReconSystem(this, true);
 
@@ -451,11 +485,15 @@ export class BattleScene extends Phaser.Scene {
     };
     this.enemyWeapons.onSplash = (x, y) => {
       splashAt(x, y);
-      this.sound3d('splash', x, y);
+      // 至近弾 (#104 #107): a splash right beside the flagship.
+      if (this.flagship.isAlive && Phaser.Math.Distance.Between(x, y, this.flagship.x, this.flagship.y) < 70) {
+        audio.play('nearMiss');
+        this.feel('nearMiss', this.flagship);
+      } else this.sound3d('splash', x, y);
     };
     const onFire = (w: IWeaponData, x: number, y: number): void => {
       const kind = weaponKind(w);
-      if (kind === WeaponKind.Torpedo) this.sound3d('torpedo', x, y);
+      if (kind === WeaponKind.Torpedo) this.sound3d('torpedoLaunch', x, y);
       else if (kind === WeaponKind.Gun) this.sound3d(w.firePower >= 90 ? 'bigGun' : 'gun', x, y);
     };
     this.playerWeapons.onFire = onFire;
@@ -567,6 +605,8 @@ export class BattleScene extends Phaser.Scene {
     this.playerWeapons.update(time, delta);
     this.enemyWeapons.update(time, delta);
     this.updateAir(time, delta, playerView, enemyView);
+    this.watchShips();
+    this.updateCommentary();
 
     // Who the enemy is attacking, kept current as each ship decides so they spread their fire (#34).
     const attackers = new Map<BaseShip, number>();
@@ -1168,6 +1208,9 @@ export class BattleScene extends Phaser.Scene {
     g.clear();
     if (!this.enemies.some((e) => e.isAlive && e.submerged)) return;
     const phase = (time % SONAR_PING_MS) / SONAR_PING_MS;
+    // ソナー音 (#104): one ping as each sweep starts.
+    if (phase < this.sonarPhase) audio.play('sonar');
+    this.sonarPhase = phase;
     for (const ship of this.friendlies()) {
       const range = sonarRange(ship.stats.shipClass) * ship.mods.sonarMul;
       if (!ship.isAlive || ship.submerged || range <= 0) continue;
@@ -1183,6 +1226,7 @@ export class BattleScene extends Phaser.Scene {
     if (!sub) return;
     if (!this.wantDive && !canDive(sub)) return;
     this.wantDive = !this.wantDive;
+    audio.play(this.wantDive ? 'dive' : 'surface');
   }
 
   private refreshDiveUi(): void {
@@ -1497,7 +1541,9 @@ export class BattleScene extends Phaser.Scene {
     this.rollFireOrFlood(target, weapon);
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
-    this.sound3d('explosion', projectile.x, projectile.y);
+    // 命中 (#104): a torpedo's blast, a shell that went in, or one that glanced off the armour.
+    const kind: SoundKind = projectile instanceof Torpedo ? 'torpedoHit' : dmg < weapon.firePower * 0.35 ? 'ricochet' : 'hit';
+    this.sound3d(kind, projectile.x, projectile.y);
   }
 
   /** Plays a sound attenuated by its distance from the middle of the screen. */
@@ -1801,6 +1847,7 @@ export class BattleScene extends Phaser.Scene {
     slots[i] = used;
     if (kind === 'repair') ship.status = {};
     if (kind === 'smoke') this.smoke.push({ x: ship.x, y: ship.y, until: used.activeUntil });
+    if (kind === 'aa') this.sound3d('aaFire', ship.x, ship.y);
     if (ship.visible) {
       const t = this.add.text(ship.x, ship.y - 60, slotLabel(used, now).split(' ')[0], textStyle(14, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
         .setOrigin(0.5).setDepth(DEPTH_HUD - 2);
@@ -2106,6 +2153,9 @@ export class BattleScene extends Phaser.Scene {
     const t2 = this.add.text(CANVAS_W / 2, y + (IS_PORTRAIT ? 22 : 18), goal, textStyle(IS_PORTRAIT ? 14 : 15, Css.text, { align: 'center', wordWrap: { width: w - 32, useAdvancedWrap: true } })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
     for (const t of [t1, t2]) if (t.width > w - 24) t.setScale((w - 24) / t.width);
     this.time.delayedCall(3000, () => this.tweens.add({ targets: [band, t1, t2], alpha: 0, duration: 500, onComplete: () => [band, t1, t2].forEach((o) => o.destroy()) }));
+    // ナレーション (#106): the area and its goal read out; then the battle's first call.
+    voice.say(narrationLine('areaStart', { area: area?.name ?? this.scenario?.name ?? kind, objective: this.goalText() }), 'narration');
+    this.comment('start', {});
   }
 
   /** 撤退 (#279): a full withdrawal. The saved sortie ends (no 続きから), the fleet comes home and can be docked. */
@@ -2124,9 +2174,118 @@ export class BattleScene extends Phaser.Scene {
     return OBJECTIVE_LABEL[this.objective];
   }
 
+  // -------------------------------------------------------------------------
+  // 音・実況・揺れ (#104 #106 #107)
+  // -------------------------------------------------------------------------
+
+  /** Ships that went down or were badly hurt since the last frame: their sound, line, shake and buzz. */
+  private watchShips(): void {
+    const own = new Set(this.friendlies());
+    for (const ship of [...this.playerSide(), ...this.enemies]) {
+      const wasAlive = this.aliveLastFrame.has(ship);
+      if (ship.isAlive) {
+        this.aliveLastFrame.add(ship);
+        const frac = ship.stats.currentHp / Math.max(1, ship.stats.maxHp);
+        if (frac <= 0.25 && !this.calledHeavy.has(ship) && !ship.isLand && !ship.isConvoy) {
+          this.calledHeavy.add(ship);
+          if (own.has(ship)) {
+            this.comment('ownHeavy', { name: this.shortName(ship) });
+            audio.play('alarm');
+            this.feel('ownHeavy', ship);
+          } else if (this.seenByPlayer.has(ship)) {
+            this.comment('enemyHeavy', { class: CLASS_JA_SHORT[ship.stats.shipClass] ?? '艦' });
+          }
+        }
+        continue;
+      }
+      if (!wasAlive) continue;
+      this.aliveLastFrame.delete(ship);
+      if (ship.isLand || ship.isConvoy) continue;
+      const mine = own.has(ship);
+      this.sound3d(sinkSound(ship.stats.shipClass, mine), ship.x, ship.y);
+      this.feel(mine ? 'ownSunk' : 'enemySunk', ship);
+      this.comment(mine ? 'ownSunk' : 'enemySunk', { name: this.shortName(ship), class: CLASS_JA_SHORT[ship.stats.shipClass] ?? '艦' });
+    }
+    // The flagship's own hits, and the call when it is in danger.
+    if (this.flagship.isAlive) {
+      const frac = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);
+      if (frac < this.flagshipHpSeen - 0.04) {
+        this.comment('ownHit', { name: this.shortName(this.flagship) });
+        this.feel('ownHit', this.flagship);
+      }
+      if (frac <= 0.35 && this.flagshipHpSeen > 0.35) this.comment('flagshipDanger', {});
+      this.flagshipHpSeen = Math.min(this.flagshipHpSeen, frac);
+    }
+    // 撃墜 (#104): enemy planes shot down since the last frame.
+    const down = this.enemyAir.totalLost();
+    if (down > this.planesDownSeen) audio.play('planeDown');
+    this.planesDownSeen = down;
+    // 敵艦隊発見: the first enemy seen.
+    if (!this.contactCalled) {
+      const seen = this.enemies.find((e) => this.seenByPlayer.has(e) && !e.isLand);
+      if (seen) {
+        this.contactCalled = true;
+        this.comment('contact', { bearing: bearingWord(this.flagship.x, this.flagship.y, seen.x, seen.y) });
+      }
+    }
+  }
+
+  private shortName(ship: BaseShip): string {
+    return ship.stats.name.replace(/\s*\(.*\)\s*$/, '');
+  }
+
+  /** Raises a battle line (#106) in the player's navy's words. */
+  private comment(kind: CommentaryKind, vars: Record<string, string>): void {
+    if (this.scenario && kind === 'start') return;
+    this.commentary = raise(this.commentary, { kind, text: battleLine(kind, this.playerNation, vars), at: this.elapsedSec() }, audio.settings.commentaryRate);
+  }
+
+  /** Says the next line and shows it as a subtitle (#106). */
+  private updateCommentary(): void {
+    const now = this.elapsedSec();
+    const r = nextCommentary(this.commentary, now);
+    this.commentary = r.state;
+    if (r.line) {
+      voice.say(r.line.text, 'commentary');
+      this.showSubtitle(r.line.text, now);
+    }
+    if (this.subtitle && now > this.subtitleUntil) this.subtitle.setVisible(false);
+  }
+
+  private showSubtitle(text: string, now: number): void {
+    if (!audio.settings.subtitles) return;
+    if (!this.subtitle) {
+      const w = IS_PORTRAIT ? CANVAS_W - 2 * (172 + 36) : 560;
+      this.subtitle = this.add.text(CANVAS_W / 2, CANVAS_H - (IS_PORTRAIT ? 300 : 120), '', textStyle(IS_PORTRAIT ? 15 : 14, Css.text, {
+        fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4, align: 'center', wordWrap: { width: w, useAdvancedWrap: true },
+      })).setOrigin(0.5, 1).setDepth(DEPTH_HUD + 1).setScrollFactor(0);
+    }
+    this.subtitle.setText(text).setVisible(true);
+    this.subtitleUntil = now + 3;
+  }
+
+  /** The camera shake and the phone's buzz for what happened (#107). */
+  private feel(event: FeedbackEvent, ship: BaseShip): void {
+    const v = this.cameras.main.worldView;
+    const shake = shakeFor(event, shipSize(ship.stats.shipClass), Phaser.Math.Distance.Between(ship.x, ship.y, v.centerX, v.centerY), audio.settings.shake);
+    if (shake) this.cameras.main.shake(shake.durationMs, shake.intensity);
+    const buzz = vibrateFor(event, shipSize(ship.stats.shipClass), audio.settings.vibrate && !audio.muted);
+    if (buzz && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(buzz);
+      } catch {
+        // iOS Safari and desktops: nothing.
+      }
+    }
+  }
+
   private triggerGameOver(victory: boolean): void {
     if (this.gameOver) return;
     this.gameOver = true;
+    // 勝敗 (#104 #106): the jingle and the last line, said at once.
+    audio.play(victory ? 'victory' : 'defeat');
+    voice.say(battleLine(victory ? 'victory' : 'defeat', this.playerNation), 'commentary');
+    if (this.commentary) this.commentary = { ...this.commentary, log: [...this.commentary.log, { kind: victory ? 'victory' : 'defeat', text: battleLine(victory ? 'victory' : 'defeat', this.playerNation), at: this.elapsedSec() }] };
     const fleet = this.friendlies();
     // Ships and land targets are counted apart (#278): 撃沈, 全滅 and 「6 隻以上に S」 count ships only.
     const enemyShips = this.enemies.filter((e) => !e.isLand);
@@ -2150,6 +2309,8 @@ export class BattleScene extends Phaser.Scene {
       fleetSize: fleet.length,
       durationSec: this.elapsedSec(),
       captainReports: this.awardCaptains(victory, enemiesSunk + landKills),
+      // 戦闘ログ (#106): everything the commentary said.
+      log: logLines(this.commentary.log),
     };
     // Battle rank (#149): losses, damage taken and time.
     const maxHp = fleet.reduce((sum, s) => sum + s.stats.maxHp, 0);

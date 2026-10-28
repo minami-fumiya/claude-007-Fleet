@@ -43,6 +43,8 @@ export interface ICaptainReport {
 
 export interface IBattleResultData {
   victory: boolean;
+  /** 戦闘ログ (#106): the commentary as "02:15  敵駆逐艦 撃沈" lines */
+  log?: string[];
   /** Why it ended (#335): "輸送船が 2 隻沈められ…"; absent = the old flagship / annihilation line */
   reason?: string;
   score: number;

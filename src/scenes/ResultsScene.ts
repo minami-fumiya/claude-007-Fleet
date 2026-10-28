@@ -7,6 +7,11 @@ import { IBattleResultData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, addStatCard, UIButton } from '@/ui/components/UIKit';
 import { advanceSortie, endSortie } from '@/utils/SortieFlow';
+import { ScrollList } from '@/ui/components/ScrollList';
+import { voice } from '@/systems/VoiceSystem';
+import { narrationLine } from '@/systems/CommentarySystem';
+import { loadProgress, saveProgress } from '@/utils/ProgressStore';
+import { withQuestEvents } from '@/systems/QuestSystem';
 
 // Portrait text is enlarged (see uiFontSize), so the card and its stat tiles grow with it.
 const CARD_W = IS_PORTRAIT ? 664 : 620;
@@ -22,6 +27,10 @@ const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
 /** Landscape: more than 3 captains (fleets of up to 8) go in two columns so the card still fits. */
 const REPORT_COLS_FROM = 4;
 const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
+
+/** 戦闘ログ (#106) */
+const LOG_BUTTON_W = IS_PORTRAIT ? 170 : 150;
+const LOG_DEPTH = 400;
 
 export class ResultsScene extends Phaser.Scene {
   constructor() {
@@ -148,15 +157,53 @@ export class ResultsScene extends Phaser.Scene {
         this.scene.start(SceneKeys.FLEET_BUILDER);
       }, { variant: 'primary', width: half, height: BUTTONS.h1, fontSize: 17 });
     }
-    new UIButton(this, CANVAS_W / 2, y + reportH + BUTTONS.y2, advance ? '撤退 (報酬はそのまま)' : BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => {
+    // 戦闘ログ (#106) shares the last row with the way back.
+    const logs = data?.log ?? [];
+    const backW = logs.length > 0 ? CARD_W - 96 - 12 - LOG_BUTTON_W : CARD_W - 96;
+    new UIButton(this, CANVAS_W / 2 - (CARD_W - 96) / 2 + backW / 2, y + reportH + BUTTONS.y2, advance ? '撤退 (報酬はそのまま)' : BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => {
       endSortie(this);
       this.scene.start(data?.returnScene ?? SceneKeys.HOME);
     }, {
       variant: 'secondary',
-      width: CARD_W - 96,
+      width: backW,
       height: BUTTONS.h2,
       fontSize: 17,
     });
+    if (logs.length > 0) {
+      new UIButton(this, CANVAS_W / 2 + (CARD_W - 96) / 2 - LOG_BUTTON_W / 2, y + reportH + BUTTONS.y2, '戦闘ログ', () => this.openLog(logs), {
+        variant: 'secondary', width: LOG_BUTTON_W, height: BUTTONS.h2, fontSize: 15,
+      });
+    }
+    // ナレーション (#106): the outcome and its rank, then a promotion.
+    const promoted = /昇進: .+ → (\S+)/.exec(data?.merit ?? '')?.[1];
+    voice.say([narrationLine(victory ? 'victory' : 'defeat', { rank: data?.rank ?? '' }), promoted ? narrationLine('promotion', { rank: promoted }) : ''].filter((l) => l).join('。'), 'narration');
+  }
+
+  /** 戦闘ログ (#106): what the commentary said, in a scrolling sheet. */
+  private openLog(lines: string[]): void {
+    // 戦闘記録章 (#106) counts the logs read.
+    saveProgress(withQuestEvents(loadProgress(), [['logView', 1]], Date.now()));
+    const layer: Phaser.GameObjects.GameObject[] = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(LOG_DEPTH);
+      layer.push(o);
+      return o;
+    };
+    add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
+    const r = IS_PORTRAIT ? { x: 24, y: 120, w: CANVAS_W - 48, h: CANVAS_H - 240 } : { x: 240, y: 60, w: 800, h: 600 };
+    add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
+    add(this.add.text(r.x + 24, r.y + 20, `戦闘ログ (${lines.length})`, eyebrowStyle(11, Css.cyan)));
+    const top = r.y + 56;
+    const bottom = r.y + r.h - (IS_PORTRAIT ? 90 : 70);
+    const list = new ScrollList(this, { x: r.x + 20, y: top, w: r.w - 40, h: bottom - top });
+    list.setDepth(LOG_DEPTH + 1);
+    const rowH = IS_PORTRAIT ? 34 : 28;
+    lines.forEach((line, i) => list.add(this.add.text(0, i * rowH, line, textStyle(13, Css.text)).setOrigin(0, 0)));
+    list.setContentHeight(lines.length * rowH);
+    add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 44 : 34), '閉じる', () => {
+      list.destroy();
+      layer.forEach((o) => o.destroy());
+    }, { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 52 : 40, fontSize: 15 }));
   }
 
   private drawEmblem(cx: number, cy: number, color: number, victory: boolean): void {
