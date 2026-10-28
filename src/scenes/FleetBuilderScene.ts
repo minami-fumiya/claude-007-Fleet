@@ -553,7 +553,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.titleText.setText(`${NATION_INFO[this.nation].ja} — 艦隊を編成せよ`);
     this.nationChip?.destroy();
     const chip = addChip(this, 0, IS_PORTRAIT ? 46 : 44, NATION_INFO[this.nation].jaShort, Colors.gold, Css.gold);
-    chip.setX(CANVAS_W - 20 - chip.getBounds().width);
+    // The chip's width is its label + padding (a container's bounds leave out the graphics' rounded box).
+    chip.setX(CANVAS_W - 20 - ((chip.list[1] as Phaser.GameObjects.Text).width + 18));
     this.pin([chip], 60);
     this.nationChip = chip;
   }
