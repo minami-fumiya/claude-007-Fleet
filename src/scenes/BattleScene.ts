@@ -336,7 +336,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    audio.setNation(this.battleData?.playerFleet.nation);
+    audio.setNation(this.battleData?.playerFleet?.nation);
     audio.music('battle');
     this.gameOver = false;
     // Phaser reuses the scene instance: per-battle logs must be cleared here, not at declaration.
