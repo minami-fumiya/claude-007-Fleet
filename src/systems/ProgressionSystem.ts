@@ -18,6 +18,7 @@ import { newSweepCharge, sweepCharges, useSweepCharge } from './SweepSystem';
 export { nextSweepMs, SWEEP_MAX, SWEEP_RECHARGE_MS, sweepCharges } from './SweepSystem';
 import { sailingIds } from './FleetGroups';
 import { ShipClass } from '@/types/ShipClass';
+import { supplyMul } from './BaseSystem';
 
 /**
  * Ties battles to the home base (pure): paying for a sortie and settling the outcome.
@@ -35,6 +36,19 @@ export interface ISortieOptions {
   area?: ICampaignArea | null;
   /** The fleets the ships sail in (#84): each keeps under the cost cap on its own (default: all one fleet) */
   fleets?: IShipData[][];
+  /** The share of fuel and ammo paid (#373): a forward base's 補給廠 in the area's sea; the progress's own when absent */
+  supply?: number;
+}
+
+/** A cost with its fuel and ammo at `share` (#373 補給廠): the depot never cuts steel or bauxite. */
+export function withSupply(cost: IResources, share = 1): IResources {
+  if (share >= 1) return cost;
+  return { ...cost, fuel: Math.round(cost.fuel * share), ammo: Math.round(cost.ammo * share) };
+}
+
+/** The options with the 補給廠 of the area's sea filled in from the progress when not given (#373). */
+function supplied(progress: IProgress, opts: ISortieOptions): ISortieOptions {
+  return opts.supply !== undefined ? opts : { ...opts, supply: supplyMul(progress, opts.area?.theater) };
 }
 
 /** A battle is an exercise when it is neither a campaign area nor a historical scenario. */
@@ -49,7 +63,7 @@ export function isFreeSortie(opts: ISortieOptions = {}): boolean {
 
 /** What the sortie costs with these options. */
 export function sortieCostFor(ships: IShipData[], opts: ISortieOptions = {}): IResources {
-  return isFreeSortie(opts) ? resources() : sortieCost(ships);
+  return isFreeSortie(opts) ? resources() : withSupply(sortieCost(ships), opts.supply);
 }
 
 export interface IShipOutcome {
@@ -102,7 +116,7 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
     if (over) reasons.push(all.length > 1 ? `第${i + 1}艦隊の${over}` : over);
   });
   // What is short and by how much (#303): "資源が不足: 燃料 120 / 180 (60 不足)".
-  const cost = sortieCostFor(ships, opts);
+  const cost = sortieCostFor(ships, supplied(progress, opts));
   if (!canAfford(progress.resources, cost)) {
     const lack = shortfall(progress.resources, cost);
     const have = resources(progress.resources);
@@ -114,7 +128,7 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
 
 /** Pays the sortie cost. Returns null if resources are short. */
 export function paySortie(progress: IProgress, ships: IShipData[], opts: ISortieOptions = {}): IProgress | null {
-  const left = pay(progress.resources, sortieCostFor(ships, opts));
+  const left = pay(progress.resources, sortieCostFor(ships, supplied(progress, opts)));
   return left ? { ...progress, resources: left } : null;
 }
 
@@ -165,9 +179,9 @@ export function canSweep(progress: Pick<IProgress, 'campaign' | 'perfect'>, area
   return progress.campaign.includes(area.id) && progress.perfect.includes(area.id);
 }
 
-/** What a sweep costs: a sortie by a fleet the size of the enemy's (nothing in a theater's free first area). */
-export function sweepCost(area: ICampaignArea, enemy: IShipData[]): IResources {
-  return isFreeArea(area) ? resources() : sortieCost(enemy);
+/** What a sweep costs: a sortie by a fleet the size of the enemy's (nothing in a theater's free first area), less the sea's 補給廠 (#373). */
+export function sweepCost(area: ICampaignArea, enemy: IShipData[], supply = 1): IResources {
+  return isFreeArea(area) ? resources() : withSupply(sortieCost(enemy), supply);
 }
 
 export interface ISweepResult {
@@ -186,7 +200,7 @@ export interface ISweepResult {
  */
 export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShipData[], now: number, event: IEventEffects = NO_EVENT): ISweepResult | null {
   if (!canSweep(progress, area) || sweepsLeft(progress, area.id, now) <= 0) return null;
-  const cost = sweepCost(area, enemy);
+  const cost = sweepCost(area, enemy, supplyMul(progress, area.theater));
   const paid = pay(progress.resources, cost);
   if (!paid) return null;
   const won = applyEventReward(battleReward(true, enemy.length, enemy.map((s) => s.shipClass)), event, area.theater);

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { recordLedger } from '@/systems/LedgerSystem';
-import { baseOfProgress, baseReaches, basesFor, baseState, nationBases } from '@/systems/BaseSystem';
+import { baseOfProgress, baseReaches, basesFor, baseState, nationBases, supplyMul } from '@/systems/BaseSystem';
 import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -347,7 +347,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const left = sweepsLeft(progress, a.id, Date.now());
     const wait = nextSweepMs(progress.sweepCharges[a.id], Date.now());
     const sweepNote = sweepable
-      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復 ${clock(wait)}` : '満タン'}・1 時間に 1 回)  ·  ${formatResources(sweepCost(a, enemy)) || '無料'}で戦闘を省略・報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
+      ? `掃討 ${left} / ${SWEEP_MAX} 回 (${wait > 0 ? `次の回復 ${clock(wait)}` : '満タン'}・1 時間に 1 回)  ·  ${formatResources(sweepCost(a, enemy, supplyMul(progress, a.theater))) || '無料'}で戦闘を省略・報酬 ${Math.round(SWEEP_REWARD_SCALE * 100)}%`
       : isCleared(a, cleared) ? '掃討: この海域で S 評価を取ると使えます' : '';
     const by = d.y + d.h - (IS_PORTRAIT ? 56 : 46);
     const buttonTop = by - (IS_PORTRAIT ? 76 : 60) / 2;
@@ -404,7 +404,7 @@ export class CampaignMapScene extends Phaser.Scene {
     if (sweepable) {
       add(new UIButton(this, bx(count - 1), by, '掃討', () => this.sweep(a), {
         variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 17 : 20,
-      })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy)));
+      })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy, supplyMul(progress, a.theater))));
     }
   }
 

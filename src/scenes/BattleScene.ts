@@ -4,6 +4,7 @@ import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
+import { theaterFacility } from '@/systems/BaseSystem';
 import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
 import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
@@ -132,6 +133,9 @@ const CLASS_JA_SHORT: Partial<Record<ShipClass, string>> = {
   [ShipClass.Battleship]: '戦艦', [ShipClass.Cruiser]: '巡洋艦', [ShipClass.Destroyer]: '駆逐艦', [ShipClass.Carrier]: '空母', [ShipClass.Submarine]: '潜水艦',
 };
 const WORLD_BOUNDS = { width: WORLD.w, height: WORLD.h };
+/** 基地航空隊 (#373): how long the base's scouts show the enemy, and when its strikes fly (battle ms). */
+const BASE_AIR_SCOUT_MS = 20_000;
+const BASE_AIR_STRIKES_AT = [25_000, 70_000];
 const CAMERA_LERP = 0.12;
 /** Ships spawn at least this far apart (line-ahead spacing is 90 px). */
 const SPAWN_GAP = 80;
@@ -320,6 +324,10 @@ export class BattleScene extends Phaser.Scene {
   private pauseLayer: Phaser.GameObjects.GameObject[] = [];
   /** Where each enemy was last seen (battle clock), drawn as a fading ring after contact is lost (#98) */
   private lastSeen = new Map<BaseShip, { x: number; y: number; at: number }>();
+  /** 基地航空隊 (#373): the level at the forward base of this sea, its hidden airfield, and the strikes sent so far */
+  private baseAirLevel = 0;
+  private baseAirField: BaseShip | null = null;
+  private baseAirSent = 0;
   private lastSeenMarks!: Phaser.GameObjects.Graphics;
 
   private aimAngle = 0;
@@ -456,6 +464,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.objective === Objective.Convoy) this.spawnConvoy();
     if (this.objective === Objective.Bombard) this.spawnLandTargets();
     this.setupConsumables();
+    this.setupBaseAir(battleArea);
     const startAngle = this.scenarioSetup?.player.positions[0]?.angle;
     if (startAngle !== undefined) for (const s of this.friendlies()) s.setAngle(startAngle);
     this.drawObjectiveZone();
@@ -1119,6 +1128,10 @@ export class BattleScene extends Phaser.Scene {
   /** Everything one side sees with: ship vision circles, recon cones and its aircraft. */
   private visionSources(ships: BaseShip[], recon: ReconSystem, air: AirOpsSystem): VisionSource[] {
     const sources: VisionSource[] = [];
+    // 基地航空隊 (#373): the base's scouts show the whole enemy fleet for the first seconds of the battle.
+    if (air === this.playerAir && this.baseAirLevel > 0 && this.battleNow() < BASE_AIR_SCOUT_MS) {
+      sources.push({ kind: 'circle', x: WORLD.w / 2, y: WORLD.h / 2, radius: Math.hypot(WORLD.w, WORLD.h) });
+    }
     const env = this.conditions.visionMul;
     for (const s of ships) {
       if (s.isAlive) sources.push({ kind: 'circle', x: s.x, y: s.y, radius: shipVision(s.stats.shipClass, s.submerged) * s.visionMul * env });
@@ -1295,7 +1308,8 @@ export class BattleScene extends Phaser.Scene {
     const pick = (nation: Nation) => (carrier: BaseShip, foes: IShipView[]): IShipView | null =>
       chooseTarget(aiSelf(carrier), foes, TACTICS[nation]);
     // The player's own carrier strikes on command, unless touch / AUTO play is handling the fighting.
-    const playerAuto = (carrier: BaseShip): boolean => carrier !== this.flagship || this.isTouch || this.autoMode;
+    const playerAuto = (carrier: BaseShip): boolean => carrier !== this.baseAirField && (carrier !== this.flagship || this.isTouch || this.autoMode);
+    this.updateBaseAir(enemyView);
     this.playerAir.update(
       time,
       delta,
@@ -1335,6 +1349,40 @@ export class BattleScene extends Phaser.Scene {
         return chosen ? foes.find((f) => f.ship === chosen.ship) ?? null : null;
       },
     );
+  }
+
+  /**
+   * 基地航空隊 (#373): a campaign battle in a sea whose forward base has an air group. Lv1 scouts (the enemy shows for
+   * the first seconds); Lv2 and Lv3 also send one or two strikes from an airfield out of sight, which follows the
+   * flagship so the strike flies in from the fleet's side.
+   */
+  private setupBaseAir(area: ICampaignArea | undefined): void {
+    if (!area || area.training || this.scenario) return;
+    this.baseAirLevel = theaterFacility(loadProgress(), area.theater, 'baseAir');
+    if (this.baseAirLevel < 2) return;
+    const special = specialData as unknown as ISpecialData;
+    const strip = special.landTargets.find((t) => t.airWing) as IShipData | undefined;
+    if (!strip) return;
+    const data: IShipData = { ...strip, nation: this.playerNation, airWing: { fighters: 0, diveBombers: 3, torpedoBombers: 2 } };
+    const field = this.spawnShip(data, this.flagship.x, this.flagship.y, NO_MODIFIERS, false);
+    field.setVisible(false);
+    (field.body as Phaser.Physics.Arcade.Body).enable = false;
+    this.baseAirField = field;
+    this.playerAir.register(field, AirOpsSystem.wingFor(data));
+  }
+
+  /** Sends the base's strikes at their times, at the nearest visible foe in reach (#373). */
+  private updateBaseAir(enemyView: IShipView[]): void {
+    const field = this.baseAirField;
+    if (!field || this.gameOver) return;
+    if (this.flagship.isAlive) field.setPosition(this.flagship.x, this.flagship.y);
+    const due = BASE_AIR_STRIKES_AT[this.baseAirSent];
+    if (this.baseAirSent >= this.baseAirLevel - 1 || due === undefined || this.battleNow() < due) return;
+    const target = chooseTarget(aiSelf(field), this.playerAir.strikeTargets(field, enemyView), TACTICS[this.playerNation]);
+    if (!target || this.playerAir.launchStrike(field, target.ship) === 0) return;
+    this.baseAirSent++;
+    this.showToast('基地航空隊の攻撃隊が来援');
+    this.sound3d('launch', this.flagship.x, this.flagship.y);
   }
 
   /** F / strike button: send the flagship's ready bombers at the current target. */
@@ -2419,7 +2467,7 @@ export class BattleScene extends Phaser.Scene {
       // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.
       ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['baseAirStrike', this.baseAirSent], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).

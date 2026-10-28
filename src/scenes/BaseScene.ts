@@ -17,7 +17,7 @@ import { clock } from '@/utils/TimeFormat';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
-import { withQuestEvents } from '@/systems/QuestSystem';
+import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { facilityMedal, medalName } from '@/systems/MedalGate';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import campaignData from '@/data/campaign.json';
@@ -370,7 +370,8 @@ export class BaseScene extends Phaser.Scene {
     const next = rushBaseWork(progress, Date.now());
     if (!next) return;
     // The item and the base opened count for their medal and quest (#314 #315).
-    saveProgress(withQuestEvents(next, [['fastBuildUse', 1], ['baseOpened', 1]], Date.now()));
+    const opened = progress.baseWork?.base ?? '';
+    saveProgress(withQuestEvents(next, [['fastBuildUse', 1], ['baseOpened', 1], ...(opened.includes('_fb_') ? [['forwardBaseOpened', 1] as [QuestEvent, number]] : [])], Date.now()));
     this.status = `${name}が${this.tab === 'forward' ? '開設' : '開港'}しました`;
     this.refresh();
   }
