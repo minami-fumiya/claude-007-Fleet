@@ -55,7 +55,7 @@ export class MainMenuScene extends Phaser.Scene {
   create(): void {
     // The screen explains itself on the first visit (#316), once everything is drawn.
     this.events.once(Phaser.Scenes.Events.CREATE, () => showScreenHelp(this));
-    audio.music('menu');
+    audio.music('title');
     this.howToLayer = null;
     addBackdrop(this, 'menu').setDepth(-40);
     // The sea, the searchlights and a fleet crossing (#198); still when the OS asks for less motion.

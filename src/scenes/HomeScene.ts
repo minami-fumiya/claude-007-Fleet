@@ -4,6 +4,8 @@ import { nationLocks } from '@/systems/NationUnlock';
 import { holdCap, regenRules } from '@/systems/FacilitySystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
+import { voice } from '@/systems/VoiceSystem';
+import { narrationLine } from '@/systems/CommentarySystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { pendingSummary } from '@/systems/PendingSummary';
 import { addGold } from '@/systems/GoldSystem';
@@ -130,6 +132,8 @@ export class HomeScene extends Phaser.Scene {
   create(): void {
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
+    // 国別 BGM (#93): the home port plays the navy's own tune.
+    audio.setNation(loadProgress().nation);
     audio.music('menu');
     // Medals earned outside a battle (builds, facilities, an older version's progress) are handed out here (#92).
     awardPendingMedals();
@@ -626,7 +630,13 @@ export class HomeScene extends Phaser.Scene {
     const progress = loadProgress();
     if (timerKey(progress) !== this.drawnTimers) {
       const built = this.drawnBuilds.filter((id) => !progress.builds.some((b) => b.shipId === id) && progress.ships.includes(id)).length;
-      if (built > 0) this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + built);
+      if (built > 0) {
+        this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + built);
+        // 通知音とナレーション (#104 #106)
+        audio.play('notify');
+        const ship = this.registryShips.byId(this.drawnBuilds.find((id) => progress.ships.includes(id) && !progress.builds.some((b) => b.shipId === id)) ?? '');
+        voice.say(narrationLine('buildDone', { ship: ship?.name.replace(/\s*\(.*\)\s*$/, '') ?? '新しい艦' }), 'narration');
+      }
       this.refresh();
       return;
     }

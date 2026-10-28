@@ -333,6 +333,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('air_ace', 'エース章', 'growth', [1, 3, 6], (g) => `空母の航空隊に ${g} 人のエースを迎える`, (_r, c) => total(c, 'aceBorn')),
   ...ladder('ground_weapon', '地上兵器撃破章', 'battle', [10, 50, 200], (g) => `国ごとの地上兵器 (要塞砲・高射砲陣地など) を ${g} 個破壊する`, (_r, c) => c.groundTotal ?? 0),
   ...ladder('ground_kinds', '地上兵器図鑑章', 'battle', [6, 21, 42], (g) => (g >= 42 ? 'すべての地上兵器 (42 種) を破壊する' : `${g} 種類の地上兵器を破壊する`), (_r, c) => c.groundKinds ?? 0),
+  // 0.0.49 音: the battle log after a fight (#106).
+  ...ladder('battle_log', '戦闘記録章', 'battle', [1, 10, 50], (g) => `結果画面で戦闘ログを ${g} 回読む`, (_r, c) => total(c, 'logView')),
   ...ladder('consumable', '消耗品章', 'battle', [10, 100, 500], (g) => `消耗品 (応急修理・煙幕など) を ${g} 回使う`, (_r, c) => total(c, 'consumableUse')),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.
   ...ladder('expedition_pick', '遠征編成章', 'growth', [3, 30], (g) => `艦を選んで遠征を ${g} 回送り出す`, (_r, c) => total(c, 'expeditionPicked')),
