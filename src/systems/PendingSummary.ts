@@ -32,7 +32,7 @@ export function pendingSummary(progress: IProgress, now: number, freeDocks: numb
     { id: 'quests', label: '任務', count: claimableCount(progress.quests, now), scene: SceneKeys.HOME },
     { id: 'sweeps', label: '掃討', count: sweeps, scene: SceneKeys.CAMPAIGN, data: topSweep ? { areaId: topSweep.id } : undefined },
     { id: 'docks', label: '空きドック', count: Math.max(0, freeDocks), scene: SceneKeys.SHIPYARD },
-    { id: 'baseWork', label: '軍港の工事', count: basesReady, scene: SceneKeys.BASE },
+    { id: 'baseWork', label: '軍港・基地の工事', count: basesReady, scene: SceneKeys.BASE },
     // 遠征 (#41): expeditions back, to take home.
     { id: 'expeditions', label: '遠征帰還', count: (progress.expeditions ?? []).filter((r) => r.endsAt <= now).length, scene: SceneKeys.EXPEDITION },
   ];

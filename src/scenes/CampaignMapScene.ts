@@ -142,7 +142,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const hidden = all.filter((t) => !this.theaters.includes(t));
     if (hidden.length > 0) {
       const names = IS_PORTRAIT ? '' : ` (${hidden.map((t) => t.name).join('・')})`;
-      const note = this.add.text(L.map.x + 18, L.map.y + L.map.h - 14, `ほか ${hidden.length} 戦域${names}は、軍港を開くと出撃できます`, textStyle(12, Css.dim)).setOrigin(0, 1).setDepth(2);
+      const note = this.add.text(L.map.x + 18, L.map.y + L.map.h - 14, `ほか ${hidden.length} 戦域${names}は、基地を開くと出撃できます`, textStyle(12, Css.dim)).setOrigin(0, 1).setDepth(2);
       if (note.width > L.map.w - 36) note.setScale((L.map.w - 36) / note.width);
     }
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
@@ -386,10 +386,10 @@ export class CampaignMapScene extends Phaser.Scene {
     const bw = (d.w - 48 - 12 * (count - 1)) / count;
     const bx = (i: number): number => d.x + 24 + i * (bw + 12) + bw / 2;
     const bh = IS_PORTRAIT ? 76 : 60;
-    // Sorties leave from a base that reaches the theater (#145).
+    // Sorties leave from a base that reaches the theater (#145): the home port or the sea's forward base (#373).
     const reach = baseReaches(baseOfProgress(progress), a.theater);
     const from = basesFor(progress.nation, a.theater).map((b) => b.name).join('・');
-    const label = !open ? '前の海域を攻略してください' : reach ? (count > 2 ? '出撃準備 ›' : '出撃準備  ›') : `${from}を開港すると出撃可`;
+    const label = !open ? '前の海域を攻略してください' : reach ? (count > 2 ? '出撃準備 ›' : '出撃準備  ›') : `${from}を開くと出撃可`;
     const btn = add(
       new UIButton(this, bx(0), by, label, () => this.prepare(a), {
         variant: open && reach ? 'gold' : 'secondary', width: bw, height: bh, fontSize: open && reach ? (count > 2 ? 17 : 20) : 14,

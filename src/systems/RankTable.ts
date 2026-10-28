@@ -1,4 +1,7 @@
-import { nationBases } from './BaseSystem';
+import { isForward, nationBases } from './BaseSystem';
+import campaignData from '@/data/campaign.json';
+
+const THEATER_NAME: Record<string, string> = Object.fromEntries(campaignData.theaters.map((t) => [t.id, t.name]));
 import { DOCK_UPGRADES } from './DockSystem';
 import { examText, maxBuildGrade, RANKS, START_RANK } from './RankSystem';
 import { FORMATION_ORDER, FORMATION_RULES } from './FormationRules';
@@ -23,7 +26,8 @@ export function rankTable(nation: string): IRankRow[] {
     const unlocks: string[] = [];
     const docks = DOCK_UPGRADES.filter((d) => d.rank === r.index).length;
     if (docks > 0) unlocks.push('ドック増設');
-    for (const b of bases.filter((x) => x.unlockRank === r.index && r.index > 0)) unlocks.push(`軍港の着工: ${b.name}`);
+    // Ports and forward bases (#373): a forward base names the sea it opens.
+    for (const b of bases.filter((x) => x.unlockRank === r.index && r.index > 0)) unlocks.push(isForward(b) ? `基地の着工: ${b.name} (${THEATER_NAME[b.theaters?.[0] ?? ''] ?? ''})` : `軍港の着工: ${b.name}`);
     // 陣形 (#345): one more as the fleet grows.
     for (const f of FORMATION_ORDER.filter((x) => FORMATION_RULES[x].minRank === r.index && r.index > 0)) unlocks.push(`陣形: ${FORMATION_RULES[f].ja}`);
     // 遠征 (#359): one new expedition a rank.
