@@ -50,9 +50,10 @@ export function summarizeWeapons(ids: string[]): Array<{ id: string; count: numb
 // ---------------------------------------------------------------------------
 
 /** Encyclopedia tabs. */
-export type EncyclopediaTab = 'ships' | 'captains' | 'aircraft' | 'ground';
-export const TAB_LABEL: Record<EncyclopediaTab, string> = { ships: '艦艇', captains: '艦長', aircraft: '航空機', ground: '特殊' };
-export const TABS: EncyclopediaTab[] = ['ships', 'captains', 'aircraft', 'ground'];
+export type EncyclopediaTab = 'ships' | 'captains' | 'aircraft' | 'equipment' | 'ground';
+export const TAB_LABEL: Record<EncyclopediaTab, string> = { ships: '艦艇', captains: '艦長', aircraft: '航空機', equipment: '装備', ground: '特殊' };
+/** 装備 (#373): the equipment (#55 #251 #150) and the consumables (#47). */
+export const TABS: EncyclopediaTab[] = ['ships', 'captains', 'aircraft', 'equipment', 'ground'];
 
 /** "艦艇 12 / 25" — owned / all. */
 export function collectionLabel(label: string, owned: number, all: number): string {
