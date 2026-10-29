@@ -23,6 +23,8 @@ import { ShopScene } from '@/scenes/ShopScene';
 import { ItemScene } from '@/scenes/ItemScene';
 import { ExpeditionScene } from '@/scenes/ExpeditionScene';
 import { DevelopScene } from '@/scenes/DevelopScene';
+import { FocusScene } from '@/scenes/FocusScene';
+import { DesignScene } from '@/scenes/DesignScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -46,5 +48,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene, HomeScene, ArsenalScene, ShipyardScene, CampaignMapScene, ScenarioScene, EncyclopediaScene, RecordScene, SettingsScene, HelpScene, CaptainScene, BaseScene, ShopScene, ItemScene, ExpeditionScene, DevelopScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, FleetBuilderScene, BattleScene, ResultsScene, CustomizationScene, HomeScene, ArsenalScene, ShipyardScene, CampaignMapScene, ScenarioScene, EncyclopediaScene, RecordScene, SettingsScene, HelpScene, CaptainScene, BaseScene, ShopScene, ItemScene, ExpeditionScene, DevelopScene, FocusScene, DesignScene],
 };

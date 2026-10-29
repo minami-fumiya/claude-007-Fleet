@@ -70,7 +70,7 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(buildCost(byId('a150')).steel).toBeGreaterThan(bb.steel);
   });
 
-  it('grades: destroyers and submarines 0, the largest battleships and fictional ships 5', () => {
+  it('grades: destroyers and submarines 0, the largest battleships 5; planned ships by their size too (#309)', () => {
     expect(shipGrade(byId('fubuki'))).toBe(0);
     expect(shipGrade(byId('i400'))).toBe(0);
     expect(shipGrade(byId('takao'))).toBe(1);
@@ -104,7 +104,7 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], merit: 100 }, IJN, byId('atago'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battlecruiser'], rankFloor: 6 }, IJN, byId('kongo'))).toBe('rank');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battlecruiser'], rankFloor: 7 }, IJN, byId('kongo'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 11 }, IJN, byId('a150'))).toBe('fictional');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 11 }, IJN, byId('a150'))).toBe('focus');
     expect(buildState({ ...p, resources: resources() }, IJN, byId('yukikaze'))).toBe('resources');
     expect(buildStateLabel('research', byId('sendai'), { build_cruiser: '軽巡洋艦建造' })).toBe('要研究: 軽巡洋艦建造');
     expect(buildStateLabel('research', byId('atago'), { build_heavy_cruiser: '重巡洋艦建造' })).toBe('要研究: 重巡洋艦建造');
@@ -334,7 +334,7 @@ describe('同型艦は若い番号から順に建造する (#356)', () => {
     expect(buildState(p, IJN, byId('musashi'))).not.toBe('sister');
   });
 
-  it('reward and fictional ships stand outside the order', () => {
+  it('reward and planned ships stand outside the order', () => {
     for (const s of IJN.filter((x) => isRewardOnly(x) || x.fictional)) expect(sisterBefore(IJN, s), s.id).toBeUndefined();
   });
 });

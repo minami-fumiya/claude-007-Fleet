@@ -48,9 +48,8 @@ export function researchMedal(id: string): string | undefined {
   return RESEARCH_MEDALS[id];
 }
 
-/** The medal a ship's build needs (`grade` from ShipyardSystem.shipGrade): the biggest battleships and carriers, and the fictional designs. */
-export function shipMedal(ship: Pick<IShipData, 'shipClass' | 'fictional'>, grade: number): string | undefined {
-  if (ship.fictional) return 'ace';
+/** The medal a ship's build needs (`grade` from ShipyardSystem.shipGrade): the biggest battleships and carriers. */
+export function shipMedal(ship: Pick<IShipData, 'shipClass'>, grade: number): string | undefined {
   if (grade < BIG_SHIP_GRADE) return undefined;
   if (ship.shipClass === ShipClass.Battleship) return 'battleship_slayer';
   if (ship.shipClass === ShipClass.Carrier) return 'carrier_slayer';

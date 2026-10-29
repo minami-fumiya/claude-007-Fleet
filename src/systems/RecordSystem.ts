@@ -218,6 +218,17 @@ export interface IMedalContext {
   rankIndex?: number;
   /** Lifetime gold earned (#183) */
   goldEarned?: number;
+  /** 国家方針 (#49): focuses one nation has done, best nation */
+  focusDone?: number;
+  /** 架空艦 (#309): planned ships one nation owns, best nation */
+  plannedOwned?: number;
+  /** 設計艦 (#51): designs one nation has drawn, and ships of them owned in all */
+  designsDrawn?: number;
+  designsOwned?: number;
+  /** 装備改修 (#368): the highest ★ any equipment has reached */
+  equipStarsMax?: number;
+  /** 他国艦 (#368): other navies' ships owned in all */
+  foreignOwned?: number;
 }
 
 export type MedalCategory = 'sink' | 'battle' | 'campaign' | 'growth' | 'base' | 'special' | 'quest';
@@ -418,6 +429,17 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('airfield', '飛行場制圧章', 'battle', [3, 15, 50], (g) => `敵の飛行場を ${g} か所破壊する`, (_r, c) => total(c, 'airfieldDown')),
   ...ladder('superweapon_slayer', '超兵器撃沈章', 'sink', [1, 5, 20], (g) => `超兵器を ${g} 隻撃沈する`, (_r, c) => total(c, 'superweaponSunk')),
   ...ladder('hard_mode', '精鋭章', 'battle', [10, 50, 200], (g) => `難易度「難しい」で ${g} 回勝利する`, (_r, c) => total(c, 'hardWin')),
+  // 0.0.52 国家方針 (#49)・架空艦 (#309)・設計艦 (#51)・装備改修と換装・他国の設計図 (#368)
+  ...ladder('focus', '国家方針章', 'growth', [1, 4, 9], (g) => `1 つの国で、国家方針を ${g} つ終える`, (_r, c) => c.focusDone ?? 0),
+  ...ladder('focus_reset', '方針転換章', 'growth', [1], () => '国家方針を見直す', (_r, c) => total(c, 'focusReset')),
+  ...ladder('planned', '計画艦章', 'base', [1, 4, 10], (g) => `計画艦・未成艦 (架空艦) を 1 つの国で ${g} 隻持つ`, (_r, c) => c.plannedOwned ?? 0),
+  ...ladder('designer', '設計章', 'base', [1, 3, 5], (g) => `1 つの国で、艦を ${g} 隻設計する`, (_r, c) => c.designsDrawn ?? 0),
+  ...ladder('design_built', '設計艦竣工章', 'base', [1, 5], (g) => `設計した艦を ${g} 隻建造する`, (_r, c) => c.designsOwned ?? 0),
+  ...ladder('improve', '改修章', 'base', [10, 50, 200], (g) => `装備を ${g} 回改修する`, (_r, c) => total(c, 'equipImprove')),
+  ...ladder('improve_max', '改修の極み章', 'base', [5, 10], (g) => `装備を 1 つ ★${g} まで改修する`, (_r, c) => c.equipStarsMax ?? 0),
+  ...ladder('gun_swap', '換装章', 'base', [1, 10], (g) => `主砲の型を ${g} 回載せ替える`, (_r, c) => total(c, 'gunSwap')),
+  ...ladder('foreign_plans', '他国の設計図章', 'battle', [5, 30, 100], (g) => `他国の設計図の断片を ${g} 個手に入れる`, (_r, c) => total(c, 'foreignFragment')),
+  ...ladder('foreign_ship', '他国艦章', 'base', [1, 5], (g) => `他国の艦を ${g} 隻建造する`, (_r, c) => c.foreignOwned ?? 0),
   ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them
   ...([

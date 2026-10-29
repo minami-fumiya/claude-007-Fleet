@@ -1,4 +1,4 @@
-import { IShipData } from '@/types/Ship';
+import { IShipData, isHistorical } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
 import { BattleMode } from '@/types/Battle';
@@ -78,7 +78,7 @@ export function generateEnemyFleet(
 ): IShipData[] {
   const count = enemyFleetSize(size);
   // Fictional ships are the player's research reward; the enemy only fields historical ones.
-  const roster = registry.byNation(nation).filter((s) => !s.fictional);
+  const roster = registry.byNation(nation).filter((s) => isHistorical(s));
   const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
   const used = new Set<string>();
   const slots: ShipClass[][] =
@@ -117,7 +117,7 @@ export function exerciseEnemyFleet(
   size: number,
   rng: () => number = Math.random,
 ): IShipData[] {
-  const roster = registry.byNation(nation).filter((s) => !s.fictional);
+  const roster = registry.byNation(nation).filter((s) => isHistorical(s));
   if (roster.length === 0 || playerShips.length === 0) return [];
   const smallest = playerShips.reduce((a, b) => (b.hp < a.hp ? b : a));
   const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
@@ -144,6 +144,6 @@ export function exerciseEnemyFleet(
  * try new ships and captains on.
  */
 export function trainingEnemyFleet(registry: ShipRegistry, nation: Nation, size: number): IShipData[] {
-  const weak = registry.byNation(nation).filter((s) => !s.fictional && s.shipClass !== ShipClass.Submarine).sort((a, b) => a.hp - b.hp);
+  const weak = registry.byNation(nation).filter((s) => isHistorical(s) && s.shipClass !== ShipClass.Submarine).sort((a, b) => a.hp - b.hp);
   return weak.slice(0, exerciseEnemyCount(size));
 }

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import upgradesData from '@/data/upgrades.json';
 import {
-  availableShips,
   researchOrder,
   branchNodes,
   branchProgress,
@@ -75,17 +74,7 @@ describe('ResearchSystem', () => {
   });
 });
 
-describe('fictional ships research', () => {
-  const ship = (id: string, fictional?: boolean): IShipData => ({
-    id, name: id, nation: Nation.IJN, shipClass: ShipClass.Battleship, hp: 1, armor: 1, speed: 1, weapons: [], spriteKey: id, fictional,
-  });
-  const ships = [ship('yamato'), ship('a150', true)];
-
-  it('hides fictional ships until the research is done', () => {
-    expect(availableShips(ships, []).map((s) => s.id)).toEqual(['yamato']);
-    expect(availableShips(ships, [FICTIONAL_TECH]).map((s) => s.id)).toEqual(['yamato', 'a150']);
-  });
-
+describe('架空艦計画 research (#309)', () => {
   it('is a late node in the tech tree', () => {
     const tree = techTree.tech as ITechNode[];
     expect(tree.some((n) => n.id === FICTIONAL_TECH)).toBe(true);

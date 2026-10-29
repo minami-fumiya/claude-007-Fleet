@@ -21,6 +21,8 @@ export const SceneKeys = {
   ITEMS: 'ItemScene',
   EXPEDITION: 'ExpeditionScene',
   DEVELOP: 'DevelopScene',
+  FOCUS: 'FocusScene',
+  DESIGN: 'DesignScene',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];

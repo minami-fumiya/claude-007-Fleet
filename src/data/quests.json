@@ -161,6 +161,10 @@
     {"id": "e_steel2", "kind": "event", "name": "大増産", "text": "鋼材祭りの開催中に 5 回勝利する", "event": "event_steel", "goal": 5, "gold": 100, "reward": {"steel": 1500}, "items": {"fastBuild": 1}},
     {"id": "a_expedition", "kind": "once", "name": "初めての遠征", "text": "遠征から 1 回帰還する", "event": "expeditionDone", "goal": 1, "gold": 300, "reward": {"fuel": 500, "steel": 500}},
     {"id": "a_dorm", "kind": "once", "name": "寮舎の訓練", "text": "寮舎で延べ 5 時間訓練する", "event": "dormHours", "goal": 5, "gold": 300, "reward": {"ammo": 500, "steel": 500}},
-    {"id": "a_book", "kind": "once", "name": "教本で学ぶ", "text": "艦長教本を 1 冊使う", "event": "bookUse", "goal": 1, "gold": 300, "reward": {"fuel": 500, "ammo": 500}}
+    {"id": "a_book", "kind": "once", "name": "教本で学ぶ", "text": "艦長教本を 1 冊使う", "event": "bookUse", "goal": 1, "gold": 300, "reward": {"fuel": 500, "ammo": 500}},
+    {"id": "a_focus1", "kind": "once", "name": "国の進む道", "text": "国家方針を 1 つ終える", "event": "focusDone", "goal": 1, "gold": 300, "reward": {"fuel": 800, "ammo": 800, "steel": 800}},
+    {"id": "a_focus5", "kind": "once", "name": "国策の完遂", "text": "国家方針を 5 つ終える", "event": "focusDone", "goal": 5, "gold": 300, "reward": {"fuel": 1500, "ammo": 1500, "steel": 1500}},
+    {"id": "a_design1", "kind": "once", "name": "設計室", "text": "艦を 1 隻設計する", "event": "designMade", "goal": 1, "gold": 300, "reward": {"steel": 1000, "bauxite": 300}},
+    {"id": "w_improve3", "kind": "weekly", "name": "装備の改修", "text": "装備を 3 回改修する", "event": "equipImprove", "goal": 3, "reward": {"fuel": 900, "ammo": 900, "steel": 600, "bauxite": 200}}
   ]
 }

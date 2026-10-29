@@ -1,0 +1,2388 @@
+{
+ "_comment": "国家方針 (#49 #309): 国ごとの方針ツリー。exclusive は二者択一 (片方を選ぶともう片方は選べない)、unlocks はその方針で建造できるようになる計画艦・未成艦 (fictional)。minutes の間をかけて 1 つずつ進める。",
+ "nations": {
+  "IJN": [
+   {
+    "id": "ijn_expand",
+    "name": "マル五計画",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "ijn_bigGun",
+    "name": "大艦巨砲主義",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "exclusive": [
+     "ijn_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "ijn_bigGun2",
+    "name": "改大和型の建造",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "kai_yamato"
+    ]
+   },
+   {
+    "id": "ijn_bigGun3",
+    "name": "超大和型の建造",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "a150"
+    ]
+   },
+   {
+    "id": "ijn_air",
+    "name": "航空主兵",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "exclusive": [
+     "ijn_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "ijn_air2",
+    "name": "空母への改装",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "ijn_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "ibuki"
+    ]
+   },
+   {
+    "id": "ijn_air3",
+    "name": "装甲空母の量産",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "ijn_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "kai_taiho"
+    ]
+   },
+   {
+    "id": "ijn_torpedo",
+    "name": "酸素魚雷の量産",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "exclusive": [
+     "ijn_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "ijn_torpedo2",
+    "name": "丙型駆逐艦",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "kai_shimakaze"
+    ]
+   },
+   {
+    "id": "ijn_raider",
+    "name": "潜水艦による通商破壊",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "exclusive": [
+     "ijn_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "ijn_raider2",
+    "name": "水中高速潜水艦",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "sentaka_dai"
+    ]
+   },
+   {
+    "id": "ijn_cruiser",
+    "name": "超甲型巡洋艦",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "b65"
+    ]
+   },
+   {
+    "id": "ijn_escort",
+    "name": "海上護衛総隊",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "ijn_total",
+    "name": "決戦態勢",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "ijn_bigGun3",
+     "ijn_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ],
+  "USN": [
+   {
+    "id": "usn_expand",
+    "name": "両洋艦隊法",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "usn_bigGun",
+    "name": "戦艦部隊の再建",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "exclusive": [
+     "usn_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "usn_bigGun2",
+    "name": "条約前の主力艦",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "south_dakota_1920",
+     "constellation_cc"
+    ]
+   },
+   {
+    "id": "usn_bigGun3",
+    "name": "モンタナ級",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "montana"
+    ]
+   },
+   {
+    "id": "usn_air",
+    "name": "高速空母部隊",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "exclusive": [
+     "usn_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "usn_air2",
+    "name": "軽空母の量産",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "usn_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "saipan"
+    ]
+   },
+   {
+    "id": "usn_air3",
+    "name": "大型空母の量産",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "usn_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "oriskany"
+    ]
+   },
+   {
+    "id": "usn_torpedo",
+    "name": "駆逐艦の大量建造",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "exclusive": [
+     "usn_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "usn_torpedo2",
+    "name": "ギアリング級の後期艦",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "gearing_late"
+    ]
+   },
+   {
+    "id": "usn_raider",
+    "name": "無制限潜水艦戦",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "exclusive": [
+     "usn_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "usn_raider2",
+    "name": "大型巡洋艦",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "hawaii"
+    ]
+   },
+   {
+    "id": "usn_cruiser",
+    "name": "両用砲巡洋艦",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "worcester"
+    ]
+   },
+   {
+    "id": "usn_escort",
+    "name": "護衛駆逐艦の量産",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "usn_total",
+    "name": "総力戦体制",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "usn_bigGun3",
+     "usn_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ],
+  "KM": [
+   {
+    "id": "km_expand",
+    "name": "Z 計画",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "km_bigGun",
+    "name": "大洋艦隊の再建",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "exclusive": [
+     "km_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "km_bigGun2",
+    "name": "H 級戦艦",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "h39"
+    ]
+   },
+   {
+    "id": "km_bigGun3",
+    "name": "H 級の拡大",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "h41"
+    ]
+   },
+   {
+    "id": "km_air",
+    "name": "空母部隊の編成",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "exclusive": [
+     "km_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "km_air2",
+    "name": "空母 B",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "km_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "peter_strasser"
+    ]
+   },
+   {
+    "id": "km_air3",
+    "name": "客船の空母改装",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "km_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "europa_cv"
+    ]
+   },
+   {
+    "id": "km_torpedo",
+    "name": "駆逐艦隊の強化",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "exclusive": [
+     "km_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "km_torpedo2",
+    "name": "1936C 型駆逐艦",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "z46"
+    ]
+   },
+   {
+    "id": "km_raider",
+    "name": "通商破壊戦",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "exclusive": [
+     "km_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "km_raider2",
+    "name": "O 級巡洋戦艦と XVIII 型",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "o_class",
+     "u_xviii"
+    ]
+   },
+   {
+    "id": "km_cruiser",
+    "name": "M 級軽巡洋艦",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "m_class",
+     "seydlitz"
+    ]
+   },
+   {
+    "id": "km_escort",
+    "name": "沿岸の護衛",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "km_total",
+    "name": "総力戦",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "km_bigGun3",
+     "km_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ],
+  "RN": [
+   {
+    "id": "rn_expand",
+    "name": "海軍の再軍備",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "rn_bigGun",
+    "name": "主力艦の更新",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "exclusive": [
+     "rn_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rn_bigGun2",
+    "name": "ライオン級",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "lion"
+    ]
+   },
+   {
+    "id": "rn_bigGun3",
+    "name": "ライオン級 2 番艦",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "temeraire"
+    ]
+   },
+   {
+    "id": "rn_air",
+    "name": "艦隊航空隊",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "exclusive": [
+     "rn_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rn_air2",
+    "name": "装甲空母の拡大",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "rn_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "audacious"
+    ]
+   },
+   {
+    "id": "rn_air3",
+    "name": "マルタ級空母",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "rn_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "malta_cv"
+    ]
+   },
+   {
+    "id": "rn_torpedo",
+    "name": "駆逐艦隊の強化",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "exclusive": [
+     "rn_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rn_torpedo2",
+    "name": "ダーリング級",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "daring"
+    ]
+   },
+   {
+    "id": "rn_raider",
+    "name": "大型巡洋戦艦の構想",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "exclusive": [
+     "rn_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rn_raider2",
+    "name": "インコンパラブル",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "incomparable"
+    ]
+   },
+   {
+    "id": "rn_cruiser",
+    "name": "1944 年の巡洋艦",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "neptune_1944"
+    ]
+   },
+   {
+    "id": "rn_escort",
+    "name": "船団護衛体制",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "rn_total",
+    "name": "総力戦",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "rn_bigGun3",
+     "rn_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ],
+  "FR": [
+   {
+    "id": "fr_expand",
+    "name": "1938 年計画",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "fr_bigGun",
+    "name": "高速戦艦の量産",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "exclusive": [
+     "fr_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "fr_bigGun2",
+    "name": "ガスコーニュ",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "gascogne"
+    ]
+   },
+   {
+    "id": "fr_bigGun3",
+    "name": "アルザス級",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "alsace"
+    ]
+   },
+   {
+    "id": "fr_air",
+    "name": "空母の建造",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "exclusive": [
+     "fr_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "fr_air2",
+    "name": "ジョッフル",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "fr_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "joffre"
+    ]
+   },
+   {
+    "id": "fr_air3",
+    "name": "パンルヴェ",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "fr_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "painleve"
+    ]
+   },
+   {
+    "id": "fr_torpedo",
+    "name": "大型駆逐艦の伝統",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "exclusive": [
+     "fr_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "fr_torpedo2",
+    "name": "オッシュ",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "hoche"
+    ]
+   },
+   {
+    "id": "fr_raider",
+    "name": "潜水艦隊の強化",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "exclusive": [
+     "fr_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "fr_raider2",
+    "name": "ロラン・モリヨ級",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "roland_morillot"
+    ]
+   },
+   {
+    "id": "fr_cruiser",
+    "name": "軽巡洋艦の更新",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "de_grasse"
+    ]
+   },
+   {
+    "id": "fr_escort",
+    "name": "沿岸の護衛",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "fr_total",
+    "name": "総力戦",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "fr_bigGun3",
+     "fr_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ],
+  "RM": [
+   {
+    "id": "rm_expand",
+    "name": "海軍の拡張",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "rm_bigGun",
+    "name": "リットリオ級の量産",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "exclusive": [
+     "rm_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rm_bigGun2",
+    "name": "インペロ",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "impero"
+    ]
+   },
+   {
+    "id": "rm_bigGun3",
+    "name": "UP.41 計画",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "up41"
+    ]
+   },
+   {
+    "id": "rm_air",
+    "name": "空母の建造",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "exclusive": [
+     "rm_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rm_air2",
+    "name": "スパルヴィエロ",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "rm_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "sparviero"
+    ]
+   },
+   {
+    "id": "rm_air3",
+    "name": "アクィラ",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "rm_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "aquila"
+    ]
+   },
+   {
+    "id": "rm_torpedo",
+    "name": "水雷戦隊の強化",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "exclusive": [
+     "rm_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rm_torpedo2",
+    "name": "メダーリェ・ドーロ級",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "medaglie_doro"
+    ]
+   },
+   {
+    "id": "rm_raider",
+    "name": "高速偵察巡洋艦",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "exclusive": [
+     "rm_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rm_raider2",
+    "name": "改カピターニ・ロマーニ級",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "romani_kai"
+    ]
+   },
+   {
+    "id": "rm_cruiser",
+    "name": "植民地巡洋艦",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "etiopico"
+    ]
+   },
+   {
+    "id": "rm_escort",
+    "name": "船団の護衛",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "rm_total",
+    "name": "総力戦",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "rm_bigGun3",
+     "rm_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ],
+  "SU": [
+   {
+    "id": "su_expand",
+    "name": "大洋艦隊計画",
+    "text": "建造費 −5%",
+    "rank": 2,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "buildMul": 0.95
+   },
+   {
+    "id": "su_bigGun",
+    "name": "大型戦艦の建造",
+    "text": "戦艦の砲撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 600,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "exclusive": [
+     "su_air"
+    ],
+    "mods": {
+     "Battleship": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "su_bigGun2",
+    "name": "ソビエツキー・ソユーズ級",
+    "text": "戦艦の装甲 +2",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 900,
+     "ammo": 1100,
+     "steel": 1300,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_bigGun"
+    ],
+    "mods": {
+     "Battleship": {
+      "armorAdd": 2
+     }
+    },
+    "unlocks": [
+     "sovetsky_soyuz"
+    ]
+   },
+   {
+    "id": "su_bigGun3",
+    "name": "3 番艦の建造",
+    "text": "戦艦の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1300,
+     "ammo": 1600,
+     "steel": 2000,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_bigGun2"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "sovetskaya_rossiya"
+    ]
+   },
+   {
+    "id": "su_air",
+    "name": "空母の導入",
+    "text": "空母の航空攻撃 +5%",
+    "rank": 6,
+    "minutes": 30,
+    "cost": {
+     "fuel": 700,
+     "ammo": 500,
+     "steel": 700,
+     "bauxite": 400
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "exclusive": [
+     "su_bigGun"
+    ],
+    "mods": {
+     "Carrier": {
+      "airPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "su_air2",
+    "name": "71 号計画",
+    "text": "艦載機の再出撃 5% 短縮",
+    "rank": 8,
+    "minutes": 40,
+    "cost": {
+     "fuel": 1000,
+     "ammo": 700,
+     "steel": 1100,
+     "bauxite": 700
+    },
+    "requires": [
+     "su_air"
+    ],
+    "mods": {
+     "Carrier": {
+      "rearmMul": 0.95
+     }
+    },
+    "unlocks": [
+     "project71"
+    ]
+   },
+   {
+    "id": "su_air3",
+    "name": "72 号計画",
+    "text": "空母の耐久 +5%",
+    "rank": 10,
+    "minutes": 60,
+    "cost": {
+     "fuel": 1400,
+     "ammo": 900,
+     "steel": 1600,
+     "bauxite": 1000
+    },
+    "requires": [
+     "su_air2"
+    ],
+    "mods": {
+     "Carrier": {
+      "hpMul": 1.05
+     }
+    },
+    "unlocks": [
+     "project72"
+    ]
+   },
+   {
+    "id": "su_torpedo",
+    "name": "嚮導駆逐艦の量産",
+    "text": "駆逐艦の雷撃 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "exclusive": [
+     "su_raider"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "su_torpedo2",
+    "name": "48 号計画",
+    "text": "駆逐艦の速力 +3%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 600,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_torpedo"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.03
+     }
+    },
+    "unlocks": [
+     "kiev_leader"
+    ]
+   },
+   {
+    "id": "su_raider",
+    "name": "重巡洋艦の建造",
+    "text": "潜水艦の雷撃 +5%・巡洋艦の索敵 +5%",
+    "rank": 4,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 400,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "exclusive": [
+     "su_torpedo"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "visionMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "su_raider2",
+    "name": "69 号計画 (クロンシュタット)",
+    "text": "潜水艦の速力 +5%",
+    "rank": 6,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 700,
+     "steel": 700,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_raider"
+    ],
+    "mods": {
+     "Submarine": {
+      "speedMul": 1.05
+     }
+    },
+    "unlocks": [
+     "kronshtadt"
+    ]
+   },
+   {
+    "id": "su_cruiser",
+    "name": "チャパエフ級",
+    "text": "巡洋艦の装填 4% 短縮",
+    "rank": 5,
+    "minutes": 40,
+    "cost": {
+     "fuel": 700,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "mods": {
+     "Cruiser": {
+      "gunReloadMul": 0.96
+     }
+    },
+    "unlocks": [
+     "chapayev"
+    ]
+   },
+   {
+    "id": "su_escort",
+    "name": "沿岸の護衛",
+    "text": "駆逐艦のソナーと爆雷 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 400,
+     "ammo": 400,
+     "steel": 300,
+     "bauxite": 0
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "sonarMul": 1.1,
+      "depthChargeMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "su_total",
+    "name": "祖国防衛戦",
+    "text": "全艦の耐久 +3%・建造費 −5%",
+    "rank": 12,
+    "minutes": 90,
+    "cost": {
+     "fuel": 2000,
+     "ammo": 2000,
+     "steel": 2000,
+     "bauxite": 500
+    },
+    "requiresAny": [
+     "su_bigGun3",
+     "su_air3"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.03
+     },
+     "Cruiser": {
+      "hpMul": 1.03
+     },
+     "Destroyer": {
+      "hpMul": 1.03
+     },
+     "Carrier": {
+      "hpMul": 1.03
+     },
+     "Submarine": {
+      "hpMul": 1.03
+     }
+    },
+    "buildMul": 0.95
+   }
+  ]
+ }
+}

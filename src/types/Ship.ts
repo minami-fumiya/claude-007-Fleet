@@ -68,8 +68,12 @@ export interface IShipData {
   spriteKey: string;
   /** Carriers only: embarked aircraft */
   airWing?: IAirWing;
-  /** Planned-only design: needs the 架空艦計画 research and never appears in enemy fleets */
+  /** 架空艦 (#309): a planned or unfinished ship, opened by a national focus; never in enemy fleets */
   fictional?: boolean;
+  /** 設計艦 (#51): drawn up by the player (DesignSystem.designShip); never in enemy fleets */
+  designed?: boolean;
+  /** 他国艦 (#368): another navy's ship built from its plans; the navy it came from */
+  foreign?: string;
   /** The nation's own superweapon (#148 #150): built from blueprint fragments taken from enemy superweapons */
   blueprint?: boolean;
   /** Short history for the encyclopedia */
@@ -97,6 +101,16 @@ export interface IShipStats {
   subtype?: ShipSubtype;
   /** Crew proficiency 0..100 (aim and evasion) */
   proficiency?: number;
+}
+
+/** A ship that really sailed or was laid down (史実艦): neither planned (架空艦) nor the player's own design (設計艦). */
+export function isHistorical(ship: Pick<IShipData, 'fictional' | 'designed' | 'foreign'>): boolean {
+  return !ship.fictional && !ship.designed && !ship.foreign;
+}
+
+/** 史実艦 · 架空艦 · 設計艦 (#51 #309) · 他国艦 (#368) */
+export function shipOrigin(ship: Pick<IShipData, 'fictional' | 'designed' | 'foreign'>): '史実艦' | '架空艦' | '設計艦' | '他国艦' {
+  return ship.designed ? '設計艦' : ship.foreign ? '他国艦' : ship.fictional ? '架空艦' : '史実艦';
 }
 
 /** What struck a ship (#252): guns, torpedoes, aircraft or depth charges. */

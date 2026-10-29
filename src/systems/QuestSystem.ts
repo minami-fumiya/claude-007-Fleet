@@ -71,6 +71,9 @@ export const QUEST_EVENTS = [
   'logView',
   // 0.0.50: forward bases opened, their facilities raised, base air strikes flown (#373)
   'forwardBaseOpened', 'forwardFacility', 'baseAirStrike', 'skillProc',
+  // 0.0.52: national focuses done and taken back (#49), designs drawn (#51), equipment improved, main guns swapped
+  // and other navies' plans taken (#368)
+  'focusDone', 'focusReset', 'designMade', 'equipImprove', 'gunSwap', 'foreignFragment',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

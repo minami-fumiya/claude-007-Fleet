@@ -3,7 +3,7 @@ import questData from '@/data/quests.json';
 import techTree from '@/data/tech-tree.json';
 import ijn from '@/data/ships/ijn.json';
 import { IResources } from '@/types/Progression';
-import { IShipData } from '@/types/Ship';
+import { IShipData, isHistorical } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { buildCost } from './ShipyardSystem';
 import { repairCost } from './DockSystem';
@@ -80,7 +80,7 @@ const ship = (id: string): IShipData => {
   return s;
 };
 /** A typical enemy of each class, for sweep costs. */
-const typical = (c: ShipClass): IShipData => SHIPS.find((s) => s.shipClass === c && !s.fictional && !s.subtype) ?? SHIPS[0];
+const typical = (c: ShipClass): IShipData => SHIPS.find((s) => s.shipClass === c && isHistorical(s) && !s.subtype) ?? SHIPS[0];
 
 export interface IHourBudget {
   income: Record<string, IResources>;

@@ -56,6 +56,8 @@ for (const d of [ijn, usn, km, rn, fr, su, rm]) {
   }
 }
 const OWN_SUPERWEAPONS = new Set(ownSuperweapons().map((s) => s.id));
+/** 架空艦 (#309) of every navy, for the 計画艦章 */
+const PLANNED = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships as IShipData[]).filter((s) => s.fictional).map((s) => s.id)));
 const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships as IShipData[]).filter((s) => s.shipClass === ShipClass.Carrier).map((s) => s.id)));
 
 /**
@@ -68,7 +70,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const theaters = new Set<string>();
   const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, equipStarsMax: 0, foreignOwned: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -120,6 +122,13 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     for (const st of Object.values(np.captainStats ?? {})) ctx.captainSinks = Math.max(ctx.captainSinks, st?.sinks ?? 0);
     for (const levels of Object.values(np.facilities ?? {})) for (const lv of Object.values(levels ?? {})) ctx.facilityLevels += lv ?? 0;
     ctx.rankIndex = Math.max(ctx.rankIndex, rankOf({ ...np, nation }).index);
+    // 0.0.52: national focuses (#49), planned ships (#309), designs (#51), equipment improved (#368).
+    ctx.focusDone = Math.max(ctx.focusDone, np.focus?.done.length ?? 0);
+    ctx.plannedOwned = Math.max(ctx.plannedOwned, np.ships.filter((id) => PLANNED.has(id)).length);
+    ctx.designsDrawn = Math.max(ctx.designsDrawn, np.designs?.length ?? 0);
+    ctx.designsOwned += np.ships.filter((id) => (np.designs ?? []).some((d) => d.id === id)).length;
+    ctx.equipStarsMax = Math.max(ctx.equipStarsMax, ...Object.values(np.equipStars ?? {}), 0);
+    ctx.foreignOwned += np.ships.filter((id) => id.includes('@')).length;
   }
   ctx.groundKinds = groundKillStats(Object.fromEntries([...groundSeen].map((id) => [id, 1]))).kinds;
   return { ...ctx, totals, clearedTheaters: [...theaters], goldEarned: save.wallet?.earned ?? 0 };

@@ -23,7 +23,10 @@ import { SKILL_COLOR } from '@/ui/SkillColors';
 import { nationCaptains } from '@/systems/CaptainRoster';
 import { buildTechFor, gradeRankName, killNeed, killNeedText, rewardAreaOf, shipGrade } from '@/systems/ShipyardSystem';
 import { medalName, shipMedal } from '@/systems/MedalGate';
-import { FICTIONAL_TECH, TECH_TREE } from '@/systems/ResearchSystem';
+import { TECH_TREE } from '@/systems/ResearchSystem';
+import { unlockingFocus } from '@/systems/NationFocusSystem';
+import { fragmentNeed } from '@/systems/ForeignShipSystem';
+import { isHistorical, shipOrigin } from '@/types/Ship';
 import { loadProgress, loadSave } from '@/utils/ProgressStore';
 import { moraleLabel, moraleOf } from '@/systems/MoraleSystem';
 import { IShipData } from '@/types/Ship';
@@ -227,7 +230,7 @@ export class EncyclopediaScene extends Phaser.Scene {
         return listed.map((s) => {
           const have = owned.includes(s.id);
           return {
-            id: s.id, name: have ? s.name.replace(/\s*\(.*\)\s*$/, '') : hiddenShipName(roster, s, owned), sub: `${s.fictional && have ? '架空  ' : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: have,
+            id: s.id, name: have ? s.name.replace(/\s*\(.*\)\s*$/, '') : hiddenShipName(roster, s, owned), sub: `${!isHistorical(s) && have ? `${shipOrigin(s)}  ` : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: have,
           };
         });
       }
@@ -449,8 +452,12 @@ export class EncyclopediaScene extends Phaser.Scene {
     const tech = (id: string): string => TECH_TREE.find((n) => n.id === id)?.name ?? id;
     const record = loadSave().record;
     const lines = ['工廠で建造。条件:'];
-    const research = [buildTechFor(ship), ship.fictional ? FICTIONAL_TECH : undefined].filter((id): id is string => id !== undefined);
+    const research = [buildTechFor(ship)].filter((id): id is string => id !== undefined);
     if (research.length > 0) lines.push(`・研究「${research.map(tech).join('」「')}」`);
+    // 架空艦 (#309): the national focus that opens it; 他国艦 (#368): its navy's plans; 設計艦 (#51): the player's own.
+    if (ship.fictional) lines.push(`・国家方針「${unlockingFocus(ship.nation, ship.id)?.name ?? '?'}」 (工廠 › 方針)`);
+    if (ship.foreign) lines.push(`・${NATION_INFO[ship.foreign as Nation]?.jaShort ?? ship.foreign}の設計図の断片 ${fragmentNeed(ship)} 個 (その国の艦を沈めると手に入る)`);
+    if (ship.designed) lines.unshift('工廠 › 設計で作った艦 (設計艦)');
     if (shipGrade(ship) > 0) lines.push(`・階級 ${gradeRankName(shipGrade(ship))} 以上`);
     const kills = killNeed(ship, record);
     if (kills) lines.push(`・${killNeedText(kills)}${kills.have >= kills.count ? ' ✓' : ''}`);
@@ -463,7 +470,7 @@ export class EncyclopediaScene extends Phaser.Scene {
     const d = L.detail;
     const x = d.x + 26;
     const w = d.w - 52;
-    const kind = ship.fictional ? `${kindLabel(ship)}  ·  架空艦` : kindLabel(ship);
+    const kind = isHistorical(ship) ? kindLabel(ship) : `${kindLabel(ship)}  ·  ${shipOrigin(ship)}`;
     const roster = DataLoader.getRegistry(this).byNation(ship.nation);
     const hull = hullNumber(roster, ship);
     const title = owned ? ship.name : hiddenShipName(roster, ship, this.ownedShipIds());
