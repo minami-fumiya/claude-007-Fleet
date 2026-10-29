@@ -28,9 +28,9 @@ export const TECH_PER_LEVEL: Record<ShipClass, Partial<IShipModifiers>> = {
 
 export const TECH_EFFECT_TEXT: Record<ShipClass, string> = {
   [ShipClass.Battleship]: '砲撃 +1.5%・耐久 +1%',
-  [ShipClass.Cruiser]: '主砲の装填 1.5% 短縮・対空 +2%',
+  [ShipClass.Cruiser]: '装填 −1.5%・対空 +2%',
   [ShipClass.Destroyer]: '雷撃 +2%・回避 +0.5%',
-  [ShipClass.Carrier]: '航空攻撃 +2%・艦載機の再出撃 1.5% 短縮',
+  [ShipClass.Carrier]: '航空 +2%・再出撃 −1.5%',
   [ShipClass.Submarine]: '雷撃 +2%・速力 +1%',
 };
 

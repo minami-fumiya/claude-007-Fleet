@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MAX_PROFICIENCY } from '@/systems/ProficiencySystem';
-import { TECH_EFFECT_TEXT, TECH_MAX_LEVEL, TECH_THRESHOLDS, techLevel, techModifiers, techPoints, toNextLevel } from '@/systems/FleetTechSystem';
+import { TECH_EFFECT_TEXT, TECH_THRESHOLDS, techLevel, techPoints, toNextLevel } from '@/systems/FleetTechSystem';
 import { skillOf as shipSkillOf, skillText, SKILL_REMODEL_STAGE } from '@/systems/ShipSkillSystem';
 import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
 import { filterShips, IListFilter, kindsOf, NO_FILTER } from '@/systems/ListFilter';
@@ -428,13 +428,14 @@ export class EncyclopediaScene extends Phaser.Scene {
     const registry = DataLoader.getRegistry(this);
     const points = np ? techPoints(np, (id) => registry.byId(id)?.shipClass) : techPoints({ ships: [], refits: {}, proficiency: {} }, () => undefined);
     let y = this.detailHeader(`${NATION_INFO[this.nation].ja}  ·  艦隊技術`, '艦隊技術');
-    y = this.section(y, 'しくみ', `艦を集めて育てると、その国の同じ艦種の艦がすべて少し強くなります。\n入手 1・改 +1・改二 +2・改三 +2・練度 ${MAX_PROFICIENCY} で +2 ポイント。Lv は ${TECH_THRESHOLDS.join(' / ')} ポイントで上がります (最大 Lv${TECH_MAX_LEVEL})。`, Css.muted);
-    for (const c of CLASS_ORDER) {
+    y = this.section(y, 'しくみ', `艦を集めて育てると、同じ国・艦種の艦がすべて強くなる。入手 1・改 +1・改二 +2・改三 +2・練度 ${MAX_PROFICIENCY} で +2 ポイント、Lv は ${TECH_THRESHOLDS.join(' / ')} で上がる。`, Css.muted);
+    // One line a class (#56): its level, points and what each level gives; portrait has room for no more.
+    const lines = CLASS_ORDER.map((c) => {
       const n = points[c];
-      const lv = techLevel(n);
       const next = toNextLevel(n);
-      y = this.section(y, `${CLASS_JA[c]}  Lv${lv}  ·  ${n} ポイント${next === undefined ? '  (最大)' : `  ·  次まで ${next}`}`, `1 Lv ごとに ${TECH_EFFECT_TEXT[c]}${lv > 0 ? `  (いま ${modifierLines(techModifiers(c, lv)).join('・')})` : ''}`, lv > 0 ? Css.text : Css.dim);
-    }
+      return `${CLASS_JA[c]} Lv${techLevel(n)} (${n} pt${next === undefined ? '・最大' : `・次 ${next}`})  ${TECH_EFFECT_TEXT[c]}`;
+    });
+    this.section(y, '艦種ごとの Lv と 1 Lv の効果', lines.join('\n'));
   }
 
   // -------------------------------------------------------------------------

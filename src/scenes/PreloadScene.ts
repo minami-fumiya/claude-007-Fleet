@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { takeResume } from '@/utils/OrientationWatch';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -52,7 +53,8 @@ export class PreloadScene extends Phaser.Scene {
     generateSpecialTextures(this);
     this.generateShellTexture();
     this.generateSoftTexture();
-    this.scene.start(SceneKeys.MAIN_MENU);
+    // 縦横の切り替え (#95): a reload for the other layout reopens the screen that was open.
+    this.scene.start(takeResume() ?? SceneKeys.MAIN_MENU);
   }
 
   /** Soft round puff for wakes and smoke (the 4px square 'particle' reads as dots). */

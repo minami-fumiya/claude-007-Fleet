@@ -50,7 +50,7 @@ import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
-import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES } from '@/systems/FleetPower';
+import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES, strengthMark } from '@/systems/FleetPower';
 import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
 import { EXPEDITIONS, shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
@@ -1729,7 +1729,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const own = this.powerOf(ships).total;
     const enemy = this.enemyPower();
     const n = (v: number): string => v.toLocaleString('en-US');
-    return enemy === null ? `総戦力 ${n(own)} ▸` : `総戦力 ${n(own)} (敵 ${n(enemy)} ×${(own / Math.max(1, enemy)).toFixed(2)}) ▸`;
+    return enemy === null ? `総戦力 ${n(own)} ▸` : `総戦力 ${n(own)} (敵 ${n(enemy)} ×${(own / Math.max(1, enemy)).toFixed(2)} ${strengthMark(own / Math.max(1, enemy))}) ▸`;
   }
 
   /** The breakdown of 総戦力 (#342): the ships as built, then what each source adds. */
