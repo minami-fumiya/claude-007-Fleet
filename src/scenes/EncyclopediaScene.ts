@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { MAX_PROFICIENCY } from '@/systems/ProficiencySystem';
+import { TECH_EFFECT_TEXT, TECH_MAX_LEVEL, TECH_THRESHOLDS, techLevel, techModifiers, techPoints, toNextLevel } from '@/systems/FleetTechSystem';
 import { skillOf as shipSkillOf, skillText, SKILL_REMODEL_STAGE } from '@/systems/ShipSkillSystem';
 import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
 import { filterShips, IListFilter, kindsOf, NO_FILTER } from '@/systems/ListFilter';
@@ -109,6 +111,8 @@ export class EncyclopediaScene extends Phaser.Scene {
   private list!: ScrollList;
   private countText!: Phaser.GameObjects.Text;
   private selectedId = '';
+  /** 艦隊技術 (#56): the ships tab's detail shows the navy's fleet technology instead of a ship */
+  private techView = false;
   private dynamic: Phaser.GameObjects.GameObject[] = [];
   private maxStat = { hp: 1, armor: 1, speed: 1 };
   /** Where the back button goes (#178: the 改装 screen that opened this page), or the home port */
@@ -158,6 +162,12 @@ export class EncyclopediaScene extends Phaser.Scene {
     const { x, y, w, h } = L.list;
     this.makeList(false);
     this.countText = this.add.text(x + w / 2, y + h - PAD - COUNT_H / 2 + 2, '', textStyle(12, Css.muted)).setOrigin(0.5);
+    // 艦隊技術 (#56): on the ships tab the count line opens the navy's fleet technology.
+    this.countText.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+      if (this.tab !== 'ships') return;
+      this.techView = !this.techView;
+      this.refresh();
+    });
     this.list.setOffset(0);
     this.refresh();
     if (this.revealId) {
@@ -269,7 +279,12 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.buildFilters();
     this.buildList(entries);
     const owned = all.filter((e) => e.owned).length;
-    this.countText.setText(this.tab === 'ground' ? `${all.length} 種` : collectionLabel(`${NATION_INFO[this.nation].jaShort}の${TAB_LABEL[this.tab]}`, owned, all.length));
+    const count = this.tab === 'ground' ? `${all.length} 種` : collectionLabel(`${NATION_INFO[this.nation].jaShort}の${TAB_LABEL[this.tab]}`, owned, all.length);
+    this.countText.setText(this.tab === 'ships' ? `${count}  ·  艦隊技術 ${this.techView ? '‹ 閉じる' : '›'}` : count).setColor(this.tab === 'ships' ? Css.cyan : Css.muted);
+    if (this.tab === 'ships' && this.techView) {
+      this.buildFleetTechDetail();
+      return;
+    }
     const entry = entries.find((e) => e.id === this.selectedId);
     if (!entry) {
       const d = L.detail;
@@ -384,7 +399,8 @@ export class EncyclopediaScene extends Phaser.Scene {
       const card = this.add.container(col * (colW + 8), row * (L.rowH + ROW_GAP), parts);
       this.list.addItem(card, colW, L.rowH, () => {
         this.selectedId = e.id;
-            this.refresh();
+        this.techView = false;
+        this.refresh();
       });
     });
     this.list.setContentHeight(Math.max(0, rows * (L.rowH + ROW_GAP) - ROW_GAP));
@@ -404,6 +420,21 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.track(this.add.text(d.x + 26, y, label, eyebrowStyle(10, Css.gold)));
     const t = this.track(this.add.text(d.x + 26, y + 20, body, textStyle(IS_PORTRAIT ? 14 : 13, css, { wordWrap: { width: w, useAdvancedWrap: true }, lineSpacing: 5 })));
     return t.y + t.height + 16;
+  }
+
+  /** 艦隊技術 (#56): points and level of each class for the navy shown, and what the next level needs. */
+  private buildFleetTechDetail(): void {
+    const np = loadSave().nations[this.nation];
+    const registry = DataLoader.getRegistry(this);
+    const points = np ? techPoints(np, (id) => registry.byId(id)?.shipClass) : techPoints({ ships: [], refits: {}, proficiency: {} }, () => undefined);
+    let y = this.detailHeader(`${NATION_INFO[this.nation].ja}  ·  艦隊技術`, '艦隊技術');
+    y = this.section(y, 'しくみ', `艦を集めて育てると、その国の同じ艦種の艦がすべて少し強くなります。\n入手 1・改 +1・改二 +2・改三 +2・練度 ${MAX_PROFICIENCY} で +2 ポイント。Lv は ${TECH_THRESHOLDS.join(' / ')} ポイントで上がります (最大 Lv${TECH_MAX_LEVEL})。`, Css.muted);
+    for (const c of CLASS_ORDER) {
+      const n = points[c];
+      const lv = techLevel(n);
+      const next = toNextLevel(n);
+      y = this.section(y, `${CLASS_JA[c]}  Lv${lv}  ·  ${n} ポイント${next === undefined ? '  (最大)' : `  ·  次まで ${next}`}`, `1 Lv ごとに ${TECH_EFFECT_TEXT[c]}${lv > 0 ? `  (いま ${modifierLines(techModifiers(c, lv)).join('・')})` : ''}`, lv > 0 ? Css.text : Css.dim);
+    }
   }
 
   // -------------------------------------------------------------------------

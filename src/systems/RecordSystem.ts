@@ -194,6 +194,8 @@ export interface IMedalContext {
   groundKinds?: number;
   /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
   shipTypes?: number;
+  /** 艦隊技術 (#56): the levels of every class added up, best nation */
+  techLevels?: number;
   /** Kinds of ship by 中分類 (#260: 高速戦艦・防空駆逐艦 …) one nation owns, best nation */
   midClasses?: number;
   /** Escorts (海防艦・護衛駆逐艦, #260) one nation owns, best nation */
@@ -390,6 +392,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('battle_hours', '戦闘時間章', 'battle', [1, 10, 50], (g) => `戦闘を累計 ${g} 時間戦う`, (r) => Math.floor(career(r).battleSec / 3600)),
   ...ladder('titles', '称号章', 'special', [3, 10, 20], (g) => `称号を ${g} 個得る`, (r) => earnedTitles(r.medals).length),
   // 0.0.51 艦の個性 (#58)
+  ...ladder('fleet_tech', '艦隊技術章', 'growth', [3, 10, 20, 25], (g) => (g >= 25 ? '1 つの国で、全艦種の艦隊技術を Lv5 にする' : `1 つの国で、艦隊技術の Lv を合わせて ${g} にする`), (_r, c) => c.techLevels ?? 0),
   ...ladder('ship_skill', '固有スキル章', 'battle', [5, 50, 200], (g) => `艦の固有スキルが ${g} 回働く (幸運・不屈)`, (_r, c) => total(c, 'skillProc')),
   ...ladder('consumable', '消耗品章', 'battle', [10, 100, 500], (g) => `消耗品 (応急修理・煙幕など) を ${g} 回使う`, (_r, c) => total(c, 'consumableUse')),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.

@@ -44,6 +44,8 @@ export const TITLES: readonly IAdmiralTitle[] = [
   { id: 't_marksman', name: '百発百中', medal: 'marksman_3' },
   { id: 't_multi', name: '一網打尽', medal: 'multi_sink_3' },
   { id: 't_endurance', name: '不眠の提督', medal: 'battle_hours_3' },
+  { id: 't_tech', name: '艦隊技術の父', medal: 'fleet_tech_4' },
+  { id: 't_skill', name: '名艦の提督', medal: 'ship_skill_3' },
 ];
 
 /** The titles a set of medals earns, in the table's order. */

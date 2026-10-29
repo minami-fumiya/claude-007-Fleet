@@ -93,6 +93,7 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
+import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
 import { LAST_STAND_HP, lastStandArmor, luckChance, skillModifiers, skillOf } from '@/systems/ShipSkillSystem';
 import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
@@ -275,6 +276,8 @@ export class BattleScene extends Phaser.Scene {
   private sailedPx = 0;
   /** 固有スキル (#58): how often the player's ships' skills worked this battle */
   private skillProcs = 0;
+  /** 艦隊技術 (#56): levels by class this battle */
+  private techLevels: Record<ShipClass, number> | null = null;
   /** The enemy fleet's formation (#82) */
   private enemyFormation: Formation = Formation.LineAhead;
   /** 難易度 (#100) of this battle: scenarios always 普通 */
@@ -373,6 +376,7 @@ export class BattleScene extends Phaser.Scene {
     this.torpedoHits = 0;
     this.sailedPx = 0;
     this.skillProcs = 0;
+    this.techLevels = null;
     this.superweapon = null;
     this.superweaponParts = null;
     this.consumables = new Map();
@@ -961,6 +965,8 @@ export class BattleScene extends Phaser.Scene {
       formation,
       // 固有スキル (#58)
       skillModifiers(skillOf(shipData.id), stage),
+      // 艦隊技術 (#56): what collecting and raising the navy's ships of this class has earned.
+      techModifiers(shipData.shipClass, this.techLevelOf(shipData.shipClass)),
       // 士気 (#54): a cheerful crew dodges and reloads a little better, a tired one worse.
       moraleModifiers(moraleOf(progress, shipData.id, Date.now())),
     );
@@ -1637,6 +1643,16 @@ export class BattleScene extends Phaser.Scene {
   private logDamage(target: BaseShip, weapon: IWeaponData, dmg: number): void {
     const side = this.enemies.includes(target) ? 'player' : 'enemy';
     this.damageLog[side][weapon.id] = (this.damageLog[side][weapon.id] ?? 0) + Math.round(dmg);
+  }
+
+  /** 艦隊技術 (#56): the class's level for the navy being played, worked out once a battle. */
+  private techLevelOf(shipClass: ShipClass): number {
+    if (!this.techLevels) {
+      const registry = DataLoader.getRegistry(this);
+      const points = techPoints(loadProgress(), (id) => registry.byId(id)?.shipClass);
+      this.techLevels = Object.fromEntries(Object.entries(points).map(([c, n]) => [c, techLevel(n)])) as Record<ShipClass, number>;
+    }
+    return this.techLevels[shipClass] ?? 0;
   }
 
   /** 不屈 (#58): once the ship is down to LAST_STAND_HP, its armour goes up for the rest of the battle. */

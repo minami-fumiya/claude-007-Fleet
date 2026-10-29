@@ -28,6 +28,7 @@ import { addGold, GOLD_PER_MEDAL } from '@/systems/GoldSystem';
 import { ownSuperweapons } from '@/systems/SuperweaponSystem';
 import { AIRCRAFT, isDeveloped } from '@/systems/AircraftSystem';
 import { groundKillStats } from '@/systems/GroundSystem';
+import { techLevel, techPoints } from '@/systems/FleetTechSystem';
 import { AircraftType } from '@/types/Aircraft';
 
 const CAMPAIGN = campaignData as ICampaignData;
@@ -38,6 +39,8 @@ const CLASSES: Record<string, string[][]> = {};
 const SHIP_TYPE = new Map<string, number>();
 /** Ship id → its 中分類 (#260), for the 艦種分類章 */
 const SHIP_MID = new Map<string, string>();
+/** Each ship's class, for the 艦隊技術 (#56) */
+const SHIP_CLASS = new Map<string, ShipClass>();
 /** Escorts (海防艦・護衛駆逐艦), for the 海防艦隊章 (#260) */
 const ESCORTS = new Set<string>();
 /** The last level of every research branch (#298), for the 研究の極み章 */
@@ -48,6 +51,7 @@ for (const d of [ijn, usn, km, rn, fr, su, rm]) {
   for (const s of ships) {
     SHIP_TYPE.set(s.id, shipTypeCode(s));
     SHIP_MID.set(s.id, midClass(s));
+    SHIP_CLASS.set(s.id, s.shipClass);
     if (s.subtype === 'Escort' || s.subtype === 'EscortDestroyer') ESCORTS.add(s.id);
   }
 }
@@ -64,7 +68,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const theaters = new Set<string>();
   const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -95,6 +99,8 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     ctx.expeditionKinds = Math.max(ctx.expeditionKinds, Object.keys(np.expeditionGroups ?? {}).length);
     ctx.shipTypes = Math.max(ctx.shipTypes, new Set(np.ships.map((id) => SHIP_TYPE.get(id)).filter((t) => t !== undefined)).size);
     ctx.midClasses = Math.max(ctx.midClasses, new Set(np.ships.map((id) => SHIP_MID.get(id)).filter((t) => t !== undefined)).size);
+    // 艦隊技術 (#56): every class's level added up, best nation.
+    ctx.techLevels = Math.max(ctx.techLevels, Object.values(techPoints(np, (id) => SHIP_CLASS.get(id))).reduce((sum, n) => sum + techLevel(n), 0));
     ctx.escortsOwned = Math.max(ctx.escortsOwned, np.ships.filter((id) => ESCORTS.has(id)).length);
     // 0.0.48: equipment held (#55), the own superweapon (#148), every carrier model (#87), ground weapons (#251).
     const fitted = Object.values(np.upgrades ?? {}).flat();
