@@ -194,6 +194,8 @@ export interface IMedalContext {
   groundKinds?: number;
   /** Kinds of ship by 通し番号 type (#249: 戦艦・巡洋戦艦・重巡 …) one nation owns, best nation */
   shipTypes?: number;
+  /** Traits earned by one nation's captains, added up, best nation (#252) */
+  captainTraits?: number;
   /** 艦隊技術 (#56): the levels of every class added up, best nation */
   techLevels?: number;
   /** Kinds of ship by 中分類 (#260: 高速戦艦・防空駆逐艦 …) one nation owns, best nation */
@@ -303,7 +305,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('science', '技術章', 'growth', [5, 15, 30, 60, 100], (g) => `研究を ${g} 完了する (どれか 1 か国)`, (_r, c) => c.researchDone ?? 0),
   // Lv10 of a branch (#298): one branch, then most, then all of them.
   ...ladder('research_peak', '研究の極み章', 'growth', [1, 6, 13], (g) => (g === 13 ? '1 か国で全部門の研究を Lv10 まで終える' : `1 か国で ${g} 部門の研究を Lv10 まで終える`), (_r, c) => c.researchTop ?? 0),
-  ...ladder('captains', '艦長章', 'growth', [3, 6, 9, 20, 30], (g) => `艦長を ${g} 人そろえる (どれか 1 か国)`, (_r, c) => c.captains ?? 0),
+  ...ladder('captains', '艦長章', 'growth', [3, 6, 9, 20, 30, 40, 50], (g) => (g >= 50 ? '1 つの国の艦長を全員 (50 人) そろえる' : `艦長を ${g} 人そろえる (どれか 1 か国)`), (_r, c) => c.captains ?? 0,
+    ['三等', '二等', '一等', '特等', '名誉', '殊勲', '大綬']),
   // 出撃コスト (#306): the fleet right at its cap, or a light one.
   ...ladder('full_cost', '総力戦章', 'battle', [1, 10, 50], (g) => `作戦の海域で、出撃コストを上限ちょうどにして ${g} 回勝利する`, (_r, c) => total(c, 'fullCostWin')),
   ...ladder('light_cost', '軽快部隊章', 'battle', [1, 10, 50], (g) => `作戦の海域で、出撃コストを上限の半分以下にして ${g} 回勝利する`, (_r, c) => total(c, 'lightCostWin')),
@@ -393,6 +396,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('titles', '称号章', 'special', [3, 10, 20], (g) => `称号を ${g} 個得る`, (r) => earnedTitles(r.medals).length),
   // 0.0.51 艦の個性 (#58)
   ...ladder('fleet_tech', '艦隊技術章', 'growth', [3, 10, 20, 25], (g) => (g >= 25 ? '1 つの国で、全艦種の艦隊技術を Lv5 にする' : `1 つの国で、艦隊技術の Lv を合わせて ${g} にする`), (_r, c) => c.techLevels ?? 0),
+  // 0.0.51 艦長の特性 (#252): traits earned by one nation's captains, added up
+  ...ladder('captain_traits', '特性章', 'growth', [1, 10, 30], (g) => `艦長の特性を合わせて ${g} 個得る (どれか 1 か国)`, (_r, c) => c.captainTraits ?? 0),
   ...ladder('ship_skill', '固有スキル章', 'battle', [5, 50, 200], (g) => `艦の固有スキルが ${g} 回働く (幸運・不屈)`, (_r, c) => total(c, 'skillProc')),
   ...ladder('consumable', '消耗品章', 'battle', [10, 100, 500], (g) => `消耗品 (応急修理・煙幕など) を ${g} 回使う`, (_r, c) => total(c, 'consumableUse')),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.

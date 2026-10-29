@@ -131,7 +131,7 @@ describe('v13 (#199): 艦長教本 and captains own sinkings', () => {
     const { save } = parseSaveChecked(raw);
     const np = save.nations.IJN!;
     expect(np.items.captainBook).toBe(0);
-    expect(np.captainStats.ijn_sakai).toEqual({ ...before, sinks: 0 });
+    expect(np.captainStats.ijn_sakai).toMatchObject({ ...before, sinks: 0 });
   });
 });
 

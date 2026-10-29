@@ -1448,7 +1448,7 @@ export class BattleScene extends Phaser.Scene {
       const f = depthChargeFalloff(Phaser.Math.Distance.Between(x, y, ship.x, ship.y), DEPTH_CHARGE_RADIUS);
       if (f <= 0) continue;
       const dmg = CombatSystem.calculateDamage(weapon, ship.stats.shipClass, ship.stats.armor) * f;
-      CombatSystem.applyDamage(ship, dmg, source);
+      CombatSystem.applyDamage(ship, dmg, source, 'charge');
       this.rollCritical(ship, weapon, dmg);
       this.explosion.play(ship.x, ship.y);
     }
@@ -1615,7 +1615,7 @@ export class BattleScene extends Phaser.Scene {
     const weapon = shell === fired.type ? fired : { ...fired, type: shell };
     const dmg = CombatSystem.calculateDamage(weapon, target.stats.shipClass, target.stats.armor);
     const hpBefore = target.stats.currentHp / Math.max(1, target.stats.maxHp);
-    CombatSystem.applyDamage(target, dmg, projectile.source);
+    CombatSystem.applyDamage(target, dmg, projectile.source, !projectile.fromShip ? 'air' : projectile instanceof Torpedo ? 'torpedo' : 'gun');
     if (target === this.superweapon) this.breakParts(target, hpBefore);
     this.wakeLastStand(target);
     this.rollCritical(target, weapon, dmg);
@@ -2166,7 +2166,12 @@ export class BattleScene extends Phaser.Scene {
       // What traits count (#45): the fleet's sinks, and coming home 大破.
       const heavySurvival = ship.isAlive && ship.stats.maxHp > 0 && ship.stats.currentHp / ship.stats.maxHp <= 0.25;
       const before = earnedTraits(captainStats[captain.id]).length;
-      captainStats[captain.id] = addBattleStats(captainStats[captain.id], { night, sunk: own.length, subsSunk: ownSubs, heavySurvival });
+      const big = own.filter((e) => e.stats.shipClass === ShipClass.Battleship || e.stats.shipClass === ShipClass.Carrier).length;
+      captainStats[captain.id] = addBattleStats(captainStats[captain.id], {
+        night, sunk: own.length, subsSunk: ownSubs, heavySurvival, victory, flagship: ship === this.flagship,
+        hpLeft: ship.isAlive ? ship.stats.currentHp / Math.max(1, ship.stats.maxHp) : 0,
+        torpedoSinks: own.filter((e) => e.lastHitKind === 'torpedo').length, airSinks: own.filter((e) => e.lastHitKind === 'air').length, bigSinks: big,
+      });
       const traits = earnedTraits(captainStats[captain.id]);
       const newTrait = traits.length > before ? traits[traits.length - 1] : undefined;
       const notes = [...levelUpNotes(captain, award.captain), ...(newTrait ? [`特性「${newTrait.name}」獲得`] : [])];

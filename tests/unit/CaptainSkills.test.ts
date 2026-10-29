@@ -76,9 +76,10 @@ describe('captain roster (#44)', () => {
     expect(r.joined?.id).toBe(nationCaptains('USN')[1].id);
     // Destroyers only: the next destroyer specialists; a carrier brings the aviator forward.
     // The engineer suits destroyers at S too (#188), and so does the AA specialist (#185).
-    const dd = nationCaptains('USN').filter((c) => [CaptainSkill.Torpedo, CaptainSkill.ASW, CaptainSkill.Night, CaptainSkill.Engineering, CaptainSkill.AntiAir].includes(c.skill)).map((c) => c.id);
+    // Since #252 some officers of other specialities suit destroyers too (a destroyer's damage-control captain).
+    const dd = nationCaptains('USN').filter((c) => aptitudeFor(c, ShipClass.Destroyer) === 'S').map((c) => c.id);
     expect(nextCaptain('USN', [first.id], [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.ASW);
-    expect(nextCaptain('USN', dd, [ShipClass.Destroyer])?.skill).toBe(CaptainSkill.Recon);
+    expect(aptitudeFor(nextCaptain('USN', dd, [ShipClass.Destroyer])!, ShipClass.Destroyer)).not.toBe('S');
     // A carrier brings a captain suited to it (an aviator, or since #209 a carrier damage-control officer).
     expect(aptitudeFor(nextCaptain('USN', [first.id], [ShipClass.Carrier])!, ShipClass.Carrier)).toBe('S');
     // Captains join speciality by speciality in the recruit order (several per speciality since #209).
@@ -152,10 +153,33 @@ describe('captain stats count their own ship (#199)', () => {
   it('adds what the ship sank, at night and of submarines, and shows trait progress', () => {
     let s = addBattleStats(undefined, { night: true, sunk: 2, subsSunk: 1, heavySurvival: false });
     s = addBattleStats(s, { night: false, sunk: 0, subsSunk: 0, heavySurvival: true });
-    expect(s).toEqual({ nightSinks: 2, subSinks: 1, sinks: 2, heavySurvivals: 1 });
+    expect(s).toMatchObject({ nightSinks: 2, subSinks: 1, sinks: 2, heavySurvivals: 1 });
     expect(earnedTraits(s)).toEqual([]);
     const night = TRAITS.find((t) => t.id === 'night_ace')!;
     expect(night.progress(s)).toEqual([2, 3]);
     expect(earnedTraits(addBattleStats(s, { night: true, sunk: 1, subsSunk: 0, heavySurvival: false })).map((t) => t.id)).toEqual(['night_ace']);
+  });
+});
+
+describe('艦長の特性 0.0.51 (#252)', () => {
+  it('there are 13 traits with unique ids and names', () => {
+    expect(TRAITS.length).toBe(13);
+    expect(new Set(TRAITS.map((t) => t.id)).size).toBe(13);
+    expect(new Set(TRAITS.map((t) => t.name)).size).toBe(13);
+  });
+
+  it('counts wins, flagship wins, unhurt wins and what struck the blow', () => {
+    let s = addBattleStats(undefined, { night: false, sunk: 3, subsSunk: 0, heavySurvival: false, victory: true, flagship: true, hpLeft: 0.97, torpedoSinks: 2, airSinks: 1, bigSinks: 1 });
+    s = addBattleStats(s, { night: false, sunk: 0, subsSunk: 0, heavySurvival: false, victory: false, flagship: true, hpLeft: 1 });
+    expect(s).toMatchObject({ battles: 2, wins: 1, flagshipWins: 1, unhurtWins: 1, torpedoSinks: 2, airSinks: 1, bigSinks: 1, sinks: 3 });
+  });
+
+  it('a trait is earned at its goal', () => {
+    const torpedo = TRAITS.find((t) => t.id === 'torpedo_ace')!;
+    let s = addBattleStats(undefined, { night: false, sunk: 4, subsSunk: 0, heavySurvival: false, torpedoSinks: 4 });
+    expect(torpedo.earned(s)).toBe(false);
+    s = addBattleStats(s, { night: false, sunk: 1, subsSunk: 0, heavySurvival: false, torpedoSinks: 1 });
+    expect(torpedo.earned(s)).toBe(true);
+    expect(earnedTraits(s).map((t) => t.id)).toContain('torpedo_ace');
   });
 });

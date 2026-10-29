@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { IShipStats } from '@/types/Ship';
+import { HitKind, IShipStats } from '@/types/Ship';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { IWeaponData } from '@/types/Weapon';
 import { ShipClass } from '@/types/ShipClass';
@@ -25,6 +25,8 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   /** 固有スキル (#58): the player's ship's own skill as it works this battle, and whether its 不屈 has woken */
   skill: { name: string; luck: number; lastStand: number } | null = null;
   lastStandOn = false;
+  /** What struck the last blow (#252: a captain's torpedo and air sinkings) */
+  lastHitKind: HitKind | null = null;
   /** Aim error scale from modifiers (night-battle research); proficiency is applied separately */
   aimErrorMul = 1;
   /** Ship data id (for saving damage after the battle) */

@@ -15,7 +15,7 @@ import { shipClasses } from '@/systems/ShipOrder';
 import { shipTypeCode } from '@/systems/Numbering';
 import { midClass } from '@/systems/ShipKind';
 import { TECH_LEVELS, TECH_TREE } from '@/systems/ResearchSystem';
-import { levelForXp } from '@/systems/CaptainSystem';
+import { earnedTraits, levelForXp } from '@/systems/CaptainSystem';
 import { rankOf } from '@/systems/RankSystem';
 import { theaterStep } from '@/systems/DifficultyCurve';
 import { holdCap } from '@/systems/FacilitySystem';
@@ -68,7 +68,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
   const theaters = new Set<string>();
   const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -115,6 +115,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     ctx.carriersOwned = Math.max(ctx.carriersOwned, np.ships.filter((id) => CARRIERS.has(id)).length);
     ctx.researchDone = Math.max(ctx.researchDone, np.research.length);
     ctx.captains = Math.max(ctx.captains, (np.captains ?? []).length);
+    ctx.captainTraits = Math.max(ctx.captainTraits, Object.values(np.captainStats ?? {}).reduce((sum, st) => sum + earnedTraits(st).length, 0));
     for (const xp of Object.values(np.captainXp ?? {})) ctx.captainLevel = Math.max(ctx.captainLevel, levelForXp(xp));
     for (const st of Object.values(np.captainStats ?? {})) ctx.captainSinks = Math.max(ctx.captainSinks, st?.sinks ?? 0);
     for (const levels of Object.values(np.facilities ?? {})) for (const lv of Object.values(levels ?? {})) ctx.facilityLevels += lv ?? 0;
