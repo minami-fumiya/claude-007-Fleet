@@ -2,12 +2,13 @@ import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { MEDAL_CATEGORY_LABEL, MedalCategory, medalProgress, MEDALS, RECORD_MODE_LABEL, RECORD_MODES, scenarioWins, totalSunk, unsortedRecord, emptyModeRecord } from '@/systems/RecordSystem';
+import { emptyCareer, hitRate, MEDAL_CATEGORY_LABEL, MedalCategory, medalProgress, MEDALS, RECORD_MODE_LABEL, RECORD_MODES, scenarioWins, totalSunk, unsortedRecord, emptyModeRecord } from '@/systems/RecordSystem';
 import { medalContext } from '@/utils/MedalContext';
 import { unlocksOf } from '@/systems/MedalGate';
 import { TECH_TREE } from '@/systems/ResearchSystem';
 import { CLASS_JA, CLASS_ORDER } from '@/systems/EncyclopediaSystem';
-import { awardPendingMedals, loadProgress, loadSave } from '@/utils/ProgressStore';
+import { awardPendingMedals, loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
+import { earnedTitles, TITLES } from '@/systems/AdmiralTitles';
 import { INCOME, LEDGER_HOURS, LEDGER_LABEL, LedgerCategory, ledgerHours, ledgerTotals, SPENDING } from '@/systems/LedgerSystem';
 import { RESOURCE_KEYS, RESOURCE_LABEL, resources } from '@/systems/ResourceSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -17,6 +18,10 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
+/** The right panel (#92 #137): medals, the career figures, titles or the resource ledger. */
+type RecordView = 'medals' | 'career' | 'titles' | 'ledger';
+const VIEW_LABEL: Record<RecordView, string> = { medals: '勲章', career: '記録', titles: '称号', ledger: '資源の収支' };
+
 const L = IS_PORTRAIT
   ? { stats: { x: 16, y: 140, w: CANVAS_W - 32, h: 384 } as IRect, statCols: 3, medals: { x: 16, y: 540, w: CANVAS_W - 32, h: CANVAS_H - 556 } as IRect, medalCols: 2 }
   : { stats: { x: 24, y: 96, w: 400, h: 604 } as IRect, statCols: 2, medals: { x: 440, y: 96, w: 816, h: 604 } as IRect, medalCols: 3 };
@@ -24,7 +29,9 @@ const L = IS_PORTRAIT
 /** 戦績: career totals and the medal case. */
 export class RecordScene extends Phaser.Scene {
   /** Right panel: the medal case or the resource ledger (#137) */
-  private view: 'medals' | 'ledger' = 'medals';
+  private view: RecordView = 'medals';
+  /** 称号 page (#92) */
+  private titlePage = 0;
   private layer: Phaser.GameObjects.GameObject[] = [];
   /** Medal case category and page (#92) */
   private medalCategory: MedalCategory = 'sink';
@@ -37,7 +44,7 @@ export class RecordScene extends Phaser.Scene {
     super({ key: SceneKeys.RECORD });
   }
 
-  init(data?: { view?: 'medals' | 'ledger' }): void {
+  init(data?: { view?: RecordView }): void {
     this.view = data?.view ?? 'medals';
   }
 
@@ -63,20 +70,115 @@ export class RecordScene extends Phaser.Scene {
   }
 
   /** Switches the right panel between the medals and the ledger. */
-  showView(view: 'medals' | 'ledger'): void {
+  showView(view: RecordView): void {
     for (const o of this.layer) o.destroy();
     this.layer = [];
     this.view = view;
     const p = L.medals;
-    const tw = IS_PORTRAIT ? 150 : 130;
+    const views = Object.keys(VIEW_LABEL) as RecordView[];
+    const tw = IS_PORTRAIT ? 104 : 100;
     const th = IS_PORTRAIT ? 44 : 32;
-    (['medals', 'ledger'] as const).forEach((v, i) => {
-      this.track(new UIButton(this, p.x + p.w - 22 - (1 - i) * (tw + 8) - tw / 2, p.y + 14 + th / 2, v === 'medals' ? '勲章' : '資源の収支', () => this.showView(v), {
-        variant: v === view ? 'primary' : 'secondary', width: tw, height: th, fontSize: 13,
+    views.forEach((v, i) => {
+      const w = v === 'ledger' ? tw + 30 : tw;
+      const right = views.slice(i + 1).reduce((sum, x) => sum + (x === 'ledger' ? tw + 30 : tw) + 8, 0);
+      this.track(new UIButton(this, p.x + p.w - 22 - right - w / 2, p.y + 14 + th / 2, VIEW_LABEL[v], () => this.showView(v), {
+        variant: v === view ? 'primary' : 'secondary', width: w, height: th, fontSize: 13,
       }));
     });
     if (view === 'medals') this.buildMedals(loadProgress().record.medals);
+    else if (view === 'career') this.buildCareer();
+    else if (view === 'titles') this.buildTitles();
     else this.buildLedger();
+  }
+
+  /** 通算の記録 (#92): what the ships have done since 0.0.51, a row each. */
+  private buildCareer(): void {
+    const p = L.medals;
+    const c = loadProgress().record.career ?? emptyCareer();
+    this.track(this.add.text(p.x + 22, p.y + 18, '通算の記録', eyebrowStyle(11)));
+    const rate = (hits: number, fired: number): string => {
+      const r = hitRate(hits, fired);
+      return r === undefined ? '—' : `${r}%`;
+    };
+    const time = (sec: number): string => (sec <= 0 ? '—' : sec >= 3600 ? `${Math.floor(sec / 3600)} 時間 ${Math.floor((sec % 3600) / 60)} 分` : `${Math.floor(sec / 60)} 分 ${sec % 60} 秒`);
+    const n = (v: number): string => Math.round(v).toLocaleString('en-US');
+    const rows: Array<[string, string]> = [
+      ['航行距離', `${n(c.distanceNm)} 海里`],
+      ['主砲・副砲の発射', `${n(c.shellsFired)} 発`],
+      ['主砲・副砲の命中', `${n(c.shellHits)} 発  (命中率 ${rate(c.shellHits, c.shellsFired)})`],
+      ['魚雷の発射', `${n(c.torpedoesFired)} 本`],
+      ['魚雷の命中', `${n(c.torpedoHits)} 本  (命中率 ${rate(c.torpedoHits, c.torpedoesFired)})`],
+      ['爆雷の投下', `${n(c.chargesDropped)} 発`],
+      ['敵機の撃墜', `${n(c.planesDown)} 機`],
+      ['受けたダメージ', n(c.damageTaken)],
+      ['戦闘時間の合計', time(c.battleSec)],
+      ['最も長い戦闘', time(c.longestSec)],
+      ['最も早い勝利', time(c.fastestWinSec)],
+      ['1 戦の最多撃沈', `${c.mostSunk} 隻`],
+    ];
+    const top = p.y + (IS_PORTRAIT ? 80 : 64);
+    const rowH = Math.min(IS_PORTRAIT ? 44 : 38, (p.h - (top - p.y) - 50) / rows.length);
+    const g = this.track(this.add.graphics());
+    rows.forEach(([label, value], i) => {
+      const y = top + i * rowH;
+      if (i % 2 === 0) {
+        g.fillStyle(0xffffff, 0.04);
+        g.fillRect(p.x + 16, y - 4, p.w - 32, rowH);
+      }
+      this.track(this.add.text(p.x + 26, y + rowH / 2 - 4, label, textStyle(IS_PORTRAIT ? 14 : 13, Css.muted)).setOrigin(0, 0.5));
+      this.track(this.add.text(p.x + p.w - 26, y + rowH / 2 - 4, value, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0.5));
+    });
+    this.track(this.add.text(p.x + 22, p.y + p.h - 18, '作戦と演習の戦闘を、0.0.51 から数えます (史実は入りません)', textStyle(11, Css.dim)).setOrigin(0, 1));
+  }
+
+  /** 称号 (#92): earned titles can be worn (one at a time, shown on the home screen); the rest say which medal. */
+  private buildTitles(): void {
+    const p = L.medals;
+    const record = loadProgress().record;
+    const earned = earnedTitles(record.medals);
+    this.track(this.add.text(p.x + 22, p.y + 18, `称号  ·  ${earned.length} / ${TITLES.length}`, eyebrowStyle(11)));
+    const cols = L.medalCols;
+    const rowsPerPage = 6;
+    const perPage = cols * rowsPerPage;
+    const pages = Math.max(1, Math.ceil(TITLES.length / perPage));
+    this.titlePage = Math.min(this.titlePage, pages - 1);
+    const top = p.y + (IS_PORTRAIT ? 80 : 64);
+    const navH = IS_PORTRAIT ? 52 : 36;
+    const gap = 10;
+    const cw = (p.w - 44 - gap * (cols - 1)) / cols;
+    const ch = (p.y + p.h - 16 - navH - 10 - top - gap * (rowsPerPage - 1)) / rowsPerPage;
+    TITLES.slice(this.titlePage * perPage, (this.titlePage + 1) * perPage).forEach((t, i) => {
+      const x = p.x + 22 + (i % cols) * (cw + gap);
+      const y = top + Math.floor(i / cols) * (ch + gap);
+      const on = record.medals.includes(t.medal);
+      const worn = record.title === t.id && on;
+      const medal = MEDALS.find((m) => m.id === t.medal);
+      this.track(drawPanel(this.add.graphics(), x, y, cw, ch, {
+        radius: 12, fill: worn ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.35, rimAlpha: worn ? 1 : on ? 0.5 : 0.12, glow: worn ? 0.9 : 0,
+      }));
+      this.track(this.add.text(x + 14, y + 8, `${worn ? '✓ ' : ''}${t.name}`, textStyle(14, on ? (worn ? Css.gold : Css.text) : Css.muted, { fontStyle: 'bold' })));
+      this.track(this.add.text(x + 14, y + ch - 8, on ? (worn ? '着用中 (もう一度で外す)' : 'タップで着ける') : `条件: ${medal?.name ?? t.medal}`, textStyle(10, on ? Css.cyan : Css.dim)).setOrigin(0, 1));
+      if (!on) return;
+      const zone = this.track(this.add.zone(x + cw / 2, y + ch / 2, cw, ch).setInteractive({ useHandCursor: true }));
+      zone.on('pointerup', () => {
+        const progress = loadProgress();
+        saveProgress({ ...progress, record: { ...progress.record, title: worn ? undefined : t.id } });
+        this.showView('titles');
+      });
+    });
+    if (pages > 1) {
+      const ny = p.y + p.h - 16 - navH / 2;
+      const nw = IS_PORTRAIT ? 120 : 90;
+      this.track(new UIButton(this, p.x + p.w / 2 - nw - 50, ny, '‹ 前', () => {
+        this.titlePage = (this.titlePage + pages - 1) % pages;
+        this.showView('titles');
+      }, { variant: 'secondary', width: nw, height: navH, fontSize: 13 }));
+      this.track(this.add.text(p.x + p.w / 2, ny, `${this.titlePage + 1} / ${pages}`, textStyle(13, Css.muted)).setOrigin(0.5));
+      this.track(new UIButton(this, p.x + p.w / 2 + nw + 50, ny, '次 ›', () => {
+        this.titlePage = (this.titlePage + 1) % pages;
+        this.showView('titles');
+      }, { variant: 'secondary', width: nw, height: navH, fontSize: 13 }));
+    }
   }
 
   private track<T extends Phaser.GameObjects.GameObject>(o: T): T {

@@ -1,13 +1,14 @@
 import { EVENT_KINDS } from './EventKinds';
-import { IBattleRecordInput, IMedal, IModeRecord, IScenarioBest, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
+import { IBattleRecordInput, ICareerStats, IMedal, IModeRecord, IScenarioBest, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
 import { ALL_SCENARIOS } from '@/data/scenarios';
 import { ShipClass } from '@/types/ShipClass';
 import campaignData from '@/data/campaign.json';
+import { earnedTitles } from './AdmiralTitles';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
 
 export function emptyRecord(): IServiceRecord {
-  return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {} };
+  return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {}, career: emptyCareer() };
 }
 
 export function emptyModeRecord(): IModeRecord {
@@ -16,6 +17,43 @@ export function emptyModeRecord(): IModeRecord {
 
 export function totalSunk(r: Pick<IModeRecord, 'sunk'>): number {
   return Object.values(r.sunk).reduce((a, n) => a + (n ?? 0), 0);
+}
+
+/**
+ * Battle pixels per nautical mile (#92): a ship's speed is about 4.4 px/s per knot and a battle second stands for a
+ * minute at sea, so 4.4 × 60.
+ */
+export const PX_PER_NM = 264;
+
+/** 通算の記録 (#92): nothing yet. */
+export function emptyCareer(): ICareerStats {
+  return { distanceNm: 0, shellsFired: 0, shellHits: 0, torpedoesFired: 0, torpedoHits: 0, chargesDropped: 0, planesDown: 0, damageTaken: 0, battleSec: 0, longestSec: 0, fastestWinSec: 0, mostSunk: 0 };
+}
+
+/** One battle added to the career figures (#92): sums, the longest battle, the quickest win and the most sunk. */
+export function addCareer(c: ICareerStats, b: IBattleRecordInput): ICareerStats {
+  const x = b.career ?? {};
+  const n = (v: number | undefined): number => Math.max(0, Math.round(v ?? 0));
+  const sec = n(x.battleSec);
+  return {
+    distanceNm: c.distanceNm + n(x.distanceNm),
+    shellsFired: c.shellsFired + n(x.shellsFired),
+    shellHits: c.shellHits + n(x.shellHits),
+    torpedoesFired: c.torpedoesFired + n(x.torpedoesFired),
+    torpedoHits: c.torpedoHits + n(x.torpedoHits),
+    chargesDropped: c.chargesDropped + n(x.chargesDropped),
+    planesDown: c.planesDown + n(x.planesDown),
+    damageTaken: c.damageTaken + n(x.damageTaken),
+    battleSec: c.battleSec + sec,
+    longestSec: Math.max(c.longestSec, sec),
+    fastestWinSec: b.victory && sec > 0 && (c.fastestWinSec === 0 || sec < c.fastestWinSec) ? sec : c.fastestWinSec,
+    mostSunk: Math.max(c.mostSunk, b.sunkClasses.length),
+  };
+}
+
+/** Hits over shots in percent (#92), or undefined before the first shot. */
+export function hitRate(hits: number, fired: number): number | undefined {
+  return fired > 0 ? Math.round((Math.min(hits, fired) / fired) * 1000) / 10 : undefined;
 }
 
 export const RECORD_MODES: RecordMode[] = ['campaign', 'exercise', 'scenario'];
@@ -44,7 +82,7 @@ function addBattle<T extends IModeRecord>(r: T, b: IBattleRecordInput): T {
  */
 export function recordBattle(r: IServiceRecord, b: IBattleRecordInput, mode: RecordMode = 'campaign', scenario?: { id: string; force: 'A' | 'B' }): IServiceRecord {
   const byMode = { ...(r.byMode ?? {}), [mode]: addBattle(r.byMode?.[mode] ?? emptyModeRecord(), b) };
-  const out: IServiceRecord = { ...(mode === 'scenario' ? r : addBattle(r, b)), byMode };
+  const out: IServiceRecord = { ...(mode === 'scenario' ? r : { ...addBattle(r, b), career: addCareer(r.career ?? emptyCareer(), b) }), byMode };
   if (mode !== 'scenario' || !scenario) return out;
   const was: IScenarioRecord = r.scenarios?.[scenario.id] ?? { wins: {}, losses: {} };
   const key = b.victory ? 'wins' : 'losses';
@@ -193,6 +231,9 @@ interface IMedalRule extends IMedal {
 
 const sunkOf = (r: IServiceRecord, c: ShipClass): number => r.sunk[c] ?? 0;
 const total = (ctx: IMedalContext, event: string): number => ctx.totals?.[event] ?? 0;
+const career = (r: IServiceRecord): ICareerStats => r.career ?? emptyCareer();
+/** Shots before the hit rate counts for the 名射手章 (#92) */
+export const MARKSMAN_SHOTS = 1000;
 
 /** One medal per tier of a ladder: `ranks` names the tiers (三等 / 二等 / 一等 …). */
 function ladder(
@@ -339,6 +380,15 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('forward_base', '基地開設章', 'base', [1, 3, 5], (g) => `基地を ${g} つ開く`, (_r, c) => total(c, 'forwardBaseOpened')),
   ...ladder('front_works', '前線整備章', 'base', [5, 15, 30], (g) => `基地の施設を ${g} 回作る・強化する`, (_r, c) => total(c, 'forwardFacility')),
   ...ladder('base_air', '基地航空隊章', 'battle', [3, 15, 50], (g) => `基地航空隊の攻撃隊を ${g} 回送る`, (_r, c) => total(c, 'baseAirStrike')),
+  // 0.0.51 通算の記録と称号 (#92)
+  ...ladder('voyage', '航海章', 'battle', [1000, 10000, 50000], (g) => `艦隊で累計 ${g.toLocaleString()} 海里を航行する`, (r) => career(r).distanceNm),
+  ...ladder('gunnery', '砲術章', 'battle', [500, 5000, 30000], (g) => `主砲・副砲を累計 ${g.toLocaleString()} 発命中させる`, (r) => career(r).shellHits),
+  ...ladder('torpedo_hits', '雷撃章', 'battle', [20, 200, 1000], (g) => `魚雷を累計 ${g.toLocaleString()} 本命中させる`, (r) => career(r).torpedoHits),
+  ...ladder('marksman', '名射手章', 'battle', [25, 35, 45], (g) => `主砲・副砲の命中率 ${g}% 以上 (${MARKSMAN_SHOTS.toLocaleString()} 発以上撃って)`,
+    (r) => (career(r).shellsFired >= MARKSMAN_SHOTS ? Math.floor(hitRate(career(r).shellHits, career(r).shellsFired) ?? 0) : 0)),
+  ...ladder('multi_sink', '一網打尽章', 'sink', [3, 5, 8], (g) => `1 回の戦闘で敵艦を ${g} 隻撃沈する`, (r) => career(r).mostSunk),
+  ...ladder('battle_hours', '戦闘時間章', 'battle', [1, 10, 50], (g) => `戦闘を累計 ${g} 時間戦う`, (r) => Math.floor(career(r).battleSec / 3600)),
+  ...ladder('titles', '称号章', 'special', [3, 10, 20], (g) => `称号を ${g} 個得る`, (r) => earnedTitles(r.medals).length),
   ...ladder('consumable', '消耗品章', 'battle', [10, 100, 500], (g) => `消耗品 (応急修理・煙幕など) を ${g} 回使う`, (_r, c) => total(c, 'consumableUse')),
   // 遠征用の編成 (#337): expeditions sent with a group the player chose.
   ...ladder('expedition_pick', '遠征編成章', 'growth', [3, 30], (g) => `艦を選んで遠征を ${g} 回送り出す`, (_r, c) => total(c, 'expeditionPicked')),
@@ -410,11 +460,16 @@ export function parseRecord(raw: unknown): IServiceRecord {
       scenarios[id] = { wins: side(v.wins), losses: side(v.losses), ...(Object.keys(best).length > 0 ? { best } : {}) };
     }
   }
+  const c = (r.career !== null && typeof r.career === 'object' ? r.career : {}) as Partial<ICareerStats>;
+  const career = emptyCareer();
+  for (const k of Object.keys(career) as Array<keyof ICareerStats>) career[k] = num(c[k]);
   return {
     ...parseModeRecord(r),
     medals: Array.isArray(r.medals) ? r.medals.filter((m): m is string => typeof m === 'string') : [],
     byMode,
     scenarios,
+    career,
+    ...(typeof r.title === 'string' ? { title: r.title } : {}),
   };
 }
 

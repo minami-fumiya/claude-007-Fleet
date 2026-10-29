@@ -50,6 +50,29 @@ export interface IServiceRecord {
   byMode?: Partial<Record<RecordMode, IModeRecord>>;
   /** Historical scenario results by scenario id (#177) */
   scenarios?: Record<string, IScenarioRecord>;
+  /** 通算の記録 (#92): figures from 0.0.51 on, counted like the totals (作戦と演習) */
+  career?: ICareerStats;
+  /** 称号 (#92): the id of the title shown beside the admiral's rank, if one is picked */
+  title?: string;
+}
+
+/** 通算の記録 (#92): what the player's ships did over every battle since 0.0.51. */
+export interface ICareerStats {
+  /** Distance sailed by the player's ships, in nautical miles */
+  distanceNm: number;
+  shellsFired: number;
+  shellHits: number;
+  torpedoesFired: number;
+  torpedoHits: number;
+  chargesDropped: number;
+  planesDown: number;
+  damageTaken: number;
+  /** Seconds of battle in all, the longest battle, and the quickest win (0 = none yet) */
+  battleSec: number;
+  longestSec: number;
+  fastestWinSec: number;
+  /** Most enemy ships sunk in one battle */
+  mostSunk: number;
 }
 
 /** What one battle adds to the record. */
@@ -59,6 +82,8 @@ export interface IBattleRecordInput {
   sunkClasses: ShipClass[];
   damageDealt: number;
   shipsLost: number;
+  /** What the ships did this battle (#92); the sums and bests are worked out by the record */
+  career?: Partial<Omit<ICareerStats, 'longestSec' | 'fastestWinSec' | 'mostSunk'>>;
 }
 
 export interface IMedal {

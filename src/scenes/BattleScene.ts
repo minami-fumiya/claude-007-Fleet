@@ -92,7 +92,7 @@ import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
-import { recordBattle } from '@/systems/RecordSystem';
+import { PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain, TRAINING_MANUAL_DROP_CHANCE } from '@/systems/ProficiencySystem';
@@ -268,6 +268,10 @@ export class BattleScene extends Phaser.Scene {
   private landColliders: BaseShip[] = [];
   /** Fires and floods the player's side started on enemy ships (#48) */
   private firesSet = 0;
+  /** 通算の記録 (#92): hits by the player's ships' own shells and torpedoes, and how far their ships sailed (px) */
+  private shellHits = 0;
+  private torpedoHits = 0;
+  private sailedPx = 0;
   /** The enemy fleet's formation (#82) */
   private enemyFormation: Formation = Formation.LineAhead;
   /** 難易度 (#100) of this battle: scenarios always 普通 */
@@ -362,6 +366,9 @@ export class BattleScene extends Phaser.Scene {
     this.perfFrames = [];
     this.perfShownAt = 0;
     this.firesSet = 0;
+    this.shellHits = 0;
+    this.torpedoHits = 0;
+    this.sailedPx = 0;
     this.superweapon = null;
     this.superweaponParts = null;
     this.consumables = new Map();
@@ -611,6 +618,8 @@ export class BattleScene extends Phaser.Scene {
 
     this.applySea(dtSec);
     this.updateConvoy(dtSec);
+    // 航行距離 (#92): every ship of the player's own fleets, at the speed it is making.
+    for (const s of this.friendlies()) if (s.isAlive && s.body) this.sailedPx += (s.body as Phaser.Physics.Arcade.Body).velocity.length() * dtSec;
     this.playerWeapons.update(time, delta);
     this.enemyWeapons.update(time, delta);
     this.updateAir(time, delta, playerView, enemyView);
@@ -1587,6 +1596,10 @@ export class BattleScene extends Phaser.Scene {
     if (target === this.superweapon) this.breakParts(target, hpBefore);
     this.rollCritical(target, weapon, dmg);
     this.rollFireOrFlood(target, weapon);
+    if (projectile.fromShip && this.enemies.includes(target)) {
+      if (projectile instanceof Torpedo) this.torpedoHits++;
+      else this.shellHits++;
+    }
     projectile.deactivate();
     this.explosion.play(projectile.x, projectile.y);
     // 命中 (#104): a torpedo's blast, a shell that went in, or one that glanced off the armour.
@@ -2620,6 +2633,17 @@ export class BattleScene extends Phaser.Scene {
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       damageDealt: Object.values(this.damageLog.player).reduce((a, n) => a + n, 0),
       shipsLost,
+      career: {
+        distanceNm: this.sailedPx / PX_PER_NM,
+        shellsFired: this.playerWeapons.fired.shells,
+        shellHits: this.shellHits,
+        torpedoesFired: this.playerWeapons.fired.torpedoes,
+        torpedoHits: this.torpedoHits,
+        chargesDropped: this.playerWeapons.fired.charges,
+        planesDown: this.enemyAir.totalLost(),
+        damageTaken: Object.values(this.damageLog.enemy).reduce((a, n) => a + n, 0),
+        battleSec: this.elapsedSec(),
+      },
     }, this.scenario ? 'scenario' : this.exercise ? 'exercise' : 'campaign',
     this.scenario && this.scenarioSetup ? { id: this.scenario.id, force: this.scenarioSetup.side.force } : undefined);
     // Medals look at every nation's progress too (#92): the save as it will be written.
