@@ -1,0 +1,138 @@
+{
+  "id": "tallinn",
+  "name": "タリン撤退",
+  "date": "1941年8月",
+  "history": {
+    "winner": "A",
+    "lost": {
+      "A": 0,
+      "B": 0
+    },
+    "text": "ソ連艦隊はクロンシュタットへ着いた。機雷と空襲で駆逐艦 5 隻と多くの輸送船を失ったが、巡洋艦キーロフは無事だった"
+  },
+  "theater": "baltic",
+  "description": "ドイツ軍に包囲されたエストニアのタリンから、バルト艦隊は将兵と船を乗せてクロンシュタットへ撤退した。フィンランド湾には機雷が敷き詰められ、空襲と魚雷艇の攻撃が続いた。(ドイツ空軍・機雷原・フィンランドの魚雷艇は、ドイツの駆逐艦と潜水艦が代役)",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Day",
+  "forces": {
+    "A": {
+      "nation": "SU",
+      "ships": [
+        "kirov",
+        "leningrad",
+        "minsk",
+        "svirepy",
+        "storozhevoy",
+        "shch"
+      ],
+      "positions": [
+        {
+          "x": 0.12,
+          "y": 0.5,
+          "angle": 90
+        },
+        {
+          "x": 0.18,
+          "y": 0.42,
+          "angle": 90
+        },
+        {
+          "x": 0.18,
+          "y": 0.58,
+          "angle": 90
+        },
+        {
+          "x": 0.06,
+          "y": 0.42,
+          "angle": 90
+        },
+        {
+          "x": 0.06,
+          "y": 0.58,
+          "angle": 90
+        },
+        {
+          "x": 0.1,
+          "y": 0.66,
+          "angle": 90
+        }
+      ]
+    },
+    "B": {
+      "nation": "KM",
+      "ships": [
+        "z2",
+        "z3",
+        "z4",
+        "u_boat_viic",
+        "z17",
+        "z18"
+      ],
+      "positions": [
+        {
+          "x": 0.56,
+          "y": 0.24,
+          "angle": 180
+        },
+        {
+          "x": 0.62,
+          "y": 0.3,
+          "angle": 180
+        },
+        {
+          "x": 0.56,
+          "y": 0.76,
+          "angle": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.5,
+          "angle": 270
+        },
+        {
+          "x": 0.66,
+          "y": 0.7,
+          "angle": 0
+        },
+        {
+          "x": 0.7,
+          "y": 0.26,
+          "angle": 180
+        }
+      ]
+    }
+  },
+  "sides": [
+    {
+      "force": "A",
+      "label": "バルト艦隊で撤退",
+      "objective": "Breakthrough",
+      "zone": {
+        "x": 0.94,
+        "y": 0.5,
+        "r": 0.05,
+        "label": "クロンシュタット"
+      },
+      "timeLimitSec": 300,
+      "brief": "巡洋艦キーロフを東のクロンシュタットへ送り届けよ。"
+    },
+    {
+      "force": "B",
+      "label": "撤退を阻む",
+      "objective": "PreventEscape",
+      "targets": [
+        "kirov"
+      ],
+      "zone": {
+        "x": 0.94,
+        "y": 0.5,
+        "r": 0.05,
+        "label": "クロンシュタット"
+      },
+      "timeLimitSec": 300,
+      "enemyGoesForZone": true,
+      "brief": "巡洋艦キーロフがクロンシュタットへ着く前に撃沈せよ。"
+    }
+  ]
+}

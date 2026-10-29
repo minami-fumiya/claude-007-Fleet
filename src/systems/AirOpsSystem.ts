@@ -275,7 +275,7 @@ export class AirOpsSystem {
     const bomb = airPowered(this.bomb, sq);
     for (let i = 0; i < hits && target.isAlive; i++) {
       const dmg = CombatSystem.calculateDamage(bomb, target.stats.shipClass, target.stats.armor);
-      CombatSystem.applyDamage(target, dmg, sq.carrier);
+      CombatSystem.applyDamage(target, dmg, sq.carrier, 'air');
       this.onBombHit(target, this.bomb, dmg);
     }
     sq.state = SquadronState.Return;

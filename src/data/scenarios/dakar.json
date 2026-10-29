@@ -1,0 +1,135 @@
+{
+  "id": "dakar",
+  "name": "ダカール沖海戦",
+  "date": "1940年9月",
+  "history": {
+    "winner": "A",
+    "lost": {
+      "A": 1,
+      "B": 0
+    },
+    "text": "ヴィシー・フランスの勝利。英・自由フランスは上陸をあきらめた。仏側は駆逐艦ローダシューが大破して座礁し、潜水艦 2 隻を失った。英戦艦レゾリューションは魚雷で大破"
+  },
+  "theater": "atlantic",
+  "description": "英国と自由フランスは、西アフリカのダカールをヴィシー政府から奪おうとした (メナス作戦)。未完成の戦艦リシュリューと沿岸砲台、巡洋艦・潜水艦が港を守り、英艦隊は 3 日で引き揚げた。(レゾリューションはリヴェンジ、デヴォンシャーはケントが代役)",
+  "map": "open-sea",
+  "weather": "Overcast",
+  "time": "Day",
+  "forces": {
+    "A": {
+      "nation": "FR",
+      "ships": [
+        "richelieu",
+        "georges_leygues",
+        "montcalm",
+        "le_fantasque",
+        "l_audacieux",
+        "le_malin"
+      ],
+      "positions": [
+        {
+          "x": 0.16,
+          "y": 0.5,
+          "angle": 90
+        },
+        {
+          "x": 0.24,
+          "y": 0.42,
+          "angle": 90
+        },
+        {
+          "x": 0.24,
+          "y": 0.58,
+          "angle": 90
+        },
+        {
+          "x": 0.3,
+          "y": 0.36,
+          "angle": 90
+        },
+        {
+          "x": 0.3,
+          "y": 0.64,
+          "angle": 90
+        },
+        {
+          "x": 0.32,
+          "y": 0.5,
+          "angle": 90
+        }
+      ]
+    },
+    "B": {
+      "nation": "RN",
+      "ships": [
+        "barham",
+        "revenge",
+        "ark_royal",
+        "cumberland",
+        "kent",
+        "javelin"
+      ],
+      "positions": [
+        {
+          "x": 0.82,
+          "y": 0.5,
+          "angle": 270
+        },
+        {
+          "x": 0.86,
+          "y": 0.42,
+          "angle": 270
+        },
+        {
+          "x": 0.92,
+          "y": 0.5,
+          "angle": 270
+        },
+        {
+          "x": 0.78,
+          "y": 0.36,
+          "angle": 270
+        },
+        {
+          "x": 0.78,
+          "y": 0.64,
+          "angle": 270
+        },
+        {
+          "x": 0.74,
+          "y": 0.5,
+          "angle": 270
+        }
+      ]
+    }
+  },
+  "sides": [
+    {
+      "force": "A",
+      "label": "ダカールを守る",
+      "objective": "Delay",
+      "targets": [
+        "barham"
+      ],
+      "zone": {
+        "x": 0.08,
+        "y": 0.5,
+        "r": 0.07,
+        "label": "ダカール港"
+      },
+      "timeLimitSec": 240,
+      "enemyGoesForZone": true,
+      "brief": "英戦艦バーラムをダカール港に近づけるな。時間を稼ぐか、撃沈せよ。"
+    },
+    {
+      "force": "B",
+      "label": "英艦隊で攻撃",
+      "objective": "SinkTargets",
+      "targets": [
+        "richelieu"
+      ],
+      "timeLimitSec": 300,
+      "brief": "港を守る戦艦リシュリューを撃沈せよ。"
+    }
+  ]
+}

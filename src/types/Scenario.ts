@@ -43,7 +43,7 @@ export interface IScenarioSide {
 }
 
 /** Sea area a scenario is filed under in the list (#71). */
-export type ScenarioTheater = 'pacific' | 'atlantic' | 'mediterranean' | 'arctic';
+export type ScenarioTheater = 'pacific' | 'atlantic' | 'mediterranean' | 'arctic' | 'baltic' | 'blacksea';
 
 /** What happened in the real battle (#200): who won, how many ships each force lost, in a line. */
 export interface IScenarioHistory {

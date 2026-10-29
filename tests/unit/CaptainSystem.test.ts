@@ -100,13 +100,13 @@ describe('captainModifiers', () => {
     for (const skill of Object.values(CaptainSkill)) expect(SKILL_LABEL[skill], skill).toMatch(/^.{2}$/);
   });
 
-  it('has 30 captains per nation (#209), every speciality three times or more, unique ids and names', () => {
+  it('has 50 captains per nation (#209 #252), every speciality three times or more, unique ids and names', () => {
     const all = captains.captains as ICaptainData[];
     expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
     expect(new Set(all.map((c) => c.name)).size).toBe(all.length);
     for (const nation of Object.values(Nation)) {
       const mine = all.filter((c) => c.nation === nation);
-      expect(mine, nation).toHaveLength(30);
+      expect(mine, nation).toHaveLength(50);
       for (const skill of Object.values(CaptainSkill)) expect(mine.filter((c) => c.skill === skill).length, `${nation} ${skill}`).toBeGreaterThanOrEqual(3);
       // The same speciality comes in different flavours: not every captain of it suits the same classes.
       const flavours = new Set(mine.filter((c) => c.skill === CaptainSkill.Torpedo).map((c) => JSON.stringify(c.aptitude ?? {})));

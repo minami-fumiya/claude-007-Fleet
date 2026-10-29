@@ -17,6 +17,8 @@ export class BaseProjectile extends Phaser.Physics.Arcade.Sprite {
   source: BaseShip | null = null;
   /** Ships this shot has already narrowly missed (rolled once per ship, not every overlapping frame) */
   readonly missed = new Set<object>();
+  /** Fired from a ship's own guns or tubes, not dropped by aircraft (通算の記録 #92 counts these hits) */
+  fromShip = false;
   private startX = 0;
   private startY = 0;
   private maxDistance = Infinity;
@@ -32,6 +34,7 @@ export class BaseProjectile extends Phaser.Physics.Arcade.Sprite {
     this.weapon = weapon ?? null;
     this.source = source;
     this.missed.clear();
+    this.fromShip = false;
     if (weapon && weapon.projectileSpeed > 0) this.speed = weapon.projectileSpeed;
     this.maxDistance = weapon ? weapon.range * RANGE_OVERSHOOT : Infinity;
     this.startX = x;

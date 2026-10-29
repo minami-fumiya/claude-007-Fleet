@@ -19,7 +19,7 @@ import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventS
 import { activeEvent } from '@/utils/GameClock';
 import { areaDepth, curveText, enemyScale, fleetPower, theaterStep } from '@/systems/DifficultyCurve';
 import { IShipData } from '@/types/Ship';
-import { fleetPowerBreakdown, powerCompareText, powerTone } from '@/systems/FleetPower';
+import { fleetPowerBreakdown, powerCompareText, powerTone, strengthMark } from '@/systems/FleetPower';
 import { selectedShipIds } from '@/utils/FleetSelection';
 import { prerequisitesOf, areasOf, firstSReward, lockText, sevenSeasText, enemyNationFor, enemyShips, isCleared, isFreeArea, isUnlocked, theaterProgress, theatersFor } from '@/systems/CampaignSystem';
 import { ownedIds, rewardShipFor } from '@/systems/ShipyardSystem';
@@ -315,7 +315,7 @@ export class CampaignMapScene extends Phaser.Scene {
       // The difficulty curve (#254): the enemy's strength against the target for this depth, and the rank it is for.
       // Portrait shares the route's row, so the briefing stays clear of the buttons.
       ...(IS_PORTRAIT
-        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(enemyPower, depth)}${ownPower > 0 ? `  ·  自艦隊 ×${(ownPower / enemyPower).toFixed(2)}` : ''}`] as [string, string]]
+        ? [['ルート・敵の戦力', `${sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')}  ·  ${curveText(enemyPower, depth)}${ownPower > 0 ? `  ·  自艦隊 ×${(ownPower / enemyPower).toFixed(2)} ${strengthMark(ownPower / enemyPower)}` : ''}`] as [string, string]]
         : [['ルート', sortieRoute(a, enemy).map((n) => NODE_LABEL[n.kind]).join(' → ')], ['敵の戦力', curveText(enemyPower, depth)],
           // The fleet last set up, weighed the same way (#280).
           ...(ownPower > 0 ? [['戦力の比較', powerCompareText(ownPower, enemyPower)] as [string, string]] : [])] as Array<[string, string]>),

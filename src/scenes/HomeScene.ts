@@ -6,6 +6,7 @@ import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { voice } from '@/systems/VoiceSystem';
 import { narrationLine } from '@/systems/CommentarySystem';
+import { wornTitle } from '@/systems/AdmiralTitles';
 import { SceneKeys } from '@/config/SceneKeys';
 import { pendingSummary } from '@/systems/PendingSummary';
 import { addGold } from '@/systems/GoldSystem';
@@ -190,7 +191,9 @@ export class HomeScene extends Phaser.Scene {
     });
     const x = a.x + bw + 16;
     // Portrait: rank and next promotion on separate lines (one line would run off the narrow screen).
-    const rankLine = `${rank.name}  ·  出撃枠 ${fleetSlots(progress)}`;
+    // 称号 (#92): the one the admiral wears, before the rank.
+    const title = wornTitle(progress.record);
+    const rankLine = `${title ? `「${title}」 ` : ''}${rank.name}  ·  出撃枠 ${fleetSlots(progress)}`;
     if (IS_PORTRAIT) {
       this.add.text(x, a.y, rankLine, textStyle(12, Css.gold, { fontStyle: 'bold' }));
       const next = this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
