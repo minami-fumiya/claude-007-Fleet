@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { skillOf, skillText } from '@/systems/ShipSkillSystem';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -1685,6 +1686,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
     const arm = add(this.add.text(x, y, lines.join('\n') || '—', textStyle(14, Css.text, { ...wrap, lineSpacing: 4 })));
     y += arm.height + 14;
+    // 艦の固有スキル (#58)
+    const own = skillOf(ship.id);
+    if (own) {
+      add(this.add.text(x, y, `固有スキル「${own.name}」`, eyebrowStyle(11, Css.gold)));
+      y += 22;
+      const t = add(this.add.text(x, y, skillText(own, loadProgress().refits[ship.id] ?? 0), textStyle(14, Css.text, wrap)));
+      y += t.height + 14;
+    }
 
     const captain = this.captainOf(slot);
     add(this.add.text(x, y, '艦長', eyebrowStyle(11, Css.gold)));

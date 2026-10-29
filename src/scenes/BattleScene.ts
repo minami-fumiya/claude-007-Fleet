@@ -93,6 +93,7 @@ import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
+import { LAST_STAND_HP, lastStandArmor, luckChance, skillModifiers, skillOf } from '@/systems/ShipSkillSystem';
 import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain, TRAINING_MANUAL_DROP_CHANCE } from '@/systems/ProficiencySystem';
@@ -272,6 +273,8 @@ export class BattleScene extends Phaser.Scene {
   private shellHits = 0;
   private torpedoHits = 0;
   private sailedPx = 0;
+  /** 固有スキル (#58): how often the player's ships' skills worked this battle */
+  private skillProcs = 0;
   /** The enemy fleet's formation (#82) */
   private enemyFormation: Formation = Formation.LineAhead;
   /** 難易度 (#100) of this battle: scenarios always 普通 */
@@ -369,6 +372,7 @@ export class BattleScene extends Phaser.Scene {
     this.shellHits = 0;
     this.torpedoHits = 0;
     this.sailedPx = 0;
+    this.skillProcs = 0;
     this.superweapon = null;
     this.superweaponParts = null;
     this.consumables = new Map();
@@ -941,7 +945,7 @@ export class BattleScene extends Phaser.Scene {
     // What the 中分類 is good at (#260), on the player's ships only: the enemy's strength is set by the difficulty
     // curve, which knows nothing of it (enemy AA cruisers at ×1.5 halved the win rate in the simulator).
     const formation = combineModifiers(formationModifiers(this.formation, isFlagship), midModifiers(shipData));
-    if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx, [], undefined, shipData.shipClass), formation);
+    if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx, [], undefined, shipData.shipClass), formation, skillModifiers(skillOf(shipData.id), 0));
     const progress = loadProgress();
     // Every copy fitted counts (#55): a part taken from an enemy needs no research.
     const catalog = DataLoader.getUpgrades(this);
@@ -955,6 +959,8 @@ export class BattleScene extends Phaser.Scene {
       captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass,
         captain ? progress.captainBonus[captain.id] ?? [] : []),
       formation,
+      // 固有スキル (#58)
+      skillModifiers(skillOf(shipData.id), stage),
       // 士気 (#54): a cheerful crew dodges and reloads a little better, a tired one worse.
       moraleModifiers(moraleOf(progress, shipData.id, Date.now())),
     );
@@ -968,6 +974,11 @@ export class BattleScene extends Phaser.Scene {
 
   /** Damage carried over from earlier battles, and the crew's proficiency. */
   private applyStartingDamage(ship: BaseShip): void {
+    // 固有スキル (#58): the ship's own skill, stronger from 改二 (scenarios sail the original build, stage 0).
+    const skill = skillOf(ship.dataId);
+    const stage = this.scenario ? 0 : loadProgress().refits[ship.dataId] ?? 0;
+    ship.skill = skill ? { name: skill.name, luck: luckChance(skill, stage), lastStand: lastStandArmor(skill, stage) } : null;
+    ship.lastStandOn = false;
     // Scenarios start every ship fresh: full HP, green crew, original build.
     if (this.scenario) return;
     const progress = loadProgress();
@@ -1586,6 +1597,12 @@ export class BattleScene extends Phaser.Scene {
       projectile.missed.add(target);
       return;
     }
+    // 幸運艦 (#58): now and then a hit does nothing at all.
+    if (target.skill && target.skill.luck > 0 && Math.random() < target.skill.luck) {
+      projectile.deactivate();
+      this.skillPopup(target, `${target.skill.name}: 被害なし`);
+      return;
+    }
     const fired = projectile.weapon ?? FALLBACK_WEAPON;
     // 弾種 (#48): a gun's shell is AP or HE by the firing ship's choice (AUTO picks by the target).
     const shell = effectiveShell(fired.type, projectile.source?.shellMode ?? 'auto', target.stats.shipClass);
@@ -1594,6 +1611,7 @@ export class BattleScene extends Phaser.Scene {
     const hpBefore = target.stats.currentHp / Math.max(1, target.stats.maxHp);
     CombatSystem.applyDamage(target, dmg, projectile.source);
     if (target === this.superweapon) this.breakParts(target, hpBefore);
+    this.wakeLastStand(target);
     this.rollCritical(target, weapon, dmg);
     this.rollFireOrFlood(target, weapon);
     if (projectile.fromShip && this.enemies.includes(target)) {
@@ -1619,6 +1637,26 @@ export class BattleScene extends Phaser.Scene {
   private logDamage(target: BaseShip, weapon: IWeaponData, dmg: number): void {
     const side = this.enemies.includes(target) ? 'player' : 'enemy';
     this.damageLog[side][weapon.id] = (this.damageLog[side][weapon.id] ?? 0) + Math.round(dmg);
+  }
+
+  /** 不屈 (#58): once the ship is down to LAST_STAND_HP, its armour goes up for the rest of the battle. */
+  private wakeLastStand(ship: BaseShip): void {
+    if (!ship.skill || ship.skill.lastStand <= 0 || ship.lastStandOn || !ship.isAlive) return;
+    if (ship.stats.currentHp / Math.max(1, ship.stats.maxHp) > LAST_STAND_HP) return;
+    ship.lastStandOn = true;
+    ship.stats.armor += ship.skill.lastStand;
+    this.skillPopup(ship, `${ship.skill.name}: 装甲 +${ship.skill.lastStand}`);
+  }
+
+  /** A skill that just worked (#58): its name over the ship, and one more for the 固有スキル章. */
+  private skillPopup(ship: BaseShip, text: string): void {
+    this.skillProcs++;
+    if (!ship.visible) return;
+    const t = this.add
+      .text(ship.x, ship.y - 58, text, textStyle(14, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
+      .setOrigin(0.5)
+      .setDepth(DEPTH_HUD - 2);
+    this.tweens.add({ targets: t, y: t.y - 36, alpha: 0, duration: 1600, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   }
 
   /** 超兵器 (#148): parts give way as it is worn down, each for the rest of the battle. */
@@ -2480,7 +2518,7 @@ export class BattleScene extends Phaser.Scene {
       // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.
       ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['baseAirStrike', this.baseAirSent], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['baseAirStrike', this.baseAirSent], ['skillProc', this.skillProcs], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).

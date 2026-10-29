@@ -22,6 +22,9 @@ export class BaseShip extends Phaser.Physics.Arcade.Sprite {
   aaMul = 1;
   /** Every modifier applied at spawn (sonar, aviation and night bonuses are read from here) */
   mods: IShipModifiers = NO_MODIFIERS;
+  /** 固有スキル (#58): the player's ship's own skill as it works this battle, and whether its 不屈 has woken */
+  skill: { name: string; luck: number; lastStand: number } | null = null;
+  lastStandOn = false;
   /** Aim error scale from modifiers (night-battle research); proficiency is applied separately */
   aimErrorMul = 1;
   /** Ship data id (for saving damage after the battle) */

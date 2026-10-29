@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { skillOf as shipSkillOf, skillText, SKILL_REMODEL_STAGE } from '@/systems/ShipSkillSystem';
 import { classKey, hullNumber, shipClasses } from '@/systems/ShipOrder';
 import { filterShips, IListFilter, kindsOf, NO_FILTER } from '@/systems/ListFilter';
 import { FilterBar, loadFilter } from '@/ui/components/FilterBar';
@@ -484,6 +485,12 @@ export class EncyclopediaScene extends Phaser.Scene {
     // 中分類の特性 (#260): escorts hunt submarines, AA ships shoot planes.
     const kindMods = modifierLines(combineModifiers(midModifiers(ship)));
     if (kindMods.length > 0) y = this.section(y, `艦種の特性 — ${midLabel(midClass(ship))}`, kindMods.join('・'), Css.cyan);
+    // 艦の固有スキル (#58): from the ship's own history, stronger from 改二.
+    const own = shipSkillOf(ship.id);
+    if (own) {
+      const stage = this.nation === loadSave().current ? loadProgress().refits[ship.id] ?? 0 : 0;
+      y = this.section(y, `艦の固有スキル「${own.name}」`, `${skillText(own, stage)}\n${own.origin}${stage >= SKILL_REMODEL_STAGE ? '  (改二で強化済み)' : '  (改二で 1.5 倍)'}`, Css.gold);
+    }
     // The class's other ships (#85): same performance, other names.
     // The class, its hull number (#246) and the other ships of it, by name once owned (#245).
     if (hull.of > 1) {
