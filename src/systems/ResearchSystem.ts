@@ -148,13 +148,8 @@ export function unlockedUpgrades(catalog: IUpgradeData[], done: string[]): IUpgr
   return catalog.filter((u) => !u.dropFrom && (!u.requires || done.includes(u.requires)));
 }
 
-/** Research that unlocks the fictional (planned-only) ships. */
+/** 架空艦計画 (#309): planned ships and designs cost less (ShipyardSystem.PLANNED_COST_MUL) and designs go a step further (DesignSystem.designTier). */
 export const FICTIONAL_TECH = 'fictional_ships';
-
-/** Ships the player may build: historical ones, plus fictional ones once their research is done. */
-export function availableShips(ships: IShipData[], done: string[]): IShipData[] {
-  return done.includes(FICTIONAL_TECH) ? ships : ships.filter((s) => !s.fictional);
-}
 
 /** Depth of a node in the tree (0 = no prerequisites), for laying the tree out in columns. */
 export function techTier(tree: ITechNode[], id: string, seen: Set<string> = new Set()): number {

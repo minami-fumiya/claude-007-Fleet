@@ -40,6 +40,9 @@ import type { IExpeditionRun } from '@/systems/ExpeditionSystem';
 import type { IDormEntry } from '@/systems/DormSystem';
 import { ISupportChoice, MISSIONS } from '@/systems/FleetGroups';
 import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSystem';
+import { IFocusState, parseFocus } from '@/systems/NationFocusSystem';
+import type { IShipDesign } from '@/types/Design';
+import { parseDesigns } from '@/systems/DesignSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -140,6 +143,16 @@ export interface INationProgress {
   dorm: IDormEntry[];
   /** 支援艦隊 (#84): the saved setups chosen to sail with the main fleet, and their missions */
   support: ISupportChoice[];
+  /** 国家方針 (#49): focuses done and the one under way */
+  focus: IFocusState;
+  /** 設計艦 (#51): the nation's own designs */
+  designs: IShipDesign[];
+  /** 装備改修 (#368): upgrade id → ★ (0..10), for every copy of it */
+  equipStars: Record<string, number>;
+  /** 型の載せ替え (#368): ship id → original weapon id → the weapon fitted in its place */
+  gunSwaps: Record<string, Record<string, string>>;
+  /** 他国の設計図 (#368): nation → fragments of its blueprints */
+  foreignFragments: Record<string, number>;
 }
 
 /** The whole save (v2 and later). */
@@ -188,6 +201,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
+    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {},
   };
 }
 
@@ -363,6 +377,11 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     support: (Array.isArray(data.support) ? data.support : []).filter(isObject)
       .map((c) => ({ preset: isNum(c.preset) ? c.preset : -1, mission: MISSIONS.find((m) => m === c.mission) ?? 'strike' }))
       .filter((c) => c.preset >= 0 && c.preset < PRESET_COUNT),
+    focus: parseFocus(data.focus),
+    designs: parseDesigns(data.designs),
+    equipStars: Object.fromEntries(Object.entries(numbers(data.equipStars)).map(([k, v]) => [k, Math.min(10, Math.max(0, Math.floor(v)))])),
+    gunSwaps: isObject(data.gunSwaps) ? Object.fromEntries(Object.entries(data.gunSwaps).map(([k, v]) => [k, stringMap(v)])) : {},
+    foreignFragments: numbers(data.foreignFragments),
   };
 }
 

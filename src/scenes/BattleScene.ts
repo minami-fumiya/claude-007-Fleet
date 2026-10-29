@@ -1,4 +1,8 @@
 import Phaser from 'phaser';
+import { improvedCatalog } from '@/systems/ImprovementSystem';
+import { withSwaps } from '@/systems/GunSwapSystem';
+import { rollFragment } from '@/systems/ForeignShipSystem';
+import { focusModifiers } from '@/systems/NationFocusSystem';
 import { CAPTAIN_DROP_CHANCE, CAPTAIN_MIN_DEPTH, CAPTAIN_PROMOTION_RANK, DUPLICATE_CAPTAIN_XP, MAX_RECRUITS_PER_BATTLE, recruitCaptains } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -952,12 +956,15 @@ export class BattleScene extends Phaser.Scene {
     if (this.scenario) return combineModifiers(captainModifiers(captain, captainCtx, [], undefined, shipData.shipClass), formation, skillModifiers(skillOf(shipData.id), 0));
     const progress = loadProgress();
     // Every copy fitted counts (#55): a part taken from an enemy needs no research.
-    const catalog = DataLoader.getUpgrades(this);
+    // 装備改修 (#368): each upgrade at the navy's ★.
+    const catalog = improvedCatalog(DataLoader.getUpgrades(this), progress.equipStars);
     const fitted = progress.upgrades[shipData.id] ?? [];
     const stage = progress.refits[shipData.id] ?? 0;
     return combineModifiers(
       upgradeModifiers(fitted, catalog, upgradeSlots(stage)),
       researchModifiers(TECH_TREE, progress.research),
+      // 国家方針 (#49): the lasting bonus of the focuses done, for this class.
+      focusModifiers(progress.nation, progress.focus, shipData.shipClass),
       refitModifiers(REFIT_TABLE, shipData, stage, progress.refitBranches[shipData.id]),
       // The captain's own speciality, learned skills, abilities and earned traits (#45), by aptitude for the ship (#131).
       captainModifiers(captain, captainCtx, captain ? progress.captainSkills[captain.id] ?? [] : [], captain ? progress.captainStats[captain.id] : undefined, shipData.shipClass,
@@ -975,7 +982,9 @@ export class BattleScene extends Phaser.Scene {
   /** The player's ship as remodelled (special refits swap weapons or embark aircraft); scenarios use the original build. */
   private rebuilt(shipData: IShipData): IShipData {
     if (this.scenario) return shipData;
-    return refitShipData(REFIT_TABLE, shipData, loadProgress().refits[shipData.id] ?? 0);
+    const progress = loadProgress();
+    // 型の載せ替え (#368): the main guns swapped on the 改装 screen.
+    return withSwaps(refitShipData(REFIT_TABLE, shipData, progress.refits[shipData.id] ?? 0), progress.gunSwaps[shipData.id]);
   }
 
   /** Damage carried over from earlier battles, and the crew's proficiency. */
@@ -2660,6 +2669,13 @@ export class BattleScene extends Phaser.Scene {
       progress = withQuestEvents(applyDrops(progress, drops), [['partDrop', drops.parts.length], ['blueprint', drops.blueprints], ['swAreaWin', won(swArea)]], now);
       const line = dropLine(catalog, drops, progress.blueprints);
       if (line) recruitLines.push(line);
+      // 他国の設計図 (#368): another navy's plans, found on its ships sunk.
+      const fragment = enemyNation !== progress.nation ? rollFragment(sunk.length, rank, victory, Math.random) : 0;
+      if (fragment > 0) {
+        const have = (progress.foreignFragments[enemyNation] ?? 0) + fragment;
+        progress = withQuestEvents({ ...progress, foreignFragments: { ...progress.foreignFragments, [enemyNation]: have } }, [['foreignFragment', fragment]], now);
+        recruitLines.push(`${NATION_INFO[enemyNation as Nation]?.jaShort ?? enemyNation}の設計図の断片 +${fragment} (計 ${have}・工廠 › 建造でその国の艦を建造できます)`);
+      }
     }
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
     progress = this.updateRecord(progress, victory, fleet.filter((s) => !s.isAlive).length, result);

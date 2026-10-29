@@ -659,6 +659,144 @@
       "year": 1940,
       "description": "ル・アルディ級駆逐艦の同型艦。性能はル・アルディと同じ。",
       "sisterOf": "le_hardi"
+    },
+    {
+      "id": "gascogne",
+      "no": 1701006,
+      "name": "ガスコーニュ (Gascogne)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "subtype": "FastBattleship",
+      "hp": 770,
+      "armor": 62,
+      "speed": 150,
+      "weapons": [
+        "380mm_m1935",
+        "152mm_m1930"
+      ],
+      "spriteKey": "gascogne",
+      "fictional": true,
+      "description": "リシュリュー級の主砲配置を前後に分けた改良型。1940 年の降伏で起工されなかった (計画艦)。",
+      "year": 1945
+    },
+    {
+      "id": "alsace",
+      "no": 1701007,
+      "name": "アルザス (Alsace)",
+      "nation": "FR",
+      "shipClass": "Battleship",
+      "subtype": "FastBattleship",
+      "hp": 820,
+      "armor": 64,
+      "speed": 148,
+      "weapons": [
+        "380mm_m1935",
+        "152mm_m1930"
+      ],
+      "spriteKey": "alsace",
+      "fictional": true,
+      "description": "38cm 砲 12 門を持つ大型戦艦の計画。設計段階で降伏を迎えた (計画艦)。",
+      "year": 1946
+    },
+    {
+      "id": "joffre",
+      "no": 1709002,
+      "name": "ジョッフル (Joffre)",
+      "nation": "FR",
+      "shipClass": "Carrier",
+      "hp": 490,
+      "armor": 30,
+      "speed": 165,
+      "weapons": [
+        "130mm_m1932"
+      ],
+      "spriteKey": "joffre",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 3
+      },
+      "fictional": true,
+      "description": "フランス初の本格的な空母として 1938 年に起工されたが、降伏で工事が止まった (未成艦)。",
+      "year": 1943
+    },
+    {
+      "id": "painleve",
+      "no": 1709003,
+      "name": "パンルヴェ (Painlevé)",
+      "nation": "FR",
+      "shipClass": "Carrier",
+      "hp": 490,
+      "armor": 30,
+      "speed": 165,
+      "weapons": [
+        "130mm_m1932"
+      ],
+      "spriteKey": "painleve",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 3
+      },
+      "fictional": true,
+      "description": "ジョッフル級空母の 2 番艦。起工されることはなかった (計画艦)。",
+      "year": 1944
+    },
+    {
+      "id": "hoche",
+      "no": 1707013,
+      "name": "オッシュ (Hoche)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "subtype": "LeaderDestroyer",
+      "hp": 245,
+      "armor": 15,
+      "speed": 255,
+      "weapons": [
+        "138mm_m1929",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "hoche",
+      "fictional": true,
+      "description": "モガドール級に続く大型駆逐艦 (嚮導駆逐艦) の計画。降伏で起工されなかった (計画艦)。",
+      "year": 1943
+    },
+    {
+      "id": "de_grasse",
+      "no": 1705010,
+      "name": "ド・グラース (De Grasse)",
+      "nation": "FR",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 370,
+      "armor": 32,
+      "speed": 175,
+      "weapons": [
+        "152mm_m1930",
+        "550mm_torpedo"
+      ],
+      "spriteKey": "de_grasse",
+      "fictional": true,
+      "description": "1939 年に起工された軽巡洋艦。占領中は工事が止まり、完成は戦後になった (未成艦)。",
+      "year": 1945
+    },
+    {
+      "id": "roland_morillot",
+      "no": 1712002,
+      "name": "ロラン・モリヨ (Roland Morillot)",
+      "nation": "FR",
+      "shipClass": "Submarine",
+      "hp": 160,
+      "armor": 6,
+      "speed": 150,
+      "weapons": [
+        "550mm_sub_torpedo"
+      ],
+      "spriteKey": "roland_morillot",
+      "fictional": true,
+      "description": "1937 年に計画された大型の潜水艦。降伏で工事が止まった (未成艦)。",
+      "year": 1942
     }
   ]
 }

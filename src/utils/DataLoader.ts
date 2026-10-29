@@ -7,6 +7,9 @@ import { ICaptainData } from '@/types/Captain';
 import { IUpgradeData } from '@/types/Modifiers';
 import { IMapData } from '@/types/Map';
 import { IScenario } from '@/types/Scenario';
+import { designShip } from '@/systems/DesignSystem';
+import { foreignShips } from '@/systems/ForeignShipSystem';
+import { loadSave } from './ProgressStore';
 
 export interface IShipJsonFile {
   ships: IShipData[];
@@ -30,7 +33,16 @@ export class DataLoader {
   static getRegistry(scene: Phaser.Scene): ShipRegistry {
     // The navies' own superweapons (#148) are built from blueprints; they join each roster.
     const own = ownSuperweapons();
-    return new ShipRegistry(PLAYABLE_NATIONS.flatMap((n) => [...DataLoader.getShips(scene, NATION_INFO[n].dataKey), ...own.filter((s) => s.nation === n)]));
+    const ships = PLAYABLE_NATIONS.flatMap((n) => [...DataLoader.getShips(scene, NATION_INFO[n].dataKey), ...own.filter((s) => s.nation === n)]);
+    // Other navies' ships built from their plans (#368) join each roster as its own copies.
+    const foreign = PLAYABLE_NATIONS.flatMap((n) => foreignShips(ships, n));
+    return new ShipRegistry([...ships, ...foreign, ...DataLoader.designs(ships)]);
+  }
+
+  /** The player's designs (設計艦, #51) as ships, each navy's from its save. */
+  static designs(ships: IShipData[]): IShipData[] {
+    const save = loadSave();
+    return PLAYABLE_NATIONS.flatMap((n) => (save.nations[n]?.designs ?? []).map((d) => designShip(d, n, ships)));
   }
 
   static getCaptains(scene: Phaser.Scene): ICaptainData[] {

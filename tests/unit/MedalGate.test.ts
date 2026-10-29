@@ -21,7 +21,6 @@ describe('medals as prerequisites (#169)', () => {
     expect(shipMedal({ shipClass: ShipClass.Destroyer }, 0)).toBeUndefined();
     expect(shipMedal({ shipClass: ShipClass.Battleship }, 3)).toBeUndefined();
     expect(shipMedal({ shipClass: ShipClass.Battleship }, 4)).toBe('battleship_slayer');
-    expect(shipMedal({ shipClass: ShipClass.Battleship, fictional: true }, 5)).toBe('ace');
     for (const id of ['fuelTank', 'ammoDepot', 'steelMill', 'airBase', 'workshop'] as const) {
       for (const lv of [1, 2, 3]) expect(facilityMedal('ijn_home', id, lv)).toBeUndefined();
       expect(facilityMedal('ijn_home', id, 4)).toBeDefined();

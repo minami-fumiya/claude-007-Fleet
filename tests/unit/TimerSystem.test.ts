@@ -19,7 +19,7 @@ describe('timers end in one place (#310)', () => {
 
   it('finishes repairs, builds, facilities and a base together, whatever their order', () => {
     const { progress: q, done } = completeTimers(p, NOW);
-    expect(done).toEqual({ repairs: ['a'], builds: ['x'], facilities: 1, base: 'ijn_light' });
+    expect(done).toEqual({ repairs: ['a'], builds: ['x'], facilities: 1, base: 'ijn_light', focus: null });
     expect(q.docks.map((d) => d.shipId)).toEqual(['b']);
     expect(q.damage.a).toBeUndefined();
     expect(q.ships).toEqual(['a', 'b', 'x']);

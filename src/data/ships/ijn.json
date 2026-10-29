@@ -3947,6 +3947,126 @@
       "year": 1944,
       "description": "伊400型潜水艦の同型艦。性能は伊400と同じ。",
       "sisterOf": "i400"
+    },
+    {
+      "id": "kai_yamato",
+      "no": 1101008,
+      "name": "改大和型 (Kai-Yamato)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "hp": 840,
+      "armor": 67,
+      "speed": 122,
+      "weapons": [
+        "46cm_main_gun",
+        "10cm_type98"
+      ],
+      "spriteKey": "kai_yamato",
+      "fictional": true,
+      "description": "大和型の防御と対空兵装を改めた改良型。1942 年度の計画に入ったが、ミッドウェーの後に中止された (計画艦)。",
+      "year": 1945
+    },
+    {
+      "id": "kai_taiho",
+      "no": 1109014,
+      "name": "改大鳳型 (Kai-Taiho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "ArmoredCarrier",
+      "hp": 565,
+      "armor": 42,
+      "speed": 152,
+      "weapons": [
+        "10cm_type98"
+      ],
+      "spriteKey": "kai_taiho",
+      "airWing": {
+        "fighters": 6,
+        "diveBombers": 5,
+        "torpedoBombers": 5
+      },
+      "fictional": true,
+      "description": "大鳳の装甲飛行甲板を受け継ぐ改良型空母。1942 年の改マル五計画で 5 隻が予定されたが、起工されなかった (計画艦)。",
+      "year": 1946
+    },
+    {
+      "id": "ibuki",
+      "no": 1110007,
+      "name": "伊吹 (Ibuki)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 455,
+      "armor": 20,
+      "speed": 168,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "ibuki",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 2,
+        "torpedoBombers": 2
+      },
+      "fictional": true,
+      "description": "改鈴谷型重巡洋艦として起工され、建造中に軽空母へ改められた。8 割ほどできたところで工事が止まった (未成艦)。",
+      "year": 1945
+    },
+    {
+      "id": "kai_shimakaze",
+      "no": 1107118,
+      "name": "改島風型 (Kai-Shimakaze)",
+      "nation": "IJN",
+      "shipClass": "Destroyer",
+      "hp": 205,
+      "armor": 14,
+      "speed": 265,
+      "weapons": [
+        "12cm_gun",
+        "torpedo_type93",
+        "depth_charge"
+      ],
+      "spriteKey": "kai_shimakaze",
+      "fictional": true,
+      "description": "島風に続く高速の重雷装駆逐艦として 16 隻が計画されたが、1 隻も起工されなかった (計画艦)。",
+      "year": 1945
+    },
+    {
+      "id": "b65",
+      "no": 1102005,
+      "name": "超甲型巡洋艦 (B-65)",
+      "nation": "IJN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 640,
+      "armor": 46,
+      "speed": 190,
+      "weapons": [
+        "36cm_main_gun",
+        "10cm_type98"
+      ],
+      "spriteKey": "b65",
+      "fictional": true,
+      "description": "米国のアラスカ級に対抗する大型巡洋艦。31cm 砲 9 門の計画で 2 隻が予定されたが、起工されなかった (計画艦)。",
+      "year": 1946
+    },
+    {
+      "id": "sentaka_dai",
+      "no": 1112012,
+      "name": "潜高大型 (Sentaka-dai)",
+      "nation": "IJN",
+      "shipClass": "Submarine",
+      "subtype": "LargeSubmarine",
+      "hp": 160,
+      "armor": 6,
+      "speed": 170,
+      "weapons": [
+        "type95_torpedo"
+      ],
+      "spriteKey": "sentaka_dai",
+      "fictional": true,
+      "description": "水中で高速を出す潜高型を大きくした計画の潜水艦。設計のみで終わった (計画艦)。",
+      "year": 1946
     }
   ]
 }

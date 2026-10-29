@@ -11,7 +11,7 @@ import { classKey, hullNumber } from './ShipOrder';
 export const HIDDEN_NAME = '？？？';
 
 /** Build states that keep the ship's name hidden: it is out of reach until something else is done first. */
-const LOCKED: ReadonlySet<BuildState> = new Set<BuildState>(['reward', 'research', 'fictional', 'rank', 'medal']);
+const LOCKED: ReadonlySet<BuildState> = new Set<BuildState>(['reward', 'research', 'focus', 'rank', 'medal']);
 
 /** Whether the shipyard shows the ship's name (and draws it in colour): owned, building, or buildable now. */
 export function buildNameShown(state: BuildState): boolean {

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { COPY_FROM, improve, improveCost, improvedEffects, improveState, MAX_STARS, STAR_STEP, starLabel, starsOf } from '@/systems/ImprovementSystem';
+import { describeModifiers } from '@/systems/CustomizationSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
@@ -29,7 +31,9 @@ const KIND_JA: Record<CarrierAircraft, string> = {
   [AircraftType.Fighter]: '艦上戦闘機', [AircraftType.DiveBomber]: '艦上爆撃機', [AircraftType.TorpedoBomber]: '艦上攻撃機',
 };
 
-type Mode = 'equipment' | 'aircraft';
+type Mode = 'equipment' | 'aircraft' | 'improve';
+
+const MODE_JA: Record<Mode, string> = { equipment: '装備', aircraft: '航空機', improve: '改修' };
 
 /**
  * 工廠 › 開発 (#55 #87). 装備: equipment is made with resources — a chosen one at its price, or 「おまかせ」 (a random
@@ -102,15 +106,17 @@ export class DevelopScene extends Phaser.Scene {
     const p = loadProgress();
     this.bar.refresh(p.resources, holdCap(p.facilities));
     const w = CANVAS_W - L.list.x * 2;
-    const tw = (w - 8) / 2;
-    (['equipment', 'aircraft'] as Mode[]).forEach((m, i) => {
-      add(new UIButton(this, L.list.x + i * (tw + 8) + tw / 2, L.tabs.y, m === 'equipment' ? '装備' : '航空機', () => {
+    const modes: Mode[] = ['equipment', 'improve', 'aircraft'];
+    const tw = (w - 8 * (modes.length - 1)) / modes.length;
+    modes.forEach((m, i) => {
+      add(new UIButton(this, L.list.x + i * (tw + 8) + tw / 2, L.tabs.y, MODE_JA[m], () => {
         this.mode = m;
         this.status = '';
         this.draw();
       }, { variant: this.mode === m ? 'primary' : 'secondary', width: tw, height: L.tabs.h, fontSize: 14 }));
     });
     if (this.mode === 'equipment') this.drawEquipment(add);
+    else if (this.mode === 'improve') this.drawImprove(add);
     else this.drawAircraft(add);
   }
 
@@ -147,6 +153,47 @@ export class DevelopScene extends Phaser.Scene {
     });
     list.setContentHeight(Math.max(0, pool.length * (L.rowH + L.gap) - L.gap));
     list.setOffset(keep);
+  }
+
+  /** 改修 (#368): the equipment held, ★0..10 for every copy; from ★6 on a spare copy goes in too. */
+  private drawImprove(add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
+    const p = loadProgress();
+    const held = this.catalog().filter((u) => heldCount(p, u.id) > 0);
+    this.statusLine(add, held.length === 0 ? '装備を開発すると改修できます' : `改修すると、その装備はどの艦でも強くなります (★${MAX_STARS} で効果 ×${(1 + STAR_STEP * MAX_STARS).toFixed(1)})`);
+    add(this.add.text(CANVAS_W / 2, L.action.y, `★${COPY_FROM} からは予備の装備を 1 つ使います`, textStyle(12, Css.muted)).setOrigin(0.5));
+    const list = this.list!;
+    const keep = list.offset;
+    list.clear();
+    const w = CANVAS_W - L.list.x * 2 - 12;
+    held.forEach((u, i) => {
+      const stars = starsOf(p.equipStars, u.id);
+      const state = improveState(p, u);
+      const lit = state === 'ready';
+      const frame = drawPanel(this.add.graphics(), 0, 0, w, L.rowH, { radius: 14, fill: Colors.panel, fillAlpha: lit ? 0.7 : 0.4, rimAlpha: stars >= MAX_STARS ? 0.8 : lit ? 0.5 : 0.15, rim: stars >= MAX_STARS ? Colors.gold : undefined });
+      const name = this.add.text(16, 10, `${u.name}  ${starLabel(stars) || '★0'}`, textStyle(15, lit || stars > 0 ? Css.text : Css.dim, { fontStyle: 'bold' }));
+      const no = this.add.text(w - 16, 12, `所持 ${stockOf(p, u.id)} / 計 ${heldCount(p, u.id)}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
+      const now = describeModifiers(improvedEffects(u.effects, stars)).join(' ');
+      const next = stars < MAX_STARS ? `  →  ${describeModifiers(improvedEffects(u.effects, stars + 1)).join(' ')}` : '';
+      const desc = this.add.text(16, IS_PORTRAIT ? 40 : 34, `${now}${next}`, textStyle(12, Css.muted, { wordWrap: { width: w - 32, useAdvancedWrap: true } }));
+      const line = state === 'max' ? '改修完了' : state === 'copy' ? `予備の${u.name}が要ります (開発で作れます)` : `改修 ${formatResources(improveCost(u, stars))}${stars + 1 >= COPY_FROM ? '・予備 1' : ''}  ·  ${state === 'ready' ? 'タップで改修' : '資源不足'}`;
+      const foot = this.add.text(16, L.rowH - (IS_PORTRAIT ? 30 : 24), line, textStyle(12, state === 'max' ? Css.gold : state === 'ready' ? Css.cyan : Css.danger, { fontStyle: 'bold' }));
+      if (foot.width > w - 32) foot.setScale((w - 32) / foot.width);
+      list.addItem(this.add.container(0, i * (L.rowH + L.gap), [frame, name, no, desc, foot]), w, L.rowH, () => this.improveOne(u));
+    });
+    list.setContentHeight(Math.max(0, held.length * (L.rowH + L.gap) - L.gap));
+    list.setOffset(keep);
+  }
+
+  improveOne(u: IUpgradeData): void {
+    const p = loadProgress();
+    const next = improve(p, u);
+    if (!next) {
+      const state = improveState(p, u);
+      if (state !== 'max') this.say(`${u.name}: ${state === 'copy' ? '予備の装備が要ります' : '資源が足りません'}`, true);
+      return;
+    }
+    saveProgress(withQuestEvents(next, [['equipImprove', 1]], Date.now()), 'refit');
+    this.say(`${u.name} を ${starLabel(starsOf(next.equipStars, u.id))} に改修しました`);
   }
 
   /** 航空機 (#87): the selected carrier's models and pilots, then every model of the navy to develop. */

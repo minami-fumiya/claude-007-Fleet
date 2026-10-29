@@ -1,6 +1,6 @@
 import { ICampaignArea, ICampaignData, ITheater } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
-import { IShipData } from '@/types/Ship';
+import { IShipData, isHistorical } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { BattleMode } from '@/types/Battle';
 import { ShipRegistry } from './ShipRegistry';
@@ -115,8 +115,8 @@ export function enemyNationFor(data: ICampaignData, area: ICampaignArea, player?
  */
 export function enemyShips(area: ICampaignArea, registry: ShipRegistry, nation: Nation = area.enemy.nation): IShipData[] {
   const written = area.enemy.ships.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
-  if (nation === area.enemy.nation) return uniqueShips(written, registry.byNation(nation).filter((s) => !s.fictional));
-  const roster = registry.byNation(nation).filter((s) => !s.fictional);
+  if (nation === area.enemy.nation) return uniqueShips(written, registry.byNation(nation).filter((s) => isHistorical(s)));
+  const roster = registry.byNation(nation).filter((s) => isHistorical(s));
   if (roster.length === 0) return written;
   const used = new Set<string>();
   const fallback = [ShipClass.Battleship, ShipClass.Cruiser, ShipClass.Destroyer];

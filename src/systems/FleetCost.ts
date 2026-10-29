@@ -19,15 +19,15 @@ const MID_COST: Partial<Record<string, number>> = {
   Battleship: 5, [ShipSubtype.FastBattleship]: 5, [ShipSubtype.BattleCruiser]: 5, [ShipSubtype.AviationBattleship]: 5,
 };
 
-/** A fictional design weighs this much more */
-export const FICTIONAL_COST = 2;
+/** A planned ship (架空艦, #309) weighs this much more: most outclass the real ships of their kind */
+export const FICTIONAL_COST = 1;
 
 /** The fleet's cost cap by rank index (准尉 6 … 元帥 48). */
 export const COST_CAP = [6, 6, 10, 12, 14, 15, 16, 20, 24, 28, 32, 36, 40, 48];
 
 /**
  * A ship's sortie cost: its 中分類, +1 per grade above 2 for battleships and fleet carriers (the biggest ones weigh most),
- * +2 for a fictional design and +1 per remodel stage.
+ * +1 for a planned ship (架空艦) and +1 per remodel stage.
  */
 export function shipCost(ship: Pick<IShipData, 'shipClass' | 'subtype' | 'fictional'> & Partial<IShipData>, stage = 0): number {
   const base = MID_COST[midClass(ship)] ?? 3;

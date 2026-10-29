@@ -169,7 +169,8 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   // A gun ship leads (a carrier flagship sails AUTO straight into torpedoes), and carriers fill at most a third.
   const slots = RANKS[rank.index].slots;
   const pool = registry.byNation(nation)
-    .filter((s) => !s.fictional && !isRewardOnly(s) && s.shipClass !== 'Submarine' && gradeAllowed(shipGrade(s), rank.index))
+    // Real ships only: no planned ships, designs (#51) or other navies' copies (#368).
+    .filter((s) => !s.fictional && !s.designed && !s.foreign && !isRewardOnly(s) && s.shipClass !== 'Submarine' && gradeAllowed(shipGrade(s), rank.index))
     .sort((x, y) => curve.fleetPower([y]) - curve.fleetPower([x]));
   const guns = pool.filter((s) => s.shipClass !== 'Carrier');
   const carriers = pool.filter((s) => s.shipClass === 'Carrier').slice(0, Math.floor(slots / 3));

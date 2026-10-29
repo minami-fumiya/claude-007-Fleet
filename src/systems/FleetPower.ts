@@ -1,4 +1,6 @@
 import { IShipData } from '@/types/Ship';
+import { improvedCatalog } from './ImprovementSystem';
+import { focusModifiers, IFocusState } from './NationFocusSystem';
 import { IShipModifiers, IUpgradeData, NO_MODIFIERS } from '@/types/Modifiers';
 import { ICaptain } from '@/types/Captain';
 import { Formation } from '@/types/Formation';
@@ -27,16 +29,26 @@ export interface IFleetPowerProgress {
   captainBonus?: Record<string, string[]>;
   morale?: Record<string, number>;
   moraleAt?: Record<string, number>;
+  equipStars?: Record<string, number>;
+  /** 国家方針 (#49): counted with the research */
+  nation?: string;
+  focus?: Pick<IFocusState, 'done'>;
+}
+
+/** Research and the national focuses done, for one ship's class. */
+function researchFor(research: IShipModifiers, progress: IFleetPowerProgress, s: IShipData): IShipModifiers {
+  return progress.nation && progress.focus ? combineModifiers(research, focusModifiers(progress.nation, progress.focus, s.shipClass)) : research;
 }
 
 /** The fleet's strength with what the admiral has done to its ships. */
 export function ownFleetPower(ships: readonly IShipData[], progress: IFleetPowerProgress, catalog: IUpgradeData[]): number {
   // Every fitted copy counts (#55), researched or taken from an enemy.
-  const parts = catalog;
+  // 装備改修 (#368): at the navy's ★.
+  const parts = improvedCatalog(catalog, progress.equipStars);
   const research = researchModifiers(TECH_TREE, progress.research);
   return fleetPower(ships.map((s) => {
     const stage = progress.refits[s.id] ?? 0;
-    const m = combineModifiers(upgradeModifiers(progress.upgrades[s.id] ?? [], parts, upgradeSlots(stage)), research, refitModifiers(REFIT_TABLE, s, stage, progress.refitBranches[s.id]));
+    const m = combineModifiers(upgradeModifiers(progress.upgrades[s.id] ?? [], parts, upgradeSlots(stage)), researchFor(research, progress, s), refitModifiers(REFIT_TABLE, s, stage, progress.refitBranches[s.id]));
     return { hp: s.hp * m.hpMul, armor: s.armor + m.armorAdd };
   }));
 }
@@ -81,7 +93,8 @@ export function fleetPowerBreakdown(
   opts: { captains?: readonly (ICaptain | null)[]; formation?: Formation; now?: number } = {},
 ): IPowerBreakdown {
   // Every fitted copy counts (#55), researched or taken from an enemy.
-  const parts = catalog;
+  // 装備改修 (#368): at the navy's ★.
+  const parts = improvedCatalog(catalog, progress.equipStars);
   const research = researchModifiers(TECH_TREE, progress.research);
   const now = opts.now ?? Date.now();
   const per = ships.map((s, i) => {
@@ -89,7 +102,7 @@ export function fleetPowerBreakdown(
     const captain = opts.captains?.[i] ?? null;
     const mods: Record<PowerSource, IShipModifiers> = {
       refit: combineModifiers(upgradeModifiers(progress.upgrades[s.id] ?? [], parts, upgradeSlots(stage)), refitModifiers(REFIT_TABLE, s, stage, progress.refitBranches[s.id])),
-      research,
+      research: researchFor(research, progress, s),
       captain: captain ? captainModifiers(captain, {}, progress.captainSkills?.[captain.id] ?? [], progress.captainStats?.[captain.id], s.shipClass, progress.captainBonus?.[captain.id] ?? []) : NO_MODIFIERS,
       proficiency: NO_MODIFIERS,
       morale: progress.morale ? combineModifiers(moraleModifiers(moraleOf({ morale: progress.morale, moraleAt: progress.moraleAt ?? {} }, s.id, now))) : NO_MODIFIERS,

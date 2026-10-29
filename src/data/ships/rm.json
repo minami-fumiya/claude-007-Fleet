@@ -842,6 +842,124 @@
       "year": 1937,
       "description": "オリアーニ級駆逐艦の同型艦。性能はアルフレード・オリアーニと同じ。",
       "sisterOf": "alfredo_oriani"
+    },
+    {
+      "id": "impero",
+      "no": 1501008,
+      "name": "インペロ (Impero)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "subtype": "FastBattleship",
+      "hp": 760,
+      "armor": 61,
+      "speed": 150,
+      "weapons": [
+        "381mm_m1934",
+        "152mm_m1934"
+      ],
+      "spriteKey": "impero",
+      "fictional": true,
+      "description": "リットリオ級戦艦の 4 番艦。進水したが工事が止まり、未完成のまま終戦を迎えた (未成艦)。",
+      "year": 1944
+    },
+    {
+      "id": "up41",
+      "no": 1501009,
+      "name": "UP.41 計画戦艦 (UP.41)",
+      "nation": "RM",
+      "shipClass": "Battleship",
+      "subtype": "FastBattleship",
+      "hp": 800,
+      "armor": 62,
+      "speed": 148,
+      "weapons": [
+        "381mm_m1934",
+        "152mm_m1934"
+      ],
+      "spriteKey": "up41",
+      "fictional": true,
+      "description": "リットリオ級を拡大した戦艦の計画。設計段階で終わった (計画艦)。",
+      "year": 1946
+    },
+    {
+      "id": "sparviero",
+      "no": 1510001,
+      "name": "スパルヴィエロ (Sparviero)",
+      "nation": "RM",
+      "shipClass": "Carrier",
+      "subtype": "LightCarrier",
+      "hp": 470,
+      "armor": 22,
+      "speed": 150,
+      "weapons": [
+        "152mm_m1934"
+      ],
+      "spriteKey": "sparviero",
+      "airWing": {
+        "fighters": 3,
+        "diveBombers": 3,
+        "torpedoBombers": 2
+      },
+      "fictional": true,
+      "description": "客船アウグストゥスを空母に改装する計画。工事は途中で止まった (未成艦)。",
+      "year": 1944
+    },
+    {
+      "id": "medaglie_doro",
+      "no": 1507023,
+      "name": "メダーリェ・ドーロ級 (Comandanti Medaglie d'Oro)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "hp": 225,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "135mm_m1938",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "medaglie_doro",
+      "fictional": true,
+      "description": "13.5cm 砲を積む大型駆逐艦。20 隻が計画され、数隻が起工されたが完成しなかった (未成艦)。",
+      "year": 1944
+    },
+    {
+      "id": "romani_kai",
+      "no": 1505010,
+      "name": "改カピターニ・ロマーニ級 (Capitani Romani kai)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 345,
+      "armor": 22,
+      "speed": 195,
+      "weapons": [
+        "135mm_m1938",
+        "533mm_si270"
+      ],
+      "spriteKey": "romani_kai",
+      "fictional": true,
+      "description": "高速の偵察巡洋艦カピターニ・ロマーニ級を拡大する案。実行されなかった (計画艦)。",
+      "year": 1945
+    },
+    {
+      "id": "etiopico",
+      "no": 1505009,
+      "name": "エティオピコ級 (Etiopico)",
+      "nation": "RM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 370,
+      "armor": 32,
+      "speed": 172,
+      "weapons": [
+        "152mm_m1934",
+        "533mm_si270"
+      ],
+      "spriteKey": "etiopico",
+      "fictional": true,
+      "description": "東アフリカに置く植民地用の巡洋艦の計画。設計段階で終わった (計画艦)。",
+      "year": 1944
     }
   ]
 }

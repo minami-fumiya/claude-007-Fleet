@@ -181,6 +181,8 @@ export function generateShipTextures(scene: Phaser.Scene, ships: IShipData[]): v
     if (ship.sisterOf) continue;
     // The own superweapons (#148) borrow a ship's sprite like the enemy giants.
     if (ship.blueprint) continue;
+    // So do the designs (#51) and other navies' ships built at home (#368).
+    if (ship.designed || ship.foreign) continue;
     const spec = CLASS_SPRITES[ship.shipClass] ?? CLASS_SPRITES[ShipClass.Cruiser];
     // Sister-ship shading counts per nation and class, so every navy starts from its base colour.
     const key = `${ship.nation}:${ship.shipClass}`;

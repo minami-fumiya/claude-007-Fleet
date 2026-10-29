@@ -42,7 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
-  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'DevelopScene',
+  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'DevelopScene', 'FocusScene', 'DesignScene',
 ];
 
 /** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */
@@ -1476,4 +1476,66 @@ test('史実 (0.0.51): France, the Soviet Union and Italy each have battles of t
     await page.screenshot({ path: info.outputPath(`scenario-battle-${nation}.png`) });
     expect(errors, nation).toEqual([]);
   }
+});
+
+test('方針・設計・改修 (0.0.52): national focus, a design built, equipment improved and a gun swapped (#49 #51 #309 #368)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  const save = {
+    ...SAVE, version: 7, seenHelp: SCREENS,
+    nations: { IJN: { ...SAVE.nations.IJN, rankFloor: 13, resources: { fuel: 20000, ammo: 20000, steel: 20000, bauxite: 8000 }, equipment: { fire_director: 2 }, research: [...SAVE.nations.IJN.research, 'fire_control'] } },
+  };
+  const errors = await boot(page, layout, save);
+  const stored = (): Promise<Record<string, unknown>> => page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as Record<string, unknown>);
+  // 国家方針: the first focus starts and its clock shows.
+  await open(page, 'FocusScene');
+  const started = await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('FocusScene') as unknown as { startFirst(): boolean }).startFirst());
+  expect(started, `a focus starts (${layout})`).toBe(true);
+  await page.waitForTimeout(300);
+  expect(((await stored()).focus as { current: { id: string } }).current.id).toBe('ijn_expand');
+  await page.screenshot({ path: info.outputPath('focus.png') });
+  expect(await overflowingTexts(page, 'FocusScene'), `focus (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'FocusScene'), `focus overlaps (${layout})`).toEqual([]);
+  // 設計: a destroyer drawn up, named and saved; the shipyard lists it.
+  await open(page, 'DesignScene');
+  await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('DesignScene') as unknown as { sampleDesign(): void; save(): void };
+    s.sampleDesign();
+    s.save();
+  });
+  await page.waitForTimeout(300);
+  const designs = (await stored()).designs as Array<{ id: string; name: string }>;
+  expect(designs.map((d) => d.name), `design saved (${layout})`).toEqual(['試作駆逐艦']);
+  await page.screenshot({ path: info.outputPath('design.png') });
+  expect(await overflowingTexts(page, 'DesignScene'), `design (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'DesignScene'), `design overlaps (${layout})`).toEqual([]);
+  await open(page, 'ShipyardScene');
+  expect(await overflowingTexts(page, 'ShipyardScene'), `shipyard (${layout})`).toEqual([]);
+  // 改修: ★1 on the fire director.
+  await open(page, 'DevelopScene', { mode: 'improve' });
+  await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('DevelopScene') as unknown as { improveOne(u: { id: string }): void };
+    s.improveOne({ id: 'fire_director', name: '射撃指揮装置', description: '', effects: { gunReloadMul: 0.9 }, cost: { ammo: 150, steel: 150, bauxite: 50 } } as never);
+  });
+  await page.waitForTimeout(300);
+  expect(((await stored()).equipStars as Record<string, number>).fire_director, `improved (${layout})`).toBe(1);
+  await page.screenshot({ path: info.outputPath('improve.png') });
+  expect(await overflowingTexts(page, 'DevelopScene'), `improve (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'DevelopScene'), `improve overlaps (${layout})`).toEqual([]);
+  // 型の載せ替え: Nagato's card shows on the 改装 screen.
+  await open(page, 'CustomizationScene', { returnTo: 'HomeScene', scope: 'all', shipId: 'nagato' });
+  await page.screenshot({ path: info.outputPath('swap.png') });
+  expect(await overflowingTexts(page, 'CustomizationScene'), `swap (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'CustomizationScene'), `swap overlaps (${layout})`).toEqual([]);
+  // The home menu with 方針 in the arsenal tab.
+  await open(page, 'HomeScene');
+  await page.evaluate(() => {
+    const g = (window as unknown as { game: Phaser.Game }).game;
+    g.registry.set('home.tab', 'arsenal');
+    g.scene.getScene('HomeScene').scene.restart();
+  });
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: info.outputPath('home-arsenal.png') });
+  expect(await overflowingTexts(page, 'HomeScene'), `home arsenal (${layout})`).toEqual([]);
+  expect(errors).toEqual([]);
 });

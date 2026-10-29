@@ -30,6 +30,8 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { sailingIds } from '@/systems/FleetGroups';
 import { MAX_PROFICIENCY, TRAINING_MANUAL_GAIN, useTrainingManual } from '@/systems/ProficiencySystem';
+import { improvedCatalog, starLabel, starsOf } from '@/systems/ImprovementSystem';
+import { swapCost, swapGun, swappableGuns, swapOptions, withSwaps } from '@/systems/GunSwapSystem';
 
 interface IRect { x: number; y: number; w: number; h: number }
 
@@ -322,7 +324,20 @@ export class CustomizationScene extends Phaser.Scene {
     list.clear();
     const progress = loadProgress();
     const shown = this.shownCatalog();
-    shown.forEach((u, i) => {
+    // 型の載せ替え (#368): a card for each main gun that has another type to take its place.
+    const swaps = this.swapCards();
+    swaps.forEach((c, i) => {
+      const r = this.cardRect(i);
+      const frame = drawPanel(this.add.graphics(), 0, 0, r.w, r.h, { radius: 16, fill: c.swapped ? Colors.panelHi : Colors.panel, fillAlpha: c.swapped ? 0.9 : 0.6, rim: Colors.gold, rimAlpha: c.swapped ? 0.8 : 0.35 });
+      const name = this.add.text(18, IS_PORTRAIT ? 10 : 14, `主砲の型: ${c.current}`, textStyle(15, c.swapped ? Css.gold : Css.text, { fontStyle: 'bold' }));
+      const desc = this.add.text(18, IS_PORTRAIT ? 40 : 46, c.line, textStyle(11, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } }));
+      const mark = this.add.text(r.w - 18, r.h / 2, '換装 ›', textStyle(13, Css.cyan, { fontStyle: 'bold' })).setOrigin(1, 0.5);
+      if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
+      list.addItem(this.add.container(r.x, r.y, [frame, name, desc, mark]), r.w, r.h, () => this.swapNext(c.from));
+    });
+    const off = swaps.length;
+    shown.forEach((u, j) => {
+      const i = j + off;
       const r = this.cardRect(i);
       const on = fitted.includes(u.id);
       const stock = stockOf(progress, u.id);
@@ -330,7 +345,8 @@ export class CustomizationScene extends Phaser.Scene {
       const frame = drawPanel(this.add.graphics(), 0, 0, r.w, r.h, {
         radius: 16, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.85 : 0.2, glow: on ? 1 : 0,
       });
-      const name = this.add.text(18, IS_PORTRAIT ? 10 : 14, u.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
+      const stars = starsOf(progress.equipStars, u.id);
+      const name = this.add.text(18, IS_PORTRAIT ? 10 : 14, `${u.name}${stars > 0 ? `  ${starLabel(stars)}` : ''}`, textStyle(15, Css.text, { fontStyle: 'bold' }));
       const desc = this.add.text(18, IS_PORTRAIT ? 40 : 46, u.description, textStyle(11, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } }));
       const markText = on ? '装備中' : stock === 0 ? '工廠で開発' : slots === 0 ? '要改造' : full ? '—' : '+';
       const mark = this.add.text(r.w - 18, r.h / 2 - 10, markText, textStyle(stock === 0 || slots === 0 || on ? 12 : 18, on ? Css.gold : stock === 0 ? Css.dim : Css.cyan, { fontStyle: 'bold' })).setOrigin(1, 0.5);
@@ -338,9 +354,44 @@ export class CustomizationScene extends Phaser.Scene {
       if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
       list.addItem(this.add.container(r.x, r.y, [frame, name, desc, mark, count]), r.w, r.h, () => this.toggle(u.id));
     });
-    const rows = Math.ceil(shown.length / L.cols);
+    const rows = Math.ceil((shown.length + off) / L.cols);
     list.setContentHeight(Math.max(0, rows * (L.cardH + L.gap) - L.gap));
     list.setOffset(keep);
+  }
+
+  /** The selected ship's main guns that can change type (#368), with what is fitted now and what comes next. */
+  private swapCards(): Array<{ from: string; current: string; swapped: boolean; line: string }> {
+    const ship = this.ships[this.selected];
+    if (!ship) return [];
+    const progress = loadProgress();
+    const roster = DataLoader.getRegistry(this).all();
+    const swaps = progress.gunSwaps[ship.id] ?? {};
+    return swappableGuns(ship).flatMap((gun) => {
+      const options = swapOptions(ship, gun.id, roster);
+      if (options.length === 0) return [];
+      const now = swaps[gun.id] ?? gun.id;
+      const cycle = [gun.id, ...options.map((w) => w.id)];
+      const next = cycle[(cycle.indexOf(now) + 1) % cycle.length];
+      const nameOf = (id: string): string => DataLoader.getWeaponById(this, id)?.name ?? id;
+      const price = next === gun.id ? '元に戻す (無料)' : formatResources(swapCost(next));
+      return [{ from: gun.id, current: nameOf(now), swapped: now !== gun.id, line: `次: ${nameOf(next)}  ·  ${price}  ·  元の型 ${gun.name}` }];
+    });
+  }
+
+  /** Swaps the gun for its next type (#368), or back to the ship's own. */
+  private swapNext(from: string): void {
+    const ship = this.ships[this.selected];
+    if (!ship || this.away(ship.id)) return;
+    const progress = loadProgress();
+    const roster = DataLoader.getRegistry(this).all();
+    const options = swapOptions(ship, from, roster).map((w) => w.id);
+    const cycle = [from, ...options];
+    const now = progress.gunSwaps[ship.id]?.[from] ?? from;
+    const to = cycle[(cycle.indexOf(now) + 1) % cycle.length];
+    const next = swapGun(progress, ship, from, to, roster);
+    if (!next) return;
+    saveProgress(to === from ? next : withQuestEvents(next, [['gunSwap', 1]], Date.now()), 'refit');
+    this.refresh();
   }
 
   private fitted(): string[] {
@@ -494,10 +545,11 @@ export class CustomizationScene extends Phaser.Scene {
     const progress = loadProgress();
     const stage = progress.refits[ship.id] ?? 0;
     const branch = progress.refitBranches[ship.id];
-    const mods = combineModifiers(upgradeModifiers(fitted, this.catalog, slots), refitModifiers(this.refitTable, ship, stage, branch));
+    // 装備改修 (#368): each upgrade at the navy's ★.
+    const mods = combineModifiers(upgradeModifiers(fitted, improvedCatalog(this.catalog, progress.equipStars), slots), refitModifiers(this.refitTable, ship, stage, branch));
     const after = applyToStats(base, mods);
-    // Special refits may swap weapons (e.g. secondaries replaced by AA guns).
-    const weaponsAfter = applyToWeapons(this.loadout(refitShipData(this.refitTable, ship, stage).weapons), mods);
+    // Special refits may swap weapons (e.g. secondaries replaced by AA guns), and so may the main-gun swaps (#368).
+    const weaponsAfter = applyToWeapons(this.loadout(withSwaps(refitShipData(this.refitTable, ship, stage), progress.gunSwaps[ship.id]).weapons), mods);
     const gunBefore = primaryWeapon(loadout.filter((w) => weaponKind(w) === WeaponKind.Gun));
     const gunAfter = primaryWeapon(weaponsAfter.filter((w) => weaponKind(w) === WeaponKind.Gun));
     const torpBefore = loadout.find((w) => weaponKind(w) === WeaponKind.Torpedo);
@@ -520,7 +572,7 @@ export class CustomizationScene extends Phaser.Scene {
       line('魚雷火力', torpBefore?.firePower, torpAfter?.firePower),
     ];
     const extras = describeModifiers({ visionMul: mods.visionMul, aaMul: mods.aaMul, airPowerMul: mods.airPowerMul, planesAdd: mods.planesAdd, rearmMul: mods.rearmMul, sonarMul: mods.sonarMul, depthChargeMul: mods.depthChargeMul, nightAimMul: mods.nightAimMul, nightVisionMul: mods.nightVisionMul });
-    const afterIds = refitShipData(this.refitTable, ship, stage).weapons;
+    const afterIds = withSwaps(refitShipData(this.refitTable, ship, stage), progress.gunSwaps[ship.id]).weapons;
     const removed = loadout.filter((w) => !afterIds.includes(w.id)).map((w) => w.name);
     const added = this.loadout(afterIds.filter((id) => !ship.weapons.includes(id))).map((w) => w.name);
     if (removed.length > 0 || added.length > 0) extras.push(`兵装 ${removed.join('・') || '—'} → ${added.join('・') || '撤去'}`);
