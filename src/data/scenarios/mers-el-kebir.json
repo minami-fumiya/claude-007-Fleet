@@ -1,0 +1,132 @@
+{
+  "id": "mers-el-kebir",
+  "name": "メルセルケビール海戦",
+  "date": "1940年7月",
+  "history": {
+    "winner": "B",
+    "lost": {
+      "A": 1,
+      "B": 0
+    },
+    "text": "英国の勝利。戦艦ブルターニュが沈没、ダンケルクとプロヴァンスが大破。ストラスブールは港を脱出してトゥーロンへ逃れた"
+  },
+  "theater": "mediterranean",
+  "description": "フランスの降伏後、英国は仏艦隊がドイツの手に渡るのを恐れ、アルジェリアのメルセルケビール港に停泊する仏艦隊に英国への引き渡しか自沈を求めた。拒まれた H 部隊は港を砲撃し、戦艦ブルターニュを沈めた。戦艦ストラスブールは砲火の中を脱出した。(レゾリューションはリヴェンジ、アリシューザはダイドー、仏・英の駆逐艦は近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Day",
+  "forces": {
+    "A": {
+      "nation": "FR",
+      "ships": [
+        "strasbourg",
+        "dunkerque",
+        "bretagne",
+        "provence",
+        "mogador",
+        "le_terrible"
+      ],
+      "positions": [
+        {
+          "x": 0.22,
+          "y": 0.78,
+          "angle": 45
+        },
+        {
+          "x": 0.16,
+          "y": 0.82,
+          "angle": 45
+        },
+        {
+          "x": 0.1,
+          "y": 0.86,
+          "angle": 45
+        },
+        {
+          "x": 0.16,
+          "y": 0.9,
+          "angle": 45
+        },
+        {
+          "x": 0.28,
+          "y": 0.74,
+          "angle": 45
+        },
+        {
+          "x": 0.3,
+          "y": 0.84,
+          "angle": 45
+        }
+      ]
+    },
+    "B": {
+      "nation": "RN",
+      "ships": [
+        "hood",
+        "valiant",
+        "revenge",
+        "ark_royal",
+        "dido",
+        "javelin"
+      ],
+      "positions": [
+        {
+          "x": 0.5,
+          "y": 0.22,
+          "angle": 200
+        },
+        {
+          "x": 0.44,
+          "y": 0.18,
+          "angle": 200
+        },
+        {
+          "x": 0.38,
+          "y": 0.14,
+          "angle": 200
+        },
+        {
+          "x": 0.62,
+          "y": 0.12,
+          "angle": 200
+        },
+        {
+          "x": 0.56,
+          "y": 0.26,
+          "angle": 200
+        },
+        {
+          "x": 0.46,
+          "y": 0.3,
+          "angle": 200
+        }
+      ]
+    }
+  },
+  "sides": [
+    {
+      "force": "B",
+      "label": "H 部隊で港を砲撃",
+      "objective": "SinkTargets",
+      "targets": [
+        "bretagne",
+        "dunkerque"
+      ],
+      "timeLimitSec": 300,
+      "brief": "港の戦艦ブルターニュとダンケルクを撃沈せよ。"
+    },
+    {
+      "force": "A",
+      "label": "ストラスブールで脱出",
+      "objective": "Breakthrough",
+      "zone": {
+        "x": 0.92,
+        "y": 0.12,
+        "r": 0.06,
+        "label": "トゥーロン方面"
+      },
+      "timeLimitSec": 300,
+      "brief": "英艦隊の砲火をかわし、北東のトゥーロン方面へ逃れよ。"
+    }
+  ]
+}

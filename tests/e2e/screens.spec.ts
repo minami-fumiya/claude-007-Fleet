@@ -53,7 +53,7 @@ async function boot(page: Page, layout: string, save: object = SAVE, lastSeen = 
   await page.waitForFunction(() => (window as GameWindow).game !== undefined, null, { timeout: 60_000 });
   await page.evaluate(([s, seen, extra]) => {
     const data = s as typeof SAVE;
-    localStorage.setItem('ww2fleet.progress.v2', JSON.stringify({ ...data, nations: { IJN: { ...data.nations.IJN, regenAt: Date.now() } } }));
+    localStorage.setItem('ww2fleet.progress.v2', JSON.stringify({ ...data, nations: { ...data.nations, IJN: { ...data.nations.IJN, regenAt: Date.now() } } }));
     localStorage.setItem('ww2fleet.settings.v1', JSON.stringify({ ...(extra as object), lastSeenVersion: seen }));
   }, [save, lastSeen, settings] as const);
   await page.reload();
@@ -1438,4 +1438,42 @@ test('表示 (0.0.51): the light theme draws every menu screen, and readings fol
   // 横須賀鎮守府〈ちんじゅふ〉 on the home screen; never on a button label.
   expect(texts.some((t) => t.includes('鎮守府〈ちんじゅふ〉'))).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('史実 (0.0.51): France, the Soviet Union and Italy each have battles of their own that start (#317)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  for (const [nation, id] of [['FR', 'mers-el-kebir'], ['SU', 'tallinn'], ['RM', 'second-sirte']] as const) {
+    // The nation being played picks the scenarios (#224).
+    const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS, current: nation, nations: { ...SAVE.nations, [nation]: { ...SAVE.nations.IJN, ships: [], campaign: [], regenAt: Date.now() } } });
+    await open(page, 'ScenarioScene');
+    const listed = await page.evaluate(([scId, n]) => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as {
+        scenarios: Array<{ id: string; forces: Record<string, { nation: string }>; sides: Array<{ force: string }> }>; selected: number; side: number; refresh(): void;
+      };
+      s.selected = Math.max(0, s.scenarios.findIndex((x) => x.id === scId));
+      const sc = s.scenarios[s.selected];
+      // The side of the navy being played.
+      s.side = sc.sides.findIndex((d) => sc.forces[d.force].nation === n);
+      s.refresh();
+      return s.scenarios.map((x) => x.id);
+    }, [id, nation] as const);
+    expect(listed, nation).toContain(id);
+    await page.screenshot({ path: info.outputPath(`scenarios-${nation}.png`) });
+    expect(await overflowingTexts(page, 'ScenarioScene'), `${nation} (${layout})`).toEqual([]);
+    await page.evaluate(() => {
+      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ScenarioScene') as unknown as { scenarios: unknown[]; selected: number; start(sc: unknown): void };
+      s.start(s.scenarios[s.selected]);
+    });
+    await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+    await page.waitForTimeout(1500);
+    const sizes = await page.evaluate(() => {
+      const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { escorts: unknown[]; enemies: unknown[] };
+      return { mine: b.escorts.length + 1, enemy: b.enemies.length };
+    });
+    expect(sizes.mine, nation).toBeGreaterThan(0);
+    expect(sizes.enemy, nation).toBeGreaterThan(0);
+    await page.screenshot({ path: info.outputPath(`scenario-battle-${nation}.png`) });
+    expect(errors, nation).toEqual([]);
+  }
 });

@@ -11,6 +11,8 @@ import usn from '@/data/ships/usn.json';
 import km from '@/data/ships/km.json';
 import rn from '@/data/ships/rn.json';
 import rm from '@/data/ships/rm.json';
+import fr from '@/data/ships/fr.json';
+import su from '@/data/ships/su.json';
 import { onIsland, resolveMap } from '@/systems/MapSystem';
 import { IMapData } from '@/types/Map';
 import openSea from '@/data/maps/open-sea.json';
@@ -19,7 +21,7 @@ import strait from '@/data/maps/strait.json';
 import atoll from '@/data/maps/atoll.json';
 import convoyRoute from '@/data/maps/convoy-route.json';
 
-const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...rm.ships] as IShipData[]);
+const registry = new ShipRegistry([...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...rm.ships, ...fr.ships, ...su.ships] as IShipData[]);
 const SCENARIOS: IScenario[] = sortScenarios(ALL_SCENARIOS);
 const MAPS = new Map(([openSea, archipelago, strait, atoll, convoyRoute] as IMapData[]).map((m) => [m.id, m]));
 
@@ -71,9 +73,9 @@ describe('ScenarioSystem', () => {
     }
   });
 
-  it('thirteen scenarios, oldest first, each in a theater, at most 8 ships a side; the big battles at 6 or more (#71)', () => {
-    expect(SCENARIOS).toHaveLength(13);
-    expect(new Set(SCENARIOS.map((x) => x.id)).size).toBe(13);
+  it('nineteen scenarios (#317: France, the Soviet Union and Italy too), oldest first, each in a theater, at most 8 ships a side; the big battles at 6 or more (#71)', () => {
+    expect(SCENARIOS).toHaveLength(19);
+    expect(new Set(SCENARIOS.map((x) => x.id)).size).toBe(19);
     const months = SCENARIOS.map((x) => scenarioMonth(x.date));
     expect(months.every((m) => m > 193900)).toBe(true);
     expect(months).toEqual([...months].sort((a, b) => a - b));
@@ -86,7 +88,9 @@ describe('ScenarioSystem', () => {
       expect(Math.min(sc.forces.A.ships.length, sc.forces.B.ships.length), id).toBeGreaterThanOrEqual(6);
     }
     expect(scenariosIn(SCENARIOS, 'pacific').length).toBeGreaterThanOrEqual(6);
-    expect(scenariosIn(SCENARIOS, 'all')).toHaveLength(13);
+    expect(scenariosIn(SCENARIOS, 'all')).toHaveLength(19);
+    // Every navy has battles of its own to play (#317).
+    for (const n of ['IJN', 'USN', 'KM', 'RN', 'FR', 'SU', 'RM']) expect(playableScenarios(SCENARIOS, n).length, n).toBeGreaterThanOrEqual(2);
   });
 
   it('fleets where both sides must sink the other are within a factor of two in hull strength', () => {

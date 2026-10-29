@@ -1,0 +1,126 @@
+{
+  "id": "sevastopol-run",
+  "name": "セヴァストポリ輸送作戦",
+  "date": "1942年6月",
+  "history": {
+    "winner": "A",
+    "lost": {
+      "A": 0,
+      "B": 0
+    },
+    "text": "ソ連の成功。タシュケントは兵と弾薬を届け、負傷者を乗せて戻った。帰路に 300 発以上の爆弾を受けて大破したが、ノヴォロシースクへ着いた"
+  },
+  "theater": "blacksea",
+  "description": "包囲されたセヴァストポリへ、黒海艦隊の艦は夜ごとに兵と物資を運んだ。嚮導駆逐艦タシュケントの最後の輸送では、爆撃機の大群に襲われながら港を出入りした。(ドイツ空軍の爆撃機と黒海のイタリア魚雷艇は、イタリアの駆逐艦と潜水艦が代役)",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Night",
+  "forces": {
+    "A": {
+      "nation": "SU",
+      "ships": [
+        "tashkent",
+        "molotov",
+        "kharkov",
+        "soobrazitelny",
+        "sposobny"
+      ],
+      "positions": [
+        {
+          "x": 0.1,
+          "y": 0.82,
+          "angle": 45
+        },
+        {
+          "x": 0.06,
+          "y": 0.88,
+          "angle": 45
+        },
+        {
+          "x": 0.14,
+          "y": 0.9,
+          "angle": 45
+        },
+        {
+          "x": 0.04,
+          "y": 0.78,
+          "angle": 45
+        },
+        {
+          "x": 0.18,
+          "y": 0.84,
+          "angle": 45
+        }
+      ]
+    },
+    "B": {
+      "nation": "RM",
+      "ships": [
+        "aviere",
+        "maestrale",
+        "libeccio",
+        "grecale",
+        "marcello"
+      ],
+      "positions": [
+        {
+          "x": 0.5,
+          "y": 0.4,
+          "angle": 225
+        },
+        {
+          "x": 0.58,
+          "y": 0.34,
+          "angle": 225
+        },
+        {
+          "x": 0.42,
+          "y": 0.5,
+          "angle": 225
+        },
+        {
+          "x": 0.66,
+          "y": 0.46,
+          "angle": 225
+        },
+        {
+          "x": 0.5,
+          "y": 0.6,
+          "angle": 225
+        }
+      ]
+    }
+  },
+  "sides": [
+    {
+      "force": "A",
+      "label": "タシュケントで輸送",
+      "objective": "Breakthrough",
+      "zone": {
+        "x": 0.9,
+        "y": 0.12,
+        "r": 0.06,
+        "label": "セヴァストポリ"
+      },
+      "timeLimitSec": 300,
+      "brief": "嚮導駆逐艦タシュケントを北東のセヴァストポリへ送り届けよ。"
+    },
+    {
+      "force": "B",
+      "label": "輸送を阻む",
+      "objective": "PreventEscape",
+      "targets": [
+        "tashkent"
+      ],
+      "zone": {
+        "x": 0.9,
+        "y": 0.12,
+        "r": 0.06,
+        "label": "セヴァストポリ"
+      },
+      "timeLimitSec": 300,
+      "enemyGoesForZone": true,
+      "brief": "タシュケントがセヴァストポリへ着く前に撃沈せよ。"
+    }
+  ]
+}

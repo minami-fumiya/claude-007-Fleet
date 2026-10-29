@@ -345,12 +345,12 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('nations', '連合章', 'special', [2, 4, 7], (g) => `${g} か国で艦隊を率いる`, (_r, c) => c.nationsPlayed ?? 0),
   ...ladder('torpedo_squadron', '水雷戦隊章', 'special', [10, 50], (g) => `駆逐艦が旗艦の艦隊で ${g} 回勝利する`, (_r, c) => total(c, 'ddFlagWin')),
   ...ladder('drill', '演習章', 'special', [20, 100], (g) => `演習で ${g} 回勝利する`, (_r, c) => total(c, 'exerciseWin')),
-  ...ladder('historian', '戦史章', 'special', [3, 6, 10], (g) => `史実のシナリオを ${g} 種類勝利する`, (r) => scenarioWins(r).won),
+  ...ladder('historian', '戦史章', 'special', [3, 6, 10, ALL_SCENARIOS.length], (g) => `史実のシナリオを ${g} 種類勝利する`, (r) => scenarioWins(r).won),
   ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
   ...ladder('history_battles', '史実従軍章', 'special', [10, 50], (g) => `史実のシナリオで ${g} 回勝利する`, (r) => r.byMode?.scenario?.victories ?? 0),
   ...ladder('overturn', '史実を覆す章', 'special', [3, ALL_SCENARIOS.filter((sc) => sc.history && sc.history.winner !== 'draw').length], (g) => `史実で負けた側で、史実のシナリオ ${g} 種類に勝利する`, (r) => overturnedCount(r)),
   { id: 'chronicler', name: '歴史家章', description: `史実のシナリオ ${ALL_SCENARIOS.length} 種類すべてを両方の陣営で遊ぶ`, category: 'special', value: (r) => bothSidesPlayed(r), goal: ALL_SCENARIOS.length },
-  ...([['pacific', '太平洋'], ['atlantic', '大西洋'], ['mediterranean', '地中海'], ['arctic', '北極海']] as const).map(([t, name]): IMedalRule => ({
+  ...([['pacific', '太平洋'], ['atlantic', '大西洋'], ['mediterranean', '地中海'], ['arctic', '北極海'], ['baltic', 'バルト海'], ['blacksea', '黒海']] as const).map(([t, name]): IMedalRule => ({
     id: `history_${t}`, name: `${name}戦史章`, description: `${name}の史実のシナリオすべてに勝利する`, category: 'special', value: (r) => theaterWins(r, t), goal: 1,
   })),
   ...ladder('unscathed', '無傷章', 'special', [10, 50], (g) => `艦を失わずに ${g} 回勝利する (任務の記録)`, (_r, c) => total(c, 'perfectWin')),
