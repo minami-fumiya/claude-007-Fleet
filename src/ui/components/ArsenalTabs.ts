@@ -17,9 +17,10 @@ const TABS: Array<{ id: ArsenalTab; label: string; scene: string }> = [
 
 /** 研究 / 方針 / 建造 / 設計 / 開発 tabs in the top-right corner of the arsenal screens; each tab is its own scene. */
 export function addArsenalTabs(scene: Phaser.Scene, active: ArsenalTab): UIButton[] {
-  const w = IS_PORTRAIT ? 92 : 100;
+  // Five tabs (#49 #51): narrow enough in landscape to clear the screen titles in the middle.
+  const w = IS_PORTRAIT ? 92 : 84;
   const h = IS_PORTRAIT ? 60 : 44;
-  const gap = 8;
+  const gap = IS_PORTRAIT ? 8 : 6;
   const y = IS_PORTRAIT ? 46 : 44;
   return TABS.map((t, i) => {
     const x = CANVAS_W - 16 - w / 2 - (TABS.length - 1 - i) * (w + gap);
