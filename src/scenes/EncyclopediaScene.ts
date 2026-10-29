@@ -491,9 +491,15 @@ export class EncyclopediaScene extends Phaser.Scene {
       y += 26;
     }
     // The crew of an owned ship of the nation being played: morale (#54) and proficiency.
+    // 艦の固有スキル (#58): portrait has no room for a section, so its name rides the crew line (the effect is in the fleet builder).
+    const own = shipSkillOf(ship.id);
+    const skillTag = own && IS_PORTRAIT ? `  ·  ★ ${own.name}` : '';
     if (owned && this.nation === loadSave().current) {
       const p = loadProgress();
-      this.track(this.add.text(x, y, `${moraleLabel(moraleOf(p, ship.id, Date.now()))}  ·  練度 ${p.proficiency[ship.id] ?? 0}`, textStyle(12, Css.muted)));
+      this.track(this.add.text(x, y, `${moraleLabel(moraleOf(p, ship.id, Date.now()))}  ·  練度 ${p.proficiency[ship.id] ?? 0}${skillTag}`, textStyle(12, Css.muted)));
+      y += 22;
+    } else if (skillTag) {
+      this.track(this.add.text(x, y, `★ 固有スキル「${own?.name ?? ''}」`, textStyle(12, Css.gold)));
       y += 22;
     }
     y += 8;
@@ -518,10 +524,10 @@ export class EncyclopediaScene extends Phaser.Scene {
     const kindMods = modifierLines(combineModifiers(midModifiers(ship)));
     if (kindMods.length > 0) y = this.section(y, `艦種の特性 — ${midLabel(midClass(ship))}`, kindMods.join('・'), Css.cyan);
     // 艦の固有スキル (#58): from the ship's own history, stronger from 改二.
-    const own = shipSkillOf(ship.id);
-    if (own) {
+    if (own && !IS_PORTRAIT) {
       const stage = this.nation === loadSave().current ? loadProgress().refits[ship.id] ?? 0 : 0;
-      y = this.section(y, `艦の固有スキル「${own.name}」`, `${skillText(own, stage)}\n${own.origin}${stage >= SKILL_REMODEL_STAGE ? '  (改二で強化済み)' : '  (改二で 1.5 倍)'}`, Css.gold);
+      const body = `${skillText(own, stage)}\n${own.origin}`;
+      y = this.section(y, `艦の固有スキル「${own.name}」${stage >= SKILL_REMODEL_STAGE ? '  改二で強化済み' : '  改二で 1.5 倍'}`, body, Css.gold);
     }
     // The class's other ships (#85): same performance, other names.
     // The class, its hull number (#246) and the other ships of it, by name once owned (#245).

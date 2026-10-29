@@ -20,6 +20,8 @@ interface IRect { x: number; y: number; w: number; h: number }
 
 /** The right panel (#92 #137): medals, the career figures, titles or the resource ledger. */
 type RecordView = 'medals' | 'career' | 'titles' | 'ledger';
+/** Where a view's heading sits (#92): portrait puts it under the four view buttons, which fill the top row. */
+const HEAD_Y = IS_PORTRAIT ? 66 : 18;
 const VIEW_LABEL: Record<RecordView, string> = { medals: '勲章', career: '記録', titles: '称号', ledger: '資源の収支' };
 
 const L = IS_PORTRAIT
@@ -95,7 +97,7 @@ export class RecordScene extends Phaser.Scene {
   private buildCareer(): void {
     const p = L.medals;
     const c = loadProgress().record.career ?? emptyCareer();
-    this.track(this.add.text(p.x + 22, p.y + 18, '通算の記録', eyebrowStyle(11)));
+    this.track(this.add.text(p.x + 22, p.y + HEAD_Y, '通算の記録', eyebrowStyle(11)));
     const rate = (hits: number, fired: number): string => {
       const r = hitRate(hits, fired);
       return r === undefined ? '—' : `${r}%`;
@@ -116,7 +118,7 @@ export class RecordScene extends Phaser.Scene {
       ['最も早い勝利', time(c.fastestWinSec)],
       ['1 戦の最多撃沈', `${c.mostSunk} 隻`],
     ];
-    const top = p.y + (IS_PORTRAIT ? 80 : 64);
+    const top = p.y + (IS_PORTRAIT ? 104 : 64);
     const rowH = Math.min(IS_PORTRAIT ? 44 : 38, (p.h - (top - p.y) - 50) / rows.length);
     const g = this.track(this.add.graphics());
     rows.forEach(([label, value], i) => {
@@ -136,13 +138,13 @@ export class RecordScene extends Phaser.Scene {
     const p = L.medals;
     const record = loadProgress().record;
     const earned = earnedTitles(record.medals);
-    this.track(this.add.text(p.x + 22, p.y + 18, `称号  ·  ${earned.length} / ${TITLES.length}`, eyebrowStyle(11)));
+    this.track(this.add.text(p.x + 22, p.y + HEAD_Y, `称号  ·  ${earned.length} / ${TITLES.length}`, eyebrowStyle(11)));
     const cols = L.medalCols;
     const rowsPerPage = 6;
     const perPage = cols * rowsPerPage;
     const pages = Math.max(1, Math.ceil(TITLES.length / perPage));
     this.titlePage = Math.min(this.titlePage, pages - 1);
-    const top = p.y + (IS_PORTRAIT ? 80 : 64);
+    const top = p.y + (IS_PORTRAIT ? 104 : 64);
     const navH = IS_PORTRAIT ? 52 : 36;
     const gap = 10;
     const cw = (p.w - 44 - gap * (cols - 1)) / cols;
@@ -194,12 +196,12 @@ export class RecordScene extends Phaser.Scene {
     const p = L.medals;
     const now = Date.now();
     const totals = ledgerTotals(loadProgress().ledger, now);
-    this.track(this.add.text(p.x + 22, p.y + 18, `資源の収支  ·  直近 ${LEDGER_HOURS} 時間`, eyebrowStyle(11)));
+    this.track(this.add.text(p.x + 22, p.y + HEAD_Y, `資源の収支  ·  直近 ${LEDGER_HOURS} 時間`, eyebrowStyle(11)));
     const rows: Array<{ cat: LedgerCategory | 'net'; sign: 1 | -1 }> = [
       ...INCOME.filter((c) => totals[c]).map((c) => ({ cat: c, sign: 1 as const })),
       ...SPENDING.filter((c) => totals[c]).map((c) => ({ cat: c, sign: -1 as const })),
     ];
-    const top = p.y + (IS_PORTRAIT ? 74 : 62);
+    const top = p.y + (IS_PORTRAIT ? 98 : 62);
     if (rows.length === 0) {
       this.track(this.add.text(p.x + p.w / 2, p.y + p.h / 2, 'まだ記録がありません\n(戦闘・建造・修理などをすると記録されます)', textStyle(14, Css.dim, { align: 'center' })).setOrigin(0.5));
       return;
@@ -326,9 +328,9 @@ export class RecordScene extends Phaser.Scene {
     const record = loadProgress().record;
     const ctx = medalContext(loadSave());
     const rate = Math.round((earned.filter((id) => MEDALS.some((m) => m.id === id)).length / MEDALS.length) * 100);
-    this.track(this.add.text(p.x + 22, p.y + 18, `勲章  ·  ${earned.length} / ${MEDALS.length}  ·  達成率 ${rate}%`, eyebrowStyle(11)));
+    this.track(this.add.text(p.x + 22, p.y + HEAD_Y, `勲章  ·  ${earned.length} / ${MEDALS.length}  ·  達成率 ${rate}%`, eyebrowStyle(11)));
     const cats = Object.keys(MEDAL_CATEGORY_LABEL) as MedalCategory[];
-    const top = p.y + (IS_PORTRAIT ? 70 : 56);
+    const top = p.y + (IS_PORTRAIT ? 94 : 56);
     const ctw = (p.w - 44 - 6 * (cats.length - 1)) / cats.length;
     const cth = IS_PORTRAIT ? 44 : 30;
     cats.forEach((c, i) => {
