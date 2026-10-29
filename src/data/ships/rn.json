@@ -1638,6 +1638,127 @@
       "year": 1940,
       "description": "U 級潜水艦の同型艦。性能はアップホルダーと同じ。",
       "sisterOf": "upholder"
+    },
+    {
+      "id": "temeraire",
+      "no": 1401019,
+      "name": "テメレーア (Temeraire)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "subtype": "FastBattleship",
+      "hp": 820,
+      "armor": 61,
+      "speed": 150,
+      "weapons": [
+        "16in_mk2",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "temeraire",
+      "fictional": true,
+      "description": "ライオン級戦艦の 2 番艦。1939 年に起工されたが、戦争中に工事は止まった (未成艦)。",
+      "year": 1946
+    },
+    {
+      "id": "malta_cv",
+      "no": 1409006,
+      "name": "マルタ (Malta)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "hp": 560,
+      "armor": 34,
+      "speed": 160,
+      "weapons": [
+        "4_5in_mk1"
+      ],
+      "spriteKey": "malta_cv",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 4,
+        "torpedoBombers": 5
+      },
+      "fictional": true,
+      "description": "英国で最大となるはずだった大型空母。4 隻が発注されたが、終戦で取り消された (計画艦)。",
+      "year": 1947
+    },
+    {
+      "id": "audacious",
+      "no": 1409005,
+      "name": "オーディシャス (Audacious)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "subtype": "ArmoredCarrier",
+      "hp": 530,
+      "armor": 40,
+      "speed": 155,
+      "weapons": [
+        "4_5in_mk1"
+      ],
+      "spriteKey": "audacious",
+      "airWing": {
+        "fighters": 5,
+        "diveBombers": 4,
+        "torpedoBombers": 4
+      },
+      "fictional": true,
+      "description": "装甲空母の拡大型。戦争中に起工され、完成は戦後になった (未成艦)。",
+      "year": 1946
+    },
+    {
+      "id": "daring",
+      "no": 1407016,
+      "name": "ダーリング (Daring)",
+      "nation": "RN",
+      "shipClass": "Destroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 250,
+      "weapons": [
+        "4_5in_mk1",
+        "mk8_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "daring",
+      "fictional": true,
+      "description": "大戦末期に設計された大型駆逐艦。完成は戦後になった (未成艦)。",
+      "year": 1946
+    },
+    {
+      "id": "incomparable",
+      "no": 1402004,
+      "name": "インコンパラブル (Incomparable)",
+      "nation": "RN",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 700,
+      "armor": 40,
+      "speed": 185,
+      "weapons": [
+        "15in_mk1",
+        "4_5in_mk1"
+      ],
+      "spriteKey": "incomparable",
+      "fictional": true,
+      "description": "フィッシャー提督が第一次大戦中に構想した、20 インチ砲の超大型巡洋戦艦。設計案だけで終わった (計画艦)。",
+      "year": 1918
+    },
+    {
+      "id": "neptune_1944",
+      "no": 1405022,
+      "name": "ネプチューン (Neptune, 1944)",
+      "nation": "RN",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 410,
+      "armor": 36,
+      "speed": 175,
+      "weapons": [
+        "6in_mk23",
+        "mk8_torpedo"
+      ],
+      "spriteKey": "neptune_1944",
+      "fictional": true,
+      "description": "6 インチ砲 12 門を持つ大型巡洋艦の計画。終戦で取り消された (計画艦)。",
+      "year": 1946
     }
   ]
 }

@@ -47,7 +47,9 @@ export const HOME_MENU: IHomeMenuTab[] = [
   {
     id: 'arsenal', label: '工廠', items: [
       { label: '研究', caption: '艦種と装備', scene: SceneKeys.ARSENAL, variant: 'primary' },
-      { label: '建造', caption: '新しい艦と解体', scene: SceneKeys.SHIPYARD, variant: 'primary' },
+      // 国家方針 (#49): the navy's course, which opens the planned ships (#309)
+      { label: '方針', caption: '国の進む道', scene: SceneKeys.FOCUS, variant: 'primary' },
+      { label: '建造', caption: '建造と設計', scene: SceneKeys.SHIPYARD, variant: 'primary' },
       // 装備の開発 (#55)
       { label: '開発', caption: '装備を作る', scene: SceneKeys.DEVELOP, variant: 'primary' },
       // ゴールドとショップ (#183)

@@ -3,6 +3,8 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { baseState, nationBases } from './BaseSystem';
 import { claimableCount } from './QuestSystem';
 import { sweepCharges } from './SweepSystem';
+import { focusStatus, focusTree } from './NationFocusSystem';
+import { rankOf } from './RankSystem';
 
 /**
  * お知らせ (#192, pure): what the admiral can do right now, for the strip on the home screen. Builds, repairs and
@@ -10,7 +12,7 @@ import { sweepCharges } from './SweepSystem';
  * empty docks and a base ready to be built (captain books left the strip in 0.0.40, #303: the captain screen shows them).
  */
 
-export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions';
+export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus';
 
 export interface IPendingItem {
   id: PendingId;
@@ -35,6 +37,16 @@ export function pendingSummary(progress: IProgress, now: number, freeDocks: numb
     { id: 'baseWork', label: '軍港・基地の工事', count: basesReady, scene: SceneKeys.BASE },
     // 遠征 (#41): expeditions back, to take home.
     { id: 'expeditions', label: '遠征帰還', count: (progress.expeditions ?? []).filter((r) => r.endsAt <= now).length, scene: SceneKeys.EXPEDITION },
+    // 国家方針 (#49): none under way while one could start.
+    { id: 'focus', label: '方針', count: focusReady(progress), scene: SceneKeys.FOCUS },
   ];
   return items.filter((i) => i.count > 0);
+}
+
+/** 1 when no national focus is under way and one could start now. */
+function focusReady(progress: IProgress): number {
+  const focus = progress.focus ?? { done: [], current: null };
+  if (focus.current) return 0;
+  const rank = rankOf(progress).index;
+  return focusTree(progress.nation).some((n) => focusStatus(progress.nation, focus, n.id, rank, progress.resources) === 'ready') ? 1 : 0;
 }

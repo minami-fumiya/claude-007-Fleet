@@ -703,6 +703,105 @@
       "year": 1929,
       "description": "ケーニヒスベルク級軽巡洋艦の同型艦。性能はケーニヒスベルクと同じ。",
       "sisterOf": "koenigsberg"
+    },
+    {
+      "id": "peter_strasser",
+      "no": 1309002,
+      "name": "ペーター・シュトラッサー (Peter Strasser)",
+      "nation": "KM",
+      "shipClass": "Carrier",
+      "hp": 485,
+      "armor": 32,
+      "speed": 150,
+      "weapons": [
+        "15cm_skc28"
+      ],
+      "spriteKey": "peter_strasser",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 3
+      },
+      "fictional": true,
+      "description": "グラーフ・ツェッペリンの姉妹艦。1938 年に起工されたが、工事は途中で止まり解体された (未成艦)。",
+      "year": 1944
+    },
+    {
+      "id": "europa_cv",
+      "no": 1309003,
+      "name": "ヨーロッパ (Europa)",
+      "nation": "KM",
+      "shipClass": "Carrier",
+      "hp": 500,
+      "armor": 22,
+      "speed": 160,
+      "weapons": [
+        "15cm_skc28"
+      ],
+      "spriteKey": "europa_cv",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 3
+      },
+      "fictional": true,
+      "description": "大西洋航路の客船ヨーロッパを空母に改める計画。実行されなかった (計画艦)。",
+      "year": 1944
+    },
+    {
+      "id": "z46",
+      "no": 1307016,
+      "name": "Z46 (1936C 型)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "hp": 230,
+      "armor": 15,
+      "speed": 235,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "z46",
+      "fictional": true,
+      "description": "両用砲を積む 1936C 型駆逐艦。建造中に空襲で損傷し、完成しなかった (未成艦)。",
+      "year": 1945
+    },
+    {
+      "id": "m_class",
+      "no": 1305006,
+      "name": "M 級軽巡洋艦 (M-class)",
+      "nation": "KM",
+      "shipClass": "Cruiser",
+      "subtype": "LightCruiser",
+      "hp": 360,
+      "armor": 30,
+      "speed": 185,
+      "weapons": [
+        "15cm_skc25",
+        "g7a_torpedo"
+      ],
+      "spriteKey": "m_class",
+      "fictional": true,
+      "description": "Z 計画で通商破壊用に計画された軽巡洋艦。2 隻が起工されたが、開戦で工事は止まった (未成艦)。",
+      "year": 1944
+    },
+    {
+      "id": "u_xviii",
+      "no": 1312004,
+      "name": "XVIII 型 U ボート (Type XVIII)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "hp": 160,
+      "armor": 6,
+      "speed": 170,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_xviii",
+      "fictional": true,
+      "description": "ヴァルター機関で水中を高速で進む計画の潜水艦。2 隻が建造中に止まった (未成艦)。",
+      "year": 1945
     }
   ]
 }

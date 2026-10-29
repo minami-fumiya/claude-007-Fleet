@@ -71,7 +71,7 @@ describe('ship classes and hull order (#246)', () => {
 
 describe('what is out of reach stays nameless (#245)', () => {
   it('the shipyard hides ships locked by research, rank, medal, or kept for a reward', () => {
-    const hidden: BuildState[] = ['reward', 'research', 'fictional', 'rank', 'medal'];
+    const hidden: BuildState[] = ['reward', 'research', 'focus', 'rank', 'medal'];
     const shown: BuildState[] = ['owned', 'building', 'ready', 'resources', 'dock'];
     for (const s of hidden) expect(buildNameShown(s), s).toBe(false);
     for (const s of shown) expect(buildNameShown(s), s).toBe(true);
@@ -92,7 +92,7 @@ describe('the shipyard card look (#262)', () => {
     expect(buildLook('building')).toBe('building');
     expect(buildLook('resources')).toBe('grey');
     expect(buildLook('dock')).toBe('grey');
-    for (const s of ['reward', 'research', 'fictional', 'rank', 'medal'] as BuildState[]) expect(buildLook(s), s).toBe('hidden');
+    for (const s of ['reward', 'research', 'focus', 'rank', 'medal'] as BuildState[]) expect(buildLook(s), s).toBe('hidden');
     expect(shortfall({ fuel: 50, ammo: 500, steel: 100, bauxite: 0 }, { fuel: 100, ammo: 100, steel: 220 })).toEqual({ fuel: 50, ammo: 0, steel: 120, bauxite: 0 });
   });
 });

@@ -1,9 +1,13 @@
-import { IShipData, ShipSubtype } from '@/types/Ship';
+import { IShipData, isHistorical, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH, MID_BUILD_TECH } from './ResearchSystem';
+import { fragmentNeed } from './ForeignShipSystem';
+import { NATION_INFO } from '@/config/NationInfo';
+import { Nation } from '@/types/Nation';
+import { EMPTY_FOCUS, focusBuildMul, focusUnlocks, unlockingFocus } from './NationFocusSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
 import { assignShips, baseOfProgress, buildMultiplier, currentBaseId, dockTotal, scaleCost } from './BaseSystem';
 import { ESCORT_COST_MUL, ESCORT_TIME_MUL, isLightCruiser, MidClass, midClass } from './ShipKind';
@@ -44,9 +48,8 @@ export function isBuildTech(id: string): boolean {
 export const GRADE_HP = [250, 400, 520, 700, 780];
 export const MAX_GRADE = GRADE_HP.length;
 
-/** Grade 0 (destroyers, submarines) .. 5 (the largest battleships and every fictional design). */
+/** Grade 0 (destroyers, submarines) .. 5 (the largest battleships); planned ships too go by their size (#309). */
 export function shipGrade(ship: IShipData): number {
-  if (ship.fictional) return MAX_GRADE;
   return GRADE_HP.filter((hp) => ship.hp > hp).length;
 }
 
@@ -72,7 +75,8 @@ const COST_PER_HP: Record<ShipClass, IResources> = {
   [ShipClass.Battleship]: { fuel: 1.2, ammo: 1.5, steel: 1.8, bauxite: 0.1 },
 };
 const ARMOR_HP = 5;
-const FICTIONAL_COST_MUL = 1.3;
+/** 架空艦計画 (#309): the research makes planned ships and designs this much cheaper. */
+export const PLANNED_COST_MUL = 0.85;
 /** The own superweapon (#148) costs half again as much as its size says. */
 const BLUEPRINT_COST_MUL = 1.5;
 /** Light cruisers are cheaper to build than heavy ones (#37). */
@@ -81,7 +85,7 @@ const LIGHT_CRUISER_COST_MUL = 0.85;
 /** Build cost from the ship's class, HP and armour (rounded to tens). */
 export function buildCost(ship: IShipData): IResources {
   const k = COST_PER_HP[ship.shipClass] ?? COST_PER_HP[ShipClass.Cruiser];
-  const mul = (ship.fictional ? FICTIONAL_COST_MUL : 1) * (ship.blueprint ? BLUEPRINT_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_COST_MUL : 1);
+  const mul = (ship.blueprint ? BLUEPRINT_COST_MUL : 1) * (isLightCruiser(ship) ? LIGHT_CRUISER_COST_MUL : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_COST_MUL : 1);
   const size = { fuel: ship.hp, ammo: ship.hp, steel: ship.hp + ship.armor * ARMOR_HP, bauxite: ship.hp };
   const out = resources();
   for (const key of RESOURCE_KEYS) out[key] = Math.round((k[key] * size[key] * mul) / 10) * 10;
@@ -89,9 +93,10 @@ export function buildCost(ship: IShipData): IResources {
 }
 
 /** Build cost at the admiral's current base (#88), which can make some classes cheaper. */
-export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campaign' | 'merit' | 'rankFloor' | 'basesOpen' | 'facilities'>, ship: IShipData): IResources {
-  // Every open base's build discount adds up (#281).
-  return scaleCost(buildCost(ship), buildMultiplier(baseOfProgress(progress), ship.shipClass));
+export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campaign' | 'merit' | 'rankFloor' | 'basesOpen' | 'facilities'> & Partial<Pick<IProgress, 'research' | 'focus'>>, ship: IShipData): IResources {
+  // Every open base's build discount adds up (#281); national focuses (#49) and the 架空艦計画 research cut it further.
+  const planned = !isHistorical(ship) && (progress.research ?? []).includes(FICTIONAL_TECH) ? PLANNED_COST_MUL : 1;
+  return scaleCost(buildCost(ship), buildMultiplier(baseOfProgress(progress), ship.shipClass) * focusBuildMul(progress.nation, progress.focus ?? EMPTY_FOCUS) * planned);
 }
 
 /**
@@ -99,7 +104,7 @@ export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campa
  * (Japan: 睦月) — not an escort or a reward ship; else its cheapest ship.
  */
 export function starterShip(roster: IShipData[]): IShipData | undefined {
-  const historical = roster.filter((s) => !s.fictional);
+  const historical = roster.filter(isHistorical);
   const destroyers = historical
     .map((s, i) => ({ s, i }))
     .filter(({ s }) => s.shipClass === ShipClass.Destroyer && s.subtype !== ShipSubtype.Escort && !isRewardOnly(s))
@@ -149,15 +154,15 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
-export type BuildState = 'owned' | 'building' | 'reward' | 'blueprint' | 'research' | 'fictional' | 'rank' | 'sister' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
+export type BuildState = 'owned' | 'building' | 'reward' | 'blueprint' | 'research' | 'focus' | 'foreign' | 'rank' | 'sister' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
 
 /**
  * 同型艦は若い番号から (#356): the sister laid down just before `ship` in its class, among the ships that can be built
- * (reward and fictional ships stand outside the order); undefined for a lead or a ship of its own.
+ * (reward, planned and designed ships stand outside the order); undefined for a lead or a ship of its own.
  */
 export function sisterBefore(roster: readonly IShipData[], ship: IShipData): IShipData | undefined {
-  if (isRewardOnly(ship) || ship.fictional) return undefined;
-  const group = shipClasses(roster.filter((s) => classKey(s) === classKey(ship) && !isRewardOnly(s) && !s.fictional))[0];
+  if (isRewardOnly(ship) || !isHistorical(ship)) return undefined;
+  const group = shipClasses(roster.filter((s) => classKey(s) === classKey(ship) && !isRewardOnly(s) && isHistorical(s)))[0];
   const i = group ? group.ships.findIndex((s) => s.id === ship.id) : -1;
   return i > 0 ? group!.ships[i - 1] : undefined;
 }
@@ -206,19 +211,24 @@ const CLASS_SINK_JA: Record<ShipClass, string> = {
 export function buildState(progress: IProgress, roster: IShipData[], ship: IShipData): BuildState {
   if (isOwned(progress, roster, ship.id)) return 'owned';
   if ((progress.builds ?? []).some((b) => b.shipId === ship.id)) return 'building';
-  if (isRewardOnly(ship)) return 'reward';
+  // A planned ship kept for a first clear can also be built once its national focus is done (#309).
+  const opened = ship.fictional && focusUnlocks(progress.nation, progress.focus ?? EMPTY_FOCUS, ship.id);
+  if (isRewardOnly(ship) && !opened) return 'reward';
+  // Another navy's ship waits for enough of its plans (#368).
+  if (ship.foreign && (progress.foreignFragments?.[ship.foreign] ?? 0) < fragmentNeed(ship)) return 'foreign';
   // The own superweapon (#148) waits for its blueprint fragments (#150).
   if (ship.blueprint && (progress.blueprints ?? 0) < BLUEPRINT_NEED) return 'blueprint';
   const tech = buildTechFor(ship);
   if (tech && !progress.research.includes(tech)) return 'research';
-  if (ship.fictional && !progress.research.includes(FICTIONAL_TECH)) return 'fictional';
+  // A planned ship (架空艦) waits for the national focus that opens it (#309).
+  if (ship.fictional && !opened) return 'focus';
   if (!gradeAllowed(shipGrade(ship), rankOf(progress).index)) return 'rank';
   // The sister before it must be built (or on the slip) first (#356).
   const before = sisterBefore(roster, ship);
   if (before && !isOwned(progress, roster, before.id) && !(progress.builds ?? []).some((b) => b.shipId === before.id)) return 'sister';
   const kills = killNeed(ship, progress.record);
   if (kills && kills.have < kills.count) return 'kills';
-  // The biggest battleships and carriers, and the fictional designs, need a medal too (#169).
+  // The biggest battleships and carriers need a medal too (#169).
   if (!hasMedal(progress.record ?? { medals: [] }, shipMedal(ship, shipGrade(ship)))) return 'medal';
   if (!canAfford(progress.resources, buildCostAt(progress, ship))) return 'resources';
   if (docksInUse(progress) >= buildDockCount(progress)) return 'dock';
@@ -226,7 +236,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
 }
 
 /** Short label for a build state, e.g. "要研究: 巡洋艦建造" / "要階級: 少将" / "作戦報酬: 坊ノ岬沖". */
-export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>, roster: readonly IShipData[] = [], blueprints = 0): string {
+export function buildStateLabel(state: BuildState, ship: IShipData, techNames: Record<string, string> = {}, areaNames: Record<string, string> = {}, record?: Pick<IServiceRecord, 'sunk'>, roster: readonly IShipData[] = [], blueprints = 0, foreignHave = 0): string {
   switch (state) {
     case 'owned': return '保有';
     case 'building': return '建造中';
@@ -240,7 +250,8 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
       const id = buildTechFor(ship) ?? '';
       return `要研究: ${techNames[id] ?? id}`;
     }
-    case 'fictional': return `要研究: ${techNames[FICTIONAL_TECH] ?? FICTIONAL_TECH}`;
+    case 'foreign': return `要設計図: ${NATION_INFO[ship.foreign as Nation]?.jaShort ?? ship.foreign} ${Math.min(foreignHave, fragmentNeed(ship))} / ${fragmentNeed(ship)}`;
+    case 'focus': return `要方針: ${unlockingFocus(ship.nation, ship.id)?.name ?? '国家方針'}`;
     case 'rank': return `要階級: ${gradeRankName(shipGrade(ship))}`;
     case 'sister': {
       const before = sisterBefore(roster, ship);
@@ -277,7 +288,7 @@ export const GRADE_MINUTES = 0.5;
 
 export function buildTimeMs(ship: IShipData, timeMul = 1): number {
   const base = isLightCruiser(ship) ? LIGHT_CRUISER_MINUTES : BUILD_MINUTES[ship.shipClass];
-  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.fictional ? 1.5 : 1) * (ship.subtype === ShipSubtype.Escort ? ESCORT_TIME_MUL : 1);
+  const minutes = (base + GRADE_MINUTES * shipGrade(ship)) * (ship.subtype === ShipSubtype.Escort ? ESCORT_TIME_MUL : 1);
   return Math.round(minutes * 60_000 * timeMul);
 }
 

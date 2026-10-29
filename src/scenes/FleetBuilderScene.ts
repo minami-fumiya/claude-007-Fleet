@@ -21,7 +21,6 @@ import { aptitudeFor, assignCaptains, captainFit, SKILL_LABEL, withProgress } fr
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { askShipName } from '@/ui/components/FilterBar';
 import { shipSearchNames } from '@/utils/SearchHistory';
-import { availableShips } from '@/systems/ResearchSystem';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { supplyMul } from '@/systems/BaseSystem';
 import { formatResources } from '@/systems/ResourceSystem';
@@ -565,11 +564,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     buttons.forEach((b, i) => b.setVariant(i === selected ? 'primary' : 'secondary'));
   }
 
-  /** Owned ships of the current nation (#18), with fictional designs still gated by their research. */
+  /** Owned ships of the current nation (#18), designs (#51) among them. */
   private offeredShips(): IShipData[] {
     const progress = loadProgress();
     // By kind, then class by class oldest first, hulls in order (#246).
-    return filterEntries(availableShips(ownedShips(progress, this.shipRegistry.byNation(this.nation)), progress.research), null);
+    return filterEntries(ownedShips(progress, this.shipRegistry.byNation(this.nation)), null);
   }
 
   /** Every owned ship is at hand: ships no longer belong to a base (#281). */

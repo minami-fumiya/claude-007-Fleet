@@ -563,6 +563,85 @@
       "year": 1936,
       "description": "レニングラード級嚮導駆逐艦の同型艦。性能はレニングラードと同じ。",
       "sisterOf": "leningrad"
+    },
+    {
+      "id": "sovetskaya_rossiya",
+      "no": 1601005,
+      "name": "ソビエツカヤ・ロシア (Sovetskaya Rossiya)",
+      "nation": "SU",
+      "shipClass": "Battleship",
+      "hp": 840,
+      "armor": 64,
+      "speed": 140,
+      "weapons": [
+        "406mm_b37",
+        "152mm_b38"
+      ],
+      "spriteKey": "sovetskaya_rossiya",
+      "fictional": true,
+      "description": "ソビエツキー・ソユーズ級戦艦の 3 番艦。1940 年に起工されたが完成しなかった (未成艦)。",
+      "year": 1946
+    },
+    {
+      "id": "kronshtadt",
+      "no": 1602001,
+      "name": "クロンシュタット (Kronshtadt)",
+      "nation": "SU",
+      "shipClass": "Battleship",
+      "subtype": "BattleCruiser",
+      "hp": 660,
+      "armor": 48,
+      "speed": 170,
+      "weapons": [
+        "305mm_obukhov",
+        "152mm_b38"
+      ],
+      "spriteKey": "kronshtadt",
+      "fictional": true,
+      "description": "69 号計画の重巡洋艦 (巡洋戦艦)。1939 年に起工されたが、独ソ戦で工事が止まった (未成艦)。",
+      "year": 1945
+    },
+    {
+      "id": "project72",
+      "no": 1609001,
+      "name": "72 号計画空母 (Project 72)",
+      "nation": "SU",
+      "shipClass": "Carrier",
+      "hp": 520,
+      "armor": 28,
+      "speed": 160,
+      "weapons": [
+        "130mm_b13"
+      ],
+      "spriteKey": "project72",
+      "airWing": {
+        "fighters": 4,
+        "diveBombers": 4,
+        "torpedoBombers": 3
+      },
+      "fictional": true,
+      "description": "戦時中に検討された大型空母の計画。設計案だけで終わった (計画艦)。",
+      "year": 1946
+    },
+    {
+      "id": "kiev_leader",
+      "no": 1607017,
+      "name": "キエフ (Kiev)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "subtype": "LeaderDestroyer",
+      "hp": 235,
+      "armor": 14,
+      "speed": 260,
+      "weapons": [
+        "130mm_b13",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "kiev_leader",
+      "fictional": true,
+      "description": "48 号計画の嚮導駆逐艦。1939 年に起工されたが、戦争で工事が止まった (未成艦)。",
+      "year": 1944
     }
   ]
 }

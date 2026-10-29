@@ -3,6 +3,7 @@ import { completeRepairs } from './DockSystem';
 import { finishBaseWork, IBaseWork } from './BaseSystem';
 import { Facilities, finishFacilities, IFacilityJob, isForwardBaseId } from './FacilitySystem';
 import { IQuestState, QuestEvent, withQuestEvents } from './QuestSystem';
+import { IFocusState, settleFocus } from './NationFocusSystem';
 
 /**
  * Everything that ends with time, in one place (#310, pure): repairs, builds, facility jobs and base construction.
@@ -22,6 +23,8 @@ export interface ITimerState {
   basesOpen?: string[];
   baseWork?: IBaseWork | null;
   quests: IQuestState;
+  /** 国家方針 (#49) */
+  focus?: IFocusState;
 }
 
 export interface ITimersDone {
@@ -33,6 +36,8 @@ export interface ITimersDone {
   facilities: number;
   /** The base whose construction ended, if any */
   base: string | null;
+  /** The national focus that ended, if any (#49) */
+  focus: string | null;
 }
 
 /** Ships whose construction has finished join the fleet (#143), even if the game was closed meanwhile. */
@@ -51,12 +56,15 @@ export function completeTimers<T extends ITimerState>(progress: T, now: number):
   const builds = progress.builds.filter((b) => b.endsAt <= now).map((b) => b.shipId);
   const facilities = progress.facilityJobs.filter((j) => j.endsAt <= now).length;
   const base = progress.baseWork && progress.baseWork.endsAt <= now ? progress.baseWork.base : null;
-  const done: ITimersDone = { repairs, builds, facilities, base };
-  if (repairs.length === 0 && builds.length === 0 && facilities === 0 && base === null) return { progress, done };
+  const settled = progress.focus ? settleFocus(progress.focus, now) : undefined;
+  const focus = settled?.finished ?? null;
+  const done: ITimersDone = { repairs, builds, facilities, base, focus };
+  if (repairs.length === 0 && builds.length === 0 && facilities === 0 && base === null && focus === null) return { progress, done };
   let next: T = { ...progress, ...completeRepairs(progress, now) };
   next = finishBuilds(next, now);
   next = finishFacilities(next, now);
   next = finishBaseWork(next, now);
+  if (focus !== null && settled) next = withQuestEvents({ ...next, focus: settled.state }, [['focusDone', 1]], now);
   // 竣工章 (#264) counts the ships that come out of the yard, wherever the build is noticed.
   if (builds.length > 0) next = withQuestEvents(next, [['buildDone', builds.length]], now);
   if (base !== null) next = withQuestEvents(next, [['baseOpened', 1], ...(isForwardBaseId(base) ? [['forwardBaseOpened', 1] as [QuestEvent, number]] : [])], now);
@@ -67,6 +75,6 @@ export function completeTimers<T extends ITimerState>(progress: T, now: number):
 }
 
 /** "入渠 2 / 建造 1": what a screen of timers drew, so it can tell when a load finished something (#310). */
-export function timerKey(progress: Pick<ITimerState, 'docks' | 'builds' | 'facilityJobs' | 'baseWork'>): string {
-  return `${progress.docks.length}/${progress.builds.length}/${progress.facilityJobs.length}/${progress.baseWork ? 1 : 0}`;
+export function timerKey(progress: Pick<ITimerState, 'docks' | 'builds' | 'facilityJobs' | 'baseWork' | 'focus'>): string {
+  return `${progress.docks.length}/${progress.builds.length}/${progress.facilityJobs.length}/${progress.baseWork ? 1 : 0}/${progress.focus?.current ? 1 : 0}`;
 }

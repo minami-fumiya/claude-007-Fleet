@@ -18,7 +18,7 @@ import weapons from '@/data/weapons/weapons.json';
 
 const W = new Map((weapons.weapons as IWeaponData[]).map((w) => [w.id, w]));
 const EVERY = [...ijn.ships, ...usn.ships, ...km.ships, ...rn.ships, ...fr.ships, ...su.ships, ...rm.ships] as IShipData[];
-/** Historical ships, one per class (sister ships share their lead's performance, #85); fictional ones are a research reward and are checked separately. */
+/** Historical ships, one per class (sister ships share their lead's performance, #85); the planned ones (架空艦, #309) are checked separately. */
 const ALL = EVERY.filter((s) => !s.fictional && !s.sisterOf);
 /** Fictional battleships; fictional carriers (USSR, Italy) only have to keep the hull order. */
 // A planned battlecruiser (O 級, #352) is weighed with the battlecruisers, not against the designed battleships.
@@ -33,6 +33,10 @@ const loadout = (s: IShipData): IWeaponData[] => s.weapons.map((id) => W.get(id)
 const of = (cls: ShipClass): IShipData[] => ALL.filter((s) => s.shipClass === cls);
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 const BB_TARGET = { shipClass: ShipClass.Battleship, armor: 60 };
+/** Each navy's strongest planned battleship (#309): the one the national focus aims at. */
+const TOP_PLANNED = Object.values(Nation)
+  .map((n) => FICTIONAL.filter((s) => s.nation === n).sort((a, b) => b.hp * shipDps(loadout(b), BB_TARGET) - a.hp * shipDps(loadout(a), BB_TARGET))[0])
+  .filter((s): s is IShipData => s !== undefined);
 const DD_TARGET = { shipClass: ShipClass.Destroyer, armor: 15 };
 
 describe('balance', () => {
@@ -116,10 +120,10 @@ describe('balance', () => {
         expect(power(b) / power(a), `${b.id} (${b.year}) vs ${a.id} (${a.year})`).toBeGreaterThanOrEqual(0.8);
       }
     }
-    // A fictional carrier flies more than the best historical one of its 中分類.
+    // A planned carrier (#309) flies at least three quarters of the best historical one of its 中分類.
     for (const f of EVERY.filter((s) => s.fictional && s.shipClass === ShipClass.Carrier)) {
       const best = Math.max(...ALL.filter((s) => s.shipClass === ShipClass.Carrier && midClass(s) === midClass(f)).map(planesOf));
-      expect(planesOf(f), f.id).toBeGreaterThan(best);
+      expect(planesOf(f), f.id).toBeGreaterThanOrEqual(best * 0.75);
     }
   });
 
@@ -147,8 +151,8 @@ describe('balance', () => {
     expect(avg(ShipClass.Cruiser)).toBeGreaterThan(avg(ShipClass.Battleship));
   });
 
-  it('makes each fictional battleship a step above its nation\'s best historical one, but not overwhelming', () => {
-    for (const f of FICTIONAL.filter((x) => !OLD_ONLY.includes(x.nation))) {
+  it('makes each navy\'s strongest planned battleship a step above its best historical one, but not overwhelming', () => {
+    for (const f of TOP_PLANNED.filter((x) => !OLD_ONLY.includes(x.nation))) {
       const rivals = of(ShipClass.Battleship).filter((s) => s.nation === f.nation);
       const best = rivals.sort((a, b) => b.hp * shipDps(loadout(b), BB_TARGET) - a.hp * shipDps(loadout(a), BB_TARGET))[0];
       const r = duelRatio(loadout(f), f, loadout(best), best);
@@ -158,10 +162,10 @@ describe('balance', () => {
     }
   });
 
-  it('keeps the fictional battleships even with each other', () => {
-    expect(FICTIONAL.length).toBe(6);
-    for (const a of FICTIONAL) {
-      for (const b of FICTIONAL) {
+  it('keeps the navies\' strongest planned battleships even with each other', () => {
+    expect(TOP_PLANNED.length).toBe(Object.values(Nation).length);
+    for (const a of TOP_PLANNED) {
+      for (const b of TOP_PLANNED) {
         if (a === b) continue;
         const r = duelRatio(loadout(a), a, loadout(b), b);
         expect(r, `${a.id} vs ${b.id}`).toBeGreaterThan(0.7);

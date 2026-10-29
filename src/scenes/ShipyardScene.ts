@@ -8,13 +8,13 @@ import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/Progress
 import { buildCostAt, buildDockCount, buildsHere, docksInUse, buildState, buildStateLabel, buildTimeMs, completeBuilds, fastBuild, gradeRankName, ownedIds, shipGrade, startBuild } from '@/systems/ShipyardSystem';
 import { clock } from '@/utils/TimeFormat';
 import { holdCap } from '@/systems/FacilitySystem';
-import { availableShips, canResearch, medalMet, MID_BUILD_TECH, prerequisitesMet, rankMet, research } from '@/systems/ResearchSystem';
+import { canResearch, medalMet, MID_BUILD_TECH, prerequisitesMet, rankMet, research } from '@/systems/ResearchSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
 import { formatResources, shortfall } from '@/systems/ResourceSystem';
 import { maxBuildGrade, RANKS, rankOf } from '@/systems/RankSystem';
 import { MID_CLASSES } from '@/systems/ShipKind';
 import { CLASS_JA, CLASS_ORDER, kindLabel } from '@/systems/EncyclopediaSystem';
-import { IShipData } from '@/types/Ship';
+import { IShipData, isHistorical, shipOrigin } from '@/types/Ship';
 import { shipOrder, hullNumber } from '@/systems/ShipOrder';
 import { filterShips, kindsOf } from '@/systems/ListFilter';
 import { shipSearchNames } from '@/utils/SearchHistory';
@@ -161,12 +161,12 @@ export class ShipyardScene extends Phaser.Scene {
     return `建造中  残り ${clock(Math.max(0, left))}${items > 0 ? `  ·  タップで高速建造 (高速建造材 ${items})` : ''}`;
   }
 
-  /** The nation's ships of the selected class (fictional ones only once their research is done), in list order. */
+  /** The nation's ships of the selected class (planned ones and designs among them), in list order. */
   private classRoster(): IShipData[] {
     const progress = loadProgress();
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
     // Class by class, oldest first, hulls in order (#246).
-    return shipOrder(availableShips(roster, progress.research).filter((s) => s.shipClass === this.shipClass));
+    return shipOrder(roster.filter((s) => s.shipClass === this.shipClass));
   }
 
   /** The tab's ships that pass the filter bar (#263). */
@@ -195,7 +195,7 @@ export class ShipyardScene extends Phaser.Scene {
     this.building = progress.builds.length;
     this.bar.refresh(progress.resources, holdCap(progress.facilities));
     CLASS_ORDER.forEach((c, i) => {
-      const all = availableShips(roster, progress.research).filter((s) => s.shipClass === c);
+      const all = roster.filter((s) => s.shipClass === c);
       const have = all.filter((s) => owned.includes(s.id)).length;
       this.tabs[i].setLabel(`${CLASS_JA[c]} ${have}/${all.length}`).setVariant(c === this.shipClass ? 'primary' : 'secondary');
     });
@@ -298,7 +298,7 @@ export class ShipyardScene extends Phaser.Scene {
     const hull = hullNumber(roster, ship);
     const title = shown ? ship.name : hiddenShipName(roster, ship, ownedList);
     const name = this.add.text(pad, 10, title, textStyle(15, lit ? Css.text : Css.dim, { fontStyle: 'bold' }));
-    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
+    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints, ship.foreign ? progress.foreignFragments[ship.foreign] ?? 0 : 0), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
     if (name.width > room) name.setScale(room / name.width);
@@ -307,7 +307,7 @@ export class ShipyardScene extends Phaser.Scene {
     const classLine = `${shown && ship.no ? `${formatNo(ship.no)} · ` : ''}${shown && hull.of > 1 ? `${hull.className} ${hull.number} 番艦 · ` : ''}`;
     // An owned ship can be scrapped (#42): the card says what it gives back.
     const costLine = owned ? (this.scrapArmed === ship.id ? 'もう一度タップで解体' : `保有中  ·  タップで解体 (返却 ${formatResources(scrapRefund(ship, progress.refits[ship.id] ?? 0, progress.refitBranches[ship.id]))})`)
-      : state === 'reward' ? '報酬限定艦 — 作戦の S 評価で入手'
+      : state === 'reward' ? (ship.fictional ? '報酬艦 — 作戦の S 評価か、国家方針で建造可' : '報酬限定艦 — 作戦の S 評価で入手')
         : !shown ? ''
           // Short of resources (#262): what is missing, in red.
           : state === 'resources' ? `不足: ${formatResources(shortfall(progress.resources, buildCostAt(progress, ship)))}`
@@ -316,7 +316,7 @@ export class ShipyardScene extends Phaser.Scene {
       frame,
       name,
       stateText,
-      this.fitWidth(this.add.text(pad, 10 + lineH + 4, `${classLine}${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${ship.fictional && shown ? ' · 架空艦' : ''}`, textStyle(11, ship.fictional && shown ? Css.gold : Css.muted)), r.w - pad * 2),
+      this.fitWidth(this.add.text(pad, 10 + lineH + 4, `${classLine}${kindLabel(ship)} · 格 ${grade} (${gradeRankName(grade)})${!isHistorical(ship) && shown ? ` · ${shipOrigin(ship)}` : ''}`, textStyle(11, !isHistorical(ship) && shown ? Css.gold : Css.muted)), r.w - pad * 2),
       this.add.text(pad, 10 + lineH * 2 + 4, shown ? `HP ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}` : '', textStyle(11, Css.muted)),
       // Reward-only ships (#39) show where they come from instead of a build cost.
       this.fitWidth(this.add.text(pad, r.h - (IS_PORTRAIT ? 30 : 22), costLine, textStyle(11, owned || state === 'reward' ? Css.gold : state === 'resources' ? Css.danger : Css.dim)), r.w - pad * 2),
