@@ -323,9 +323,21 @@ export interface ICaptainStats {
   sinks: number;
   /** Battles the captain's ship came home from heavily damaged (25% HP or less) */
   heavySurvivals: number;
+  /** From 0.0.51 (#252): battles and wins, wins as the flagship and wins with the ship all but unhurt */
+  battles: number;
+  wins: number;
+  flagshipWins: number;
+  unhurtWins: number;
+  /** From 0.0.51 (#252): the captain's ship's sinks by torpedo and by its own aircraft, and battleships or carriers */
+  torpedoSinks: number;
+  airSinks: number;
+  bigSinks: number;
 }
 
-export const NO_STATS: ICaptainStats = { nightSinks: 0, subSinks: 0, sinks: 0, heavySurvivals: 0 };
+export const NO_STATS: ICaptainStats = { nightSinks: 0, subSinks: 0, sinks: 0, heavySurvivals: 0, battles: 0, wins: 0, flagshipWins: 0, unhurtWins: 0, torpedoSinks: 0, airSinks: 0, bigSinks: 0 };
+
+/** HP left at which a win counts as unhurt (無傷の名手, #252). */
+export const UNHURT_HP = 0.95;
 
 export interface ITrait {
   id: string;
@@ -359,6 +371,21 @@ export const TRAITS: ITrait[] = [
     progress: (s) => [s.subSinks, 5],
     modifiers: () => ({ depthChargeMul: 1.1, sonarMul: 1.1 }),
   },
+  // 0.0.51 (#252): what famous commanders were known for.
+  ...([
+    ['torpedo_ace', '水雷の名手', '魚雷で 5 隻撃沈', '雷撃 +6%', (s) => [s.torpedoSinks, 5], () => ({ torpedoPowerMul: 1.06 })],
+    ['air_ace', '航空戦の名手', '艦載機で 5 隻撃沈', '航空攻撃 +6%', (s) => [s.airSinks, 5], () => ({ airPowerMul: 1.06 })],
+    ['giant_killer', '大物食い', '戦艦か空母を 3 隻撃沈', '砲撃 +4%・雷撃 +4%', (s) => [s.bigSinks, 3], () => ({ gunPowerMul: 1.04, torpedoPowerMul: 1.04 })],
+    ['sink_king', '撃沈王', '20 隻撃沈', '砲撃 +4%', (s) => [s.sinks, 20], () => ({ gunPowerMul: 1.04 })],
+    ['veteran', '歴戦の艦長', '50 回出撃', '耐久 +3%・主砲の装填 3% 短縮', (s) => [s.battles, 50], () => ({ hpMul: 1.03, gunReloadMul: 0.97 })],
+    ['victor', '常勝の艦長', '30 回勝利', '回避 +2%', (s) => [s.wins, 30], () => ({ evadeAdd: 0.02 })],
+    ['flag_captain', '旗艦の重み', '旗艦で 20 回勝利', '索敵 +5%・対空 +5%', (s) => [s.flagshipWins, 20], () => ({ visionMul: 1.05, aaMul: 1.05 })],
+    ['untouched', '無傷の名手', '耐久 95% 以上で 10 回勝利', '回避 +3%', (s) => [s.unhurtWins, 10], () => ({ evadeAdd: 0.03 })],
+    ['damecon_master', 'ダメコンの鬼', '大破から 10 回生還', '火災・浸水 −15%', (s) => [s.heavySurvivals, 10], () => ({ fireFloodMul: 0.85 })],
+    ['night_lord', '夜の支配者', '夜戦で 10 隻撃沈', '夜戦の照準のぶれ −10%', (s) => [s.nightSinks, 10], (ctx) => (ctx.night ? { nightAimMul: 0.9 } : {})],
+  ] as Array<[string, string, string, string, (s: ICaptainStats) => [number, number], ITrait['modifiers']]>).map(([id, name, condition, effect, progress, modifiers]): ITrait => ({
+    id, name, condition, effect, progress, modifiers, earned: (s) => { const [n, goal] = progress(s); return n >= goal; },
+  })),
 ];
 
 export function earnedTraits(stats: ICaptainStats | undefined): ITrait[] {
@@ -366,14 +393,39 @@ export function earnedTraits(stats: ICaptainStats | undefined): ITrait[] {
 }
 
 /** Adds one battle to a captain's stats: `sunk` and `subsSunk` are what the captain's own ship sank (#199). */
-export function addBattleStats(stats: ICaptainStats | undefined, battle: { night: boolean; sunk: number; subsSunk: number; heavySurvival: boolean }): ICaptainStats {
-  const s = stats ?? NO_STATS;
+export function addBattleStats(stats: ICaptainStats | undefined, battle: ICaptainBattle): ICaptainStats {
+  const s = { ...NO_STATS, ...(stats ?? {}) };
+  const n = (v: number | undefined): number => Math.max(0, v ?? 0);
+  const won = battle.victory === true;
   return {
-    nightSinks: s.nightSinks + (battle.night ? Math.max(0, battle.sunk) : 0),
-    subSinks: s.subSinks + Math.max(0, battle.subsSunk),
-    sinks: (s.sinks ?? 0) + Math.max(0, battle.sunk),
+    nightSinks: s.nightSinks + (battle.night ? n(battle.sunk) : 0),
+    subSinks: s.subSinks + n(battle.subsSunk),
+    sinks: s.sinks + n(battle.sunk),
     heavySurvivals: s.heavySurvivals + (battle.heavySurvival ? 1 : 0),
+    battles: s.battles + 1,
+    wins: s.wins + (won ? 1 : 0),
+    flagshipWins: s.flagshipWins + (won && battle.flagship ? 1 : 0),
+    unhurtWins: s.unhurtWins + (won && (battle.hpLeft ?? 0) >= UNHURT_HP ? 1 : 0),
+    torpedoSinks: s.torpedoSinks + n(battle.torpedoSinks),
+    airSinks: s.airSinks + n(battle.airSinks),
+    bigSinks: s.bigSinks + n(battle.bigSinks),
   };
+}
+
+/** One battle as a captain's stats see it (#45 #199 #252). */
+export interface ICaptainBattle {
+  night: boolean;
+  /** What the captain's own ship sank, all and submarines */
+  sunk: number;
+  subsSunk: number;
+  heavySurvival: boolean;
+  victory?: boolean;
+  flagship?: boolean;
+  /** HP fraction left at the end */
+  hpLeft?: number;
+  torpedoSinks?: number;
+  airSinks?: number;
+  bigSinks?: number;
 }
 
 /** One thing that adds to a captain's bonus, for the colour-coded breakdown (#130). */

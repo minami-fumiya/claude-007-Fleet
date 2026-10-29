@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { reloadAt } from '@/utils/OrientationWatch';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { askText } from '@/ui/components/TextInputSheet';
 import { DIFFICULTIES, nextDifficulty } from '@/systems/DifficultySystem';
@@ -6,7 +7,7 @@ import { ledgerText } from '@/systems/LedgerSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { clampVolume, COMMENTARY_RATE_LABEL, COMMENTARY_RATES, frameLimitLabel, ISettings, nextChoice, nextFrameLimit, SHAKE_LABEL, SHAKE_LEVELS, stepVolume } from '@/systems/SettingsSystem';
+import { ORIENTATION_CHOICES, ORIENTATION_LABEL, RUBY_LABEL, RUBY_LEVELS, THEME_CHOICES, THEME_LABEL, clampVolume, COMMENTARY_RATE_LABEL, COMMENTARY_RATES, frameLimitLabel, ISettings, nextChoice, nextFrameLimit, SHAKE_LABEL, SHAKE_LEVELS, stepVolume } from '@/systems/SettingsSystem';
 import { voice } from '@/systems/VoiceSystem';
 import { applyFrameLimit } from '@/utils/FrameLimit';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
@@ -24,9 +25,9 @@ const ROW_H = IS_PORTRAIT ? 80 : 64;
 const BTN_H = IS_PORTRAIT ? 64 : 48;
 
 /** 設定: sound volumes and mute, and save data transfer / reset. */
-type SettingsTab = 'sound' | 'play' | 'data';
-const TAB_LABEL: Record<SettingsTab, string> = { sound: '音', play: '操作・表示', data: 'データ' };
-const TABS: SettingsTab[] = ['sound', 'play', 'data'];
+type SettingsTab = 'sound' | 'play' | 'display' | 'data';
+const TAB_LABEL: Record<SettingsTab, string> = { sound: '音', play: '操作', display: '表示', data: 'データ' };
+const TABS: SettingsTab[] = ['sound', 'play', 'display', 'data'];
 const TAB_H = IS_PORTRAIT ? 56 : 40;
 
 /** Sheets drawn over the settings (nation reset). */
@@ -95,6 +96,7 @@ export class SettingsScene extends Phaser.Scene {
     const top = P.y + 20 + TAB_H + (IS_PORTRAIT ? 24 : 18);
     if (this.tab === 'sound') this.drawSound(top);
     else if (this.tab === 'play') this.drawPlay(top);
+    else if (this.tab === 'display') this.drawDisplay(top);
     else this.drawData(top);
   }
 
@@ -192,6 +194,42 @@ export class SettingsScene extends Phaser.Scene {
     this.toggleRow(x2, y, colW, '振動 (スマホ)', s.vibrate ? 'ON' : 'OFF', s.vibrate, () => this.change({ vibrate: !s.vibrate }));
     y += BTN_H + 6;
     this.note(x2, y, colW, '自分の艦の被弾・大破・撃沈で短く振動します (対応している端末だけ。iPhone は振動しません)。');
+  }
+
+  /**
+   * 表示 (#94 #95): the colour theme, readings after hard words and which way up the screen is. The theme and the
+   * orientation take a reload, which this screen does at once (the settings are saved first).
+   */
+  private drawDisplay(top: number): void {
+    const s = audio.settings;
+    const x = P.x + 28;
+    const w = P.w - 56;
+    let y = top;
+    const gap = IS_PORTRAIT ? 18 : 14;
+    this.toggleRow(x, y, w, 'テーマ', THEME_LABEL[s.theme], s.theme !== 'dark', () => {
+      audio.update({ theme: nextChoice(THEME_CHOICES, s.theme) });
+      this.reloadInPlace();
+    });
+    y += BTN_H + 6;
+    y += this.note(x, y, w, 'ダーク (夜の海) と ライト (明るい画面) を切り替えます。「端末に合わせる」は端末のダークモードの設定に従います。切り替えると画面を読み込み直します。') + gap;
+    this.toggleRow(x, y, w, 'ふりがな', RUBY_LABEL[s.ruby], s.ruby !== 'off', () => {
+      audio.update({ ruby: nextChoice(RUBY_LEVELS, s.ruby) });
+      this.reloadInPlace();
+    });
+    y += BTN_H + 6;
+    y += this.note(x, y, w, '艦名・艦長名・地名・階級・用語の後ろに、小さく読みを付けます (例: 陸奥〈むつ〉)。「難しい語のみ」は読みにくい語だけに付けます。') + gap;
+    this.toggleRow(x, y, w, '画面の向き', ORIENTATION_LABEL[s.orientation], s.orientation !== 'auto', () => {
+      audio.update({ orientation: nextChoice(ORIENTATION_CHOICES, s.orientation) });
+      this.reloadInPlace();
+    });
+    y += BTN_H + 6;
+    y += this.note(x, y, w, '「自動」では、スマホを横にすると横画面、縦にすると縦画面になります (戦闘中は戦闘の後に切り替わります)。パソコンは横画面です。') + gap;
+    this.note(x, y, w, '色だけで分かる表示には、記号も添えています (▲ 有利・▼ 不利・✓ 研究済・満 など)。');
+  }
+
+  /** Reloads the game on this screen (#94 #95): the theme and the layout are read once at start-up. */
+  private reloadInPlace(): void {
+    reloadAt(SceneKeys.SETTINGS);
   }
 
   /** データ: save codes, help, the ledger, resets and backups. */

@@ -1,0 +1,101 @@
+{
+  "id": "cape-spada",
+  "name": "スパダ岬沖海戦",
+  "date": "1940年7月",
+  "history": {
+    "winner": "B",
+    "lost": {
+      "A": 1,
+      "B": 0
+    },
+    "text": "英国の勝利。軽巡洋艦バルトロメオ・コレオーニが沈没、ジョヴァンニ・デッレ・バンデ・ネーレは逃れた。英側は艦の損失なし"
+  },
+  "theater": "mediterranean",
+  "description": "クレタ島北西のスパダ岬沖で、イタリアの軽巡洋艦 2 隻が豪巡洋艦シドニーと英駆逐艦隊に追われた。機関を撃ち抜かれたバルトロメオ・コレオーニは停止して沈んだ。(シドニーは同型のリアンダー、英駆逐艦は近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Clear",
+  "time": "Day",
+  "forces": {
+    "A": {
+      "nation": "RM",
+      "ships": [
+        "giovanni_delle_bande_nere",
+        "bartolomeo_colleoni"
+      ],
+      "positions": [
+        {
+          "x": 0.5,
+          "y": 0.4,
+          "angle": 180
+        },
+        {
+          "x": 0.56,
+          "y": 0.34,
+          "angle": 180
+        }
+      ]
+    },
+    "B": {
+      "nation": "RN",
+      "ships": [
+        "leander",
+        "javelin",
+        "jervis",
+        "juno",
+        "jupiter"
+      ],
+      "positions": [
+        {
+          "x": 0.3,
+          "y": 0.12,
+          "angle": 135
+        },
+        {
+          "x": 0.6,
+          "y": 0.08,
+          "angle": 180
+        },
+        {
+          "x": 0.66,
+          "y": 0.12,
+          "angle": 180
+        },
+        {
+          "x": 0.72,
+          "y": 0.08,
+          "angle": 180
+        },
+        {
+          "x": 0.78,
+          "y": 0.12,
+          "angle": 180
+        }
+      ]
+    }
+  },
+  "sides": [
+    {
+      "force": "B",
+      "label": "シドニーで追撃",
+      "objective": "SinkTargets",
+      "targets": [
+        "bartolomeo_colleoni"
+      ],
+      "timeLimitSec": 300,
+      "brief": "軽巡洋艦バルトロメオ・コレオーニを撃沈せよ。"
+    },
+    {
+      "force": "A",
+      "label": "イタリア巡洋艦で離脱",
+      "objective": "Breakthrough",
+      "zone": {
+        "x": 0.5,
+        "y": 0.96,
+        "r": 0.06,
+        "label": "ベンガジ方面"
+      },
+      "timeLimitSec": 300,
+      "brief": "英艦隊を振り切り、南のベンガジ方面へ逃れよ。"
+    }
+  ]
+}

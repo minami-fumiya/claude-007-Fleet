@@ -1,6 +1,7 @@
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { ShipClass } from '@/types/ShipClass';
 import { BaseShip } from '@/entities/ships/BaseShip';
+import { HitKind } from '@/types/Ship';
 
 const REDUCTION_FACTOR = 0.5;
 
@@ -56,8 +57,9 @@ export class CombatSystem {
   }
 
   /** `source` is the ship that fired (#199), kept on the target so its sinking is credited to that ship. */
-  static applyDamage(ship: BaseShip, damage: number, source?: BaseShip | null): void {
+  static applyDamage(ship: BaseShip, damage: number, source?: BaseShip | null, kind?: HitKind): void {
     if (source) ship.lastHitBy = source;
+    if (kind) ship.lastHitKind = kind;
     ship.takeDamage(Math.round(damage));
   }
 }

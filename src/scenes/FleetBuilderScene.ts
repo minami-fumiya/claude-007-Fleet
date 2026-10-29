@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { skillOf, skillText } from '@/systems/ShipSkillSystem';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -49,7 +50,7 @@ import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
-import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES } from '@/systems/FleetPower';
+import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES, strengthMark } from '@/systems/FleetPower';
 import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
 import { EXPEDITIONS, shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
@@ -1685,6 +1686,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
     const arm = add(this.add.text(x, y, lines.join('\n') || '—', textStyle(14, Css.text, { ...wrap, lineSpacing: 4 })));
     y += arm.height + 14;
+    // 艦の固有スキル (#58)
+    const own = skillOf(ship.id);
+    if (own) {
+      add(this.add.text(x, y, `固有スキル「${own.name}」`, eyebrowStyle(11, Css.gold)));
+      y += 22;
+      const t = add(this.add.text(x, y, skillText(own, loadProgress().refits[ship.id] ?? 0), textStyle(14, Css.text, wrap)));
+      y += t.height + 14;
+    }
 
     const captain = this.captainOf(slot);
     add(this.add.text(x, y, '艦長', eyebrowStyle(11, Css.gold)));
@@ -1720,7 +1729,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const own = this.powerOf(ships).total;
     const enemy = this.enemyPower();
     const n = (v: number): string => v.toLocaleString('en-US');
-    return enemy === null ? `総戦力 ${n(own)} ▸` : `総戦力 ${n(own)} (敵 ${n(enemy)} ×${(own / Math.max(1, enemy)).toFixed(2)}) ▸`;
+    return enemy === null ? `総戦力 ${n(own)} ▸` : `総戦力 ${n(own)} (敵 ${n(enemy)} ×${(own / Math.max(1, enemy)).toFixed(2)} ${strengthMark(own / Math.max(1, enemy))}) ▸`;
   }
 
   /** The breakdown of 総戦力 (#342): the ships as built, then what each source adds. */

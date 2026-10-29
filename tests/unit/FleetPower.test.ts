@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fleetPowerBreakdown, ownFleetPower, powerBreakdownText, powerCompareText, powerTone, proficiencyValue } from '@/systems/FleetPower';
+import { fleetPowerBreakdown, ownFleetPower, powerBreakdownText, powerCompareText, powerTone, proficiencyValue, strengthMark } from '@/systems/FleetPower';
 import { Formation } from '@/types/Formation';
 import { fleetPower } from '@/systems/DifficultyCurve';
 import { baseReaches, nationBases } from '@/systems/BaseSystem';
@@ -23,7 +23,9 @@ describe('自艦隊の戦力 (#280)', () => {
     expect(powerTone(700, 1000)).toBe('danger');
     expect(powerTone(1000, 1000)).toBe('even');
     expect(powerTone(1300, 1000)).toBe('ahead');
-    expect(powerCompareText(1820, 1560)).toBe('自艦隊 1,820 / 敵 1,560 (×1.17)');
+    expect(powerCompareText(1820, 1560)).toBe('自艦隊 1,820 / 敵 1,560 (×1.17 ◆ 互角)');
+    expect(strengthMark(0.79)).toBe('▼ 不利');
+    expect(strengthMark(1.2)).toBe('▲ 有利');
   });
 });
 

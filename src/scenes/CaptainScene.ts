@@ -452,9 +452,10 @@ export class CaptainScene extends Phaser.Scene {
     const w = IS_PORTRAIT ? CANVAS_W - 48 : 760;
     const body = TRAITS.map((t) => {
       const [n, goal] = t.progress(stats);
-      return `${earned.has(t.id) ? '★' : '☆'} ${t.name}  ${Math.min(n, goal)} / ${goal}\n   条件: ${t.condition}\n   効果: ${t.effect}`;
+      // Two lines each (#252: 13 traits no longer fit three lines apiece in landscape).
+      return `${earned.has(t.id) ? '★' : '☆'} ${t.name}  ${Math.min(n, goal)} / ${goal}  —  ${t.condition}\n      効果: ${t.effect}`;
     });
-    const text = this.add.text(0, 0, body.join('\n'), textStyle(IS_PORTRAIT ? 14 : 13, Css.text, { lineSpacing: 6, wordWrap: { width: w - 52, useAdvancedWrap: true } }));
+    const text = this.add.text(0, 0, body.join('\n'), textStyle(IS_PORTRAIT ? 14 : 12, Css.text, { lineSpacing: IS_PORTRAIT ? 6 : 3, wordWrap: { width: w - 52, useAdvancedWrap: true } }));
     const h = Math.min(CANVAS_H - 32, text.height + 170);
     const r = { x: (CANVAS_W - w) / 2, y: Math.max(16, (CANVAS_H - h) / 2), w, h };
     this.sheetAdd(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.75).setOrigin(0, 0).setInteractive());

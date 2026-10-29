@@ -41,7 +41,23 @@ export interface ISettings {
   shake: ShakeLevel;
   /** スマホの振動 (#107) */
   vibrate: boolean;
+  /** 0.0.51 表示 (#94 #95): colour theme, readings after hard words, and which way up the screen is */
+  theme: ThemeChoice;
+  ruby: RubyLevel;
+  orientation: OrientationChoice;
 }
+
+export type ThemeChoice = 'dark' | 'light' | 'system';
+export const THEME_CHOICES: ThemeChoice[] = ['dark', 'light', 'system'];
+export const THEME_LABEL: Record<ThemeChoice, string> = { dark: 'ダーク', light: 'ライト', system: '端末に合わせる' };
+
+export type RubyLevel = 'off' | 'hard' | 'all';
+export const RUBY_LEVELS: RubyLevel[] = ['off', 'hard', 'all'];
+export const RUBY_LABEL: Record<RubyLevel, string> = { off: 'なし', hard: '難しい語のみ', all: 'すべて' };
+
+export type OrientationChoice = 'auto' | 'portrait' | 'landscape';
+export const ORIENTATION_CHOICES: OrientationChoice[] = ['auto', 'portrait', 'landscape'];
+export const ORIENTATION_LABEL: Record<OrientationChoice, string> = { auto: '自動', portrait: '縦固定', landscape: '横固定' };
 
 export type CommentaryRate = 'few' | 'normal' | 'many';
 export const COMMENTARY_RATES: CommentaryRate[] = ['normal', 'many', 'few'];
@@ -71,6 +87,7 @@ export function nextFrameLimit(limit: FrameLimit): FrameLimit {
 
 export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false, frameLimit: 0,
   voice: 80, commentary: 80, bgmOn: true, sfxOn: true, voiceOn: true, commentaryOn: true, nationalBgm: true, commentaryRate: 'normal', subtitles: true, shake: 'weak', vibrate: true,
+  theme: 'dark', ruby: 'off', orientation: 'auto',
 };
 export const VOLUME_STEP = 10;
 
@@ -116,6 +133,10 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       subtitles: typeof d.subtitles === 'boolean' ? d.subtitles : DEFAULT_SETTINGS.subtitles,
       shake: SHAKE_LEVELS.includes(d.shake as ShakeLevel) ? (d.shake as ShakeLevel) : DEFAULT_SETTINGS.shake,
       vibrate: typeof d.vibrate === 'boolean' ? d.vibrate : DEFAULT_SETTINGS.vibrate,
+      // 0.0.51 (#94 #95)
+      theme: THEME_CHOICES.includes(d.theme as ThemeChoice) ? (d.theme as ThemeChoice) : DEFAULT_SETTINGS.theme,
+      ruby: RUBY_LEVELS.includes(d.ruby as RubyLevel) ? (d.ruby as RubyLevel) : DEFAULT_SETTINGS.ruby,
+      orientation: ORIENTATION_CHOICES.includes(d.orientation as OrientationChoice) ? (d.orientation as OrientationChoice) : DEFAULT_SETTINGS.orientation,
     };
   } catch {
     return { ...DEFAULT_SETTINGS, muted: legacyMuted };

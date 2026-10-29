@@ -1,0 +1,138 @@
+{
+  "id": "second-sirte",
+  "name": "第二次シルテ湾海戦",
+  "date": "1942年3月",
+  "history": {
+    "winner": "B",
+    "lost": {
+      "A": 0,
+      "B": 0
+    },
+    "text": "英国の勝利。ヴァイアンの巡洋艦と駆逐艦は煙幕と雷撃で戦艦リットリオを退け、船団をマルタへ逃がした。双方とも海戦で沈んだ艦はない"
+  },
+  "theater": "mediterranean",
+  "description": "マルタへ向かう英船団を、戦艦リットリオを中心とするイタリア艦隊が襲った。ヴァイアン少将の軽巡洋艦と駆逐艦は、荒れた海で煙幕を張りながら何度も突撃し、船団を守り抜いた。(英駆逐艦は近似艦が代役)",
+  "map": "open-sea",
+  "weather": "Storm",
+  "time": "Day",
+  "forces": {
+    "A": {
+      "nation": "RM",
+      "ships": [
+        "littorio",
+        "gorizia",
+        "trento",
+        "giovanni_delle_bande_nere",
+        "aviere",
+        "ascari"
+      ],
+      "positions": [
+        {
+          "x": 0.82,
+          "y": 0.22,
+          "angle": 225
+        },
+        {
+          "x": 0.88,
+          "y": 0.18,
+          "angle": 225
+        },
+        {
+          "x": 0.76,
+          "y": 0.16,
+          "angle": 225
+        },
+        {
+          "x": 0.9,
+          "y": 0.28,
+          "angle": 225
+        },
+        {
+          "x": 0.82,
+          "y": 0.1,
+          "angle": 225
+        },
+        {
+          "x": 0.94,
+          "y": 0.22,
+          "angle": 225
+        }
+      ]
+    },
+    "B": {
+      "nation": "RN",
+      "ships": [
+        "cleopatra",
+        "euryalus",
+        "dido",
+        "jervis",
+        "sikh",
+        "zulu"
+      ],
+      "positions": [
+        {
+          "x": 0.46,
+          "y": 0.5,
+          "angle": 45
+        },
+        {
+          "x": 0.4,
+          "y": 0.54,
+          "angle": 45
+        },
+        {
+          "x": 0.34,
+          "y": 0.58,
+          "angle": 45
+        },
+        {
+          "x": 0.52,
+          "y": 0.44,
+          "angle": 45
+        },
+        {
+          "x": 0.46,
+          "y": 0.6,
+          "angle": 45
+        },
+        {
+          "x": 0.4,
+          "y": 0.64,
+          "angle": 45
+        }
+      ]
+    }
+  },
+  "sides": [
+    {
+      "force": "B",
+      "label": "ヴァイアンで船団を守る",
+      "objective": "Delay",
+      "targets": [
+        "littorio"
+      ],
+      "zone": {
+        "x": 0.1,
+        "y": 0.88,
+        "r": 0.07,
+        "label": "船団 (マルタ方面)"
+      },
+      "timeLimitSec": 240,
+      "enemyGoesForZone": true,
+      "brief": "戦艦リットリオを船団に近づけるな。時間を稼ぐか、撃沈せよ。"
+    },
+    {
+      "force": "A",
+      "label": "イタリア艦隊で船団を襲う",
+      "objective": "Breakthrough",
+      "zone": {
+        "x": 0.1,
+        "y": 0.88,
+        "r": 0.07,
+        "label": "船団 (マルタ方面)"
+      },
+      "timeLimitSec": 300,
+      "brief": "英艦隊を突破し、南西の船団へ迫れ。"
+    }
+  ]
+}

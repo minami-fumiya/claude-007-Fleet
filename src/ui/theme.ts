@@ -1,12 +1,13 @@
-import Phaser from 'phaser';
-import { IS_PORTRAIT } from '@/config/GameConstants';
+import type Phaser from 'phaser';
+import { IS_PORTRAIT, IS_TOUCH_ONLY } from '@/config/GameConstants';
 import { jaWordWrap } from '@/utils/JaWrap';
 
 /**
  * Shared visual tokens for every scene.
- * Dark "night ocean" base, glassy panels with a thin cyan rim, gold as the hero accent.
+ * Dark "night ocean" base, glassy panels with a thin cyan rim, gold as the hero accent. A light theme (#94) swaps the
+ * values at start-up (applyTheme, before the game is made), so every screen reads them as before.
  */
-export const Colors = {
+const DARK_COLORS = {
   bgDeep: 0x020814,
   bgMid: 0x061a33,
   panel: 0x0b1d38,
@@ -20,22 +21,73 @@ export const Colors = {
   text: 0xf5fbff,
   muted: 0x8aa0c7,
   dim: 0x4a5f85,
-} as const;
+};
+
+/** Light theme (#94): dark ink on paper-white panels; accents darkened to keep 4.5:1 against white (WCAG). */
+const LIGHT_COLORS: typeof DARK_COLORS = {
+  bgDeep: 0xe6edf6,
+  bgMid: 0xd5e2f0,
+  panel: 0xffffff,
+  panelHi: 0xe3f1fb,
+  rim: 0x1f7fb0,
+  cyan: 0x0a6f9c,
+  blue: 0x2a55c4,
+  gold: 0x8a5600,
+  danger: 0xbf1f3a,
+  success: 0x0f7a4b,
+  text: 0x0b1a2e,
+  muted: 0x45597a,
+  dim: 0x6a7a93,
+};
+
+const css = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
+const cssOf = (c: typeof DARK_COLORS) => ({
+  bgDeep: css(c.bgDeep), bgMid: css(c.bgMid), cyan: css(c.cyan), blue: css(c.blue), gold: css(c.gold), danger: css(c.danger),
+  success: css(c.success), text: css(c.text), muted: css(c.muted), dim: css(c.dim), ink: '#061226',
+});
+
+export const Colors = { ...DARK_COLORS };
 
 /** CSS forms of the same tokens, for Text styles and canvas drawing. */
-export const Css = {
-  bgDeep: '#020814',
-  bgMid: '#061a33',
-  cyan: '#61e7ff',
-  blue: '#4f8cff',
-  gold: '#ffc94a',
-  danger: '#ff5f7a',
-  success: '#5df2b0',
-  text: '#f5fbff',
-  muted: '#8aa0c7',
-  dim: '#4a5f85',
-  ink: '#061226',
-} as const;
+export const Css = cssOf(DARK_COLORS);
+
+/** What the drawn surfaces use beyond the tokens (#94): backdrop, sea, plain buttons and the vignette. */
+export const Surface = {
+  backdropTop: '#05142c',
+  oceanTop: '#072447',
+  oceanBottom: '#03142b',
+  sea: '#05203f',
+  secondaryFill: 'rgba(11,29,56,0.85)',
+  vignette: 'rgba(0,0,0,0.55)',
+};
+const LIGHT_SURFACE: typeof Surface = {
+  backdropTop: '#f4f8fc',
+  oceanTop: '#cfe6f7',
+  oceanBottom: '#a9cfea',
+  sea: '#8fc3e6',
+  secondaryFill: 'rgba(255,255,255,0.9)',
+  vignette: 'rgba(40,70,110,0.12)',
+};
+
+export type ThemeName = 'dark' | 'light';
+let current: ThemeName = 'dark';
+
+/** Puts the light or dark values in place; call before the game is made (#94). */
+export function applyTheme(name: ThemeName): void {
+  current = name;
+  Object.assign(Colors, name === 'light' ? LIGHT_COLORS : DARK_COLORS);
+  Object.assign(Css, cssOf(name === 'light' ? LIGHT_COLORS : DARK_COLORS));
+  if (name === 'light') Object.assign(Surface, LIGHT_SURFACE);
+}
+
+export function themeName(): ThemeName {
+  return current;
+}
+
+/** The theme a settings choice gives: 'system' follows the device's dark-mode setting. */
+export function resolveTheme(choice: string, prefersDark: boolean): ThemeName {
+  return choice === 'light' ? 'light' : choice === 'system' ? (prefersDark ? 'dark' : 'light') : 'dark';
+}
 
 export const Fonts = {
   // Japanese web fonts loaded in index.html; system fonts are only a fallback.
@@ -55,7 +107,9 @@ const TEXT_RESOLUTION = 2;
  */
 export function uiFontSize(size: number): number {
   if (size >= 40) return size;
-  return IS_PORTRAIT ? Math.round(Math.max(17, size * 1.5)) : Math.max(12, size);
+  if (IS_PORTRAIT) return Math.round(Math.max(17, size * 1.5));
+  // A phone held sideways (#95) shows the landscape canvas small: its text a little larger, never below 14px.
+  return IS_TOUCH_ONLY ? Math.round(Math.max(14, size * 1.15)) : Math.max(12, size);
 }
 
 export function textStyle(

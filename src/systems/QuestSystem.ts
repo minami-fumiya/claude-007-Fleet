@@ -70,7 +70,7 @@ export const QUEST_EVENTS = [
   // 0.0.49: battle logs read (#106)
   'logView',
   // 0.0.50: forward bases opened, their facilities raised, base air strikes flown (#373)
-  'forwardBaseOpened', 'forwardFacility', 'baseAirStrike',
+  'forwardBaseOpened', 'forwardFacility', 'baseAirStrike', 'skillProc',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

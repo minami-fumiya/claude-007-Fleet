@@ -491,7 +491,12 @@ function parseCaptainStats(src: unknown): Record<string, ICaptainStats> {
   for (const [id, v] of Object.entries(src)) {
     if (!isObject(v)) continue;
     const n = (x: unknown): number => (isNum(x) ? Math.max(0, x) : 0);
-    out[id] = { nightSinks: n(v.nightSinks), subSinks: n(v.subSinks), sinks: n(v.sinks), heavySurvivals: n(v.heavySurvivals) };
+    out[id] = {
+      nightSinks: n(v.nightSinks), subSinks: n(v.subSinks), sinks: n(v.sinks), heavySurvivals: n(v.heavySurvivals),
+      // 0.0.51 (#252): older saves have none of these yet.
+      battles: n(v.battles), wins: n(v.wins), flagshipWins: n(v.flagshipWins), unhurtWins: n(v.unhurtWins),
+      torpedoSinks: n(v.torpedoSinks), airSinks: n(v.airSinks), bigSinks: n(v.bigSinks),
+    };
   }
   return out;
 }

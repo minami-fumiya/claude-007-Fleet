@@ -85,7 +85,7 @@ export class ScenarioScene extends Phaser.Scene {
       this.listLayer.push(o);
       return o;
     };
-    const tabs: Array<ScenarioTheater | 'all'> = ['all', 'pacific', 'atlantic', 'mediterranean', 'arctic'];
+    const tabs: Array<ScenarioTheater | 'all'> = ['all', 'pacific', 'atlantic', 'mediterranean', 'arctic', 'baltic', 'blacksea'];
     const tw = (L.list.w - 6 * (tabs.length - 1)) / tabs.length;
     tabs.forEach((t, i) => {
       const n = scenariosIn(this.scenarios, t).length;

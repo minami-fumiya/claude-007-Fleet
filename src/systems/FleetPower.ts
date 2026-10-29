@@ -125,8 +125,14 @@ export function powerTone(own: number, enemy: number): PowerTone {
   return r < 0.8 ? 'danger' : r < 1.2 ? 'even' : 'ahead';
 }
 
-/** "自艦隊 1,820 / 敵 1,560 (×1.17)". */
+/** "自艦隊 1,820 / 敵 1,560 (×1.17 ◆ 互角)". */
 export function powerCompareText(own: number, enemy: number): string {
   const n = (v: number): string => v.toLocaleString('en-US');
-  return `自艦隊 ${n(own)} / 敵 ${n(enemy)}${enemy > 0 ? ` (×${(own / enemy).toFixed(2)})` : ''}`;
+  return `自艦隊 ${n(own)} / 敵 ${n(enemy)}${enemy > 0 ? ` (×${(own / enemy).toFixed(2)} ${strengthMark(own / enemy)})` : ''}`;
+}
+
+/** 色だけに頼らない (#94): a mark and a word beside a strength ratio (own ÷ enemy), the same bands as powerTone's colours. */
+export function strengthMark(ratio: number): string {
+  const tone = powerTone(ratio, 1);
+  return tone === 'ahead' ? '▲ 有利' : tone === 'even' ? '◆ 互角' : '▼ 不利';
 }

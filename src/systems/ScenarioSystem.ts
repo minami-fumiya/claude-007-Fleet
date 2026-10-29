@@ -37,7 +37,7 @@ export function inZone(x: number, y: number, zone: { x: number; y: number; r: nu
   return Math.hypot(x - c.x, y - c.y) <= zoneRadius(zone.r, worldW, worldH);
 }
 
-export const SCENARIO_THEATER_LABEL: Record<ScenarioTheater, string> = { pacific: '太平洋', atlantic: '大西洋', mediterranean: '地中海', arctic: '北極海' };
+export const SCENARIO_THEATER_LABEL: Record<ScenarioTheater, string> = { pacific: '太平洋', atlantic: '大西洋', mediterranean: '地中海', arctic: '北極海', baltic: 'バルト海', blacksea: '黒海' };
 
 /** "1942年6月" → 194206 (0 when unreadable), for ordering the list (#71). */
 export function scenarioMonth(date: string): number {

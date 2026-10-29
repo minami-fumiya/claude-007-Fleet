@@ -98,3 +98,6 @@ export interface IShipStats {
   /** Crew proficiency 0..100 (aim and evasion) */
   proficiency?: number;
 }
+
+/** What struck a ship (#252): guns, torpedoes, aircraft or depth charges. */
+export type HitKind = 'gun' | 'torpedo' | 'air' | 'charge';

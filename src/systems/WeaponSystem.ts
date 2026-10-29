@@ -35,6 +35,8 @@ export class WeaponSystem {
   onFire: (weapon: IWeaponData, x: number, y: number) => void = () => undefined;
   /** Extra random spread on every shot (weather), radians */
   aimError = 0;
+  /** What this side's ships have fired this battle (通算の記録 #92): shells, torpedoes and depth charges */
+  readonly fired = { shells: 0, torpedoes: 0, charges: 0 };
   private lastFired = new WeakMap<BaseShip, number>();
   /** Per-torpedo copies of torpedo weapons (firePower split across the salvo) */
   private perTorpedo = new Map<string, IWeaponData>();
@@ -76,15 +78,23 @@ export class WeaponSystem {
         const each = this.torpedoShare(weapon);
         for (let i = 0; i < TORPEDOES_PER_SALVO; i++) {
           const offset = (i - (TORPEDOES_PER_SALVO - 1) / 2) * TORPEDO_SPREAD;
-          this.acquire(Torpedo).fire(ship.x, ship.y, targetAngle + offset, each, ship);
+          const t = this.acquire(Torpedo);
+          t.fire(ship.x, ship.y, targetAngle + offset, each, ship);
+          t.fromShip = true;
         }
+        this.fired.torpedoes += TORPEDOES_PER_SALVO;
         break;
       }
       case WeaponKind.DepthCharge:
         this.acquireCharge().drop(ship.x, ship.y, weapon, now, ship);
+        this.fired.charges++;
         break;
-      default:
-        this.acquire(Shell).fire(ship.x, ship.y, targetAngle, weapon, ship);
+      default: {
+        const shell = this.acquire(Shell);
+        shell.fire(ship.x, ship.y, targetAngle, weapon, ship);
+        shell.fromShip = true;
+        this.fired.shells++;
+      }
     }
     return true;
   }

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Css } from '@/ui/theme';
 import { CANVAS_W, CANVAS_H } from './GameConstants';
 import { BootScene } from '@/scenes/BootScene';
 import { PreloadScene } from '@/scenes/PreloadScene';
@@ -27,7 +28,7 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: CANVAS_W,
   height: CANVAS_H,
-  backgroundColor: '#020814',
+  backgroundColor: Css.bgDeep,
   parent: 'game',
   scale: {
     // Fit the fixed 1280x720 canvas into any screen (phones included) while keeping aspect ratio.

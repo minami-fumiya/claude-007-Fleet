@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
-import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
+import { Colors, Css, eyebrowStyle, Surface, textStyle } from '@/ui/theme';
+import { plainText } from '@/ui/RubyText';
 import { audio } from '@/systems/AudioSystem';
 
 // ---------------------------------------------------------------------------
@@ -43,11 +44,11 @@ export function addBackdrop(scene: Phaser.Scene, variant: BackdropVariant = 'men
 
     const base = ctx.createLinearGradient(0, 0, 0, h);
     if (variant === 'menu') {
-      base.addColorStop(0, '#05142c');
+      base.addColorStop(0, Surface.backdropTop);
       base.addColorStop(1, Css.bgDeep);
     } else {
-      base.addColorStop(0, '#072447');
-      base.addColorStop(1, '#03142b');
+      base.addColorStop(0, Surface.oceanTop);
+      base.addColorStop(1, Surface.oceanBottom);
     }
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
@@ -117,7 +118,7 @@ export function addBackdrop(scene: Phaser.Scene, variant: BackdropVariant = 'men
     // Vignette
     const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.hypot(w, h) / 2);
     v.addColorStop(0, 'rgba(0,0,0,0)');
-    v.addColorStop(1, 'rgba(0,0,0,0.55)');
+    v.addColorStop(1, Surface.vignette);
     ctx.fillStyle = v;
     ctx.fillRect(0, 0, w, h);
   });
@@ -133,7 +134,7 @@ const OCEAN_TILE = 320;
  */
 export function addOceanWorld(scene: Phaser.Scene, worldW: number, worldH: number): void {
   const tileKey = makeCanvasTexture(scene, 'ui-ocean-tile', OCEAN_TILE, OCEAN_TILE, (ctx) => {
-    ctx.fillStyle = '#05203f';
+    ctx.fillStyle = Surface.sea;
     ctx.fillRect(0, 0, OCEAN_TILE, OCEAN_TILE);
     for (let i = 0; i < OCEAN_TILE; i += 80) {
       ctx.strokeStyle = i === 0 ? 'rgba(160,210,255,0.10)' : 'rgba(160,210,255,0.045)';
@@ -331,7 +332,7 @@ function buttonTexture(scene: Phaser.Scene, variant: ButtonVariant, w: number, h
       roundRectPath(ctx, x, y, w, h, r);
       ctx.fill();
     } else {
-      ctx.fillStyle = 'rgba(11,29,56,0.85)';
+      ctx.fillStyle = Surface.secondaryFill;
       roundRectPath(ctx, x, y, w, h, r);
       ctx.fill();
       ctx.strokeStyle = 'rgba(97,231,255,0.35)';
@@ -373,6 +374,8 @@ export class UIButton extends Phaser.GameObjects.Container {
     this.label = scene.add
       .text(0, 0, text, textStyle(opts.fontSize ?? 20, BUTTON_TEXT[variant], { fontStyle: 'bold' }))
       .setOrigin(0.5);
+    // ふりがな (#94) stays off button labels.
+    plainText(this.label, text);
     this.add([this.bg, this.label]);
     this.fitLabel();
 
@@ -425,7 +428,7 @@ export class UIButton extends Phaser.GameObjects.Container {
   }
 
   setLabel(text: string): this {
-    this.label.setText(text);
+    plainText(this.label, text);
     this.fitLabel();
     return this;
   }
