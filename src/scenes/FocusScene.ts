@@ -203,13 +203,11 @@ export class FocusScene extends Phaser.Scene {
         rimAlpha: on ? 0.95 : st === 'done' || st === 'active' ? 0.75 : 0.2,
         glow: on ? 0.6 : 0,
       }));
-      const name = add(this.add.text(r.x + r.w / 2, r.y + 8, n.name, textStyle(IS_PORTRAIT ? 13 : 12, st === 'closed' ? Css.dim : Css.text, {
-        fontStyle: 'bold', align: 'center', wordWrap: { width: r.w - 10, useAdvancedWrap: true },
-      })).setOrigin(0.5, 0));
+      // One line, shrunk to fit: a wrap would split a word (マル五計 | 画, #382).
+      const name = add(this.add.text(r.x, r.y, n.name, textStyle(IS_PORTRAIT ? 13 : 12, st === 'closed' ? Css.dim : Css.text, { fontStyle: 'bold' })));
+      if (name.width > r.w - 10) name.setScale((r.w - 10) / name.width);
+      name.setPosition(r.x + (r.w - name.displayWidth) / 2, r.y + (r.h - 14 - name.displayHeight) / 2);
       const stateText = add(this.add.text(r.x + r.w / 2, r.y + r.h - 6, st === 'active' && p.focus.current ? `残り ${clock(Math.max(0, p.focus.current.endsAt - Date.now()))}` : STATE_SHORT[st], eyebrowStyle(9, this.stateColor(st))).setOrigin(0.5, 1));
-      // A long name keeps to the room above the state line.
-      const nameRoom = r.h - 8 - stateText.height - 8;
-      if (name.height > nameRoom) name.setScale(Math.max(0.6, nameRoom / name.height));
       if (stateText.width > r.w - 8) stateText.setScale((r.w - 8) / stateText.width);
       const hit = add(this.add.zone(r.x, r.y, r.w, r.h).setOrigin(0, 0).setInteractive({ useHandCursor: true }));
       hit.on('pointerup', () => this.select(n.id));
