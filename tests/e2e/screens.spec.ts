@@ -790,7 +790,7 @@ test.describe('screens', () => {
   test('the encyclopedia shows every tab, owned-only and everything (#43 #44 #91)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     await open(page, 'EncyclopediaScene');
-    for (const tab of ['ships', 'captains', 'aircraft', 'equipment', 'ground']) {
+    for (const tab of ['ships', 'captains', 'aircraft', 'equipment', 'ground', 'music']) {
       for (const ownedOnly of [true, false]) {
         await page.evaluate(([t, o]) => {
           const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('EncyclopediaScene') as unknown as { tab: string; ownedOnly: boolean; selectedId: string; refresh(): void };
@@ -1614,5 +1614,53 @@ test('不具合と表示 (0.0.53): research cards never overlap, locked areas an
     return s.children.list.some((o) => (o as Phaser.GameObjects.Container).list?.some?.((t) => (t as Phaser.GameObjects.Text).text?.startsWith?.('竣工 › 改装')));
   });
   expect(chip, `notice (${layout})`).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('図鑑と音楽室 (0.0.54): ships met open their page with the sunk count, the tunes heard play (#383 #384 #387)', async ({ page }, info) => {
+  test.setTimeout(180_000);
+  const layout = info.project.metadata.layout as string;
+  const save = {
+    ...SAVE, version: 7, seenHelp: SCREENS,
+    record: { sorties: 5, encountered: ['iowa', 'gw_usn_seaplane_base', 'sw_usn'], kills: { iowa: 2, sw_usn: 1 }, tunesHeard: ['ijn', 'ijn_battle', 'mood_night'] },
+  };
+  const errors = await boot(page, layout, save);
+  await open(page, 'EncyclopediaScene');
+  const pick = async (tab: string, nation: string, id: string): Promise<string[]> => page.evaluate(([t, n, i]) => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('EncyclopediaScene') as unknown as { tab: string; nation: string; ownedOnly: boolean; selectedId: string; refresh(): void; children: Phaser.GameObjects.DisplayList };
+    s.tab = t;
+    s.nation = n;
+    s.ownedOnly = true;
+    s.selectedId = i;
+    s.refresh();
+    return s.children.list.filter((o) => o.type === 'Text').map((o) => (o as Phaser.GameObjects.Text).text);
+  }, [tab, nation, id] as const);
+  // 会敵 (#384): Iowa, never owned, has its page, its sunk count and how it comes.
+  const iowa = await pick('ships', 'USN', 'iowa');
+  expect(iowa.some((t) => t.includes('会敵') && t.includes('撃沈 2')), `iowa (${layout})`).toBe(true);
+  expect(iowa.some((t) => t.startsWith('アイオワ'))).toBe(true);
+  expect(await overflowingTexts(page, 'EncyclopediaScene'), `ships (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('book-met.png') });
+  // A ground weapon met, and the superweapon met and sunk.
+  const sea = await pick('ground', 'USN', 'gw_usn_seaplane_base');
+  expect(sea.some((t) => t === '水上機基地')).toBe(true);
+  const giant = await pick('ground', 'USN', 'sw_usn');
+  expect(giant.some((t) => t.includes('撃沈 1'))).toBe(true);
+  expect(await overflowingTexts(page, 'EncyclopediaScene'), `ground (${layout})`).toEqual([]);
+  // 音楽室 (#383): the tunes heard, the play button starts one and stops it.
+  const tunes = await pick('music', 'IJN', 'ijn_battle');
+  expect(tunes.some((t) => t.includes('(50%)'))).toBe(true);
+  expect(await overflowingTexts(page, 'EncyclopediaScene'), `music (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'EncyclopediaScene'), `music (${layout})`).toEqual([]);
+  const playing = await page.evaluate(async () => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('EncyclopediaScene') as unknown as { children: Phaser.GameObjects.DisplayList };
+    const btn = s.children.list.find((o) => (o as Phaser.GameObjects.Container).list?.some?.((t) => (t as Phaser.GameObjects.Text).text?.includes?.('聴く'))) as Phaser.GameObjects.Container | undefined;
+    btn?.emit('pointerdown');
+    btn?.emit('pointerup');
+    const { audio } = await import('/src/systems/AudioSystem.ts');
+    return audio.previewing;
+  });
+  expect(playing).toBe('ijn_battle');
+  await page.screenshot({ path: info.outputPath('book-music.png') });
   expect(errors).toEqual([]);
 });

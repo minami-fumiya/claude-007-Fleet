@@ -331,7 +331,7 @@ export class EncyclopediaScene extends Phaser.Scene {
       });
     };
     // Row 0: what to look at, and owned-only / everything (#44).
-    const kinds = [...TABS.map((t) => TAB_LABEL[t]), this.ownedOnly ? '所持のみ' : '全て'];
+    const kinds = [...TABS.map((t) => TAB_LABEL[t]), this.ownedOnly ? '既知' : '全て'];
     tab(0, kinds, TABS.indexOf(this.tab), (i) => {
       if (i < TABS.length) this.tab = TABS[i];
       else {
@@ -557,7 +557,8 @@ export class EncyclopediaScene extends Phaser.Scene {
     }
     // The class's other ships (#85): same performance, other names.
     // The class, its hull number (#246) and the other ships of it, by name once owned (#245).
-    if (hull.of > 1) {
+    // A ship only met (#384) leaves its sisters out: its page ends with how it comes, and portrait has no room for both.
+    if (hull.of > 1 && owned) {
       const have = this.knownShipIds();
       const others = shipClasses(roster.filter((s) => classKey(s) === classKey(ship)))[0].ships.filter((s) => s.id !== ship.id);
       const names = others.map((s) => (have.includes(s.id) ? s.name.replace(/\s*\(.*\)\s*$/, '') : HIDDEN_NAME));
