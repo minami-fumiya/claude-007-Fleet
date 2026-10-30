@@ -1,5 +1,6 @@
 import { audio } from './AudioSystem';
 import { channelGain } from './SettingsSystem';
+import { pickVoice, speechPhrases } from './SpeechStyle';
 
 /**
  * 声 (#106): narration and battle commentary through the browser's speech synthesis (Web Speech API, a Japanese
@@ -12,6 +13,8 @@ export type VoiceChannel = 'narration' | 'commentary';
 class VoiceSystem {
   private voice: SpeechSynthesisVoice | null = null;
   private looked = false;
+  /** The settings' voice the lookup was made for */
+  private chosen = '';
   /** The channel last spoken: battle calls don't cut the narration off, they wait for it (subtitles still show) */
   private lastChannel: VoiceChannel | null = null;
 
@@ -31,18 +34,34 @@ class VoiceSystem {
     if (!synth || !text || !this.enabled(channel)) return;
     if (channel === 'commentary' && this.lastChannel === 'narration' && synth.speaking) return;
     try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ja-JP';
+      // 抑揚 (#383): one utterance a phrase, each with its own rate and pitch, queued so they follow on.
       const v = this.japanese(synth);
-      if (v) u.voice = v;
       const s = audio.settings;
-      u.volume = channelGain(1, channel === 'narration' ? s.voice : s.commentary, s.muted);
-      u.rate = channel === 'commentary' ? 1.25 : 1.05;
+      const volume = channelGain(1, channel === 'narration' ? s.voice : s.commentary, s.muted);
       synth.cancel();
-      synth.speak(u);
+      for (const p of speechPhrases(text, channel)) {
+        const u = new SpeechSynthesisUtterance(p.text);
+        u.lang = 'ja-JP';
+        if (v) u.voice = v;
+        u.volume = volume;
+        u.rate = p.rate;
+        u.pitch = p.pitch;
+        synth.speak(u);
+      }
       this.lastChannel = channel;
     } catch {
       // Speech unavailable: the subtitles carry the words.
+    }
+  }
+
+  /** The device's Japanese voices, most natural first (#383: the settings pick one). */
+  voices(): string[] {
+    const synth = this.synth();
+    if (!synth) return [];
+    try {
+      return synth.getVoices().filter((v) => v.lang?.toLowerCase().startsWith('ja')).map((v) => v.name);
+    } catch {
+      return [];
     }
   }
 
@@ -54,10 +73,13 @@ class VoiceSystem {
     }
   }
 
+  /** The voice the settings name, else the most natural Japanese one (#383); looked up again when the choice changes. */
   private japanese(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
-    if (!this.looked || !this.voice) {
+    const want = audio.settings.voiceName;
+    if (!this.looked || !this.voice || this.chosen !== want) {
       this.looked = true;
-      this.voice = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith('ja')) ?? null;
+      this.chosen = want;
+      this.voice = pickVoice(synth.getVoices(), want);
     }
     return this.voice;
   }

@@ -37,6 +37,8 @@ export interface ISettings {
   commentaryRate: CommentaryRate;
   /** Narration and commentary as text too (#106) */
   subtitles: boolean;
+  /** 声の種類 (#383): the device voice's name; '' picks the most natural Japanese one */
+  voiceName: string;
   /** 画面の揺れ (#107): weak by default (motion sickness) */
   shake: ShakeLevel;
   /** スマホの振動 (#107) */
@@ -86,7 +88,7 @@ export function nextFrameLimit(limit: FrameLimit): FrameLimit {
 }
 
 export const DEFAULT_SETTINGS: ISettings = { bgm: 80, sfx: 80, muted: false, joystick: true, keepExercise: true, encyclopediaOwnedOnly: true, customizeAll: true, lastSeenVersion: '', difficulty: 'normal', showFps: false, frameLimit: 0,
-  voice: 80, commentary: 80, bgmOn: true, sfxOn: true, voiceOn: true, commentaryOn: true, nationalBgm: true, commentaryRate: 'normal', subtitles: true, shake: 'weak', vibrate: true,
+  voice: 80, commentary: 80, bgmOn: true, sfxOn: true, voiceOn: true, commentaryOn: true, nationalBgm: true, commentaryRate: 'normal', subtitles: true, voiceName: '', shake: 'weak', vibrate: true,
   theme: 'dark', ruby: 'off', orientation: 'auto',
 };
 export const VOLUME_STEP = 10;
@@ -131,6 +133,7 @@ export function parseSettings(raw: string | null, legacyMuted = false): ISetting
       nationalBgm: typeof d.nationalBgm === 'boolean' ? d.nationalBgm : DEFAULT_SETTINGS.nationalBgm,
       commentaryRate: COMMENTARY_RATES.includes(d.commentaryRate as CommentaryRate) ? (d.commentaryRate as CommentaryRate) : DEFAULT_SETTINGS.commentaryRate,
       subtitles: typeof d.subtitles === 'boolean' ? d.subtitles : DEFAULT_SETTINGS.subtitles,
+      voiceName: typeof d.voiceName === 'string' ? d.voiceName.slice(0, 120) : DEFAULT_SETTINGS.voiceName,
       shake: SHAKE_LEVELS.includes(d.shake as ShakeLevel) ? (d.shake as ShakeLevel) : DEFAULT_SETTINGS.shake,
       vibrate: typeof d.vibrate === 'boolean' ? d.vibrate : DEFAULT_SETTINGS.vibrate,
       // 0.0.51 (#94 #95)

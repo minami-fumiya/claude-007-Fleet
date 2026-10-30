@@ -14,8 +14,9 @@ import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import {
-  CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
+  BOOK_STATE_LABEL, bookState, CLASS_JA, CLASS_ORDER, collectionLabel, EncyclopediaTab, filterEntries, kindLabel, modifierLines, summarizeWeapons, TAB_LABEL, TABS,
 } from '@/systems/EncyclopediaSystem';
+import { ITune, TUNE_ROLE_LABEL, tunesOf } from '@/systems/MusicScore';
 import { combineModifiers } from '@/systems/CustomizationSystem';
 import { midClass, midLabel, midModifiers } from '@/systems/ShipKind';
 import { aptitudeFor, earnedTraits, inherentLabel, SKILL_LABEL, SKILL_LEVEL_CAP, skillModifiers, withProgress } from '@/systems/CaptainSystem';
@@ -144,6 +145,8 @@ export class EncyclopediaScene extends Phaser.Scene {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
     audio.music('menu');
+    // 音楽室 (#383): a tune played here stops when the book is left.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => audio.playTune(null));
     this.dynamic = [];
     this.nation = loadSave().current;
     this.ownedOnly = audio.settings.encyclopediaOwnedOnly;
@@ -208,6 +211,11 @@ export class EncyclopediaScene extends Phaser.Scene {
     return loadSave().nations[this.nation]?.ships ?? [];
   }
 
+  /** 図鑑 (#384): ships owned, or met in battle by any nation's fleet (their pages open too). */
+  private knownShipIds(): string[] {
+    return [...this.ownedShipIds(), ...(loadSave().record.encountered ?? [])];
+  }
+
   private ownedCaptainIds(): string[] {
     return loadSave().nations[this.nation]?.captains ?? [];
   }
@@ -223,14 +231,16 @@ export class EncyclopediaScene extends Phaser.Scene {
     switch (this.tab) {
       case 'ships': {
         const owned = this.ownedShipIds();
+        const known = this.knownShipIds();
         const roster = DataLoader.getRegistry(this).byNation(this.nation);
-        // Not owned yet (#245): the name stays hidden ("長門型 ？番艦" once a ship of the class is owned).
-        // 一覧の絞り込み (#263): the kind and a name search; a ship not yet owned never matches a name.
-        const listed = filterShips(filterEntries(roster, this.shipClass), this.shipFilter, { owned, roster, nameKnown: (s) => owned.includes(s.id) });
+        // Not owned yet (#245): the name stays hidden ("長門型 ？番艦" once a ship of the class is owned), unless the
+        // fleet has met one in battle (#384).
+        // 一覧の絞り込み (#263): the kind and a name search; a ship not yet seen never matches a name.
+        const listed = filterShips(filterEntries(roster, this.shipClass), this.shipFilter, { owned, roster, nameKnown: (s) => known.includes(s.id) });
         return listed.map((s) => {
-          const have = owned.includes(s.id);
+          const seen = known.includes(s.id);
           return {
-            id: s.id, name: have ? s.name.replace(/\s*\(.*\)\s*$/, '') : hiddenShipName(roster, s, owned), sub: `${!isHistorical(s) && have ? `${shipOrigin(s)}  ` : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: have,
+            id: s.id, name: seen ? s.name.replace(/\s*\(.*\)\s*$/, '') : hiddenShipName(roster, s, known), sub: `${!isHistorical(s) && seen ? `${shipOrigin(s)}  ` : ''}${kindLabel(s)}`, icon: s.spriteKey, owned: seen,
           };
         });
       }
@@ -255,15 +265,18 @@ export class EncyclopediaScene extends Phaser.Scene {
         const cons = (Object.values(CONSUMABLES)).map((c) => ({ id: `consumable_${c.kind}`, name: c.name, sub: '消耗品', icon: '', owned: research.includes(c.requires) }));
         return [...gear, ...cons];
       }
-      case 'ground': {
-        // A superweapon stays ？？？ until one has been sunk (#315, like unseen ships #245).
-        const seen = this.giantsSunk();
-        // 地上兵器 (#251): the nation's shore defences, each ？？？ until one of it has been destroyed.
-        const destroyed = this.groundDestroyed();
+      case 'ground':
+        // A superweapon (#315) and a ground weapon (#251) stay ？？？ until met in battle (#384) or destroyed.
         return [...GROUND, ...this.groundWeaponEntries()].map((g) => {
-          const hidden = (g.kind === '超兵器' && !seen) || (isGroundWeapon(g.id) && !destroyed.has(g.id));
+          const hidden = this.groundHidden(g);
           return { id: g.id, name: hidden ? HIDDEN_NAME : g.name, sub: g.kind ?? (g.id === 'convoy_ship' ? '支援' : '地上'), icon: hidden ? '' : g.spriteKey, owned: !hidden };
         });
+      case 'music': {
+        // 音楽室 (#383): the navy's tunes and the shared themes, each ？？？ until it has played once.
+        const heard = loadSave().record.tunesHeard ?? [];
+        return tunesOf(this.nation).map((t) => ({
+          id: t.id, name: heard.includes(t.id) ? t.title : HIDDEN_NAME, sub: TUNE_ROLE_LABEL[t.role], icon: '', owned: heard.includes(t.id),
+        }));
       }
     }
   }
@@ -282,7 +295,8 @@ export class EncyclopediaScene extends Phaser.Scene {
     this.buildFilters();
     this.buildList(entries);
     const owned = all.filter((e) => e.owned).length;
-    const count = this.tab === 'ground' ? `${all.length} 種` : collectionLabel(`${NATION_INFO[this.nation].jaShort}の${TAB_LABEL[this.tab]}`, owned, all.length);
+    // 収集率 (#387): what is in the book against all of it, every tab.
+    const count = collectionLabel(`${NATION_INFO[this.nation].jaShort}の${TAB_LABEL[this.tab]}`, owned, all.length);
     this.countText.setText(this.tab === 'ships' ? `${count}  ·  艦隊技術 ${this.techView ? '‹ 閉じる' : '›'}` : count).setColor(this.tab === 'ships' ? Css.cyan : Css.muted);
     if (this.tab === 'ships' && this.techView) {
       this.buildFleetTechDetail();
@@ -294,10 +308,11 @@ export class EncyclopediaScene extends Phaser.Scene {
       this.track(this.add.text(d.x + d.w / 2, d.y + d.h / 2, this.ownedOnly ? 'まだ入手していません\n(右上の「全て」で未入手も表示)' : '項目がありません', textStyle(15, Css.dim, { align: 'center' })).setOrigin(0.5));
       return;
     }
-    if (this.tab === 'ships') this.buildShipDetail(DataLoader.getRegistry(this).byId(entry.id)!, entry.owned);
+    if (this.tab === 'ships') this.buildShipDetail(DataLoader.getRegistry(this).byId(entry.id)!, bookState(entry.id, this.ownedShipIds(), loadSave().record.encountered ?? []) === 'owned', entry.owned);
     else if (this.tab === 'captains') this.buildCaptainDetail(nationCaptains(this.nation).find((c) => c.id === entry.id)!, entry.owned);
     else if (this.tab === 'aircraft') this.buildAircraftDetail(AIRCRAFT.find((a) => a.id === entry.id)!, entry.owned);
     else if (this.tab === 'equipment') this.buildEquipmentDetail(entry.id);
+    else if (this.tab === 'music') this.buildTuneDetail(tunesOf(this.nation).find((t) => t.id === entry.id)!, entry.owned);
     else this.buildGroundDetail([...GROUND, ...this.groundWeaponEntries()].find((g) => g.id === entry.id)!);
   }
 
@@ -466,18 +481,22 @@ export class EncyclopediaScene extends Phaser.Scene {
     return lines.join('\n');
   }
 
-  private buildShipDetail(ship: IShipData, owned: boolean): void {
+  /** `owned`: the nation has it; `seen`: owned or met in battle (#384: its page opens, without the crew or refits). */
+  private buildShipDetail(ship: IShipData, owned: boolean, seen = owned): void {
     const d = L.detail;
     const x = d.x + 26;
     const w = d.w - 52;
     const kind = isHistorical(ship) ? kindLabel(ship) : `${kindLabel(ship)}  ·  ${shipOrigin(ship)}`;
     const roster = DataLoader.getRegistry(this).byNation(ship.nation);
     const hull = hullNumber(roster, ship);
-    const title = owned ? ship.name : hiddenShipName(roster, ship, this.ownedShipIds());
-    let y = this.detailHeader(`${formatNo(ship.no)}  ·  ${NATION_INFO[ship.nation].ja}  ·  ${owned ? kind : kindLabel(ship)}${owned ? '  ·  保有' : '  ·  未入手'}`, title, owned ? Css.cyan : Css.dim);
+    const title = seen ? ship.name : hiddenShipName(roster, ship, this.knownShipIds());
+    // 撃沈数 (#384): how many of it the fleets have sunk, on the header line.
+    const sunk = loadSave().record.kills?.[ship.id] ?? 0;
+    const state = owned ? BOOK_STATE_LABEL.owned : seen ? BOOK_STATE_LABEL.met : BOOK_STATE_LABEL.unseen;
+    let y = this.detailHeader(`${formatNo(ship.no)}  ·  ${NATION_INFO[ship.nation].ja}  ·  ${seen ? kind : kindLabel(ship)}  ·  ${state}${sunk > 0 ? `  ·  撃沈 ${sunk}` : ''}`, title, seen ? Css.cyan : Css.dim);
     const icon = this.track(this.add.image(d.x + d.w - 30, d.y + 22, ship.spriteKey).setOrigin(1, 0));
     icon.setScale(Math.min(2, (IS_PORTRAIT ? 130 : 140) / Math.max(1, icon.height)));
-    if (!owned) {
+    if (!seen) {
       // Not owned yet (#245): a silhouette, the kind and how it comes; no name, stats or story.
       icon.setTintFill(0x101a2c).setAlpha(0.8);
       this.section(y, '入手方法', this.shipSource(ship), Css.gold);
@@ -539,12 +558,14 @@ export class EncyclopediaScene extends Phaser.Scene {
     // The class's other ships (#85): same performance, other names.
     // The class, its hull number (#246) and the other ships of it, by name once owned (#245).
     if (hull.of > 1) {
-      const have = this.ownedShipIds();
+      const have = this.knownShipIds();
       const others = shipClasses(roster.filter((s) => classKey(s) === classKey(ship)))[0].ships.filter((s) => s.id !== ship.id);
       const names = others.map((s) => (have.includes(s.id) ? s.name.replace(/\s*\(.*\)\s*$/, '') : HIDDEN_NAME));
       y = this.section(y, `同型艦 — ${hull.className} ${hull.number} 番艦 (全 ${hull.of} 隻)`, names.join('・'), Css.muted);
     }
-    this.section(y, '解説', ship.description ?? '—', Css.muted);
+    // Met but not owned (#384): how it comes, in place of its story.
+    if (owned) this.section(y, '解説', ship.description ?? '—', Css.muted);
+    else this.section(y, '入手方法', this.shipSource(ship), Css.gold);
   }
 
   // -------------------------------------------------------------------------
@@ -634,26 +655,60 @@ export class EncyclopediaScene extends Phaser.Scene {
     }));
   }
 
-  /** Ground weapons destroyed by any nation's admiral (#251). */
-  private groundDestroyed(): Set<string> {
-    return new Set(Object.values(loadSave().nations).flatMap((np) => Object.keys(np?.groundKills ?? {})));
+  /** Ground weapons destroyed by any nation's admiral (#251), by id, all nations added up. */
+  private groundDestroyed(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const np of Object.values(loadSave().nations)) for (const [id, n] of Object.entries(np?.groundKills ?? {})) out[id] = (out[id] ?? 0) + n;
+    return out;
+  }
+
+  /** A ground weapon or a superweapon not yet met (#384) nor destroyed stays ？？？ (one superweapon sunk opens them all, #315). */
+  private groundHidden(g: IGroundEntry): boolean {
+    const met = loadSave().record.encountered ?? [];
+    if (g.kind === '超兵器') return !this.giantsSunk() && !met.includes(g.id);
+    return isGroundWeapon(g.id) && !(this.groundDestroyed()[g.id] > 0) && !met.includes(g.id);
   }
 
   private buildGroundDetail(g: IGroundEntry): void {
-    if (isGroundWeapon(g.id) && !this.groundDestroyed().has(g.id)) {
+    if (this.groundHidden(g) && g.kind !== '超兵器') {
       const y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.kind ?? '地上兵器'}`, HIDDEN_NAME);
-      this.section(y, '解説', '作戦「対地攻撃」の島に置かれる地上兵器。1 度破壊すると、ここに載る。', Css.muted);
+      this.section(y, '解説', '作戦「対地攻撃」の島に置かれる地上兵器。1 度戦うと、ここに載る。', Css.muted);
       return;
     }
-    if (g.kind === '超兵器' && !this.giantsSunk()) {
+    if (this.groundHidden(g)) {
       const y = this.detailHeader(`${formatNo(g.no)}  ·  超兵器`, HIDDEN_NAME);
-      this.section(y, '解説', '超兵器出現のイベント中、戦域の主力艦隊に現れる。1 隻沈めると、すべての超兵器がここに載る。', Css.muted);
+      this.section(y, '解説', '超兵器出現のイベント中、戦域の主力艦隊に現れる。1 度戦うとその超兵器が、1 隻沈めるとすべての超兵器がここに載る。', Css.muted);
       return;
     }
-    let y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.kind ?? (g.id === 'convoy_ship' ? '支援' : '地上目標')}`, g.name);
+    // 撃破数 (#384): the shore defences destroyed, the superweapons sunk.
+    const downs = g.kind === '超兵器' ? loadSave().record.kills?.[g.id] ?? 0 : this.groundDestroyed()[g.id] ?? 0;
+    const tag = downs > 0 ? `  ·  ${g.kind === '超兵器' ? '撃沈' : '破壊'} ${downs}` : '';
+    let y = this.detailHeader(`${formatNo(g.no)}  ·  ${g.kind ?? (g.id === 'convoy_ship' ? '支援' : '地上目標')}${tag}`, g.name);
     const d = L.detail;
     this.track(this.add.image(d.x + d.w - 60, d.y + 60, g.spriteKey).setScale(g.scale ?? 2));
     y = this.section(y, '性能', `耐久 ${g.hp}  装甲 ${g.armor}`);
     this.section(y, '解説', g.description, Css.muted);
+  }
+
+  // -------------------------------------------------------------------------
+  // 音楽室 (#383)
+  // -------------------------------------------------------------------------
+
+  private buildTuneDetail(t: ITune, heard: boolean): void {
+    const d = L.detail;
+    const where = t.nation ? NATION_INFO[t.nation as Nation].ja : '各国共通';
+    let y = this.detailHeader(`${where}  ·  ${TUNE_ROLE_LABEL[t.role]}`, heard ? t.title : HIDDEN_NAME, heard ? Css.cyan : Css.dim);
+    y = this.section(y, '流れる場面', `${TUNE_ROLE_LABEL[t.role]}${t.nation ? ` (${NATION_INFO[t.nation as Nation].jaShort}で遊んでいるとき)` : ''}`);
+    if (!heard) {
+      this.section(y, '聴くには', 'その場面で 1 度流れると、ここで聴けるようになる。', Css.gold);
+      return;
+    }
+    y = this.section(y, '曲', `${t.composer}  ·  ${t.year} 年  ·  テンポ ${t.bpm}`, Css.muted);
+    const playing = audio.previewing === t.id;
+    const bh = IS_PORTRAIT ? 52 : 40;
+    this.track(new UIButton(this, d.x + 26 + 110, Math.min(y + bh / 2, d.y + d.h - 20 - bh / 2), playing ? '■  止める' : '▶  聴く', () => {
+      audio.playTune(playing ? null : t.id);
+      this.refresh();
+    }, { variant: playing ? 'secondary' : 'primary', width: 220, height: bh, fontSize: 14 }));
   }
 }

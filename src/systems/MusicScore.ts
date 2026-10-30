@@ -13,16 +13,48 @@ export interface ITune {
   composer: string;
   year: number;
   bpm: number;
+  /** home: the home port and menus; map: the sortie map and the fleet; battle: its battles; night / crisis / boss: the
+   * shared themes a battle turns to (#383) */
+  role: TuneRole;
   notes: string[];
 }
+
+export type TuneRole = 'home' | 'map' | 'battle' | 'night' | 'crisis' | 'boss';
+/** 音楽室 (#383): where each kind of tune plays. */
+export const TUNE_ROLE_LABEL: Record<TuneRole, string> = {
+  home: '鎮守府', map: '出撃・編成', battle: '戦闘', night: '夜戦', crisis: '劣勢の戦闘', boss: '超兵器との戦闘',
+};
+
+/** 音楽室 (#383): a navy's tunes, then the shared themes. */
+export function tunesOf(nation: string): ITune[] {
+  return [...TUNES.filter((t) => t.nation === nation), ...TUNES.filter((t) => !t.nation)];
+}
+
+/** The moods a battle can turn to (#383): its own tune, or a shared theme. */
+export type BattleMood = 'normal' | 'night' | 'crisis' | 'boss';
 
 export const TUNES = (data as unknown as { tunes: ITune[] }).tunes;
 export const FANFARE = (data as unknown as { fanfare: string[] }).fanfare;
 /** A battle plays the tune this much faster. */
 export const BATTLE_TEMPO = 1.25;
 
-export function tuneFor(nation: string | undefined): ITune | undefined {
-  return TUNES.find((t) => t.nation === nation);
+/** The navy's tune for a role (#383); its home tune when it has none for that role, nothing for no navy. */
+export function tuneFor(nation: string | undefined, role: TuneRole = 'home'): ITune | undefined {
+  if (!nation) return undefined;
+  return TUNES.find((t) => t.nation === nation && t.role === role) ?? TUNES.find((t) => t.nation === nation && t.role === 'home');
+}
+
+/** The shared theme of a battle mood (#383): night, crisis, boss. */
+export function moodTune(mood: BattleMood): ITune | undefined {
+  return mood === 'normal' ? undefined : TUNES.find((t) => t.role === mood);
+}
+
+/** How a battle's mood follows the fight (#383): a superweapon brings its theme, then night, then a fleet below 40%. */
+export function battleMoodFor(state: { boss: boolean; night: boolean; ownHpShare: number }): BattleMood {
+  if (state.boss) return 'boss';
+  if (state.ownHpShare < 0.4) return 'crisis';
+  if (state.night) return 'night';
+  return 'normal';
 }
 
 const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };

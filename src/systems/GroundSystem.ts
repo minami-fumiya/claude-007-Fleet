@@ -10,7 +10,9 @@ import { Nation } from '@/types/Nation';
  * in the deeper seas.
  */
 
-export type GroundKind = 'heavy_battery' | 'battery' | 'aa' | 'torpedo_base' | 'radar' | 'railway';
+export type GroundKind = 'heavy_battery' | 'battery' | 'aa' | 'torpedo_base' | 'radar' | 'railway'
+  // 0.0.54 (#384): pillboxes, searchlights, fuel tanks, seaplane bases and midget submarine bases.
+  | 'pillbox' | 'searchlight' | 'fuel_tank' | 'seaplane_base' | 'midget_base';
 
 export interface IGroundWeapon extends IShipData {
   kind: GroundKind;
@@ -35,8 +37,8 @@ export function isGroundWeapon(id: string | undefined): boolean {
 
 /** From this depth on, the heavy guns stand on the island. */
 export const HEAVY_DEPTH = 8;
-/** The second spot's kind turns with the area: an AA site, a radar station or a torpedo boat base. */
-const SUPPORT_KINDS: GroundKind[] = ['aa', 'radar', 'torpedo_base'];
+/** The second spot's kind turns with the area: an AA site, a radar station, a torpedo boat base and (#384) more. */
+const SUPPORT_KINDS: GroundKind[] = ['aa', 'radar', 'torpedo_base', 'searchlight', 'seaplane_base', 'midget_base'];
 
 /** A small, stable number from an id (which support kind an area has). */
 function idHash(id: string): number {
@@ -54,9 +56,11 @@ export function bombardLineup(layout: readonly string[], areaId: string, nation:
   return layout.map((id) => {
     if (id !== 'land_battery') return id;
     const i = battery++;
-    const kind: GroundKind = i === 0 ? 'battery'
-      : i === 1 ? SUPPORT_KINDS[idHash(areaId) % SUPPORT_KINDS.length]
-        : depth >= HEAVY_DEPTH ? (idHash(areaId) % 2 === 0 ? 'heavy_battery' : 'railway') : 'battery';
+    // The first spot is a gun (a pillbox on some islands, #384); the last a heavy gun deep in, else a gun or a fuel tank.
+    const h = idHash(areaId);
+    const kind: GroundKind = i === 0 ? (h % 3 === 0 ? 'pillbox' : 'battery')
+      : i === 1 ? SUPPORT_KINDS[h % SUPPORT_KINDS.length]
+        : depth >= HEAVY_DEPTH ? (h % 2 === 0 ? 'heavy_battery' : 'railway') : (h % 4 === 1 ? 'fuel_tank' : 'battery');
     return groundWeapon(nation, kind)?.id ?? id;
   });
 }
