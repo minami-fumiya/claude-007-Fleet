@@ -1,6 +1,6 @@
 import { distanceGain, SoundKind, SoundThrottle } from './SoundRules';
 import { channelGain, ISettings, parseSettings } from './SettingsSystem';
-import { BATTLE_TEMPO, FANFARE, timeline, tuneFor, tuneLength } from './MusicScore';
+import { BATTLE_TEMPO, BattleMood, FANFARE, ITune, moodTune, timeline, TUNES, tuneFor, tuneLength } from './MusicScore';
 
 /**
  * Synthesised sound (WebAudio): no audio files, every effect and the background music are built from
@@ -30,7 +30,8 @@ const SCHEDULE_MS = 400;
 /** A breath between passes of the tune. */
 const TUNE_GAP_S = 2;
 
-export type MusicMood = 'title' | 'menu' | 'battle';
+/** title, the home port and menus (menu), the sortie map and the fleet (map, #383), a battle */
+export type MusicMood = 'title' | 'menu' | 'map' | 'battle';
 
 type AudioCtor = typeof AudioContext;
 
@@ -43,6 +44,11 @@ class AudioSystem {
   private mood: MusicMood | null = null;
   /** The navy whose tune plays (#93) */
   private nation: string | undefined;
+  /** What a battle's music follows (#383) */
+  private battleState: BattleMood = 'normal';
+  /** Told of each tune that starts (#383: the music room lists those heard) */
+  onTune: ((id: string) => void) | null = null;
+  private preview: ITune | null = null;
   private musicTimer: ReturnType<typeof setInterval> | null = null;
   private chordIndex = 0;
   /** Context time the next pass of the tune starts */
@@ -237,7 +243,36 @@ class AudioSystem {
   music(mood: MusicMood): void {
     if (this.mood === mood) return;
     this.mood = mood;
+    this.battleState = 'normal';
+    this.preview = null;
     if (this.ctx) this.startMusic();
+  }
+
+  /** A battle turns to its night, crisis or boss theme, and back (#383). */
+  battleMood(state: BattleMood): void {
+    if (this.battleState === state || this.mood !== 'battle') return;
+    this.battleState = state;
+    if (this.ctx) this.startMusic();
+  }
+
+  /** 音楽室 (#383): plays one tune until the screen is left (null: back to the screen's own). */
+  playTune(id: string | null): void {
+    this.preview = id ? TUNES.find((t) => t.id === id) ?? null : null;
+    if (this.ctx) this.startMusic();
+  }
+
+  /** The tune the music room is playing (#383), if any. */
+  get previewing(): string | null {
+    return this.preview?.id ?? null;
+  }
+
+  /** The tune that would play now. */
+  private currentTune(): ITune | undefined {
+    if (this.preview) return this.preview;
+    const mood = this.mood;
+    if (mood === 'title' || !this.settings.nationalBgm) return undefined;
+    if (mood === 'battle') return moodTune(this.battleState) ?? tuneFor(this.nation, 'battle');
+    return tuneFor(this.nation, mood === 'map' ? 'map' : 'home');
   }
 
   private startMusic(): void {
@@ -254,10 +289,12 @@ class AudioSystem {
       this.tuneOut = null;
     }
     this.chordIndex = 0;
-    const tune = mood === 'title' || !this.settings.nationalBgm ? undefined : tuneFor(this.nation);
+    const tune = this.currentTune();
     if (tune) {
-      // The tune, scheduled a little ahead of the clock and looped with a breath between passes.
-      const bpm = tune.bpm * (mood === 'battle' ? BATTLE_TEMPO : 1);
+      this.onTune?.(tune.id);
+      // The tune, scheduled a little ahead of the clock and looped with a breath between passes. A navy's home tune
+      // (the only one before #383) plays faster in a battle; its battle tunes and the themes keep their own tempo.
+      const bpm = tune.bpm * (mood === 'battle' && tune.role === 'home' && !this.preview ? BATTLE_TEMPO : 1);
       const notes = timeline(tune.notes, bpm);
       const pass = tuneLength(tune.notes, bpm) + TUNE_GAP_S;
       const out = ctx.createGain();

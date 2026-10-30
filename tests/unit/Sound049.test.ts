@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MAX_SOUNDS, shipSize, sinkSound, SOUND_MS, SoundThrottle } from '@/systems/SoundRules';
-import { BATTLE_TEMPO, noteFreq, parseNote, timeline, TUNES, tuneFor, tuneLength } from '@/systems/MusicScore';
+import { BATTLE_TEMPO, battleMoodFor, moodTune, noteFreq, parseNote, timeline, TUNES, tuneFor, tuneLength } from '@/systems/MusicScore';
 import {
   battleLine, bearingWord, COMMENTARY_RULES, emptyCommentary, fillLine, ICommentaryLine, LINE_SEC, logLines, narrationLine, next, raise, STALE_SEC,
 } from '@/systems/CommentarySystem';
@@ -37,18 +37,33 @@ describe('効果音 (#104)', () => {
 });
 
 describe('国別 BGM (#93)', () => {
-  it('every playable navy has a tune whose notes all parse', () => {
+  it('every playable navy has a home, a map and a battle tune (#383), and every tune parses', () => {
     for (const n of PLAYABLE_NATIONS) {
-      const tune = tuneFor(n);
-      expect(tune, n).toBeDefined();
-      for (const note of tune!.notes) {
-        const { pitch, beats } = parseNote(note);
-        expect(beats, `${n} ${note}`).toBeGreaterThan(0);
-        expect(pitch === 'R' || noteFreq(pitch) !== null, `${n} ${note}`).toBe(true);
+      for (const role of ['home', 'map', 'battle'] as const) {
+        const tune = tuneFor(n, role);
+        expect(tune?.role, `${n} ${role}`).toBe(role);
+        expect(tune?.nation).toBe(n);
       }
-      expect(tuneLength(tune!.notes, tune!.bpm), n).toBeGreaterThan(8);
     }
-    expect(new Set(TUNES.map((t) => t.nation)).size).toBe(TUNES.length);
+    for (const t of TUNES) {
+      for (const note of t.notes) {
+        const { pitch, beats } = parseNote(note);
+        expect(beats, `${t.id} ${note}`).toBeGreaterThan(0);
+        expect(pitch === 'R' || noteFreq(pitch) !== null, `${t.id} ${note}`).toBe(true);
+      }
+      expect(tuneLength(t.notes, t.bpm), t.id).toBeGreaterThan(8);
+    }
+    expect(new Set(TUNES.map((t) => t.id)).size).toBe(TUNES.length);
+    // The shared themes a battle turns to.
+    for (const m of ['night', 'crisis', 'boss'] as const) expect(moodTune(m)?.role, m).toBe(m);
+    expect(tuneFor(undefined)).toBeUndefined();
+  });
+
+  it('a battle\'s music follows the fight (#383): boss, then crisis, then night', () => {
+    expect(battleMoodFor({ boss: true, night: true, ownHpShare: 0.1 })).toBe('boss');
+    expect(battleMoodFor({ boss: false, night: true, ownHpShare: 0.3 })).toBe('crisis');
+    expect(battleMoodFor({ boss: false, night: true, ownHpShare: 0.9 })).toBe('night');
+    expect(battleMoodFor({ boss: false, night: false, ownHpShare: 0.9 })).toBe('normal');
   });
 
   it('pitches and timing', () => {

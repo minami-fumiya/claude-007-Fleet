@@ -64,13 +64,13 @@ const CARRIERS = new Set([ijn, usn, km, rn, fr, su, rm].flatMap((d) => (d.ships 
  * What the medals (#92) look at beyond the record, over every nation the admiral has played: lifetime quest-event
  * totals are summed, collections (ships, research, captains) count the best nation.
  */
-export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }): IMedalContext {
+export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet; record?: Pick<ISave['record'], 'encountered'> }): IMedalContext {
   const nations = Object.entries(save.nations).filter(([, np]) => np !== undefined);
   const totals: Record<string, number> = {};
   const theaters = new Set<string>();
   const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, equipStarsMax: 0, foreignOwned: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, equipStarsMax: 0, foreignOwned: 0, shipsKnown: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -130,6 +130,8 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet }
     ctx.equipStarsMax = Math.max(ctx.equipStarsMax, ...Object.values(np.equipStars ?? {}), 0);
     ctx.foreignOwned += np.ships.filter((id) => id.includes('@')).length;
   }
+  // 図鑑 (#384): ships some nation owns or the fleet has met.
+  ctx.shipsKnown = new Set([...nations.flatMap(([, np]) => np?.ships ?? []), ...(save.record?.encountered ?? [])].filter((id) => SHIP_CLASS.has(id))).size;
   ctx.groundKinds = groundKillStats(Object.fromEntries([...groundSeen].map((id) => [id, 1]))).kinds;
   return { ...ctx, totals, clearedTheaters: [...theaters], goldEarned: save.wallet?.earned ?? 0 };
 }
