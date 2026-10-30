@@ -42,6 +42,7 @@ interface ICard {
   node: ITechNode;
   frame: Phaser.GameObjects.Graphics;
   state: Phaser.GameObjects.Text;
+  name: Phaser.GameObjects.Text;
   requires: Phaser.GameObjects.Text;
   desc: Phaser.GameObjects.Text;
   w: number;
@@ -108,14 +109,16 @@ export class ResearchView {
       const tx = LEVEL_COL + 6;
       const tw = w - tx - 10;
       const frame = this.scene.add.graphics();
+      // "LV" sits on top of the number, never over it (#381: they touched on a phone).
+      const lv = this.scene.add.text(LEVEL_COL / 2 + 4, h / 2 - 2, 'LV', eyebrowStyle(9, Css.muted)).setOrigin(0.5, 1);
       const level = this.scene.add
         .text(LEVEL_COL / 2 + 4, h / 2, String(node.level), textStyle(IS_PORTRAIT ? 18 : 20, Css.gold, { fontStyle: '900' }))
-        .setOrigin(0.5);
-      const lv = this.scene.add.text(LEVEL_COL / 2 + 4, h / 2 - 22, 'LV', eyebrowStyle(9, Css.muted)).setOrigin(0.5);
+        .setOrigin(0.5, 0);
       // The state sits at the top right, beside the name, so a long requirement (rank, prerequisites and a medal) has
       // room under the effect (#336: it ran over the effect on a phone).
       const state = this.scene.add.text(w - 10, 12, '', eyebrowStyle(10, Css.cyan)).setOrigin(1, 0);
-      const name = this.scene.add.text(tx, 10, node.name, textStyle(13, Css.text, { fontStyle: 'bold', wordWrap: { width: tw - 64, useAdvancedWrap: true } }));
+      // One line: a long name (ダメージコントロール VIII) shrinks beside the state instead of wrapping under it (#381).
+      const name = this.scene.add.text(tx, 10, node.name, textStyle(13, Css.text, { fontStyle: 'bold' }));
       const desc = this.scene.add.text(tx, name.y + name.height + 4, node.description, textStyle(11, Css.muted, { wordWrap: { width: tw, useAdvancedWrap: true } }));
       const cost = this.scene.add.text(tx, h - 8, formatResources(scaleCost(node.cost, this.state().costMul ?? 1)), textStyle(10, Css.dim, { wordWrap: { width: tw, useAdvancedWrap: true } })).setOrigin(0, 1);
       const requires = this.scene.add
@@ -125,22 +128,24 @@ export class ResearchView {
       makeClickable(card, w, h);
       card.on('pointerup', () => this.onResearch(node));
       layer.add(card);
-      this.cards.push({ node, frame, state, requires, desc, w, h });
+      this.cards.push({ node, frame, state, name, requires, desc, w, h });
     });
     this.cardLayer = layer;
   }
 
-  /** "少尉・前提: 砲術研究 II・射撃管制 (電探)": the rank (#298), then the branch of prerequisites from another branch. */
+  /**
+   * "少尉・前提 Lv2・電探 Lv1": the rank (#298), then each prerequisite by its level — of this branch, or of the branch
+   * named (#381: the full names, ダメージコントロール IV and the like, ran to three lines on a phone).
+   */
   private requiresText(node: ITechNode): string {
     const rank = node.rank ? RANKS[node.rank].name : '';
     if (node.requires.length === 0) return rank || '前提なし';
     const names = node.requires.map((id) => {
       const r = this.tree.find((n) => n.id === id);
       if (!r) return id;
-      const other = r.branch !== node.branch ? ` (${TECH_BRANCHES.find((b) => b.id === r.branch)?.name ?? ''})` : '';
-      return `${r.name}${other}`;
+      return r.branch === node.branch ? `Lv${r.level}` : `${TECH_BRANCHES.find((b) => b.id === r.branch)?.name ?? ''} Lv${r.level}`;
     });
-    return `${rank ? `${rank}・` : ''}前提: ${names.join('・')}`;
+    return `${rank ? `${rank}・` : ''}前提 ${names.join('・')}`;
   }
 
   refresh(): void {
@@ -166,6 +171,9 @@ export class ResearchView {
       const label = finished ? '✓ 研究済' : !rankOk ? '要階級' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
       // 研究済 is green (#283): gold stays for what can be done now.
       c.state.setText(label).setColor(finished ? Css.success : ready ? Css.cyan : met ? Css.muted : Css.danger);
+      const nameRoom = c.state.x - c.state.width - 8 - c.name.x;
+      c.name.setScale(1);
+      if (c.name.width > nameRoom) c.name.setScale(Math.max(0.6, nameRoom / c.name.width));
       c.requires.setText(finished ? this.requiresText(c.node) : [this.requiresText(c.node), ...(medal ? [medalName(medal)] : [])].join('・'));
       // The requirement grows upwards from the cost line; when it reaches the effect, the effect gives way to one
       // line (#336), and the requirement to two (#355: a rank, prerequisites and a medal ran over each other).

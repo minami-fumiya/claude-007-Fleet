@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import focusData from '@/data/focus.json';
 import {
-  EMPTY_FOCUS, FOCUS_RESET_COST, focusBuildMul, focusModifiers, focusStatus, focusTree, focusUnlocks, IFocusNode, IFocusState,
+  EMPTY_FOCUS, FOCUS_RESET_COST, focusBuildMul, focusLayout, focusModifiers, focusStatus, focusTree, focusUnlocks, IFocusNode, IFocusState,
   parseFocus, resetFocus, settleFocus, startFocus, unlockingFocus,
 } from '@/systems/NationFocusSystem';
 import { resources } from '@/systems/ResourceSystem';
@@ -100,5 +100,32 @@ describe('国家方針 (#49)', () => {
     expect(parseFocus(undefined)).toEqual(EMPTY_FOCUS);
     expect(parseFocus({ done: ['a', 'a', 3], current: { id: 'b', endsAt: 5 } })).toEqual({ done: ['a'], current: { id: 'b', endsAt: 5 } });
     expect(parseFocus({ done: 'x', current: { id: 1 } })).toEqual(EMPTY_FOCUS);
+  });
+});
+
+describe('国家方針のツリー (#382)', () => {
+  it('lays every navy\'s tree out by depth and lane, a pair side by side and no two focuses in one place', () => {
+    for (const n of PLAYABLE_NATIONS) {
+      const { places, depths, lanes } = focusLayout(n);
+      expect(places.length).toBe(focusTree(n).length);
+      const keys = places.map((p) => `${p.depth}:${p.lane}`);
+      expect(new Set(keys).size, n).toBe(keys.length);
+      for (const node of focusTree(n)) {
+        const p = places.find((x) => x.id === node.id)!;
+        expect(p.depth).toBeLessThan(depths);
+        expect(p.lane).toBeGreaterThanOrEqual(0);
+        expect(p.lane).toBeLessThanOrEqual(lanes - 1);
+        // Each focus sits below every one it needs.
+        for (const r of [...(node.requires ?? []), ...(node.requiresAny ?? [])]) expect(p.depth, `${node.id} < ${r}`).toBeGreaterThan(places.find((x) => x.id === r)!.depth);
+        // A pair is side by side.
+        for (const e of node.exclusive ?? []) expect(Math.abs(p.lane - places.find((x) => x.id === e)!.lane), `${node.id} ↔ ${e}`).toBe(1);
+      }
+    }
+    const ijn = focusLayout('IJN');
+    expect(ijn.depths).toBe(5);
+    expect(ijn.lanes).toBe(6);
+    const at = (id: string) => ijn.places.find((p) => p.id === id)!;
+    expect(at('ijn_bigGun3').lane).toBe(at('ijn_bigGun').lane);
+    expect(at('ijn_total').lane).toBe((at('ijn_bigGun3').lane + at('ijn_air3').lane) / 2);
   });
 });

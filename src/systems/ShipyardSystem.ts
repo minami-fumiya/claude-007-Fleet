@@ -326,8 +326,8 @@ export function completeBuilds(progress: IProgress, roster: IShipData[], now: nu
     next = grantShip(next, roster, b.shipId);
     if (b.base) next = assignShips(next, [b.shipId], b.base);
   }
-  // 竣工章 (#264) counts the ships that come out of the yard.
-  return { progress: withQuestEvents(next, [['buildDone', done.length]], now), done };
+  // 竣工章 (#264) and the build quests (#381) count the ships that come out of the yard.
+  return { progress: withQuestEvents(next, [['buildDone', done.length], ['build', done.length]], now), done };
 }
 
 /** Finishes a build at once with a 高速建造材; null when there is none or the ship isn't being built. */

@@ -177,7 +177,7 @@ export class CampaignMapScene extends Phaser.Scene {
     });
     const areas = areasOf(DATA, id);
     const pending = pendingSortie(this);
-    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => a.id === this.focusArea) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
+    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => a.id === this.focusArea && isUnlocked(a, cleared)) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
     this.focusArea = null;
     this.drawMap();
     this.drawDetail();
@@ -202,7 +202,11 @@ export class CampaignMapScene extends Phaser.Scene {
     for (const o of this.mapLayer) o.destroy();
     this.mapLayer = [];
     const cleared = loadProgress().campaign;
-    const areas = areasOf(DATA, this.theater);
+    // Areas not open yet are left off the map, with the routes into them (#382): what lies ahead stays unknown. The
+    // area a sortie was left in shows whatever happens.
+    const pendingId = pendingSortie(this)?.areaId;
+    const all = areasOf(DATA, this.theater);
+    const areas = all.filter((a) => isUnlocked(a, cleared) || a.id === pendingId);
     const g = this.add.graphics();
     this.mapLayer.push(g);
     // Faint chart grid
@@ -224,7 +228,8 @@ export class CampaignMapScene extends Phaser.Scene {
     }
     // Nodes
     const names: Phaser.GameObjects.Text[] = [];
-    areas.forEach((a, i) => {
+    areas.forEach((a) => {
+      const i = all.indexOf(a);
       const { x, y } = this.nodePos(a);
       const done = isCleared(a, cleared);
       const open = isUnlocked(a, cleared);

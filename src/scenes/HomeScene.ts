@@ -72,6 +72,8 @@ const L = IS_PORTRAIT
 const HOME_TAB_KEY = 'home.tab';
 /** Registry key: builds finished since the shipyard was opened (#264), for the notice strip */
 export const BUILT_KEY = 'home.built';
+/** The ship that came out of the yard last (#382): the notice opens its 改装 page. */
+const BUILT_SHIP_KEY = 'home.builtShip';
 /** Overlay (nation picker) draws above everything else on the screen. */
 const OVERLAY_DEPTH = 200;
 
@@ -133,8 +135,10 @@ export class HomeScene extends Phaser.Scene {
   create(): void {
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
-    // 国別 BGM (#93): the home port plays the navy's own tune.
-    audio.setNation(loadProgress().nation);
+    // 国別 BGM (#93): the home port plays the navy's own tune — once a navy is chosen; before that (a new save, whose
+    // default navy is Japan), the neutral tune (#381).
+    const chosen = loadSave();
+    audio.setNation(isStarted(chosen, chosen.current) ? chosen.current : undefined);
     audio.music('menu');
     // Medals earned outside a battle (builds, facilities, an older version's progress) are handed out here (#92).
     awardPendingMedals();
@@ -638,6 +642,7 @@ export class HomeScene extends Phaser.Scene {
         // 通知音とナレーション (#104 #106)
         audio.play('notify');
         const ship = this.registryShips.byId(this.drawnBuilds.find((id) => progress.ships.includes(id) && !progress.builds.some((b) => b.shipId === id)) ?? '');
+        if (ship) this.registry.set(BUILT_SHIP_KEY, ship.id);
         voice.say(narrationLine('buildDone', { ship: ship?.name.replace(/\s*\(.*\)\s*$/, '') ?? '新しい艦' }), 'narration');
       }
       this.refresh();
@@ -705,7 +710,8 @@ export class HomeScene extends Phaser.Scene {
     const items: Array<{ id: string; label: string; count: number; scene: string }> = pendingSummary(progress, Date.now(), 0).filter((p) => p.id !== 'docks' && p.id !== 'sweeps');
     // Builds finished since the shipyard was last opened (#264).
     const built = (this.registry.get(BUILT_KEY) as number | undefined) ?? 0;
-    if (built > 0) items.unshift({ id: 'built', label: '建造完了', count: built, scene: SceneKeys.SHIPYARD });
+    // The notice opens the new ship on the 改装 screen (#382): fitting it out comes next, not another build.
+    if (built > 0) items.unshift({ id: 'built', label: '竣工 › 改装', count: built, scene: SceneKeys.CUSTOMIZATION });
     const n = L.notice;
     add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
     if (items.length === 0) {
@@ -720,7 +726,13 @@ export class HomeScene extends Phaser.Scene {
       add(new UIButton(this, left + i * (w + gap) + w / 2, n.y + n.h / 2, `${it.label} ${it.count}`, () => {
         if (it.id === 'quests') this.openQuests();
         else {
-          if (it.id === 'built') this.registry.remove(BUILT_KEY);
+          if (it.id === 'built') {
+            const shipId = this.registry.get(BUILT_SHIP_KEY) as string | undefined;
+            this.registry.remove(BUILT_KEY);
+            this.registry.remove(BUILT_SHIP_KEY);
+            this.scene.start(SceneKeys.CUSTOMIZATION, { returnTo: SceneKeys.HOME, scope: 'all', shipId });
+            return;
+          }
           this.scene.start(it.scene, { returnTo: SceneKeys.HOME });
         }
       }, { variant: it.id === 'quests' ? 'gold' : 'primary', width: w, height: n.h - 6, fontSize: IS_PORTRAIT ? 14 : 12 }));
@@ -737,6 +749,7 @@ export class HomeScene extends Phaser.Scene {
     }
     saveProgress(done);
     this.registry.set(BUILT_KEY, (this.registry.get(BUILT_KEY) as number | undefined ?? 0) + 1);
+    this.registry.set(BUILT_SHIP_KEY, shipId);
     this.refresh();
   }
 

@@ -1539,3 +1539,80 @@ test('方針・設計・改修 (0.0.52): national focus, a design built, equipme
   expect(await overflowingTexts(page, 'HomeScene'), `home arsenal (${layout})`).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('不具合と表示 (0.0.53): research cards never overlap, locked areas and bases stay hidden, the 竣工 notice opens 改装 (#381 #382)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  const save = {
+    ...SAVE, version: 7, seenHelp: SCREENS,
+    nations: { IJN: { ...SAVE.nations.IJN, rankFloor: 8, research: ['build_cruiser', 'gunnery_1', 'gunnery_2', 'torpedo_1', 'armor_1', 'engine_1', 'fire_control', 'aa_1', 'radar_1'] } },
+  };
+  const errors = await boot(page, layout, save);
+  // 研究: every branch, every card — no two texts of a card overlap, none leaves its card (#381).
+  await open(page, 'ArsenalScene');
+  const hits = await page.evaluate(() => {
+    type Card = { node: { id: string; branch: string }; frame: Phaser.GameObjects.Graphics; w: number; h: number };
+    const v = ((window as unknown as { game: Phaser.Game }).game.scene.getScene('ArsenalScene') as unknown as { view: { tree: Array<{ branch: string }>; cards: Card[]; select(b: string): void } }).view;
+    const out: string[] = [];
+    for (const b of [...new Set(v.tree.map((n) => n.branch))]) {
+      v.select(b);
+      for (const c of v.cards) {
+        const box = c.frame.parentContainer;
+        const texts = box.list.filter((o): o is Phaser.GameObjects.Text => o.type === 'Text' && (o as Phaser.GameObjects.Text).text !== '');
+        for (let i = 0; i < texts.length; i++) {
+          const a = texts[i].getBounds();
+          if (a.bottom > box.y + c.h + 1 || a.right > box.x + c.w + 1) out.push(`${c.node.id}: out [${texts[i].text}]`);
+          for (let j = i + 1; j < texts.length; j++) {
+            const z = texts[j].getBounds();
+            if (a.right > z.left + 1 && z.right > a.left + 1 && a.bottom > z.top + 1 && z.bottom > a.top + 1) out.push(`${c.node.id}: [${texts[i].text}] × [${texts[j].text}]`);
+          }
+        }
+      }
+    }
+    return out;
+  });
+  expect(hits, `research cards (${layout})`).toEqual([]);
+  // 作戦: only open areas are drawn (#382) — p1〜p3 cleared, so the map shows no area past the next ones.
+  await open(page, 'CampaignMapScene');
+  const drawn = await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { mapLayer: Phaser.GameObjects.GameObject[] };
+    return s.mapLayer.filter((o) => o.type === 'Zone').length;
+  });
+  const open1 = await page.evaluate(async () => {
+    const { isUnlocked, areasOf } = await import('/src/systems/CampaignSystem.ts');
+    const data = (await import('/src/data/campaign.json')).default;
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { theater: string };
+    const cleared = JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.campaign as string[];
+    return { open: areasOf(data, s.theater).filter((a: never) => isUnlocked(a, cleared)).length, all: areasOf(data, s.theater).length };
+  });
+  expect(drawn, `campaign nodes (${layout})`).toBe(open1.open);
+  expect(open1.open).toBeLessThan(open1.all);
+  await page.screenshot({ path: info.outputPath('campaign-hidden.png') });
+  expect(await overflowingTexts(page, 'CampaignMapScene'), `campaign (${layout})`).toEqual([]);
+  // 軍港・基地: none listed that the rank or an earlier sea still keeps out (#382).
+  await open(page, 'BaseScene');
+  const locked = await page.evaluate(async () => {
+    const { baseState } = await import('/src/systems/BaseSystem.ts');
+    const ps = await import('/src/utils/ProgressStore.ts');
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BaseScene') as unknown as { listed(t: 'port' | 'forward'): Array<{ id: string }> };
+    const p = ps.loadProgress();
+    return [...s.listed('port'), ...s.listed('forward')].filter((b) => baseState(b as never, p) === 'locked').length;
+  });
+  expect(locked, `bases (${layout})`).toBe(0);
+  expect(await overflowingTexts(page, 'BaseScene'), `bases (${layout})`).toEqual([]);
+  // 竣工: the notice reads 竣工 › 改装 and opens the new ship there (#382).
+  await open(page, 'HomeScene');
+  await page.evaluate(() => {
+    const g = (window as unknown as { game: Phaser.Game }).game;
+    g.registry.set('home.built', 1);
+    g.registry.set('home.builtShip', 'yukikaze');
+    g.scene.getScene('HomeScene').scene.restart();
+  });
+  await page.waitForTimeout(700);
+  const chip = await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene');
+    return s.children.list.some((o) => (o as Phaser.GameObjects.Container).list?.some?.((t) => (t as Phaser.GameObjects.Text).text?.startsWith?.('竣工 › 改装')));
+  });
+  expect(chip, `notice (${layout})`).toBe(true);
+  expect(errors).toEqual([]);
+});

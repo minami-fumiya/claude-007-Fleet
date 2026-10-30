@@ -66,7 +66,8 @@ export function completeTimers<T extends ITimerState>(progress: T, now: number):
   next = finishBaseWork(next, now);
   if (focus !== null && settled) next = withQuestEvents({ ...next, focus: settled.state }, [['focusDone', 1]], now);
   // 竣工章 (#264) counts the ships that come out of the yard, wherever the build is noticed.
-  if (builds.length > 0) next = withQuestEvents(next, [['buildDone', builds.length]], now);
+  // The build quests count them here too (#381: they used to count a ship when it was laid down).
+  if (builds.length > 0) next = withQuestEvents(next, [['buildDone', builds.length], ['build', builds.length]], now);
   if (base !== null) next = withQuestEvents(next, [['baseOpened', 1], ...(isForwardBaseId(base) ? [['forwardBaseOpened', 1] as [QuestEvent, number]] : [])], now);
   // 前線整備章 (#373): every level a forward base's facility reaches.
   const forwardDone = progress.facilityJobs.filter((j) => j.endsAt <= now && isForwardBaseId(j.base)).length;

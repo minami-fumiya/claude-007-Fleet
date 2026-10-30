@@ -380,7 +380,8 @@ export class ShipyardScene extends Phaser.Scene {
     // The base's workshop (#146) shortens construction.
     const next = startBuild(progress, roster, ship, now, fleetBuildTimeMul(progress));
     if (!next) return;
-    saveProgress(withQuestEvents(next, [['build', 1]], now), 'build');
+    // The build quests count the ship when it is finished, not when it is laid down (#381).
+    saveProgress(next, 'build');
     this.status = `${short} を起工しました (完成まで ${clock(buildTimeMs(ship, fleetBuildTimeMul(progress)))})`;
     this.refresh();
     if (emitTutorial('build', this.registry).advanced) this.guide.refresh();

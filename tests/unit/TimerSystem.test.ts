@@ -28,6 +28,9 @@ describe('timers end in one place (#310)', () => {
     expect(q.facilities.ijn_home?.fuelTank).toBe(1);
     expect(q.basesOpen).toContain('ijn_light');
     expect(q.baseWork).toBeNull();
+    // The build quests count a ship when it is finished (#381), with 竣工章.
+    expect(q.quests.totals?.build).toBe(1);
+    expect(q.quests.totals?.buildDone).toBe(1);
     // 竣工章 (#264) still counts a build finished by a load.
     expect(q.quests.totals.buildDone).toBe(1);
     expect(timerKey(q)).not.toBe(timerKey(p));
