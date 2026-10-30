@@ -5,7 +5,8 @@ import { GameConfig } from './config/GameConfig';
 import { loadUiFonts } from './ui/fontLoader';
 import { ORIENTATION } from './config/GameConstants';
 import { audio } from './systems/AudioSystem';
-import { loadSave } from './utils/ProgressStore';
+import { loadSave, saveSave } from './utils/ProgressStore';
+import { noteTune } from './systems/RecordSystem';
 import { applyFrameLimit } from './utils/FrameLimit';
 import { watchOrientation } from './utils/OrientationWatch';
 import { installRuby } from './ui/RubyText';
@@ -15,6 +16,12 @@ document.body.dataset.layout = ORIENTATION;
 installRuby(audio.settings.ruby);
 // Read (and, for an older release's save, back up and migrate) the save before any screen touches it.
 loadSave();
+// 音楽室 (#383): each tune heard goes into the shared record, for the book's tune list and the medal.
+audio.onTune = (id) => {
+  const save = loadSave();
+  const record = noteTune(save.record, id);
+  if (record !== save.record) saveSave({ ...save, record });
+};
 // Browsers only allow audio after a user gesture.
 for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => audio.unlock());
 

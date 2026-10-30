@@ -54,6 +54,11 @@ export interface IServiceRecord {
   career?: ICareerStats;
   /** 称号 (#92): the id of the title shown beside the admiral's rank, if one is picked */
   title?: string;
+  /** 音楽室 (#383): the tunes heard so far */
+  tunesHeard?: string[];
+  /** 図鑑 (#384): the enemy ships and ground weapons met in battle, by id, and the enemy ships sunk, by id */
+  encountered?: string[];
+  kills?: Record<string, number>;
 }
 
 /** 通算の記録 (#92): what the player's ships did over every battle since 0.0.51. */

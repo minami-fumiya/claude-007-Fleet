@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { battleMoodFor } from '@/systems/MusicScore';
 import { improvedCatalog } from '@/systems/ImprovementSystem';
 import { withSwaps } from '@/systems/GunSwapSystem';
 import { rollFragment } from '@/systems/ForeignShipSystem';
@@ -96,7 +97,7 @@ import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
-import { PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
+import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
 import { LAST_STAND_HP, lastStandArmor, luckChance, skillModifiers, skillOf } from '@/systems/ShipSkillSystem';
 import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
@@ -260,6 +261,8 @@ export class BattleScene extends Phaser.Scene {
   private contactCalled = false;
   /** Fleets fighting beside the one the player steers (#84 支援艦隊, #64 友軍艦隊), each ship with its own AI */
   private groups: IFleetGroup[] = [];
+  /** When the music's mood is looked at next (#383) */
+  private musicCheckAt = 0;
   /** 友軍艦隊 still to arrive (#64) */
   private pendingAllies: Array<{ ships: IShipData[]; arriveSec: number; name: string; nation: Nation }> = [];
   /** Name of the fleet the player steers now (第一艦隊 until a switch, #84) */
@@ -369,6 +372,7 @@ export class BattleScene extends Phaser.Scene {
     this.aiSystems = [];
     this.escortAISystems = [];
     this.groups = [];
+    this.musicCheckAt = 0;
     this.pendingAllies = [];
     this.controlLabel = '第一艦隊';
     this.switchBtn = null;
@@ -543,7 +547,22 @@ export class BattleScene extends Phaser.Scene {
     const frameStart = this.perfText ? performance.now() : 0;
     this.battleUpdate(loopTime, delta);
     this.updateSuperweaponParts();
+    this.updateMusicMood(loopTime);
     if (this.perfText) this.showPerf(performance.now() - frameStart);
+  }
+
+  /** The battle's music follows the fight (#383): the superweapon's theme, a crisis, the night. Checked every second. */
+  private updateMusicMood(now: number): void {
+    if (now < this.musicCheckAt) return;
+    this.musicCheckAt = now + 1000;
+    const own = this.friendlies().filter((s) => s);
+    const max = own.reduce((sum, s) => sum + s.stats.maxHp, 0);
+    const left = own.filter((s) => s.isAlive).reduce((sum, s) => sum + s.stats.currentHp, 0);
+    audio.battleMood(battleMoodFor({
+      boss: this.superweapon?.isAlive === true,
+      night: this.conditions.time === TimeOfDay.Night,
+      ownHpShare: max > 0 ? left / max : 1,
+    }));
   }
 
   /** 航空機と搭乗員 (#87): the models the carrier flies and its pilots; scenarios fly the base planes. */
@@ -2721,6 +2740,8 @@ export class BattleScene extends Phaser.Scene {
       },
     }, this.scenario ? 'scenario' : this.exercise ? 'exercise' : 'campaign',
     this.scenario && this.scenarioSetup ? { id: this.scenario.id, force: this.scenarioSetup.side.force } : undefined);
+    // 図鑑 (#384): every enemy met opens its page; the ships sunk are counted (the shore defences have groundKills).
+    record = noteEnemies(record, this.enemies.filter((e) => !e.isConvoy).map((e) => ({ id: e.dataId, sunk: !e.isAlive && !e.isLand })));
     // Medals look at every nation's progress too (#92): the save as it will be written.
     const awarded = awardEarnedMedals(withSaveProgress(loadSave(), { ...progress, record }));
     const medals = awarded.medals;

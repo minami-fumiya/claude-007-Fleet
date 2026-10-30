@@ -107,7 +107,7 @@ export class CampaignMapScene extends Phaser.Scene {
     showScreenHelp(this);
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
-    audio.music('menu');
+    audio.music('map');
     this.tabs = [];
     this.mapLayer = [];
     this.detailLayer = [];

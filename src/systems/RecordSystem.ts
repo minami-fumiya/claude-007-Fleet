@@ -4,11 +4,13 @@ import { ALL_SCENARIOS } from '@/data/scenarios';
 import { ShipClass } from '@/types/ShipClass';
 import campaignData from '@/data/campaign.json';
 import { earnedTitles } from './AdmiralTitles';
+import { GROUND_WEAPONS } from './GroundSystem';
+import { TUNES } from './MusicScore';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
 
 export function emptyRecord(): IServiceRecord {
-  return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {}, career: emptyCareer() };
+  return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {}, career: emptyCareer(), tunesHeard: [], encountered: [], kills: {} };
 }
 
 export function emptyModeRecord(): IModeRecord {
@@ -74,6 +76,23 @@ function addBattle<T extends IModeRecord>(r: T, b: IBattleRecordInput): T {
     bestDamage: Math.max(r.bestDamage, damage),
     shipsLost: r.shipsLost + Math.max(0, b.shipsLost),
   };
+}
+
+/**
+ * 図鑑 (#384): the enemies met in a battle go into the book, and the ships sunk are counted by id. `met` lists each
+ * enemy once per hull (an id may come more than once); convoys are left out by the caller.
+ */
+export function noteEnemies(r: IServiceRecord, met: ReadonlyArray<{ id: string; sunk: boolean }>): IServiceRecord {
+  const known = met.map((m) => m.id).filter((id) => id !== '');
+  if (known.length === 0) return r;
+  const kills = { ...(r.kills ?? {}) };
+  for (const m of met) if (m.sunk && m.id) kills[m.id] = (kills[m.id] ?? 0) + 1;
+  return { ...r, encountered: [...new Set([...(r.encountered ?? []), ...known])], kills };
+}
+
+/** 音楽室 (#383): a tune heard for the first time goes on the list; the same record otherwise. */
+export function noteTune(r: IServiceRecord, id: string): IServiceRecord {
+  return (r.tunesHeard ?? []).includes(id) ? r : { ...r, tunesHeard: [...(r.tunesHeard ?? []), id] };
 }
 
 /**
@@ -229,6 +248,8 @@ export interface IMedalContext {
   equipStarsMax?: number;
   /** 他国艦 (#368): other navies' ships owned in all */
   foreignOwned?: number;
+  /** 図鑑 (#384): ships in the book, owned by some nation or met in battle */
+  shipsKnown?: number;
 }
 
 export type MedalCategory = 'sink' | 'battle' | 'campaign' | 'growth' | 'base' | 'special' | 'quest';
@@ -389,7 +410,7 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('aircraft_complete', '全機種配備章', 'base', [1], () => '自国の艦載機をすべて開発する', (_r, c) => c.aircraftComplete ?? 0),
   ...ladder('air_ace', 'エース章', 'growth', [1, 3, 6], (g) => `空母の航空隊に ${g} 人のエースを迎える`, (_r, c) => total(c, 'aceBorn')),
   ...ladder('ground_weapon', '地上兵器撃破章', 'battle', [10, 50, 200], (g) => `国ごとの地上兵器 (要塞砲・高射砲陣地など) を ${g} 個破壊する`, (_r, c) => c.groundTotal ?? 0),
-  ...ladder('ground_kinds', '地上兵器図鑑章', 'battle', [6, 21, 42], (g) => (g >= 42 ? 'すべての地上兵器 (42 種) を破壊する' : `${g} 種類の地上兵器を破壊する`), (_r, c) => c.groundKinds ?? 0),
+  ...ladder('ground_kinds', '地上兵器図鑑章', 'battle', [6, 21, 42, GROUND_WEAPONS.length], (g) => (g >= GROUND_WEAPONS.length ? `すべての地上兵器 (${g} 種) を破壊する` : `${g} 種類の地上兵器を破壊する`), (_r, c) => c.groundKinds ?? 0),
   // 0.0.49 音: the battle log after a fight (#106).
   ...ladder('battle_log', '戦闘記録章', 'battle', [1, 10, 50], (g) => `結果画面で戦闘ログを ${g} 回読む`, (_r, c) => total(c, 'logView')),
   // 0.0.50: forward bases (#373)
@@ -451,6 +472,11 @@ export const MEDALS: IMedalRule[] = [
     ['q_research10', '技術立国章', '任務「技術立国」を達成する'], ['q_facility10', '軍港の建設者章', '任務「軍港の建設者」を達成する'],
     ['q_captain30', '名艦長の師章', '任務「名艦長の師」を達成する'],
   ] as const).map(([id, name, description]): IMedalRule => ({ id, name, description, category: 'quest', value: (r) => (r.medals.includes(id) ? 1 : 0), goal: 1 })),
+  // 0.0.54 図鑑と音楽室 (#383 #384 #387): enemies met, ships sunk by kind, the book's ships, the tunes heard.
+  ...ladder('encounter', '会敵章', 'battle', [20, 100, 300], (g) => `${g} 種類の敵 (艦・地上兵器) と戦う (図鑑に載る)`, (r) => (r.encountered ?? []).length),
+  ...ladder('sink_kinds', '撃沈図鑑章', 'sink', [10, 50, 150], (g) => `${g} 種類の敵艦を沈める`, (r) => Object.values(r.kills ?? {}).filter((n) => n > 0).length),
+  ...ladder('ships_known', '艦艇図鑑章', 'special', [100, 300, 600], (g) => `図鑑の艦艇を ${g} 隻載せる (保有か会敵)`, (_r, c) => c.shipsKnown ?? 0),
+  ...ladder('music_room', '音楽室章', 'special', [5, 12, TUNES.length], (g) => (g >= TUNES.length ? `すべての曲 (${g} 曲) を聴く` : `${g} 曲を聴く (図鑑の「曲」に載る)`), (r) => (r.tunesHeard ?? []).length),
 ];
 
 /** How far along a medal is: [value, goal]. */
@@ -502,8 +528,14 @@ export function parseRecord(raw: unknown): IServiceRecord {
     scenarios,
     career,
     ...(typeof r.title === 'string' ? { title: r.title } : {}),
+    tunesHeard: ids(r.tunesHeard),
+    encountered: ids(r.encountered),
+    kills: Object.fromEntries(Object.entries(r.kills !== null && typeof r.kills === 'object' ? r.kills : {}).filter(([, v]) => num(v) > 0).map(([k, v]) => [k, num(v)])),
   };
 }
+
+/** A list of ids, each once (#383 #384). */
+const ids = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string'))] : []);
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
 

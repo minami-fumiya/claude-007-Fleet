@@ -9,6 +9,7 @@ import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { ORIENTATION_CHOICES, ORIENTATION_LABEL, RUBY_LABEL, RUBY_LEVELS, THEME_CHOICES, THEME_LABEL, clampVolume, COMMENTARY_RATE_LABEL, COMMENTARY_RATES, frameLimitLabel, ISettings, nextChoice, nextFrameLimit, SHAKE_LABEL, SHAKE_LEVELS, stepVolume } from '@/systems/SettingsSystem';
 import { voice } from '@/systems/VoiceSystem';
+import { shortVoiceName } from '@/systems/SpeechStyle';
 import { applyFrameLimit } from '@/utils/FrameLimit';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
 import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
@@ -137,12 +138,17 @@ export class SettingsScene extends Phaser.Scene {
     }
     this.toggleRow(x2, y, colW, 'BGM の曲', s.nationalBgm ? '国別の海軍の曲' : '従来の曲', s.nationalBgm, () => this.change({ nationalBgm: !s.nationalBgm }));
     y += BTN_H + 6;
-    y += this.note(x2, y, colW, '国別: 鎮守府と戦闘で、遊んでいる国の海軍の曲 (著作権の切れた行進曲など) を流します。タイトルは共通の曲です。') + (IS_PORTRAIT ? 18 : 14);
+    y += this.note(x2, y, colW, '国別: 鎮守府・出撃・戦闘で、遊んでいる国の曲 (著作権の切れた行進曲と本作の曲) を流します。夜戦・劣勢・超兵器では専用の曲に変わります。') + (IS_PORTRAIT ? 18 : 14);
     this.toggleRow(x2, y, colW, '実況の頻度', COMMENTARY_RATE_LABEL[s.commentaryRate], s.commentaryRate !== 'few', () => this.change({ commentaryRate: nextChoice(COMMENTARY_RATES, s.commentaryRate) }));
     y += BTN_H + (IS_PORTRAIT ? 14 : 12);
     this.toggleRow(x2, y, colW, '字幕', s.subtitles ? '表示' : '非表示', s.subtitles, () => this.change({ subtitles: !s.subtitles }));
     y += BTN_H + 6;
     y += this.note(x2, y, colW, 'ナレーションと実況を画面の下にも文字で出します。声は端末の音声合成を使い、日本語の声が無い端末では字幕だけになります。') + (IS_PORTRAIT ? 14 : 10);
+    // 声の種類 (#383): taps go through the device's Japanese voices; 自動 picks the most natural one.
+    const voices = ['', ...voice.voices()];
+    const at = Math.max(0, voices.indexOf(s.voiceName));
+    this.toggleRow(x2, y, colW, '声の種類', s.voiceName && voices.includes(s.voiceName) ? shortVoiceName(s.voiceName) : '自動 (自然な声)', s.voiceName !== '', () => this.change({ voiceName: voices[(at + 1) % voices.length] }));
+    y += BTN_H + (IS_PORTRAIT ? 14 : 10);
     this.track(new UIButton(this, x2 + colW / 2, y + BTN_H / 2, '声を試す', () => voice.say('敵艦隊見ゆ。全艦、戦闘配置につけ', 'narration'), {
       variant: 'secondary', width: IS_PORTRAIT ? 260 : 200, height: BTN_H, fontSize: 15,
     }));

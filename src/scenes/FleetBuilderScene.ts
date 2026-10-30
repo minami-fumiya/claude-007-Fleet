@@ -384,7 +384,7 @@ export class FleetBuilderScene extends Phaser.Scene {
   create(): void {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
-    audio.music('menu');
+    audio.music('map');
     this.shipRegistry = DataLoader.getRegistry(this);
     const progress = loadProgress();
     // The fleet is always the current nation's (switched at the home port); each nation keeps its own setup.

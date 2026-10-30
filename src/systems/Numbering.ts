@@ -83,10 +83,12 @@ export const GROUND_TYPE_CODE: Record<string, number> = {
 
 /**
  * 地上兵器 (#251), numbered under their navy: fortress and coastal guns share 02 with the shared battery, then 05 AA
- * sites, 06 torpedo boat bases, 07 radar stations, 08 railway guns.
+ * sites, 06 torpedo boat bases, 07 radar stations, 08 railway guns. 0.0.54 (#384): pillboxes under 02, fuel tanks under
+ * 03 (harbours), seaplane bases under 04 (airfields), midget submarine bases under 06, searchlights 09.
  */
 export const GROUND_WEAPON_TYPE_CODE: Record<string, number> = {
   heavy_battery: 2, battery: 2, aa: 5, torpedo_base: 6, radar: 7, railway: 8,
+  pillbox: 2, fuel_tank: 3, seaplane_base: 4, midget_base: 6, searchlight: 9,
 };
 
 export const WEAPON_TYPE_CODE: Record<WeaponType, number> = {

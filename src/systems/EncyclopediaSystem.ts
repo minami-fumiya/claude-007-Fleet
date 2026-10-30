@@ -50,15 +50,30 @@ export function summarizeWeapons(ids: string[]): Array<{ id: string; count: numb
 // ---------------------------------------------------------------------------
 
 /** Encyclopedia tabs. */
-export type EncyclopediaTab = 'ships' | 'captains' | 'aircraft' | 'equipment' | 'ground';
-export const TAB_LABEL: Record<EncyclopediaTab, string> = { ships: '艦艇', captains: '艦長', aircraft: '航空機', equipment: '装備', ground: '特殊' };
-/** 装備 (#373): the equipment (#55 #251 #150) and the consumables (#47). */
-export const TABS: EncyclopediaTab[] = ['ships', 'captains', 'aircraft', 'equipment', 'ground'];
+export type EncyclopediaTab = 'ships' | 'captains' | 'aircraft' | 'equipment' | 'ground' | 'music';
+export const TAB_LABEL: Record<EncyclopediaTab, string> = { ships: '艦艇', captains: '艦長', aircraft: '航空機', equipment: '装備', ground: '特殊', music: '曲' };
+/** 装備 (#373): the equipment (#55 #251 #150) and the consumables (#47); 曲 (#383): the music room. */
+export const TABS: EncyclopediaTab[] = ['ships', 'captains', 'aircraft', 'equipment', 'ground', 'music'];
 
-/** "艦艇 12 / 25" — owned / all. */
+/** "艦艇 12 / 25 (48%)" — owned / all, and the share collected (#387). */
 export function collectionLabel(label: string, owned: number, all: number): string {
-  return `${label} ${owned} / ${all}`;
+  return `${label} ${owned} / ${all} (${collectionRate(owned, all)}%)`;
 }
+
+/** The share collected, in whole percent rounded down (100 only when all are in). */
+export function collectionRate(owned: number, all: number): number {
+  return all > 0 ? Math.floor((owned / all) * 100) : 0;
+}
+
+/** Where a ship of the book stands (#384): owned, met in battle (its page opens), or not yet seen. */
+export type BookState = 'owned' | 'met' | 'unseen';
+
+export function bookState(id: string, owned: readonly string[], encountered: readonly string[]): BookState {
+  if (owned.includes(id)) return 'owned';
+  return encountered.includes(id) ? 'met' : 'unseen';
+}
+
+export const BOOK_STATE_LABEL: Record<BookState, string> = { owned: '保有', met: '会敵', unseen: '未入手' };
 
 const MOD_LABEL: Partial<Record<keyof IShipModifiers, string>> = {
   hpMul: '耐久', armorAdd: '装甲', speedMul: '速力', gunPowerMul: '砲火力', gunReloadMul: '主砲装填', torpedoPowerMul: '魚雷',
