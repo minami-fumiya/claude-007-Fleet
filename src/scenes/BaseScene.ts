@@ -148,18 +148,18 @@ export class BaseScene extends Phaser.Scene {
     const tabH = IS_PORTRAIT ? 44 : 36;
     const tabW = (w - 28 - 8) / 2;
     (['port', 'forward'] as const).forEach((t, i) => {
-      const n = (t === 'port' ? nationPorts(progress.nation) : nationForwardBases(progress.nation)).filter((b) => isBaseOpen(b, progress)).length;
-      const all = (t === 'port' ? nationPorts(progress.nation) : nationForwardBases(progress.nation)).length;
+      const n = this.listed(t).filter((b) => isBaseOpen(b, progress)).length;
+      const all = this.listed(t).length;
       this.track(new UIButton(this, x + 14 + tabW / 2 + i * (tabW + 8), L.list.y + 14 + tabH / 2, `${t === 'port' ? '軍港' : '基地'} ${n} / ${all}`, () => {
         if (this.tab === t) return;
         this.tab = t;
-        this.selectedId = (t === 'port' ? nationPorts(progress.nation) : nationForwardBases(progress.nation))[0]?.id ?? '';
+        this.selectedId = this.listed(t)[0]?.id ?? '';
         this.status = '';
         this.refresh();
       }, { variant: this.tab === t ? 'primary' : 'secondary', width: tabW, height: tabH, fontSize: IS_PORTRAIT ? 14 : 13 }));
     });
     const y = L.list.y + tabH + 10;
-    const bases = this.tab === 'port' ? nationPorts(progress.nation) : nationForwardBases(progress.nation);
+    const bases = this.listed(this.tab);
     const gap = 8;
     const cols = IS_PORTRAIT ? 2 : 1;
     const cw = (w - 28 - gap * (cols - 1)) / cols;
@@ -191,6 +191,15 @@ export class BaseScene extends Phaser.Scene {
         this.refresh();
       }));
     });
+  }
+
+  /**
+   * The ports or bases the list shows: those open, under way or that can be built — not those whose rank or earlier
+   * theater is still out of reach (#382: they only crowded the list with what can't be had yet).
+   */
+  private listed(tab: 'port' | 'forward'): IBase[] {
+    const progress = loadProgress();
+    return (tab === 'port' ? nationPorts(progress.nation) : nationForwardBases(progress.nation)).filter((b) => baseState(b, progress) !== 'locked');
   }
 
   private buildDetail(base: IBase): void {

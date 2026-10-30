@@ -154,3 +154,46 @@ export function parseFocus(v: unknown): IFocusState {
   return { done, current };
 }
 
+
+export interface IFocusPlace {
+  id: string;
+  /** Steps from the root: 0 for a focus that needs none */
+  depth: number;
+  /** The branch it grows on, across the tree; a node reached from several branches sits between them */
+  lane: number;
+}
+
+/**
+ * Where each focus sits in the tree (#382): its depth is one more than its deepest prerequisite; each focus right after
+ * the root opens a lane of its own (in data order, so a pair sits side by side), the ones after it keep that lane, and a
+ * focus reached from either of several (総力戦) sits between theirs.
+ */
+export function focusLayout(nation: string): { places: IFocusPlace[]; depths: number; lanes: number } {
+  const tree = focusTree(nation);
+  const depth = new Map<string, number>();
+  const depthOf = (n: IFocusNode): number => {
+    const known = depth.get(n.id);
+    if (known !== undefined) return known;
+    const before = [...(n.requires ?? []), ...(n.requiresAny ?? [])].map((id) => tree.find((x) => x.id === id)).filter((x): x is IFocusNode => x !== undefined);
+    const d = before.length === 0 ? 0 : Math.max(...before.map(depthOf)) + 1;
+    depth.set(n.id, d);
+    return d;
+  };
+  tree.forEach(depthOf);
+  const lane = new Map<string, number>();
+  let next = 0;
+  const roots = tree.filter((n) => depth.get(n.id) === 0);
+  // The root sits over the middle of the lanes, worked out once they are all known.
+  for (const n of [...tree].sort((a, b) => depth.get(a.id)! - depth.get(b.id)!)) {
+    if (depth.get(n.id) === 0) continue;
+    const parents = (n.requires ?? []).filter((id) => depth.get(id)! > 0);
+    const anyParents = (n.requiresAny ?? []).filter((id) => lane.has(id));
+    if (parents.length > 0 && lane.has(parents[0])) lane.set(n.id, lane.get(parents[0])!);
+    else if (anyParents.length > 0) lane.set(n.id, anyParents.reduce((s, id) => s + lane.get(id)!, 0) / anyParents.length);
+    else lane.set(n.id, next++);
+  }
+  const lanes = Math.max(1, next);
+  roots.forEach((n, i) => lane.set(n.id, roots.length === 1 ? (lanes - 1) / 2 : i));
+  const places = tree.map((n) => ({ id: n.id, depth: depth.get(n.id)!, lane: lane.get(n.id)! }));
+  return { places, depths: Math.max(...places.map((p) => p.depth)) + 1, lanes };
+}
