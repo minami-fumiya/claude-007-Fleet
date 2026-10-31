@@ -471,7 +471,11 @@ export class EncyclopediaScene extends Phaser.Scene {
     if (research.length > 0) lines.push(`・研究「${research.map(tech).join('」「')}」`);
     // 架空艦 (#309): the national focus that opens it; 他国艦 (#368): its navy's plans; 設計艦 (#51): the player's own.
     if (ship.fictional) lines.push(`・国家方針「${unlockingFocus(ship.nation, ship.id)?.name ?? '?'}」 (工廠 › 方針)`);
-    if (ship.foreign) lines.push(`・${NATION_INFO[ship.foreign as Nation]?.jaShort ?? ship.foreign}の設計図の断片 ${fragmentNeed(ship)} 個 (その国の艦を沈めると手に入る)`);
+    // How far the plans are (#395): 断片 7 / 10, from that navy's ships sunk.
+    if (ship.foreign) {
+      const have = Math.min(fragmentNeed(ship), loadSave().nations[this.nation]?.foreignFragments?.[ship.foreign] ?? 0);
+      lines.push(`・${NATION_INFO[ship.foreign as Nation]?.jaShort ?? ship.foreign}の設計図の断片 ${have} / ${fragmentNeed(ship)} 個 (作戦でその国の艦を沈めて勝つと手に入る)${have >= fragmentNeed(ship) ? ' ✓' : ''}`);
+    }
     if (ship.designed) lines.unshift('工廠 › 設計で作った艦 (設計艦)');
     if (shipGrade(ship) > 0) lines.push(`・階級 ${gradeRankName(shipGrade(ship))} 以上`);
     const kills = killNeed(ship, record);

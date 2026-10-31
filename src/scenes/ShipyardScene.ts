@@ -165,8 +165,10 @@ export class ShipyardScene extends Phaser.Scene {
   private classRoster(): IShipData[] {
     const progress = loadProgress();
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
-    // Class by class, oldest first, hulls in order (#246).
-    return shipOrder(roster.filter((s) => s.shipClass === this.shipClass));
+    // Class by class, oldest first, hulls in order (#246). 他国艦 (#368) are listed once their navy's plans start
+    // coming in (#386 #395): no fragment, no ship (and owned ones always).
+    const owned = progress.ships;
+    return shipOrder(roster.filter((s) => s.shipClass === this.shipClass && (!s.foreign || owned.includes(s.id) || (progress.foreignFragments[s.foreign] ?? 0) > 0)));
   }
 
   /** The tab's ships that pass the filter bar (#263). */

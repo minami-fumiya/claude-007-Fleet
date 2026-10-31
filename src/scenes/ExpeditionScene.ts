@@ -46,6 +46,8 @@ export class ExpeditionScene extends Phaser.Scene {
   /** 遠征用の編成 (#337): the expedition whose group is being chosen, and the ships chosen so far */
   private picker: IExpedition | null = null;
   private pickerIds: string[] = [];
+  /** Where the picker's list was scrolled (#395: a tap redraws it, and it jumped back to the top) */
+  private pickerScroll = 0;
   /** The expedition whose 呼び戻す was pressed once (a second press recalls it) */
   private recallArmed: string | null = null;
   /** Page of the expedition list (#359: one expedition a rank no longer fits one screen) */
@@ -216,6 +218,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const idle = this.idleShips(p, Date.now());
     this.picker = e;
     this.pickerIds = (rememberedGroup(p.expeditionGroups, e, idle) ?? pickShips(e, idle) ?? []).map((s) => s.id);
+    this.pickerScroll = 0;
     this.draw();
   }
 
@@ -253,10 +256,13 @@ export class ExpeditionScene extends Phaser.Scene {
       const card = this.add.container(0, i * (itemH + 4), parts);
       list.addItem(card, w - 52, itemH, () => {
         this.pickerIds = on ? this.pickerIds.filter((id) => id !== s.id) : [...this.pickerIds, s.id];
+        // The list stays where it was: the ships keep their places, only the mark changes (#395).
+        this.pickerScroll = list.offset;
         this.draw();
       });
     });
     list.setContentHeight(Math.max(0, idle.length * (itemH + 4) - 4));
+    list.setOffset(this.pickerScroll);
     const bw = (w - 48 - 16) / 3;
     const by = y + h - footer / 2;
     const bh = IS_PORTRAIT ? 52 : 38;
