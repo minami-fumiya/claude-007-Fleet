@@ -330,9 +330,10 @@ export class DevelopScene extends Phaser.Scene {
 
   private developRandom(): void {
     const p = loadProgress();
-    const out = developRandom(p, this.catalog(), p.nation, Math.random());
+    const out = developRandom(p, this.catalog(), p.nation, Math.random(), Math.random());
     if (!out) return;
-    saveProgress(withQuestEvents(out.holder, [['develop', 1]], Date.now()));
-    this.say(`おまかせ開発: ${this.catalog().find((u) => u.id === out.id)?.name ?? out.id} ができました`);
+    saveProgress(withQuestEvents(out.holder, [['develop', out.count], ['luckyDevelop', out.count > 1 ? 1 : 0]], Date.now()));
+    const name = this.catalog().find((u) => u.id === out.id)?.name ?? out.id;
+    this.say(out.count > 1 ? `おまかせ開発: 当たり! ${name} が 2 つできました` : `おまかせ開発: ${name} ができました`);
   }
 }

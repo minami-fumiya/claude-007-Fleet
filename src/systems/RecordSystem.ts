@@ -378,6 +378,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('torpedo_squadron', '水雷戦隊章', 'special', [10, 50], (g) => `駆逐艦が旗艦の艦隊で ${g} 回勝利する`, (_r, c) => total(c, 'ddFlagWin')),
   ...ladder('drill', '演習章', 'special', [20, 100], (g) => `演習で ${g} 回勝利する`, (_r, c) => total(c, 'exerciseWin')),
   // 0.0.57 (#404): the enemy brings as many fleets as the player.
+  // 0.0.58 (#401): おまかせ開発 is a lucky dip.
+  ...ladder('lucky_dip', '福引章', 'special', [1, 10, 30], (g) => `おまかせ開発で当たり (2 つ) を ${g} 回出す`, (_r, c) => total(c, 'luckyDevelop')),
   ...ladder('grand_drill', '総力演習章', 'special', [1, 5, 20], (g) => `3 艦隊以上どうしの演習で ${g} 回勝利する`, (_r, c) => total(c, 'fleetExerciseWin')),
   ...ladder('historian', '戦史章', 'special', [3, 6, 10, ALL_SCENARIOS.length], (g) => `史実のシナリオを ${g} 種類勝利する`, (r) => scenarioWins(r).won),
   ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
