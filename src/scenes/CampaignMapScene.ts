@@ -31,7 +31,7 @@ import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { NATION_INFO } from '@/config/NationInfo';
 import { ICampaignArea, ICampaignData, Objective, ITheater } from '@/types/Campaign';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { placeLabels } from '@/utils/LabelLayout';
@@ -143,7 +143,7 @@ export class CampaignMapScene extends Phaser.Scene {
     if (hidden.length > 0) {
       const names = IS_PORTRAIT ? '' : ` (${hidden.map((t) => t.name).join('・')})`;
       const note = this.add.text(L.map.x + 18, L.map.y + L.map.h - 14, `ほか ${hidden.length} 戦域${names}は、基地を開くと出撃できます`, textStyle(12, Css.dim)).setOrigin(0, 1).setDepth(2);
-      if (note.width > L.map.w - 36) note.setScale((L.map.w - 36) / note.width);
+      fitText(note, L.map.w - 36);
     }
     if (!this.theaters.some((t) => t.id === this.theater)) this.theater = this.theaters[0]?.id ?? DATA.theaters[0].id;
     // A sortie left unfinished (#138) opens on its area.

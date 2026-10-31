@@ -386,7 +386,7 @@ export class UIButton extends Phaser.GameObjects.Container {
         .setAlpha(0.75);
       this.add(this.caption);
       // Captions get the same shrink-to-fit as labels, so a long one never spills out of the button (#69).
-      if (this.caption.width > w - 12) this.caption.setScale((w - 12) / this.caption.width);
+      fitText(this.caption, w - 12);
       // Stack label + caption around the centre using their real (scaled) heights.
       const gap = 4;
       const total = this.label.height * 0.8 + this.caption.height * 0.8 + gap;
@@ -435,8 +435,7 @@ export class UIButton extends Phaser.GameObjects.Container {
 
   /** Shrinks a label that is wider than the button (e.g. long nation names on narrow tabs). */
   private fitLabel(): void {
-    const room = this.btnW - 12;
-    this.label.setScale(this.label.width > room ? room / this.label.width : 1);
+    fitText(this.label, this.btnW - 12);
   }
 
   /** Changes the caption line (only on buttons created with a `caption`). */
@@ -534,5 +533,27 @@ export function drawMeter(
   if (f > 0) {
     g.fillStyle(color, 0.95);
     g.fillRoundedRect(x, y, Math.max(h, w * f), h, h / 2);
+  }
+}
+
+/** The smallest a text may be drawn, in canvas px (#406: 文字の最小サイズ). */
+export const MIN_TEXT_PX = 12;
+
+/**
+ * Fits `text` into `room` px wide (#406): shrinks it, but never below MIN_TEXT_PX; past that it is cut with "…" so
+ * nothing is drawn too small to read.
+ */
+export function fitText(text: Phaser.GameObjects.Text, room: number, minPx = MIN_TEXT_PX): void {
+  text.setScale(1);
+  if (text.width <= room || room <= 0) return;
+  const px = parseFloat(String(text.style.fontSize)) || minPx;
+  const scale = Math.max(room / text.width, Math.min(1, minPx / px));
+  text.setScale(scale);
+  if (text.width * scale <= room) return;
+  const full = text.text;
+  let n = full.length;
+  while (n > 1 && text.width * scale > room) {
+    n--;
+    text.setText(`${full.slice(0, n)}…`);
   }
 }

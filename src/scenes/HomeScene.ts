@@ -28,7 +28,7 @@ import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSy
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { IShipData } from '@/types/Ship';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawMeter, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { CAMPAIGN_AREA_KEY } from '@/scenes/CampaignMapScene';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -167,7 +167,7 @@ export class HomeScene extends Phaser.Scene {
     const base = started ? baseOfProgress(loadProgress()) : undefined;
     const title = this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 104 : 60, `${NATION_INFO[save.current].jaShort} ${base?.name ?? '鎮守府'}`, displayStyle(24)).setOrigin(0.5);
     const room = IS_PORTRAIT ? CANVAS_W - 32 : CANVAS_W - 2 * 300;
-    if (title.width > room) title.setScale(room / title.width);
+    fitText(title, room);
 
     // Limited-time event (#89): what runs now, or what comes next.
     this.eventText = this.add.text(IS_PORTRAIT ? CANVAS_W / 2 : L.resources.x + L.resources.w / 2, IS_PORTRAIT ? 134 : 82, '', textStyle(12, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5);
@@ -203,7 +203,7 @@ export class HomeScene extends Phaser.Scene {
       const next = this.add.text(x, a.y + a.h / 2, promotionText(progress), textStyle(11, Css.text)).setOrigin(0, 0.5);
       // An exam and the missions can outgrow the narrow screen: shrink to fit.
       const room = CANVAS_W - x - 12;
-      if (next.width > room) next.setScale(room / next.width);
+      fitText(next, room);
     } else {
       this.add.text(x, a.y + 2, `${rankLine}  ·  ${promotionText(progress)}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
     }
@@ -396,7 +396,7 @@ export class HomeScene extends Phaser.Scene {
     // Captains a claim just brought (#209), once.
     if (this.questNote) {
       const t = add(this.add.text(x + 28, y + 40, this.questNote, textStyle(12, Css.gold)));
-      if (t.width > w - 56) t.setScale((w - 56) / t.width);
+      fitText(t, w - 56);
       this.questNote = '';
     }
     const tabs: QuestTab[] = [...QUEST_KINDS, 'rank'];
@@ -496,9 +496,10 @@ export class HomeScene extends Phaser.Scene {
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
     add(this.add.text(x + 24, y + 20, '階級一覧', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), `現在: ${current.name}  ·  戦功 ${Math.floor(progress.merit ?? 0)}`, displayStyle(IS_PORTRAIT ? 20 : 18)));
-    const cols = IS_PORTRAIT ? [0, 150, 270, 380] : [0, 150, 260, 350, 440];
+    // コスト上限 (#406) next to the slots: the two limits a fleet must fit.
+    const cols = IS_PORTRAIT ? [0, 130, 240, 330, 430] : [0, 150, 250, 330, 420, 520];
     const hy = y + head - (IS_PORTRAIT ? 26 : 22);
-    const labels = ['階級', '必要戦功', '出撃枠', '建造', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
+    const labels = ['階級', '必要戦功', '出撃枠', '建造', 'コスト上限', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
     labels.forEach((l, i) => add(this.add.text(x + 24 + cols[i], hy, l, textStyle(11, Css.muted))));
     rows.forEach((r, i) => {
       const ry = y + head + rowTop(i);
@@ -515,6 +516,7 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[1], ry + 4, String(r.minMerit), textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[4], ry + 4, String(r.costCap), textStyle(IS_PORTRAIT ? 14 : 13, css)));
       // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
       const missions = r.index === current.index + 1 ? missionLines(r.index, progress).map((m) => (m.startsWith('済') ? m : `任務: ${m}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
@@ -523,15 +525,15 @@ export class HomeScene extends Phaser.Scene {
       const captain = r.index >= CAPTAIN_PROMOTION_RANK && ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
       const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
-        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[4];
-        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[4];
+        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[5];
+        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[5];
         const color = missions.some((m) => m.startsWith('任務')) ? Css.cyan : css;
         if (next) {
           // Wrapped over two lines rather than shrunk.
           add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 4, extra, textStyle(IS_PORTRAIT ? 14 : 13, color, { lineSpacing: 2, wordWrap: { width: room, useAdvancedWrap: true } })));
         } else {
           const t = add(this.add.text(ux, IS_PORTRAIT ? ry + 32 : ry + 5, extra, textStyle(12, color)));
-          if (t.width > room) t.setScale(room / t.width);
+          fitText(t, room);
         }
       }
     });

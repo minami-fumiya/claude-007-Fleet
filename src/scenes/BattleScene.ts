@@ -67,7 +67,7 @@ import { Explosion } from '@/entities/effects/Explosion';
 import { WaterSplash } from '@/entities/effects/WaterSplash';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
-import { addChip, addOceanWorld, addPanel, UIButton } from '@/ui/components/UIKit';
+import { addChip, addOceanWorld, addPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
@@ -2337,7 +2337,7 @@ export class BattleScene extends Phaser.Scene {
     // Which battle this is (#279), under the title; the objective lines follow as before.
     const [kind] = battleBanner({ areaName: area?.name, sortie: area ? this.battleData?.sortie : undefined, exercise: this.exercise && !area, scenarioName: this.scenario?.name, goal: '' });
     const kindText = add(this.add.text(CANVAS_W / 2, y + 72, kind, eyebrowStyle(11, Css.gold)).setOrigin(0.5, 0));
-    if (kindText.width > w - 64) kindText.setScale((w - 64) / kindText.width);
+    fitText(kindText, w - 64);
     const campaign = this.battleData?.areaId !== undefined && !this.scenario;
     const lines = [
       ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length }),
@@ -2370,7 +2370,7 @@ export class BattleScene extends Phaser.Scene {
     const band = this.add.rectangle(CANVAS_W / 2, y, w, IS_PORTRAIT ? 110 : 92, Colors.bgDeep, 0.78).setScrollFactor(0).setDepth(DEPTH_HUD + 6);
     const t1 = this.add.text(CANVAS_W / 2, y - (IS_PORTRAIT ? 22 : 18), kind, textStyle(IS_PORTRAIT ? 20 : 20, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
     const t2 = this.add.text(CANVAS_W / 2, y + (IS_PORTRAIT ? 22 : 18), goal, textStyle(IS_PORTRAIT ? 14 : 15, Css.text, { align: 'center', wordWrap: { width: w - 32, useAdvancedWrap: true } })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
-    for (const t of [t1, t2]) if (t.width > w - 24) t.setScale((w - 24) / t.width);
+    for (const t of [t1, t2]) fitText(t, w - 24);
     this.time.delayedCall(3000, () => this.tweens.add({ targets: [band, t1, t2], alpha: 0, duration: 500, onComplete: () => [band, t1, t2].forEach((o) => o.destroy()) }));
     // ナレーション (#106): the area and its goal read out; then the battle's first call.
     voice.say(narrationLine('areaStart', { area: area?.name ?? this.scenario?.name ?? kind, objective: this.goalText() }), 'narration');

@@ -17,7 +17,7 @@ import { ownedShips } from '@/systems/ShipyardSystem';
 import { Aptitude, CaptainAbility, CaptainSkill, ICaptain } from '@/types/Captain';
 import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addChip, addPanel, drawMeter, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { fleetCaptainPlaces } from '@/utils/FleetSelection';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { ABILITY_COLOR, SKILL_COLOR, TRAIT_COLOR } from '@/ui/SkillColors';
@@ -188,7 +188,7 @@ export class CaptainScene extends Phaser.Scene {
       const place = places.get(c.id);
       const sub = this.add.text(colW - 12, L.rowH / 2, `${place ? `⚑ ${place}  ` : ''}Lv${c.level}  ${SKILL_LABEL[c.skill]}`, eyebrowStyle(10, place ? Css.gold : sc.css)).setOrigin(1, 0.5);
       const room = colW - 32 - sub.width - 16;
-      if (name.width > room) name.setScale(room / name.width);
+      fitText(name, room);
       const card = this.add.container((i % cols) * (colW + 8), Math.floor(i / cols) * (L.rowH + ROW_GAP), [frame, dot, name, sub]);
       this.list.addItem(card, colW, L.rowH, () => {
         this.selectedId = c.id;
@@ -204,7 +204,7 @@ export class CaptainScene extends Phaser.Scene {
       const i = captains.length;
       const frame = drawPanel(this.add.graphics(), 0, 0, colW, L.rowH, { radius: 12, fill: Colors.panel, fillAlpha: 0.25, rimAlpha: 0.3 });
       const label = this.add.text(14, L.rowH / 2, `未加入 ${left} 名  ·  入手方法 ›`, textStyle(IS_PORTRAIT ? 14 : 13, Css.gold)).setOrigin(0, 0.5);
-      if (label.width > colW - 24) label.setScale((colW - 24) / label.width);
+      fitText(label, colW - 24);
       const card = this.add.container((i % cols) * (colW + 8), Math.floor(i / cols) * (L.rowH + ROW_GAP), [frame, label]);
       this.list.addItem(card, colW, L.rowH, () => this.openRecruitInfo());
     }
@@ -437,7 +437,7 @@ export class CaptainScene extends Phaser.Scene {
       const [n, goal] = t.progress(stats);
       const text = earned.has(t.id) ? `★ ${t.name} — ${t.effect}` : `☆ ${t.name}  ${Math.min(n, goal)} / ${goal}`;
       const line = this.track(this.add.text(x, y, text, textStyle(12, earned.has(t.id) ? Css.text : Css.muted)));
-      if (line.width > w) line.setScale(w / line.width);
+      fitText(line, w);
       y += lineH;
     }
     if (shown.length < ordered.length) this.track(this.add.text(x, y, `ほか ${ordered.length - shown.length} 件 (特性の条件で表示)`, textStyle(12, Css.dim)));
@@ -516,7 +516,7 @@ export class CaptainScene extends Phaser.Scene {
       this.sheetAdd(this.add.text(r.x + 36, y + rowH / 2, SKILL_LABEL[s], textStyle(15, sc.css, { fontStyle: 'bold' })).setOrigin(0, 0.5));
       const effect = modifierLines(skillModifiers(s, c.level, { night: true }, LEARNED_SKILL_SCALE)).join('・') || '—';
       const e = this.sheetAdd(this.add.text(r.x + 100, y + rowH / 2, s === CaptainSkill.Night ? `夜戦で ${effect}` : effect, textStyle(12, Css.muted)).setOrigin(0, 0.5));
-      if (e.width > r.w - 140) e.setScale((r.w - 140) / e.width);
+      fitText(e, r.w - 140);
       this.sheetAdd(this.add.zone(r.x + 20, y, r.w - 40, rowH).setOrigin(0, 0).setInteractive({ cursor: 'pointer' }).on('pointerup', () => this.confirmLearn(c, slot, s)));
       y += rowH + 6;
     }

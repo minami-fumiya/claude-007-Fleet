@@ -5,7 +5,7 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { IBattleResultData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, addStatCard, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, addStatCard, fitText, UIButton } from '@/ui/components/UIKit';
 import { advanceSortie, endSortie } from '@/utils/SortieFlow';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { voice } from '@/systems/VoiceSystem';
@@ -125,7 +125,7 @@ export class ResultsScene extends Phaser.Scene {
       const t = this.add
         .text(cx, ry, r.maxed ? `艦長 ${r.name}  Lv ${r.level} (最大)` : `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
         .setOrigin(0.5, 0);
-      if (t.width > colW - 8) t.setScale((colW - 8) / t.width);
+      fitText(t, colW - 8);
     });
 
     // Mid-sortie (#53): advance to the next node, or withdraw keeping what was won.
