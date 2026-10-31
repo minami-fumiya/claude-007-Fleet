@@ -10,25 +10,26 @@ const T0 = 1_700_000_000_000;
 const MIN = 60_000;
 
 describe('士気 (#54)', () => {
-  it('starts rested, falls with sorties and comes back towards 50 with time', () => {
+  it('starts rested, falls with sorties, comes back to 50 and then slowly on to 100 with time (#401)', () => {
     let s = { morale: {}, moraleAt: {} };
     expect(moraleOf(s, 'a', T0)).toBe(MORALE_REST);
     // Three lost battles in a row tire the crew.
     for (let i = 0; i < 3; i++) s = addMorale(s, ['a'], battleMoraleDelta(false, 'D'), T0);
     expect(moraleOf(s, 'a', T0)).toBe(5);
     expect(moraleMood(moraleOf(s, 'a', T0))).toBe('tired');
-    // About two hours and a half later it is rested again, never past 50.
+    // About two hours and a half later it is rested again; then it rises a third as fast, up to 100.
     expect(moraleOf(s, 'a', T0 + 60 * MIN)).toBeGreaterThan(5);
     expect(moraleOf(s, 'a', T0 + 150 * MIN)).toBe(MORALE_REST);
-    expect(moraleOf(s, 'a', T0 + 999 * MIN)).toBe(MORALE_REST);
+    expect(moraleOf(s, 'a', T0 + 210 * MIN)).toBe(MORALE_REST + 6);
+    expect(moraleOf(s, 'a', T0 + 999 * MIN)).toBe(100);
   });
 
-  it('wins lift it, an S most; high morale also falls back to 50, and it stays within 0〜100', () => {
+  it('wins lift it, an S most; high morale no longer falls with time (#401), and it stays within 0〜100', () => {
     expect(battleMoraleDelta(true, 'S')).toBeGreaterThan(battleMoraleDelta(true, 'A'));
     expect(battleMoraleDelta(true, 'A')).toBeGreaterThan(battleMoraleDelta(false, 'D'));
     let s = addMorale({ morale: {}, moraleAt: {} }, ['a'], 200, T0);
     expect(moraleOf(s, 'a', T0)).toBe(100);
-    expect(moraleOf(s, 'a', T0 + 999 * MIN)).toBe(MORALE_REST);
+    expect(moraleOf(s, 'a', T0 + 999 * MIN)).toBe(100);
     s = addMorale(s, ['a'], -500, T0);
     expect(moraleOf(s, 'a', T0)).toBe(0);
   });

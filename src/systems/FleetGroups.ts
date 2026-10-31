@@ -1,6 +1,9 @@
 import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
-import { IFleetPreset, PRESET_COUNT } from './PresetSystem';
+import { IFleetPreset } from './PresetSystem';
+
+/** 支援艦隊 at most (第2〜第4艦隊). */
+export const SUPPORT_MAX = 3;
 
 /**
  * 複数艦隊 (#84) and 友軍艦隊 (#64), pure: fleets that fight beside the one the player steers. A 支援艦隊 is one of
@@ -31,7 +34,7 @@ export interface ISupportChoice {
 
 /** 支援艦隊 that may sail with the main fleet, by rank index: one at 少佐, two at 准将, three at 大将. */
 export function supportSlots(rankIndex: number): number {
-  return Math.min(PRESET_COUNT, (rankIndex >= 6 ? 1 : 0) + (rankIndex >= 9 ? 1 : 0) + (rankIndex >= 12 ? 1 : 0));
+  return Math.min(SUPPORT_MAX, (rankIndex >= 6 ? 1 : 0) + (rankIndex >= 9 ? 1 : 0) + (rankIndex >= 12 ? 1 : 0));
 }
 
 /**
