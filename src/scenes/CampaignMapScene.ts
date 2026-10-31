@@ -14,7 +14,7 @@ import { BLUEPRINT_NEED, BLUEPRINT_PER_GIANT_AREA, SUPERWEAPON_GOLD, superweapon
 import { TimeOfDay } from '@/types/Weather';
 import { FORMATION_RULES } from '@/systems/FormationRules';
 import { GOLD_SWEEP } from '@/systems/GoldSystem';
-import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
+import { canSweep, nextSweepMs, SWEEP_MAX, SWEEP_REWARD_SCALE, sweepableAreas, sweepArea, sweepCost, sweepsLeft } from '@/systems/ProgressionSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel } from '@/systems/EventSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { areaDepth, curveText, enemyScale, fleetPower, theaterStep } from '@/systems/DifficultyCurve';
@@ -86,6 +86,8 @@ export class CampaignMapScene extends Phaser.Scene {
   private theaters: ITheater[] = [];
   private selected: ICampaignArea | null = null;
   private tabs: UIButton[] = [];
+  /** 掃討できる海域 (#406): jumps to the next area with a sweep banked */
+  private sweepJump: UIButton | null = null;
   private mapLayer: Phaser.GameObjects.GameObject[] = [];
   private detailLayer: Phaser.GameObjects.GameObject[] = [];
   /** Result of the last sweep, shown above the buttons */
@@ -109,6 +111,7 @@ export class CampaignMapScene extends Phaser.Scene {
     new TutorialGuide(this);
     audio.music('map');
     this.tabs = [];
+    this.sweepJump = null;
     this.mapLayer = [];
     this.detailLayer = [];
     this.status = '';
@@ -160,11 +163,33 @@ export class CampaignMapScene extends Phaser.Scene {
     );
     addPanel(this, L.map.x, L.map.y, L.map.w, L.map.h, { radius: 24, fillAlpha: 0.45, glow: 0.5 });
     addPanel(this, L.detail.x, L.detail.y, L.detail.w, L.detail.h, { radius: 24, fillAlpha: 0.6, glow: 0.6 });
+    // 掃討できる海域 (#406): a sweep banked in any sea, the fullest first; each tap goes to the next one.
+    this.sweepJump = new UIButton(this, L.map.x + L.map.w - (IS_PORTRAIT ? 110 : 90), L.map.y + (IS_PORTRAIT ? 30 : 24), '', () => this.nextSweepable(), {
+      variant: 'gold', width: IS_PORTRAIT ? 200 : 160, height: IS_PORTRAIT ? 40 : 30, fontSize: 12,
+    }).setDepth(3);
     this.selectTheater(this.theater);
+  }
+
+  /** The areas with a sweep banked, in the seas this screen shows (#406). */
+  private sweepables(): Array<{ area: ICampaignArea; left: number }> {
+    return sweepableAreas(loadProgress(), DATA.areas, this.theaters.map((t) => t.id), Date.now());
+  }
+
+  /** Opens the next area with a sweep banked, in whatever sea it is (#406). */
+  private nextSweepable(): void {
+    const list = this.sweepables();
+    if (list.length === 0) return;
+    const at = list.findIndex((x) => x.area.id === this.selected?.id);
+    const next = list[(at + 1) % list.length].area;
+    this.focusArea = next.id;
+    this.selectTheater(next.theater);
   }
 
   private selectTheater(id: string): void {
     this.theater = id;
+    const ready = this.sweepables();
+    this.sweepJump?.setVisible(ready.length > 0).setLabel(`掃討できる海域 ${ready.length} ›`);
+    const banked = (t: string): number => ready.filter((x) => x.area.theater === t).reduce((n, x) => n + x.left, 0);
     const cleared = loadProgress().campaign;
     const base = baseOfProgress(loadProgress());
     this.theaters.forEach((t, i) => {
@@ -173,7 +198,9 @@ export class CampaignMapScene extends Phaser.Scene {
       // Black Sea where the tab has room (landscape). A sea no open base reaches only shows for a sortie left there.
       const away = baseReaches(base, t.id) ? '' : ' 他港';
       const name = `${t.name}${t.inland && !IS_PORTRAIT ? '(内海)' : ''}`;
-      this.tabs[i].setLabel(IS_PORTRAIT ? `${name}\n${pct}%${away}` : `${name} ${pct}%${away}`).setVariant(t.id === id ? 'primary' : 'secondary');
+      // The sweeps banked in the sea (#406), on its tab.
+      const sw = banked(t.id) > 0 ? ` 掃${banked(t.id)}` : '';
+      this.tabs[i].setLabel(IS_PORTRAIT ? `${name}\n${pct}%${away}${sw}` : `${name} ${pct}%${away}${sw}`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
     const areas = areasOf(DATA, id);
     const pending = pendingSortie(this);
@@ -435,7 +462,9 @@ export class CampaignMapScene extends Phaser.Scene {
     const ledger = recordLedger(recordLedger(recordLedger(r.progress.ledger, 'sweep', addResources(r.reward, r.lost, -1), now), 'sortie', r.cost, now), 'overflow', r.lost, now);
     saveProgress({ ...r.progress, ledger });
     this.status = `掃討完了: ${formatResources(r.reward)}・ゴールド ${GOLD_SWEEP}${lostNote(r.lost)}  ·  戦功 +${r.merit}${r.promotedTo ? `  ·  ${r.promotedTo.name}に昇進` : ''}${eventAppliesToBattle(event, a.theater) ? `\nイベント: ${eventLabel(event)}` : ''}`;
-    this.drawDetail();
+    // The banked sweeps on the tabs and the jump button follow (#406).
+    this.focusArea = a.id;
+    this.selectTheater(this.theater);
   }
 
   /** To the fleet builder for the area; `giant`: its superweapon sea (#148). */
