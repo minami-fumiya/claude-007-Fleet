@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
-import { boughtToday, buy, canBuy, dailyDeal, priceOf, sell, SELL, SHOP_ENTRIES, ShopRefusal } from '@/systems/GoldSystem';
+import { boughtThisHour, buy, canBuy, dailyDeal, priceOf, sell, SELL, SELL_HOURLY, sellKey, SHOP_ENTRIES, shopRefillMs, ShopRefusal } from '@/systems/GoldSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources, gainResources, RESOURCE_KEYS, RESOURCE_LABEL } from '@/systems/ResourceSystem';
 import { recordLedger } from '@/systems/LedgerSystem';
@@ -68,7 +68,7 @@ export class ShopScene extends Phaser.Scene {
       const isDeal = e.id === deal.id;
       this.track(drawPanel(this.add.graphics(), x, y, CARD_W, L.cardH, { radius: 14, fillAlpha: 0.6, rim: isDeal ? Colors.gold : undefined, rimAlpha: isDeal ? 0.8 : 0.2 }));
       this.track(this.add.text(x + 14, y + 10, e.name, textStyle(15, Css.text, { fontStyle: 'bold' })));
-      this.track(this.add.text(x + CARD_W - 14, y + 12, e.daily !== undefined ? `本日 ${boughtToday(w, e.id, now)} / ${e.daily}` : `本日 ${boughtToday(w, e.id, now)}`, textStyle(11, Css.muted)).setOrigin(1, 0));
+      this.track(this.add.text(x + CARD_W - 14, y + 12, e.hourly !== undefined ? `この 1 時間 ${boughtThisHour(w, e.id, now)} / ${e.hourly}` : '制限なし', textStyle(11, Css.muted)).setOrigin(1, 0));
       const what = e.give ? formatResources(e.give) : formatItems(e.items ?? {});
       this.track(this.add.text(x + 14, y + 34, what, textStyle(12, Css.muted)));
       const price = priceOf(e, now);
@@ -81,11 +81,12 @@ export class ShopScene extends Phaser.Scene {
     // 売る: spare resources back to gold, as often as there is enough (#296), below the last row of cards.
     const rows = Math.ceil(SHOP_ENTRIES.length / L.cols);
     const sellY = Math.max(L.sellY, L.top + rows * (L.cardH + L.gap) + (IS_PORTRAIT ? 34 : 26) + 6);
-    this.track(this.add.text(L.left, sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・回数の制限なし)`, eyebrowStyle(11, Css.gold)));
+    this.track(this.add.text(L.left, sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・各 1 時間 ${SELL_HOURLY} 回)  ·  補充まで ${Math.ceil(shopRefillMs(now) / 60_000)} 分`, eyebrowStyle(11, Css.gold)));
     const bw = (CANVAS_W - L.left * 2 - L.gap * 3) / 4;
     RESOURCE_KEYS.forEach((k, i) => {
-      const enough = p.resources[k] >= SELL.amount;
-      this.track(new UIButton(this, L.left + i * (bw + L.gap) + bw / 2, sellY + 20, `${RESOURCE_LABEL[k]} → ${SELL.rates[k]} G`, () => this.sell(k), {
+      const left = SELL_HOURLY - boughtThisHour(w, sellKey(k), now);
+      const enough = p.resources[k] >= SELL.amount && left > 0;
+      this.track(new UIButton(this, L.left + i * (bw + L.gap) + bw / 2, sellY + 20, `${RESOURCE_LABEL[k]} → ${SELL.rates[k]} G (${left})`, () => this.sell(k), {
         variant: 'primary', width: bw, height: IS_PORTRAIT ? 48 : 40, fontSize: 13,
       })).setEnabled(enough);
     });
@@ -109,7 +110,7 @@ export class ShopScene extends Phaser.Scene {
   private sell(kind: keyof IResources): void {
     const now = Date.now();
     const p = loadProgress();
-    const r = sell(walletOf(p), kind, p.resources);
+    const r = sell(walletOf(p), kind, p.resources, now);
     if (!r) return;
     const ledger = recordLedger(p.ledger, 'shopSell', { [kind]: SELL.amount }, now);
     saveProgress(withQuestEvents({ ...p, wallet: r.wallet, resources: r.resources, ledger }, [['shopSell', 1]], now));
