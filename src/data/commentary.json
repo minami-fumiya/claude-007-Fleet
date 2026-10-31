@@ -41,6 +41,15 @@
     "RM": { "start": "全艦、戦闘配置" },
     "SU": { "start": "同志諸君、戦闘配置につけ" }
   },
+  "outcome": {
+    "_comment": "勝敗の台詞を作戦目標ごとに (#394): 撃滅 (Annihilate) は battle の victory / defeat のまま。敗北は旗艦が残っている時だけ (旗艦が沈んだ時は defeat)。",
+    "Convoy": { "victory": "船団は無事に到着、作戦成功", "defeat": "船団を守り切れなかった、撤退する" },
+    "Bombard": { "victory": "地上目標を制圧、作戦成功", "defeat": "地上目標を制圧できず、撤退する" },
+    "SinkTargets": { "victory": "目標艦を撃沈、作戦成功", "defeat": "目標艦を取り逃した、作戦失敗" },
+    "Breakthrough": { "victory": "敵の包囲を突破、作戦成功", "defeat": "突破ならず、撤退する" },
+    "PreventEscape": { "victory": "目標艦を逃さず撃沈、作戦成功", "defeat": "目標艦に逃げられた、作戦失敗" },
+    "Delay": { "victory": "撤収部隊は無事に離脱、作戦成功", "defeat": "敵の突破を許した、作戦失敗" }
+  },
   "narration": {
     "areaStart": "{area}。{objective}",
     "victory": "勝利。評価 {rank}",

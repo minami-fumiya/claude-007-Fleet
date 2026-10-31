@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { battleMoodFor } from '@/systems/MusicScore';
 import { improvedCatalog } from '@/systems/ImprovementSystem';
 import { withSwaps } from '@/systems/GunSwapSystem';
-import { rollFragment } from '@/systems/ForeignShipSystem';
+import { fragmentNote, rollFragment } from '@/systems/ForeignShipSystem';
 import { focusModifiers } from '@/systems/NationFocusSystem';
 import { CAPTAIN_DROP_CHANCE, CAPTAIN_MIN_DEPTH, CAPTAIN_PROMOTION_RANK, DUPLICATE_CAPTAIN_XP, MAX_RECRUITS_PER_BATTLE, recruitCaptains } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
@@ -46,7 +46,7 @@ import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
 import { addGroundKills, bombardLineup, GROUND_WEAPONS } from '@/systems/GroundSystem';
-import { battleLine, bearingWord, CommentaryKind, emptyCommentary, ICommentaryState, logLines, narrationLine, next as nextCommentary, raise } from '@/systems/CommentarySystem';
+import { battleLine, bearingWord, outcomeLine, CommentaryKind, emptyCommentary, ICommentaryState, logLines, narrationLine, next as nextCommentary, raise } from '@/systems/CommentarySystem';
 import { voice } from '@/systems/VoiceSystem';
 import { FeedbackEvent, shakeFor, vibrateFor } from '@/systems/FeedbackRules';
 import { shipSize, sinkSound } from '@/systems/SoundRules';
@@ -305,6 +305,8 @@ export class BattleScene extends Phaser.Scene {
   private explosion!: Explosion;
   private splash!: WaterSplash;
   private hud!: HUD;
+  /** The HUD of this battle is made (a restarted scene still holds the last one's until then) */
+  private hudReady = false;
 
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -372,6 +374,7 @@ export class BattleScene extends Phaser.Scene {
     this.aiSystems = [];
     this.escortAISystems = [];
     this.groups = [];
+    this.hudReady = false;
     this.musicCheckAt = 0;
     this.pendingAllies = [];
     this.controlLabel = '第一艦隊';
@@ -500,6 +503,8 @@ export class BattleScene extends Phaser.Scene {
     this.splash = new WaterSplash(this);
     const torpedoMain = weaponKind(this.playerWeapon) === WeaponKind.Torpedo;
     this.hud = new HUD(this, this.flagship, this.enemies, this.escorts, torpedoMain ? '魚雷' : '主砲', this.convoy);
+    for (const g of this.groups) this.hud.addAllies(this, g.ships, g.owned);
+    this.hudReady = true;
 
     this.fog = new FogOfWar(this, this.conditions.fogColor, this.conditions.fogAlpha);
     this.trails = new ShipTrails(this);
@@ -750,6 +755,8 @@ export class BattleScene extends Phaser.Scene {
       group.ais.push(this.groupAI(ship, mission, nation, i));
     });
     if (group.ships.length > 0) this.groups.push(group);
+    // Their HP on the field (#394), when the HUD is up (fleets placed before it are added when it is made).
+    if (this.hudReady) this.hud.addAllies(this, group.ships, owned);
   }
 
   /** The player's 支援艦隊 (#84), each fighting by its mission. */
@@ -2433,8 +2440,10 @@ export class BattleScene extends Phaser.Scene {
     this.gameOver = true;
     // 勝敗 (#104 #106): the jingle and the last line, said at once.
     audio.play(victory ? 'victory' : 'defeat');
-    voice.say(battleLine(victory ? 'victory' : 'defeat', this.playerNation), 'commentary');
-    if (this.commentary) this.commentary = { ...this.commentary, log: [...this.commentary.log, { kind: victory ? 'victory' : 'defeat', text: battleLine(victory ? 'victory' : 'defeat', this.playerNation), at: this.elapsedSec() }] };
+    // 作戦目標ごとの台詞 (#394): a withdrawal covered is not 「敵艦隊を撃滅」.
+    const last = outcomeLine(victory, this.objective, this.playerNation, !this.flagship?.isAlive);
+    voice.say(last, 'commentary');
+    if (this.commentary) this.commentary = { ...this.commentary, log: [...this.commentary.log, { kind: victory ? 'victory' : 'defeat', text: last, at: this.elapsedSec() }] };
     const fleet = this.friendlies();
     // Ships and land targets are counted apart (#278): 撃沈, 全滅 and 「6 隻以上に S」 count ships only.
     const enemyShips = this.enemies.filter((e) => !e.isLand);
@@ -2694,7 +2703,9 @@ export class BattleScene extends Phaser.Scene {
       if (fragment > 0) {
         const have = (progress.foreignFragments[enemyNation] ?? 0) + fragment;
         progress = withQuestEvents({ ...progress, foreignFragments: { ...progress.foreignFragments, [enemyNation]: have } }, [['foreignFragment', fragment]], now);
-        recruitLines.push(`${NATION_INFO[enemyNation as Nation]?.jaShort ?? enemyNation}の設計図の断片 +${fragment} (計 ${have}・工廠 › 建造でその国の艦を建造できます)`);
+        // What the fragments lead to (#394): never "can be built" before the ship can be.
+        const note = fragmentNote(DataLoader.getRegistry(this).all(), enemyNation as Nation, have - fragment, have);
+        recruitLines.push(`${NATION_INFO[enemyNation as Nation]?.jaShort ?? enemyNation}の設計図の断片 +${fragment} (計 ${have}・${note})`);
       }
     }
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');

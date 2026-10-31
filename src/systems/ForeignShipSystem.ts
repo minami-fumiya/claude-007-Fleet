@@ -55,3 +55,35 @@ export function rollFragment(sunk: number, rank: BattleRank, victory: boolean, r
   for (let i = 0; i < sunk; i++) if (rolls() < FRAGMENT_CHANCE[rank]) return 1;
   return 0;
 }
+
+export interface IFragmentGoal {
+  /** The offered ship (its own navy's data) */
+  ship: IShipData;
+  need: number;
+  /** Fragments still missing; 0 once it can be built */
+  left: number;
+}
+
+/** What a navy's fragments lead to (#394 #395): each offered ship, its need and how many are still missing. */
+export function fragmentGoals(all: readonly IShipData[], from: Nation, have: number): IFragmentGoal[] {
+  return (FOREIGN_OFFERS[from] ?? []).flatMap((id) => {
+    const ship = all.find((s) => s.id === id && s.nation === from);
+    if (!ship) return [];
+    const need = fragmentNeed(ship);
+    return [{ ship, need, left: Math.max(0, need - have) }];
+  });
+}
+
+/**
+ * The results' line for a fragment taken (#394): how far each offered ship is ("フレッチャー あと 3 個"), and the ones
+ * this fragment opened ("フレッチャーを建造できるようになりました"); never "can be built" before it can.
+ */
+export function fragmentNote(all: readonly IShipData[], from: Nation, before: number, after: number): string {
+  const short = (s: IShipData): string => s.name.replace(/\s*\(.*\)\s*$/, '');
+  const goals = fragmentGoals(all, from, after);
+  const opened = goals.filter((g) => g.left === 0 && before < g.need);
+  if (opened.length > 0) return `${opened.map((g) => short(g.ship)).join('・')}を建造できるようになりました (工廠 › 建造)`;
+  const next = goals.filter((g) => g.left > 0);
+  if (next.length === 0) return 'この国の艦はすべて建造できます';
+  return next.map((g) => `${short(g.ship)} あと ${g.left} 個`).join('・');
+}

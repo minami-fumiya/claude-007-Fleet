@@ -23,6 +23,7 @@ function hullRadius(ship: BaseShip): number {
 const LABEL_STYLE_PLAYER = textStyle(12, Css.success, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 const LABEL_STYLE_ENEMY = textStyle(10, Css.danger, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 const LABEL_STYLE_ESCORT = textStyle(10, Css.cyan, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
+const LABEL_STYLE_ALLY = textStyle(10, Css.success, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 });
 
 // Top status strip. Positions inside the strip are relative to its top-left corner.
 interface IPos { x: number; y: number }
@@ -93,7 +94,11 @@ export class HUD {
   private enemyBars = new Map<BaseShip, HealthBar>();
   private enemyLabels = new Map<BaseShip, Phaser.GameObjects.Text>();
   private escortBars = new Map<BaseShip, HealthBar>();
+  /** Every ship of the player's own (flagship, escorts, the support fleets, #394) for the 自艦隊 count */
+  private own: BaseShip[] = [];
   private escortLabels = new Map<BaseShip, Phaser.GameObjects.Text>();
+  /** Support fleets' ships (true) and allies (false) on the escort bars (#394) */
+  private allyShips = new Map<BaseShip, boolean>();
   /** Convoy ships (#186) share the escort bars, drawn in gold so their HP reads apart from the warships'. */
   private convoyShips = new Set<BaseShip>();
   private killText: Phaser.GameObjects.Text;
@@ -130,7 +135,8 @@ export class HUD {
       this.staticTexts.push(scene.add.text(BX + pos.x, BY + pos.y, text, eyebrowStyle(9, Css.muted)).setDepth(STRIP_DEPTH + 1));
     };
     label(L.hpLabel, `旗艦 · ${player.stats.name}`);
-    label(L.sunkLabel, '撃沈');
+    // 撃沈 and the fleet left afloat side by side (#394: only the enemy's count was shown).
+    label(L.sunkLabel, '撃沈 · 自艦隊');
     label(L.gunLabel, mainWeaponLabel);
     label(L.timeLabel, '経過時間');
 
@@ -139,7 +145,7 @@ export class HUD {
         .setOrigin(originX, IS_PORTRAIT && pos === L.hpText ? 0 : 0.5)
         .setDepth(STRIP_DEPTH + 1);
     this.hpText = value(L.hpText, 12, Css.muted, L.hpTextOriginX);
-    this.killText = value(L.killText, 18, Css.gold);
+    this.killText = value(L.killText, IS_PORTRAIT ? 18 : 14, Css.gold);
     this.gunText = value(L.gunText, 11, Css.cyan);
     this.timeText = value(L.timeText, 16, Css.text).setText('0:00');
 
@@ -175,6 +181,7 @@ export class HUD {
       );
     }
 
+    this.own = [player, ...escorts];
     for (const ship of convoy) this.convoyShips.add(ship);
     for (const escort of [...escorts, ...convoy]) {
       this.escortBars.set(escort, new HealthBar(scene, ESCORT_BAR_W, 6));
@@ -188,6 +195,20 @@ export class HUD {
     }
 
     this.update(player, enemies, escorts);
+  }
+
+  /**
+   * The support fleets (#84) and allies that join (#64) get HP bars like the escorts (#394: their HP was not shown);
+   * the player's own fleets count towards 自艦隊.
+   */
+  addAllies(scene: Phaser.Scene, ships: BaseShip[], owned: boolean): void {
+    for (const ship of ships) {
+      if (this.escortBars.has(ship)) continue;
+      if (owned) this.own.push(ship);
+      this.allyShips.set(ship, owned);
+      this.escortBars.set(ship, new HealthBar(scene, ESCORT_BAR_W, 6));
+      this.escortLabels.set(ship, scene.add.text(0, 0, ship.stats.name, owned ? LABEL_STYLE_ESCORT : LABEL_STYLE_ALLY).setDepth(DEPTH_HUD).setOrigin(0.5, 0));
+    }
   }
 
   update(player: BaseShip, enemies: BaseShip[], _escorts: BaseShip[] = [], status?: IHudStatus): void {
@@ -233,7 +254,7 @@ export class HUD {
         syncLabel(label, ship);
         const bottom = ship.y + hullRadius(ship) + LABEL_GAP;
         label.setPosition(ship.x, bottom).setVisible(true);
-        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, this.convoyShips.has(ship) ? Colors.gold : Colors.cyan);
+        bar.update(ship.stats.currentHp, ship.stats.maxHp, ship.x, bottom + label.height, this.convoyShips.has(ship) ? Colors.gold : this.allyShips.get(ship) === false ? Colors.success : Colors.cyan);
       } else {
         bar.update(0, 1, -500, -500);
         label.setVisible(false);
@@ -242,7 +263,9 @@ export class HUD {
 
     const alive = enemies.filter((e) => e.isAlive).length;
     const killed = this.totalEnemies - alive;
-    this.killText.setText(`${killed} / ${this.totalEnemies}`);
+    const afloat = this.own.filter((s) => s.isAlive).length;
+    const kills = `${killed}/${this.totalEnemies}  自 ${afloat}/${this.own.length}`;
+    if (this.killText.text !== kills) this.killText.setText(kills);
 
     const hpFrac = player.stats.maxHp > 0 ? Math.max(0, player.stats.currentHp / player.stats.maxHp) : 0;
     const hpColor = hpFrac > 0.5 ? Colors.success : hpFrac > 0.25 ? Colors.gold : Colors.danger;

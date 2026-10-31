@@ -124,6 +124,18 @@ export function battleLine(kind: CommentaryKind, nation: string, vars: Record<st
   return fillLine(BATTLE[nation]?.[kind] ?? BATTLE.common[kind], vars);
 }
 
+const OUTCOME = (commentaryData as unknown as { outcome: Record<string, { victory: string; defeat: string }> }).outcome;
+
+/**
+ * The last line of a battle (#394): the objective's own words (撤収部隊は無事に離脱 …), the navy's 撃滅 line for an
+ * annihilation; a sunk flagship is the plain defeat whatever the objective.
+ */
+export function outcomeLine(victory: boolean, objective: string, nation: string, flagshipSunk = false): string {
+  const own = OUTCOME[objective];
+  if (!own || (!victory && flagshipSunk)) return battleLine(victory ? 'victory' : 'defeat', nation);
+  return victory ? own.victory : own.defeat;
+}
+
 export function narrationLine(kind: NarrationKind, vars: Record<string, string> = {}): string {
   return fillLine(NARRATION[kind], vars);
 }

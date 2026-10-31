@@ -37,28 +37,50 @@ export function supportSlots(rankIndex: number): number {
 /**
  * The ships of each chosen 支援艦隊: the setup's ships the nation owns, none twice and none from the main fleet or an
  * earlier 支援艦隊, `unavailable` ones (docked, away, training) left out. A fleet with no ship left is dropped.
+ * A captain sails with one fleet only (#394): one already aboard the main fleet or an earlier 支援艦隊 stays ashore,
+ * and `skipped` names the ships left out because another fleet has them.
  */
 export function resolveSupport(
   choices: readonly ISupportChoice[], presets: readonly (IFleetPreset | null)[], roster: readonly IShipData[], mainIds: readonly string[],
-  slots: number, unavailable: (id: string) => boolean = () => false,
-): Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: FleetMission; preset: number }> {
+  slots: number, unavailable: (id: string) => boolean = () => false, mainCaptainIds: readonly (string | null)[] = [],
+): Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: FleetMission; preset: number; skipped: IShipData[] }> {
   const used = new Set(mainIds);
-  const out: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: FleetMission; preset: number }> = [];
+  const captains = new Set(mainCaptainIds.filter((c): c is string => !!c));
+  const out: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: FleetMission; preset: number; skipped: IShipData[] }> = [];
   for (const c of choices.slice(0, slots)) {
     const preset = presets[c.preset];
     if (!preset) continue;
     const ships: IShipData[] = [];
     const captainIds: (string | null)[] = [];
+    const skipped: IShipData[] = [];
     preset.slotIds.forEach((id, i) => {
       const ship = id ? roster.find((s) => s.id === id) : undefined;
-      if (!ship || used.has(ship.id) || unavailable(ship.id)) return;
+      if (!ship || unavailable(ship.id)) return;
+      if (used.has(ship.id)) {
+        skipped.push(ship);
+        return;
+      }
       used.add(ship.id);
       ships.push(ship);
-      captainIds.push(preset.captainIds[i] ?? null);
+      const captain = preset.captainIds[i] ?? null;
+      captainIds.push(captain && !captains.has(captain) ? captain : null);
+      if (captain) captains.add(captain);
     });
-    if (ships.length > 0) out.push({ ships, captainIds, mission: c.mission, preset: c.preset });
+    if (ships.length > 0) out.push({ ships, captainIds, mission: c.mission, preset: c.preset, skipped });
   }
   return out;
+}
+
+/**
+ * The setups a 支援艦隊 place may take (#394): saved ones with at least one ship that is not already in the main fleet
+ * or another place's setup (choosing the fleet that is sailing anyway would only send its own ships twice).
+ */
+export function supportCandidates(
+  presets: readonly (IFleetPreset | null)[], mainIds: readonly string[], others: readonly number[],
+): number[] {
+  const taken = new Set(mainIds);
+  for (const o of others) for (const id of presets[o]?.slotIds ?? []) if (id) taken.add(id);
+  return presets.flatMap((p, i) => (p && !others.includes(i) && p.slotIds.some((id) => id && !taken.has(id)) ? [i] : []));
 }
 
 /** Every ship of a campaign sortie in progress (#138): the main fleet and its 支援艦隊 (#84). */

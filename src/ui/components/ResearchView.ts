@@ -159,7 +159,7 @@ export class ResearchView {
       // Finished branches read green at a glance (#283), apart from gold calls to action.
       if (p.done === p.total) tab.setCaptionColor(Css.success);
     });
-    this.summary.setText(this.summaryText(done));
+    this.fitSummary(done);
     for (const c of this.cards) {
       const finished = done.includes(c.node.id);
       const ready = canResearch(c.node, done, resources, costMul, medals, rankIndex);
@@ -198,8 +198,24 @@ export class ResearchView {
     }
   }
 
-  /** "砲術 — 研究済 2 / 6 · 現在の効果: 砲火力 ×1.05 …" for the open branch. */
-  private summaryText(done: string[]): string {
+  /**
+   * The summary keeps to the room above the cards (#394: a finished 水上艦 branch named all ten ship types and ran
+   * into the first row): the oldest effects give way to "ほか N 件" until it fits.
+   */
+  private fitSummary(done: string[]): void {
+    const room = this.cardsTop - this.summary.y - 4;
+    const { head, effect } = this.summaryParts(done);
+    for (let keep = effect.length; keep >= 0; keep--) {
+      const shown = effect.slice(effect.length - keep);
+      const more = effect.length - keep;
+      const list = [...(more > 0 ? [`ほか ${more} 件`] : []), ...shown];
+      this.summary.setText(`${head}  ·  ${effect.length > 0 ? `現在の効果: ${list.join('  ')}` : '未研究'}`);
+      if (this.summary.height <= room) return;
+    }
+  }
+
+  /** "砲術 — 研究済 2 / 6" and the branch's effects so far (砲火力 ×1.05 …). */
+  private summaryParts(done: string[]): { head: string; effect: string[] } {
     const branch = TECH_BRANCHES.find((b) => b.id === lastBranch);
     const nodes = branchNodes(this.tree, lastBranch);
     const finished = nodes.filter((n) => done.includes(n.id));
@@ -213,6 +229,6 @@ export class ResearchView {
     } else {
       effect = describeModifiers(researchModifiers(this.tree, finished.map((n) => n.id)));
     }
-    return `${head}  ·  ${effect.length > 0 ? `現在の効果: ${effect.join('  ')}` : '未研究'}`;
+    return { head, effect };
   }
 }

@@ -50,7 +50,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES, strengthMark } from '@/systems/FleetPower';
-import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
+import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportCandidates, supportSlots } from '@/systems/FleetGroups';
 import { EXPEDITIONS, shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
 import { enemyScale, fleetPower } from '@/systems/DifficultyCurve';
@@ -901,7 +901,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const unavailable = (id: string): boolean => away.has(id) || sailing.has(id) || inDorm(progress.dorm, 'ship', id)
       || (!exercise && (isDocked(completeRepairs(progress, now), id) || hpFraction(progress, id) <= HEAVY_DAMAGE));
     const main = this.slots.filter((s): s is IShipData => s !== null).map((s) => s.id);
-    return resolveSupport(progress.support, progress.presets, this.ships, main, supportSlots(this.rankIndex), unavailable);
+    const captains = this.slots.map((s, i) => (s ? this.captainIds[i] ?? null : null));
+    return resolveSupport(progress.support, progress.presets, this.ships, main, supportSlots(this.rankIndex), unavailable, captains);
   }
 
   /** The 支援艦隊 sheet: for each place the rank opens, which saved setup sails and with what mission. */
@@ -940,8 +941,16 @@ export class FleetBuilderScene extends Phaser.Scene {
       add(new UIButton(this, d.x + 24 + bw / 2, y + 44, `${presetLabel}  ›`, () => this.cycleSupport(i, 'preset'), { variant: choice ? 'primary' : 'secondary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
       if (choice) {
         add(new UIButton(this, d.x + 24 + bw + 12 + bw / 2, y + 44, `任務: ${MISSION_LABEL[choice.mission]}  ›`, () => this.cycleSupport(i, 'mission'), { variant: 'primary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
-        const names = ships.map((s) => shortName(s.name)).join('・') || '出せる艦がありません';
-        add(this.add.text(d.x + 24, y + (p ? 74 : 66), `${MISSION_NOTE[choice.mission]}  ·  ${names}`, textStyle(12, ships.length > 0 ? Css.muted : Css.danger, { wordWrap: { width: d.w - 48, useAdvancedWrap: true } })));
+        // The ships, kept to the row's room (#394: a long list ran into the next place), and those another fleet has.
+        const fleet = resolved.find((r) => r.preset === choice.preset);
+        const names = ships.map((s) => shortName(s.name));
+        const shown = names.length > 4 ? [...names.slice(0, 4), `ほか ${names.length - 4} 隻`] : names;
+        const dup = fleet && fleet.skipped.length > 0 ? `  ·  ほかの艦隊と重なる ${fleet.skipped.length} 隻は出ません` : '';
+        const line = add(this.add.text(d.x + 24, y + (p ? 74 : 66), `${MISSION_NOTE[choice.mission]}  ·  ${shown.join('・') || '出せる艦がありません'}${dup}`, textStyle(12, ships.length > 0 ? Css.muted : Css.danger, { wordWrap: { width: d.w - 48, useAdvancedWrap: true } })));
+        const room = rowH - (p ? 74 : 66) - 2;
+        const lines = line.getWrappedText(line.text);
+        const fit = Math.max(1, Math.floor(room / (line.height / Math.max(1, lines.length))));
+        if (lines.length > fit) line.setText(`${lines.slice(0, fit).join('').slice(0, -1)}…`);
       }
     }
     add(new UIButton(this, d.x + d.w / 2, d.y + d.h - (p ? 44 : 34), '閉じる', () => this.closeSupport(), { variant: 'secondary', width: p ? 240 : 200, height: p ? 56 : 40, fontSize: 15 }));
@@ -953,8 +962,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     const support = [...progress.support];
     const cur = support[index];
     if (what === 'preset') {
-      const next = cur ? cur.preset + 1 : 0;
-      if (next >= PRESET_COUNT) support.splice(index, 1);
+      // Only setups that add ships (#394): not the fleet already sailing, nor another place's.
+      const main = this.slots.filter((s): s is IShipData => s !== null).map((s) => s.id);
+      const others = support.flatMap((c, i) => (c && i !== index ? [c.preset] : []));
+      const ok = supportCandidates(progress.presets, main, others);
+      const next = ok.find((n) => n > (cur ? cur.preset : -1));
+      if (next === undefined) support.splice(index, 1);
       else support[index] = { preset: next, mission: cur?.mission ?? 'strike' };
     } else if (cur) {
       support[index] = { ...cur, mission: MISSIONS[(MISSIONS.indexOf(cur.mission) + 1) % MISSIONS.length] };
