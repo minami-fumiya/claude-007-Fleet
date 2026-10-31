@@ -46,7 +46,8 @@ const L = IS_PORTRAIT
       tabsY: 170, tabH: 60,
       stats: { x: 16, y: 220, w: CANVAS_W - 32, h: 410 } as IRect,
       grid: { x: 16, y: 646, w: CANVAS_W - 32 } as { x: number; y: number; w: number },
-      cols: 1, cardH: 70, gap: 6,
+      // Two columns, like the shipyard (#395): the name across the top, the effect under it, the mark at the bottom.
+      cols: 2, cardH: 118, gap: 8,
     }
   : {
       tabsY: 118, tabH: 44,
@@ -295,6 +296,24 @@ export class CustomizationScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * A card's texts placed for the grid (#395): portrait cards are narrow, so the name and the effect run the full width
+   * (the effect kept to two lines) and the mark and count sit on the bottom line; landscape keeps them on the right.
+   */
+  private layCard(r: IRect, name: Phaser.GameObjects.Text, desc: Phaser.GameObjects.Text, mark: Phaser.GameObjects.Text, count?: Phaser.GameObjects.Text): void {
+    if (!IS_PORTRAIT) {
+      if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
+      return;
+    }
+    const tw = r.w - 36;
+    if (name.width > tw) name.setScale(Math.max(0.6, tw / name.width));
+    desc.setWordWrapWidth(tw, true);
+    const lines = desc.getWrappedText(desc.text);
+    if (lines.length > 2) desc.setText(`${lines[0]}${lines[1].slice(0, -1)}…`);
+    mark.setPosition(r.w - 18, r.h - 18).setOrigin(1, 0.5);
+    count?.setPosition(18, r.h - 18).setOrigin(0, 0.5);
+  }
+
   private cardRect(i: number): IRect {
     const cw = (L.grid.w - 12 - L.gap * (L.cols - 1)) / L.cols;
     const col = i % L.cols;
@@ -332,7 +351,7 @@ export class CustomizationScene extends Phaser.Scene {
       const name = this.add.text(18, IS_PORTRAIT ? 10 : 14, `主砲の型: ${c.current}`, textStyle(15, c.swapped ? Css.gold : Css.text, { fontStyle: 'bold' }));
       const desc = this.add.text(18, IS_PORTRAIT ? 40 : 46, c.line, textStyle(11, Css.muted, { wordWrap: { width: r.w - 150, useAdvancedWrap: true } }));
       const mark = this.add.text(r.w - 18, r.h / 2, '換装 ›', textStyle(13, Css.cyan, { fontStyle: 'bold' })).setOrigin(1, 0.5);
-      if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
+      this.layCard(r, name, desc, mark);
       list.addItem(this.add.container(r.x, r.y, [frame, name, desc, mark]), r.w, r.h, () => this.swapNext(c.from));
     });
     const off = swaps.length;
@@ -351,7 +370,7 @@ export class CustomizationScene extends Phaser.Scene {
       const markText = on ? '装備中' : stock === 0 ? '工廠で開発' : slots === 0 ? '要改造' : full ? '—' : '+';
       const mark = this.add.text(r.w - 18, r.h / 2 - 10, markText, textStyle(stock === 0 || slots === 0 || on ? 12 : 18, on ? Css.gold : stock === 0 ? Css.dim : Css.cyan, { fontStyle: 'bold' })).setOrigin(1, 0.5);
       const count = this.add.text(r.w - 18, r.h / 2 + 16, `所持 ${stock}`, textStyle(11, stock > 0 ? Css.muted : Css.dim)).setOrigin(1, 0.5);
-      if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
+      this.layCard(r, name, desc, mark, count);
       list.addItem(this.add.container(r.x, r.y, [frame, name, desc, mark, count]), r.w, r.h, () => this.toggle(u.id));
     });
     const rows = Math.ceil((shown.length + off) / L.cols);

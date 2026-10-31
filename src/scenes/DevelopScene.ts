@@ -33,6 +33,33 @@ const KIND_JA: Record<CarrierAircraft, string> = {
 
 type Mode = 'equipment' | 'aircraft' | 'improve';
 
+/** Equipment cards a row (#395: one column was hard to read on a phone; two, like the shipyard). */
+const COLS = IS_PORTRAIT ? 2 : 1;
+
+/** Where card `i` of a `w`-wide list sits, and its width. */
+function cell(i: number, w: number): { x: number; y: number; cw: number } {
+  const cw = (w - L.gap * (COLS - 1)) / COLS;
+  return { x: (i % COLS) * (cw + L.gap), y: Math.floor(i / COLS) * (L.rowH + L.gap), cw };
+}
+
+/**
+ * A card's texts in a narrow column (#395): the name shrinks to fit, the count goes under it, the effect keeps to
+ * two lines and the foot line shrinks; in one column (landscape) the count stays at the top right.
+ */
+function layCard(cw: number, name: Phaser.GameObjects.Text, no: Phaser.GameObjects.Text, desc: Phaser.GameObjects.Text, foot: Phaser.GameObjects.Text): void {
+  const tw = cw - 32;
+  if (COLS > 1) {
+    if (name.width > tw) name.setScale(Math.max(0.6, tw / name.width));
+    no.setPosition(16, 34).setOrigin(0, 0);
+    desc.setY(52).setWordWrapWidth(tw, true);
+  } else {
+    desc.setWordWrapWidth(tw, true);
+  }
+  const lines = desc.getWrappedText(desc.text);
+  if (lines.length > 2) desc.setText(`${lines[0]}${lines[1].slice(0, -1)}…`);
+  if (foot.width > tw) foot.setScale(tw / foot.width);
+}
+
 const MODE_JA: Record<Mode, string> = { equipment: '装備', aircraft: '航空機', improve: '改修' };
 
 /**
@@ -144,14 +171,16 @@ export class DevelopScene extends Phaser.Scene {
     pool.forEach((u, i) => {
       const cost = developCost(u);
       const can = canDevelop(p, this.catalog(), u.id, p.nation);
-      const frame = drawPanel(this.add.graphics(), 0, 0, w, L.rowH, { radius: 14, fill: Colors.panel, fillAlpha: can ? 0.7 : 0.35, rimAlpha: can ? 0.5 : 0.15 });
+      const c = cell(i, w);
+      const frame = drawPanel(this.add.graphics(), 0, 0, c.cw, L.rowH, { radius: 14, fill: Colors.panel, fillAlpha: can ? 0.7 : 0.35, rimAlpha: can ? 0.5 : 0.15 });
       const name = this.add.text(16, 10, u.name, textStyle(15, can ? Css.text : Css.dim, { fontStyle: 'bold' }));
-      const no = this.add.text(w - 16, 12, `${formatNo(u.no)}  所持 ${stockOf(p, u.id)} / 計 ${heldCount(p, u.id)}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
-      const desc = this.add.text(16, IS_PORTRAIT ? 40 : 34, u.description, textStyle(12, Css.muted, { wordWrap: { width: w - 32, useAdvancedWrap: true } }));
+      const no = this.add.text(c.cw - 16, 12, `${formatNo(u.no)}  所持 ${stockOf(p, u.id)} / 計 ${heldCount(p, u.id)}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
+      const desc = this.add.text(16, IS_PORTRAIT ? 40 : 34, u.description, textStyle(12, Css.muted, { wordWrap: { width: c.cw - 32, useAdvancedWrap: true } }));
       const price = this.add.text(16, L.rowH - (IS_PORTRAIT ? 30 : 24), `開発 ${formatResources(cost)}  ·  タップで開発`, textStyle(12, can ? Css.cyan : Css.danger, { fontStyle: 'bold' }));
-      list.addItem(this.add.container(0, i * (L.rowH + L.gap), [frame, name, no, desc, price]), w, L.rowH, () => this.develop(u));
+      layCard(c.cw, name, no, desc, price);
+      list.addItem(this.add.container(c.x, c.y, [frame, name, no, desc, price]), c.cw, L.rowH, () => this.develop(u));
     });
-    list.setContentHeight(Math.max(0, pool.length * (L.rowH + L.gap) - L.gap));
+    list.setContentHeight(Math.max(0, Math.ceil(pool.length / COLS) * (L.rowH + L.gap) - L.gap));
     list.setOffset(keep);
   }
 
@@ -169,18 +198,19 @@ export class DevelopScene extends Phaser.Scene {
       const stars = starsOf(p.equipStars, u.id);
       const state = improveState(p, u);
       const lit = state === 'ready';
-      const frame = drawPanel(this.add.graphics(), 0, 0, w, L.rowH, { radius: 14, fill: Colors.panel, fillAlpha: lit ? 0.7 : 0.4, rimAlpha: stars >= MAX_STARS ? 0.8 : lit ? 0.5 : 0.15, rim: stars >= MAX_STARS ? Colors.gold : undefined });
+      const c = cell(i, w);
+      const frame = drawPanel(this.add.graphics(), 0, 0, c.cw, L.rowH, { radius: 14, fill: Colors.panel, fillAlpha: lit ? 0.7 : 0.4, rimAlpha: stars >= MAX_STARS ? 0.8 : lit ? 0.5 : 0.15, rim: stars >= MAX_STARS ? Colors.gold : undefined });
       const name = this.add.text(16, 10, `${u.name}  ${starLabel(stars) || '★0'}`, textStyle(15, lit || stars > 0 ? Css.text : Css.dim, { fontStyle: 'bold' }));
-      const no = this.add.text(w - 16, 12, `所持 ${stockOf(p, u.id)} / 計 ${heldCount(p, u.id)}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
+      const no = this.add.text(c.cw - 16, 12, `所持 ${stockOf(p, u.id)} / 計 ${heldCount(p, u.id)}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
       const now = describeModifiers(improvedEffects(u.effects, stars)).join(' ');
       const next = stars < MAX_STARS ? `  →  ${describeModifiers(improvedEffects(u.effects, stars + 1)).join(' ')}` : '';
-      const desc = this.add.text(16, IS_PORTRAIT ? 40 : 34, `${now}${next}`, textStyle(12, Css.muted, { wordWrap: { width: w - 32, useAdvancedWrap: true } }));
+      const desc = this.add.text(16, IS_PORTRAIT ? 40 : 34, `${now}${next}`, textStyle(12, Css.muted, { wordWrap: { width: c.cw - 32, useAdvancedWrap: true } }));
       const line = state === 'max' ? '改修完了' : state === 'copy' ? `予備の${u.name}が要ります (開発で作れます)` : `改修 ${formatResources(improveCost(u, stars))}${stars + 1 >= COPY_FROM ? '・予備 1' : ''}  ·  ${state === 'ready' ? 'タップで改修' : '資源不足'}`;
       const foot = this.add.text(16, L.rowH - (IS_PORTRAIT ? 30 : 24), line, textStyle(12, state === 'max' ? Css.gold : state === 'ready' ? Css.cyan : Css.danger, { fontStyle: 'bold' }));
-      if (foot.width > w - 32) foot.setScale((w - 32) / foot.width);
-      list.addItem(this.add.container(0, i * (L.rowH + L.gap), [frame, name, no, desc, foot]), w, L.rowH, () => this.improveOne(u));
+      layCard(c.cw, name, no, desc, foot);
+      list.addItem(this.add.container(c.x, c.y, [frame, name, no, desc, foot]), c.cw, L.rowH, () => this.improveOne(u));
     });
-    list.setContentHeight(Math.max(0, held.length * (L.rowH + L.gap) - L.gap));
+    list.setContentHeight(Math.max(0, Math.ceil(held.length / COLS) * (L.rowH + L.gap) - L.gap));
     list.setOffset(keep);
   }
 

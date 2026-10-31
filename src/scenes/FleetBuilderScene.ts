@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { skillOf, skillText } from '@/systems/ShipSkillSystem';
+import { refitBadge } from '@/systems/CustomizationSystem';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -50,7 +51,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES, strengthMark } from '@/systems/FleetPower';
-import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
+import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportCandidates, supportSlots } from '@/systems/FleetGroups';
 import { EXPEDITIONS, shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
 import { enemyScale, fleetPower } from '@/systems/DifficultyCurve';
@@ -250,6 +251,8 @@ interface ISlotView {
   frame: Phaser.GameObjects.Graphics;
   content: Phaser.GameObjects.Container | null;
   emptyLabel: Phaser.GameObjects.Text;
+  /** 旗艦 / 護衛 N at the card's top left: the refit chip sits right of it (#395). */
+  role: Phaser.GameObjects.Text;
 }
 
 /** One radio option in a settings group. */
@@ -901,7 +904,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const unavailable = (id: string): boolean => away.has(id) || sailing.has(id) || inDorm(progress.dorm, 'ship', id)
       || (!exercise && (isDocked(completeRepairs(progress, now), id) || hpFraction(progress, id) <= HEAVY_DAMAGE));
     const main = this.slots.filter((s): s is IShipData => s !== null).map((s) => s.id);
-    return resolveSupport(progress.support, progress.presets, this.ships, main, supportSlots(this.rankIndex), unavailable);
+    const captains = this.slots.map((s, i) => (s ? this.captainIds[i] ?? null : null));
+    return resolveSupport(progress.support, progress.presets, this.ships, main, supportSlots(this.rankIndex), unavailable, captains);
   }
 
   /** The 支援艦隊 sheet: for each place the rank opens, which saved setup sails and with what mission. */
@@ -923,7 +927,10 @@ export class FleetBuilderScene extends Phaser.Scene {
     const progress = loadProgress();
     const slots = supportSlots(this.rankIndex);
     const resolved = this.supportFleets();
-    const rowH = p ? 120 : 84;
+    // The place's name, then its buttons under it, then the ships (#394: on a phone the buttons covered the name).
+    const rowH = p ? 136 : 84;
+    const btnY = p ? 58 : 44;
+    const linesY = p ? 90 : 66;
     const presets = progress.presets;
     for (let i = 0; i < PRESET_COUNT; i++) {
       const y = d.y + (p ? 120 : 100) + i * (rowH + 10);
@@ -937,11 +944,19 @@ export class FleetBuilderScene extends Phaser.Scene {
       const ships = resolved.find((r) => r.preset === choice?.preset)?.ships ?? [];
       const presetLabel = choice ? `編成 ${choice.preset + 1}${presets[choice.preset] ? '' : ' (空)'}` : 'なし';
       const bw = p ? 200 : 180;
-      add(new UIButton(this, d.x + 24 + bw / 2, y + 44, `${presetLabel}  ›`, () => this.cycleSupport(i, 'preset'), { variant: choice ? 'primary' : 'secondary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
+      add(new UIButton(this, d.x + 24 + bw / 2, y + btnY, `${presetLabel}  ›`, () => this.cycleSupport(i, 'preset'), { variant: choice ? 'primary' : 'secondary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
       if (choice) {
-        add(new UIButton(this, d.x + 24 + bw + 12 + bw / 2, y + 44, `任務: ${MISSION_LABEL[choice.mission]}  ›`, () => this.cycleSupport(i, 'mission'), { variant: 'primary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
-        const names = ships.map((s) => shortName(s.name)).join('・') || '出せる艦がありません';
-        add(this.add.text(d.x + 24, y + (p ? 74 : 66), `${MISSION_NOTE[choice.mission]}  ·  ${names}`, textStyle(12, ships.length > 0 ? Css.muted : Css.danger, { wordWrap: { width: d.w - 48, useAdvancedWrap: true } })));
+        add(new UIButton(this, d.x + 24 + bw + 12 + bw / 2, y + btnY, `任務: ${MISSION_LABEL[choice.mission]}  ›`, () => this.cycleSupport(i, 'mission'), { variant: 'primary', width: bw, height: p ? 48 : 36, fontSize: 14 }));
+        // The ships, kept to the row's room (#394: a long list ran into the next place), and those another fleet has.
+        const fleet = resolved.find((r) => r.preset === choice.preset);
+        const names = ships.map((s) => shortName(s.name));
+        const shown = names.length > 4 ? [...names.slice(0, 4), `ほか ${names.length - 4} 隻`] : names;
+        const dup = fleet && fleet.skipped.length > 0 ? `  ·  ほかの艦隊と重なる ${fleet.skipped.length} 隻は出ません` : '';
+        const line = add(this.add.text(d.x + 24, y + linesY, `${MISSION_NOTE[choice.mission]}  ·  ${shown.join('・') || '出せる艦がありません'}${dup}`, textStyle(12, ships.length > 0 ? Css.muted : Css.danger, { wordWrap: { width: d.w - 48, useAdvancedWrap: true } })));
+        const room = rowH - linesY - 2;
+        const lines = line.getWrappedText(line.text);
+        const fit = Math.max(1, Math.floor(room / (line.height / Math.max(1, lines.length))));
+        if (lines.length > fit) line.setText(`${lines.slice(0, fit).join('').slice(0, -1)}…`);
       }
     }
     add(new UIButton(this, d.x + d.w / 2, d.y + d.h - (p ? 44 : 34), '閉じる', () => this.closeSupport(), { variant: 'secondary', width: p ? 240 : 200, height: p ? 56 : 40, fontSize: 15 }));
@@ -953,8 +968,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     const support = [...progress.support];
     const cur = support[index];
     if (what === 'preset') {
-      const next = cur ? cur.preset + 1 : 0;
-      if (next >= PRESET_COUNT) support.splice(index, 1);
+      // Only setups that add ships (#394): not the fleet already sailing, nor another place's.
+      const main = this.slots.filter((s): s is IShipData => s !== null).map((s) => s.id);
+      const others = support.flatMap((c, i) => (c && i !== index ? [c.preset] : []));
+      const ok = supportCandidates(progress.presets, main, others);
+      const next = ok.find((n) => n > (cur ? cur.preset : -1));
+      if (next === undefined) support.splice(index, 1);
       else support[index] = { preset: next, mission: cur?.mission ?? 'strike' };
     } else if (cur) {
       support[index] = { ...cur, mission: MISSIONS[(MISSIONS.indexOf(cur.mission) + 1) % MISSIONS.length] };
@@ -1330,8 +1349,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       const hint = this.gridSlots ? 'タップして艦を選ぶ' : IS_PORTRAIT ? '＋  タップして艦を選ぶ' : '＋  タップ または左の一覧から追加';
       const emptyLabel = this.add.text(r.x + r.w / 2, r.y + r.h / 2 + 10, hint, textStyle(14, Css.dim)).setOrigin(0.5);
       const role = i === 0 ? '旗艦' : `護衛 ${i}`;
-      this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : this.gridSlots ? 8 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
-      this.slotViews.push({ frame, content: null, emptyLabel });
+      const roleText = this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : this.gridSlots ? 8 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
+      this.slotViews.push({ frame, content: null, emptyLabel, role: roleText });
     }
     // How to get more slots (#30): under the cards in portrait, in the unused room in landscape.
     const next = nextSlotRank(loadProgress());
@@ -1540,6 +1559,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     return addChip(this, x, y, moraleLabel(m), color, css);
   }
 
+  /** "改二 · 装備 2/3" as a chip (#395): gold once remodelled, plain before. */
+  private refitChip(ship: IShipData, x: number, y: number): Phaser.GameObjects.Container {
+    const p = loadProgress();
+    const stage = p.refits[ship.id] ?? 0;
+    const chip = addChip(this, x, y, refitBadge(stage, (p.upgrades[ship.id] ?? []).length), stage > 0 ? Colors.gold : Colors.rim, stage > 0 ? Css.gold : Css.muted);
+    return chip;
+  }
+
   /** "41cm 連装砲 ×4": the ship's first (main) weapon. */
   private mainArmament(ship: IShipData): string {
     const first = summarizeWeapons(ship.weapons)[0];
@@ -1597,7 +1624,16 @@ export class FleetBuilderScene extends Phaser.Scene {
     const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, tiny ? 80 : 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
     // The crew's morale under the ship (#357): gold when high, red when tired.
     const morale = this.moraleChip(ship, 12, h - (p ? (tiny ? 16 : 20) : 14));
-    return [icon, morale, badge, name, ...texts, ...parts];
+    // The refit at a glance (#395): 改二 · 装備 2/3, on the 旗艦 / 護衛 N line.
+    // Right of the 旗艦 / 護衛 N label on its line, and kept left of the name column.
+    const role = this.slotViews[i]?.role;
+    const refitX = role ? 18 + role.width + 8 : 12;
+    const refitY = role ? (p ? 12 : 16) + role.height / 2 : 12;
+    const refit = this.refitChip(ship, refitX, refitY);
+    const refitRoom = (tiny ? nameX : w - (p ? 160 : 110)) - refitX - 6;
+    const refitW = refit.getBounds().width;
+    if (refitW > refitRoom) refit.setScale(refitRoom / refitW);
+    return [icon, morale, refit, badge, name, ...texts, ...parts];
   }
 
   /** A two-column slot card (landscape, more than three slots): badge and name, short stats, captain and detail buttons. */

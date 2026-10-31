@@ -1665,3 +1665,63 @@ test('図鑑と音楽室 (0.0.54): ships met open their page with the sunk count
   await page.screenshot({ path: info.outputPath('book-music.png') });
   expect(errors).toEqual([]);
 });
+
+test('不具合と表示 (0.0.56): research summary above the cards, the support sheet, two-column refit and develop lists (#394 #395)', async ({ page }, info) => {
+  test.setTimeout(300_000);
+  const layout = info.project.metadata.layout as string;
+  const tech = JSON.parse(readFileSync('src/data/tech-tree.json', 'utf8')).tech.map((n: { id: string }) => n.id) as string[];
+  const fleet = ['yamato', 'nagato', 'mutsu', 'takao', 'atago', 'sendai', 'fubuki', 'yukikaze'];
+  const save = {
+    ...SAVE, version: 8, seenHelp: SCREENS,
+    nations: { IJN: {
+      ...SAVE.nations.IJN, research: tech, rankFloor: 9, merit: 99999, ships: [...SAVE.nations.IJN.ships, 'mutsu', 'atago', 'kongo', 'haruna'],
+      equipment: { gun_fcs: 2, torpedo_oxygen: 1 }, refits: { yamato: 2, nagato: 1 },
+      presets: [
+        { slotIds: fleet.slice(0, 4), captainIds: [null, null, null, null], formation: 'LineAhead' },
+        { slotIds: ['nagato', 'kongo', 'haruna', 'sendai', 'fubuki', 'yukikaze'], captainIds: [null, null, null, null, null, null], formation: 'LineAhead' },
+        null,
+      ],
+      support: [{ preset: 1, mission: 'strike' }],
+    } },
+  };
+  const errors = await boot(page, layout, save);
+  // 研究 (#394): every branch with everything researched — the summary stays above the cards, no card text overlaps.
+  await open(page, 'ArsenalScene');
+  const research = await page.evaluate(() => {
+    const sc = (window as unknown as { game: Phaser.Game }).game.scene.getScene('ArsenalScene') as unknown as { view: { tree: Array<{ branch: string }>; cards: Array<{ node: { id: string }; frame: Phaser.GameObjects.Graphics; w: number; h: number }>; select(b: string): void; summary: Phaser.GameObjects.Text } };
+    const out: string[] = [];
+    for (const b of [...new Set(sc.view.tree.map((n) => n.branch))]) {
+      sc.view.select(b);
+      const top = Math.min(...sc.view.cards.map((c) => c.frame.parentContainer.y));
+      if (sc.view.summary.getBounds().bottom > top) out.push(`${b}: summary runs into the cards`);
+      for (const c of sc.view.cards) {
+        const box = c.frame.parentContainer;
+        const texts = box.list.filter((o): o is Phaser.GameObjects.Text => o.type === 'Text' && (o as Phaser.GameObjects.Text).text !== '');
+        texts.forEach((t, i) => texts.slice(i + 1).forEach((u) => {
+          const a = t.getBounds();
+          const z = u.getBounds();
+          if (a.right > z.left + 1 && z.right > a.left + 1 && a.bottom > z.top + 1 && z.bottom > a.top + 1) out.push(`${c.node.id}: [${t.text}] × [${u.text}]`);
+        }));
+      }
+    }
+    return out;
+  });
+  expect(research, `research (${layout})`).toEqual([]);
+  // 支援艦隊 (#394): the sheet with a long setup fits, and a ship of the main fleet is named as left out.
+  await open(page, 'FleetBuilderScene');
+  await page.evaluate(() => {
+    const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as { openSupport(): void };
+    s.openSupport();
+  });
+  expect(await overflowingTexts(page, 'FleetBuilderScene'), `support (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'FleetBuilderScene'), `support (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('support.png') });
+  // 改装・開発 (#395): two columns on a phone, nothing leaves its card.
+  for (const key of ['CustomizationScene', 'DevelopScene']) {
+    await open(page, key);
+    expect(await overflowingTexts(page, key), `${key} (${layout})`).toEqual([]);
+    expect(await textsOutOfCards(page, key), `${key} (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath(`${key}.png`) });
+  }
+  expect(errors).toEqual([]);
+});

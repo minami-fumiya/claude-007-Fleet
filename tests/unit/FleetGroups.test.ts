@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allyArrived, defaultMission, missionFoes, MISSION_LABEL, MISSIONS, resolveSupport, sailingIds, supportSlots } from '@/systems/FleetGroups';
+import { allyArrived, defaultMission, missionFoes, MISSION_LABEL, MISSIONS, resolveSupport, sailingIds, supportCandidates, supportSlots } from '@/systems/FleetGroups';
 import { sortieBlockers } from '@/systems/ProgressionSystem';
 import { resources } from '@/systems/ResourceSystem';
 import { emptyProgress, parseSave } from '@/utils/ProgressStore';
@@ -35,6 +35,19 @@ describe('支援艦隊 (#84)', () => {
     expect(out[1].mission).toBe('asw');
     // The rank allows only one.
     expect(resolveSupport([{ preset: 0, mission: 'strike' }, { preset: 1, mission: 'asw' }], presets, IJN, [], 1)).toHaveLength(1);
+  });
+
+  it('a captain and a ship sail with one fleet only; a setup that adds nothing cannot be chosen (#394)', () => {
+    const withCaptains = { slotIds: ['nagato', 'fubuki', 'yukikaze'], captainIds: ['yamamoto', 'nagumo', 'tanaka'], formation: Formation.LineAhead };
+    const out = resolveSupport([{ preset: 0, mission: 'strike' }], [withCaptains], IJN, ['nagato'], 1, () => false, ['nagumo']);
+    expect(out[0].ships.map((s) => s.id)).toEqual(['fubuki', 'yukikaze']);
+    // 南雲 is aboard the main fleet: fubuki sails without a captain.
+    expect(out[0].captainIds).toEqual([null, 'tanaka']);
+    expect(out[0].skipped.map((s) => s.id)).toEqual(['nagato']);
+    const presets = [preset(['nagato', 'fubuki']), preset(['yukikaze']), preset(['nagato']), null];
+    // The main fleet is setup 1: only setups with another ship are offered, and not one another place has.
+    expect(supportCandidates(presets, ['nagato', 'fubuki'], [])).toEqual([1]);
+    expect(supportCandidates(presets, ['yamato'], [1])).toEqual([0, 2]);
   });
 
   it('a sortie with support fleets keeps each fleet under the cost cap and blocks their ships while out', () => {

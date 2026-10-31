@@ -115,3 +115,13 @@ export function customizeShips(owned: readonly IShipData[], fleetIds: readonly s
   const rest = owned.filter((s) => !fleetIds.includes(s.id)).sort((a, b) => order.indexOf(a.shipClass) - order.indexOf(b.shipClass));
   return [...fleet, ...rest];
 }
+
+const STAGE_SHORT = ['', '改', '改二', '改三'];
+
+/**
+ * The refit at a glance on a fleet slot (#395): "改二 · 装備 2/3", or "装備 0/1" for a ship not yet remodelled.
+ */
+export function refitBadge(refitStage: number, fitted: number): string {
+  const stage = STAGE_SHORT[Math.max(0, Math.min(refitStage, STAGE_SHORT.length - 1))];
+  return `${stage ? `${stage} · ` : ''}装備 ${Math.min(fitted, upgradeSlots(refitStage))}/${upgradeSlots(refitStage)}`;
+}
