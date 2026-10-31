@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { MEDALS } from '@/systems/RecordSystem';
 import { runMigrations } from '@/utils/SaveMigration';
 import {
-  addMerit, addRankStats, ALL_MISSION_MEDALS, missionLines, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examAreas, examPassed, examProgress, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
+  addMerit, addRankStats, missionCount, ALL_MISSION_MEDALS, missionLines, ALL_MISSIONS_DONE, clearCount, missionText, openMissions, RANK_MISSIONS, examAreas, examPassed, examProgress, finalAreas, fleetSlots, GRADE_RANK, grantRankMerit, legacyRankFloor, MAX_FLEET_SLOTS,
   MERIT_FIRST_CLEAR, maxBuildGrade, meritFor, nextRank, nextSlotRank, promotionText, RANKS, rankOf, START_RANK, TUTORIAL_RANK,
 } from '@/systems/RankSystem';
 import campaign from '@/data/campaign.json';
@@ -127,8 +127,8 @@ describe('promotion missions (#142)', () => {
     let p = { ...addRankStats(fresh(200), { campaignWin: 5, sink: 10, areaClear: 1 }), ...medals };
     expect(rankOf(p).name).toBe('少尉');
     // 中尉 since #339: no night battle (its first area is deeper) and no medal.
-    expect(missionText(openMissions(RANKS[3], p)[0], p)).toBe('作戦の海域を 3 か所攻略 (1 / 3)');
-    p = addRankStats(p, { areaClear: 2 });
+    expect(missionText(openMissions(RANKS[3], p)[0], p)).toBe('作戦の海域を 2 か所攻略 (1 / 2)');
+    p = addRankStats(p, { areaClear: 1 });
     expect(rankOf(p).name).toBe('中尉');
     expect(addRankStats(p, { sink: 0 })).toBe(p);
   });
@@ -143,15 +143,17 @@ describe('promotion missions (#142)', () => {
     }
     expect(RANK_MISSIONS[0]).toBeUndefined();
     expect(RANK_MISSIONS[1]).toBeUndefined();
-    // A counter asked again later asks for more.
-    const last: Record<string, number> = {};
-    for (let index = 2; index < RANKS.length; index++) {
-      for (const m of RANK_MISSIONS[index] ?? []) {
-        if (m.stat === 'medal') continue;
-        expect(m.goal, `${RANKS[index].name} ${m.stat}`).toBeGreaterThan(last[m.stat] ?? 0);
-        last[m.stat] = m.goal;
-      }
-    }
+    // Since #401 a counter counts within the exam: no goal is a career total any more (中佐 asks for 40 sinkings, not 100).
+    expect(RANK_MISSIONS[7]?.find((m) => m.stat === 'sink')?.goal).toBeLessThanOrEqual(60);
+    expect(RANK_MISSIONS[7]?.some((m) => m.stat === 'bigS')).toBe(false);
+  });
+
+  it('the next exam counts from the last promotion (#401)', () => {
+    const p = { ...addRankStats(fresh(100), { campaignWin: 30, sink: 30 }), examFrom: { campaignWin: 28, sink: 30 } };
+    expect(missionCount(p, 'campaignWin')).toBe(2);
+    expect(missionCount(p, 'sink')).toBe(0);
+    // A save from before #401 has no starting point: it counts from zero (what was done stays done).
+    expect(missionCount(addRankStats(fresh(100), { sink: 5 }), 'sink')).toBe(5);
   });
 
   it('only the next rank shows its missions (#261)', () => {
