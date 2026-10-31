@@ -145,6 +145,22 @@ export function wingPerf(holder: Pick<IAirHolder, 'aircraftDev' | 'airGroups'>, 
   return out;
 }
 
+/**
+ * 敵空母の機種 (#368): an enemy carrier flies its navy's newest model of each kind from the carrier's own year or
+ * before (the first model when it has no year), never the old planes.
+ */
+export function eraModel(nation: Nation | string, type: CarrierAircraft, year: number | undefined): IAircraftData | undefined {
+  const models = modelsFor(nation, type);
+  if (year === undefined) return models[0];
+  return models.filter((m, i) => i === 0 || (m.year ?? Number.POSITIVE_INFINITY) <= year).pop();
+}
+
+export function eraWingPerf(nation: Nation | string, year: number | undefined): Record<CarrierAircraft, IAircraftPerf> {
+  const out = {} as Record<CarrierAircraft, IAircraftPerf>;
+  for (const t of CARRIER_AIRCRAFT) out[t] = perfOf(eraModel(nation, t, year));
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Pilots
 // ---------------------------------------------------------------------------

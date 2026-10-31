@@ -156,7 +156,9 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   // A save at the recommended rank, every help seen, so nothing stops the battle.
   const helps = (await import('/src/data/screen-help.json')).default.screens?.map((h) => h.id) ?? [];
   let save = ps.switchNation(ps.emptySave(), nation, undefined, Date.now());
-  save = { ...save, seenHelp: [...helps, 'BattleScene'], nations: { ...save.nations, [nation]: { ...save.nations[nation], merit: RANKS[rank.index].minMerit, rankFloor: rank.index } } };
+  // 初期機 (#385): the first carrier models developed, as a player with carriers would have them.
+  const { STARTER_AIRCRAFT } = await import('/src/systems/AircraftSystem.ts');
+  save = { ...save, seenHelp: [...helps, 'BattleScene'], nations: { ...save.nations, [nation]: { ...save.nations[nation], merit: RANKS[rank.index].minMerit, rankFloor: rank.index, aircraftDev: STARTER_AIRCRAFT, airStart: true } } };
   if (grown) {
     // The research the rank allows (#346), every branch.
     const tech = (await import('/src/data/tech-tree.json')).default.tech.filter((n) => (n.rank ?? 0) <= rank.index && !(n.medal)).map((n) => n.id);

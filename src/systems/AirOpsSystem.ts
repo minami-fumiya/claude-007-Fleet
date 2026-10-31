@@ -4,7 +4,7 @@ import { Squadron, SquadronState } from '@/entities/aircraft/Squadron';
 import { AircraftType, CarrierAircraft } from '@/types/Aircraft';
 import { IWeaponData } from '@/types/Weapon';
 import { IShipData } from '@/types/Ship';
-import { createAirWing, IAirWingState, land, launch, lose, REARM_MS, tickAirWing } from './AirWingSystem';
+import { createAirWing, IAirWingState, land, launch, lose, PLANE_SHARE, REARM_MS, tickAirWing } from './AirWingSystem';
 import { applyToAirWing } from './CustomizationSystem';
 import { IShipModifiers, NO_MODIFIERS } from '@/types/Modifiers';
 import { aaFire, aaStrength, applyAttrition, bombHits, dogfightRate, IAAGun } from './AirCombat';
@@ -45,7 +45,8 @@ export interface IAirContext {
 
 /** A squadron's bombs / aerial torpedoes with its carrier's aviation bonus and its model (#87). */
 function airPowered(weapon: IWeaponData, sq: Squadron): IWeaponData {
-  const mul = sq.carrier.mods.airPowerMul * sq.perf.attack;
+  // 編隊の機数 (#368): twice the planes, each with half the old bomb or torpedo.
+  const mul = sq.carrier.mods.airPowerMul * sq.perf.attack * PLANE_SHARE;
   return mul === 1 ? weapon : { ...weapon, firePower: weapon.firePower * mul };
 }
 
@@ -184,7 +185,8 @@ export class AirOpsSystem {
   /** AA losses, plus fighters' dogfights with enemy planes nearby (both sides take losses). */
   private attrition(sq: Squadron, ctx: IAirContext, dtSec: number): void {
     // A tougher model loses fewer planes (#87).
-    const aa = aaFire(sq.x, sq.y, ctx.foeGuns) / sq.perf.toughness;
+    // The guns down a bigger formation's planes faster in step (#368): the same share of it as before.
+    const aa = aaFire(sq.x, sq.y, ctx.foeGuns) / sq.perf.toughness / PLANE_SHARE;
     let r = applyAttrition(sq.planes, sq.damage, aa, dtSec);
     sq.planes = r.planes;
     sq.damage = r.damage;
