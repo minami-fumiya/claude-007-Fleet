@@ -5,8 +5,8 @@ import campaignData from '@/data/campaign.json';
 import { theaterFinalArea } from './CampaignSystem';
 
 /**
- * Nations open one step at a time (#134, pure). A new admiral picks one of four; the others open once that first
- * nation has made 少佐 or taken a whole theater, and France, Italy and the Soviet Union each follow the conquest of one
+ * Nations open one step at a time (#134, pure). A new admiral picks one of four; the other three open one by one
+ * (#405: 少佐, 大佐 and 准将, or a whole theater for a step), and France, Italy and the Soviet Union each follow the conquest of one
  * of the theaters they fight in (#294: the Soviet Union no longer opens by rank).
  * Nothing is stored: it is worked out from the nations' progress each time, and a nation already started is never
  * locked again (saves from before #134 keep everything they play).
@@ -17,6 +17,17 @@ export const STARTER_NATIONS: Nation[] = [Nation.IJN, Nation.USN, Nation.RN, Nat
 
 /** Rank the first nation needs before the other starters open. */
 export const UNLOCK_RANK = 6;
+/**
+ * The other three starters open one at a time (#405): a second navy at 少佐, a third at 大佐, the last at 准将. A
+ * whole theater taken counts as one step too. The player picks which navy each step opens.
+ */
+export const STARTER_STEP_RANKS = [UNLOCK_RANK, 8, 9];
+
+/** How many of the four starters may be played, from the best rank reached and the theaters taken. */
+export function startersAllowed(bestRank: number, theatersTaken: number): number {
+  const byRank = STARTER_STEP_RANKS.filter((r) => bestRank >= r).length;
+  return 1 + Math.min(STARTER_STEP_RANKS.length, Math.max(byRank, theatersTaken));
+}
 
 type Progress = IRankProgress & { merit: number };
 
@@ -77,10 +88,9 @@ export function nationLocks(nations: Partial<Record<Nation, Progress>>, record?:
   const started = PLAYABLE_NATIONS.filter((n) => nations[n] !== undefined);
   const all = started.map((n) => ({ n, p: nations[n]! }));
   const first = firstNation(nations);
-  const rankName = RANKS[UNLOCK_RANK].name;
-  const anyRank = all.some(({ p }) => rankOf({ ...p, nation: undefined, record }).index >= UNLOCK_RANK);
   const anyTheater = (ids: string[]): boolean => all.some(({ p }) => ids.some((t) => clearedTheater(p, t)));
   const bestRank = all.map(({ n, p }) => ({ n, r: rankOf({ ...p, nation: undefined, record }) })).sort((a, b) => b.r.index - a.r.index)[0];
+  const theatersTaken = THEATERS.filter((t) => all.some(({ p }) => clearedTheater(p, t))).length;
   const rankProgress = bestRank ? `いま ${NATION_INFO[bestRank.n].jaShort} ${bestRank.r.name}` : '';
   const out = {} as Record<Nation, INationLock>;
   for (const n of PLAYABLE_NATIONS) {
@@ -88,9 +98,14 @@ export function nationLocks(nations: Partial<Record<Nation, Progress>>, record?:
     if (nations[n]) {
       out[n] = open('', true);
     } else if (STARTER_NATIONS.includes(n)) {
-      // No nation yet: the four starters are open. After the first pick, the others wait for its progress.
+      // No nation yet: the four starters are open. After the first pick the others open one by one (#405): any of
+      // them may be chosen while a step is free, and the rest wait for the next step.
       const firstName = first ? NATION_INFO[first].jaShort : '';
-      out[n] = open(`${firstName}が${rankName}か戦域攻略で解放`, started.length === 0 || anyRank || anyTheater(THEATERS), rankProgress);
+      const startedStarters = started.filter((x) => STARTER_NATIONS.includes(x)).length;
+      const allowed = startersAllowed(bestRank?.r.index ?? 0, theatersTaken);
+      const step = Math.min(STARTER_STEP_RANKS.length - 1, Math.max(0, startedStarters - 1));
+      const stepName = RANKS[STARTER_STEP_RANKS[step]].name;
+      out[n] = open(`${firstName}が${stepName}か戦域攻略で解放 (${startedStarters + 1} 国目)`, started.length === 0 || startedStarters < allowed, rankProgress);
     } else if (LATER_NATION_THEATERS[n]) {
       const ids = LATER_NATION_THEATERS[n]!;
       out[n] = open(`${ids.length > 2 ? `${ids.map(theaterName).join('・')}のどれか` : ids.map(theaterName).join('か')}の攻略で解放`, anyTheater(ids), theaterProgressText(all, ids));
