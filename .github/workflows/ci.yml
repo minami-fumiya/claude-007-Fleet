@@ -41,20 +41,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Docs-only changes (docs/ and Markdown files) do not touch any screen: the job passes without the ~30 min run.
+      - name: Changed files
+        id: changes
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          files=$(git diff --name-only "$base" HEAD 2>/dev/null || echo "unknown")
+          echo "$files"
+          if [ -n "$files" ] && ! echo "$files" | grep -qvE '^docs/|\.md$'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Only docs changed: screen tests skipped."
+          fi
 
       - name: Setup Node.js
+        if: steps.changes.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
+        if: steps.changes.outputs.skip != 'true'
         run: npm ci
 
       - name: Install Chromium
+        if: steps.changes.outputs.skip != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Screen tests (portrait + landscape)
+        if: steps.changes.outputs.skip != 'true'
         run: npm run test:e2e
 
       - name: Upload report
