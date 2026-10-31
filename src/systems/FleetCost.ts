@@ -22,18 +22,23 @@ const MID_COST: Partial<Record<string, number>> = {
 /** A planned ship (架空艦, #309) weighs this much more: most outclass the real ships of their kind */
 export const FICTIONAL_COST = 1;
 
-/** The fleet's cost cap by rank index (准尉 6 … 元帥 48). */
-export const COST_CAP = [6, 6, 10, 12, 14, 15, 16, 20, 24, 28, 32, 36, 40, 48];
+/** The fleet's cost cap by rank index (准尉 6 … 元帥 50; #405: a little more from 大尉 on, room for remodelled ships). */
+export const COST_CAP = [6, 6, 10, 12, 15, 16, 18, 22, 26, 30, 34, 38, 42, 50];
+
+/** What a remodel adds (#405): 改 and 改二 +1, 改三 +2 (it was +1 a stage, so a 改三 fleet hit the cap long before its slots). */
+export function remodelCost(stage: number): number {
+  return Math.ceil(Math.max(0, stage) / 2);
+}
 
 /**
  * A ship's sortie cost: its 中分類, +1 per grade above 2 for battleships and fleet carriers (the biggest ones weigh most),
- * +1 for a planned ship (架空艦) and +1 per remodel stage.
+ * +1 for a planned ship (架空艦) and the remodel's weight (`remodelCost`).
  */
 export function shipCost(ship: Pick<IShipData, 'shipClass' | 'subtype' | 'fictional'> & Partial<IShipData>, stage = 0): number {
   const base = MID_COST[midClass(ship)] ?? 3;
   const big = ship.shipClass === ShipClass.Battleship || midClass(ship) === 'FleetCarrier' || ship.subtype === ShipSubtype.ArmoredCarrier;
   const grade = big && ship.hp !== undefined ? Math.max(0, shipGrade(ship as IShipData) - 2) : 0;
-  return base + grade + (ship.fictional ? FICTIONAL_COST : 0) + Math.max(0, stage);
+  return base + grade + (ship.fictional ? FICTIONAL_COST : 0) + remodelCost(stage);
 }
 
 /** The fleet's total cost, each ship at its remodel stage. */
