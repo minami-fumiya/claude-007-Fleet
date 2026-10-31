@@ -365,7 +365,7 @@ export class HomeScene extends Phaser.Scene {
     const cap = holdCap(progress.facilities);
     // The event tab (#89) shows the running event's quests only.
     const running = activeEvent(now);
-    const board = tab === 'rank' ? [] : questBoard(state, tab, now).filter((q) => tab !== 'event' || (running !== null && isEventQuestFor(q, running.kind)));
+    const board = tab === 'rank' ? [] : questBoard(state, tab, now, running?.kind ?? null);
     const rows: IQuestRow[] = tab === 'rank' ? this.rankMissionRows(progress) : board.map((q) => {
       const status = questStatus(state, q);
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;

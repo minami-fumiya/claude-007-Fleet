@@ -914,7 +914,8 @@ test.describe('screens', () => {
     const save = { ...SAVE, version: 8, nations: { IJN: { ...SAVE.nations.IJN, perfect: ['p2'] } } };
     const errors = await boot(page, layout, save);
     await open(page, 'HomeScene');
-    for (const kind of ['hourly', 'daily', 'weekly', 'once', 'rank']) {
+    // 'event' (#385): the running event's ten quests.
+    for (const kind of ['hourly', 'daily', 'weekly', 'event', 'once', 'rank']) {
       await page.evaluate((k) => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('HomeScene') as unknown as { openQuests(k: string): void }).openQuests(k), kind);
       expect(await overflowingTexts(page, 'HomeScene'), `${kind} (${layout})`).toEqual([]);
       expect(await overlappingTexts(page, 'HomeScene'), `${kind} overlaps (${layout})`).toEqual([]);

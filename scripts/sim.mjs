@@ -4,7 +4,8 @@
  *
  * The player's fleet is the one of the area's recommended rank (DifficultyCurve.recommendedRank): as many ships as the
  * rank's slots, the strongest the rank may build (no fictional, reward-only or submarine) within its cost cap (#306),
- * led by a gun ship, with carriers in at most a third of the slots. The enemy is the area's
+ * led by a gun ship, with carriers in at most a third of the slots, and against submarines a ship with depth charges
+ * (#368). The enemy is the area's
  * main fleet, strengthened for the navy's order (#293). Route battles before the main fleet are not played.
  *
  *   npm run sim -- --nations IJN,USN --areas p1,p5 --runs 3 --out docs/balance/sim.md
@@ -58,7 +59,8 @@ try {
     const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
     page.on('pageerror', (e) => console.error('page error:', e.message));
     await page.goto(`${base}/?layout=landscape`);
-    await page.waitForFunction(() => window.game !== undefined, null, { timeout: 120_000 });
+    // `window.game` is the page's #game element until the Phaser game takes the name.
+    await page.waitForFunction(() => window.game?.scene !== undefined, null, { timeout: 120_000 });
     await page.waitForFunction(() => window.game.scene.getScene('MainMenuScene')?.sys.settings.active === true, null, { timeout: 120_000 });
     pages.push(page);
   }
@@ -186,6 +188,18 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
     if (used + shipCost(s) > cap) continue;
     ships.push(s);
     used += shipCost(s);
+  }
+  // Against submarines (#368) a player brings a ship with depth charges: the strongest one that fits takes the last
+  // place when the fleet has none (the U-boat areas went 50〜67% with a fleet of guns only).
+  const asw = (s) => s.weapons.some((w) => DataLoader.getWeaponById(scene, w)?.type === 'DepthCharge');
+  const subs = (area.enemy?.ships ?? []).some((id) => registry.byId(id)?.shipClass === 'Submarine');
+  if (subs && ships.length > 1 && !ships.some(asw)) {
+    const last = ships[ships.length - 1];
+    const hunter = pool.find((s) => asw(s) && !ships.includes(s) && used - shipCost(last) + shipCost(s) <= cap);
+    if (hunter) {
+      ships[ships.length - 1] = hunter;
+      used += shipCost(hunter) - shipCost(last);
+    }
   }
   // 支援艦隊 (#84) from 少佐 in the grown fleet: the next strongest ships, guarding the flagship.
   const support = [];

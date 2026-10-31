@@ -270,9 +270,10 @@ export function questStatus(state: IQuestState, q: IQuest): QuestStatus {
 const STATUS_ORDER: QuestStatus[] = ['claimable', 'progress', 'idle', 'claimed'];
 
 /** The board for a kind (#158): its active quests, claimable first, then in progress, not started, claimed; at most 10. */
-export function questBoard(state: IQuestState, kind: QuestKind, now: number): IQuest[] {
+export function questBoard(state: IQuestState, kind: QuestKind, now: number, running?: EventKind | null): IQuest[] {
   const s = refreshQuests(state, now);
-  const list = activeQuests(kind, now);
+  // The event tab shows the running event's own ten (#385), picked before the board is cut to size.
+  const list = activeQuests(kind, now).filter((q) => kind !== 'event' || running === undefined || (running !== null && isEventQuestFor(q, running)));
   return [...list]
     .sort((a, b) => STATUS_ORDER.indexOf(questStatus(s, a)) - STATUS_ORDER.indexOf(questStatus(s, b)) || list.indexOf(a) - list.indexOf(b))
     .slice(0, QUESTS_SHOWN.once);

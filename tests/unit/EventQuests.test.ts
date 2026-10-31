@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { activeQuests, EVENT_WINDOW, emptyQuestState, gameWindow, isEventQuestFor, nextReset, QUESTS, questProgress, recordQuestEvent, setQuestEventClock } from '@/systems/QuestSystem';
+import { activeQuests, EVENT_WINDOW, questBoard, emptyQuestState, gameWindow, isEventQuestFor, nextReset, QUESTS, questProgress, recordQuestEvent, setQuestEventClock } from '@/systems/QuestSystem';
 import type { EventKind } from '@/systems/EventSystem';
 import { EVENT_KINDS } from '@/systems/EventKinds';
 import { MEDALS } from '@/systems/RecordSystem';
@@ -38,6 +38,8 @@ describe('イベントの任務を各 10 件に (#385)', () => {
     for (const k of EVENT_KINDS) {
       const own = QUESTS.filter((q) => isEventQuestFor(q, k));
       expect(own, k).toHaveLength(10);
+      // The board shows all ten of the running event, none of the others.
+      expect(questBoard(emptyQuestState(), 'event', T0, k).map((q) => q.id).sort(), k).toEqual(own.map((q) => q.id).sort());
       const last = own.find((q) => q.event === 'eventQuestClaim');
       expect(last?.medal && MEDALS.some((m) => m.id === last.medal), k).toBe(true);
     }
