@@ -1725,3 +1725,41 @@ test('不具合と表示 (0.0.56): research summary above the cards, the support
   }
   expect(errors).toEqual([]);
 });
+
+test('戦闘の隊形 (0.0.57): an exercise with 支援艦隊 meets as many enemy fleets, which keep together behind their flagships (#400 #404)', async ({ page }, info) => {
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout);
+  await page.evaluate(async () => {
+    const game = (window as unknown as { game: Phaser.Game }).game;
+    const { DataLoader } = await import('/src/utils/DataLoader.ts');
+    const reg = DataLoader.getRegistry(game.scene.getScene('MainMenuScene'));
+    const pick = (ids: string[]) => ids.map((id) => reg.byId(id)).filter((s) => s !== undefined);
+    game.scene.start('BattleScene', {
+      mapKey: 'open-sea',
+      support: [{ ships: pick(['fubuki', 'ayanami', 'akatsuki']), captainIds: [null, null, null], mission: 'strike' }],
+      enemySupport: [pick(['fletcher', 'benson', 'gleaves'])],
+    });
+  });
+  await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
+  type Ship = { x: number; y: number; isAlive: boolean };
+  type B = { setPaused(p: boolean): void; enemies: Ship[]; groups: Array<{ owned: boolean; ships: Ship[] }> };
+  const counts = await page.evaluate(() => {
+    const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+    b.setPaused(false);
+    return { enemies: b.enemies.length, groups: b.groups.filter((g) => g.owned).map((g) => g.ships.length) };
+  });
+  // The default exercise enemy plus the three of its 支援艦隊.
+  expect(counts.groups).toEqual([3]);
+  expect(counts.enemies).toBeGreaterThanOrEqual(4);
+  // Let them sail a while: the 支援艦隊 stays within reach of its own flagship.
+  await page.waitForTimeout(8000);
+  const spread = await page.evaluate(() => {
+    const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as B;
+    const g = b.groups.find((x) => x.owned)!;
+    const lead = g.ships.find((s) => s.isAlive)!;
+    return Math.max(...g.ships.filter((s) => s.isAlive).map((s) => Math.hypot(s.x - lead.x, s.y - lead.y)));
+  });
+  expect(spread).toBeLessThan(600);
+  await page.screenshot({ path: info.outputPath('exercise-fleets.png') });
+  expect(errors).toEqual([]);
+});

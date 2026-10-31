@@ -53,6 +53,8 @@ export interface ICommentaryLine {
   text: string;
   /** Seconds (battle time) it was raised */
   at: number;
+  /** The ship it is about (#404): a ship that sinks takes its waiting lines with it */
+  subject?: object;
 }
 
 export interface ICommentaryState {
@@ -77,6 +79,15 @@ export function raise(state: ICommentaryState, line: ICommentaryLine, rate: Comm
   if (last !== undefined && line.at - last < rule.gapSec * RATE_GAP_MUL[rate]) return state;
   if (state.queue.some((q) => q.kind === line.kind)) return state;
   return { ...state, queue: [...state.queue, line] };
+}
+
+/**
+ * A ship went down (#404): its lines still waiting (大破, 被弾) are dropped, so 撃沈 is never followed by 大破 of the
+ * same ship.
+ */
+export function forget(state: ICommentaryState, subject: object): ICommentaryState {
+  const queue = state.queue.filter((q) => q.subject !== subject);
+  return queue.length === state.queue.length ? state : { ...state, queue };
 }
 
 /** The line to say now, if the last one has finished: the most important waiting one; stale small talk is dropped. */

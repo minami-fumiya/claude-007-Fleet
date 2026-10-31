@@ -16,6 +16,8 @@ import { CombatSystem } from '@/systems/CombatSystem';
 import { WeaponSystem } from '@/systems/WeaponSystem';
 import { AISystem, aiSelf, AUTO_AIM_ERROR, CARRIER_STANDOFF, fireAt, IShipView, nearestDistance, shipView } from '@/systems/AISystem';
 import { EscortAISystem } from '@/systems/EscortAISystem';
+import { FLEET_LEASH } from '@/systems/EscortSteering';
+import { AUTO_SEARCH_THROTTLE, autoEngageRange, autoSearchGoal } from '@/systems/AutoCaptain';
 import { chooseTarget, FLAGSHIP_PRIORITY, TACTICS } from '@/systems/AIBrain';
 import { FORMATION_ORDER, FORMATION_RULES, formationModifiers } from '@/systems/FormationRules';
 import { EXPEDITIONS } from '@/systems/ExpeditionSystem';
@@ -46,7 +48,7 @@ import { audio } from '@/systems/AudioSystem';
 import { enemyFormation } from '@/systems/EnemyFormation';
 import { applyDrops, dropLine, rollDrops } from '@/systems/DropSystem';
 import { addGroundKills, bombardLineup, GROUND_WEAPONS } from '@/systems/GroundSystem';
-import { battleLine, bearingWord, outcomeLine, CommentaryKind, emptyCommentary, ICommentaryState, logLines, narrationLine, next as nextCommentary, raise } from '@/systems/CommentarySystem';
+import { battleLine, bearingWord, outcomeLine, CommentaryKind, emptyCommentary, ICommentaryState, logLines, narrationLine, next as nextCommentary, raise, forget as forgetLines } from '@/systems/CommentarySystem';
 import { voice } from '@/systems/VoiceSystem';
 import { FeedbackEvent, shakeFor, vibrateFor } from '@/systems/FeedbackRules';
 import { shipSize, sinkSound } from '@/systems/SoundRules';
@@ -128,7 +130,6 @@ const JOYSTICK_RADIUS = IS_PORTRAIT ? 86 : 70;
 const TAP_TARGET_RADIUS = 70;
 const WAYPOINT_ARRIVE_RADIUS = 24;
 /** AUTO mode holds the target at this fraction of the main gun's range. */
-const AUTO_RANGE_FRACTION = 0.75;
 const AUTO_EDGE_MARGIN = 70;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
 /** Torpedo / dive buttons sit above the bottom-right corner. */
@@ -487,6 +488,7 @@ export class BattleScene extends Phaser.Scene {
     this.spawnSupportFleets(playerFleet.nation);
     this.queueAllies(battleArea);
     this.spawnEnemyFleet(enemyFleet);
+    if (this.exercise && !this.scenario) (this.battleData?.enemySupport ?? []).forEach((g, i) => this.spawnEnemyGroup(g, i, enemyFleet.nation));
     if (this.objective === Objective.Convoy) this.spawnConvoy();
     if (this.objective === Objective.Bombard) this.spawnLandTargets();
     this.setupConsumables();
@@ -725,11 +727,37 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** An AI for a ship of a fleet beside the player's: escorts keep station on the steered flagship, the rest go hunting. */
-  private groupAI(ship: BaseShip, mission: FleetMission, nation: Nation, slot: number): AISystem {
+  private groupAI(ship: BaseShip, mission: FleetMission, nation: Nation, slot: number, lead?: BaseShip): AISystem {
     const ai = new AISystem(this.playerWeapons, TACTICS[nation], WORLD_BOUNDS);
     ai.patrol = { x: ship.x, y: WORLD.h / 2 };
-    if (mission === 'escort') ai.station = { lead: this.flagship, offset: FormationSystem.getOffsets(Formation.Circle, slot + 6)[slot + 5] };
+    if (mission === 'escort') {
+      ai.station = { lead: this.flagship, offset: FormationSystem.getOffsets(Formation.Circle, slot + 6)[slot + 5] };
+      ai.leash = FLEET_LEASH;
+    } else if (lead && lead !== ship && slot > 0) {
+      // The rest of a fleet keeps its line behind its own flagship and fights from there (#400).
+      ai.station = { lead, offset: FormationSystem.getOffsets(Formation.LineAhead, slot)[slot - 1] };
+      ai.leash = FLEET_LEASH;
+    }
     return ai;
+  }
+
+  /** A fleet whose flagship sank closes up on the first ship still afloat (#400). */
+  private regroup(g: IFleetGroup): void {
+    const lead = g.ships.find((s) => s.isAlive);
+    if (!lead) return;
+    let slot = 0;
+    g.ships.forEach((s, i) => {
+      const ai = g.ais[i];
+      if (!s.isAlive || g.mission === 'escort') return;
+      if (s === lead) {
+        ai.station = null;
+        ai.leash = null;
+        return;
+      }
+      slot++;
+      ai.station = { lead, offset: FormationSystem.getOffsets(Formation.LineAhead, slot)[slot - 1] };
+      ai.leash = FLEET_LEASH;
+    });
   }
 
   private spawnGroup(ships: IShipData[], label: string, mission: FleetMission, owned: boolean, nation: Nation, captainIds: (string | null)[] = []): void {
@@ -752,7 +780,7 @@ export class BattleScene extends Phaser.Scene {
       }
       this.playerRecon.register(ship);
       group.ships.push(ship);
-      group.ais.push(this.groupAI(ship, mission, nation, i));
+      group.ais.push(this.groupAI(ship, mission, nation, i, group.ships[0]));
     });
     if (group.ships.length > 0) this.groups.push(group);
     // Their HP on the field (#394), when the HUD is up (fleets placed before it are added when it is made).
@@ -798,6 +826,8 @@ export class BattleScene extends Phaser.Scene {
   /** Every fleet beside the player's fights by its mission. */
   private updateGroups(enemyView: IShipView[], time: number, delta: number): void {
     for (const g of this.groups) {
+      const lead = g.ais.find((ai) => ai.station && g.mission !== 'escort')?.station?.lead;
+      if (lead && !lead.isAlive) this.regroup(g);
       const foes = missionFoes(g.mission, enemyView.map((v, i) => ({ ...v, shipClass: this.enemies[i].stats.shipClass, alive: this.enemies[i].isAlive })));
       g.ships.forEach((ship, i) => {
         if (ship.isAlive) g.ais[i].update(ship, foes, time, delta);
@@ -814,7 +844,7 @@ export class BattleScene extends Phaser.Scene {
     this.groups = this.groups.filter((g) => g !== next);
     if (old.length > 0) {
       const g: IFleetGroup = { label: this.controlLabel, ships: old, ais: [], owned: true, mission: 'strike' };
-      g.ais = old.map((s, i) => this.groupAI(s, 'strike', nation, i));
+      g.ais = old.map((s, i) => this.groupAI(s, 'strike', nation, i, old[0]));
       this.groups.push(g);
     }
     const alive = next.ships.filter((s) => s.isAlive);
@@ -1124,6 +1154,37 @@ export class BattleScene extends Phaser.Scene {
         ai.goalThrottle = goalThrottle(Math.hypot(ai.goal.x - enemy.x, ai.goal.y - enemy.y), enemy.currentSpeed, side.arrivalSec);
       }
       if (target) this.scenarioTargets.push(enemy);
+      this.aiSystems.push(ai);
+    });
+  }
+
+  /**
+   * 演習の敵の支援艦隊 (#404): the n-th fleet beside the enemy's main one, left and right of it in turn as the
+   * player's are, in line ahead behind its own flagship until it has a target.
+   */
+  private spawnEnemyGroup(ships: IShipData[], n: number, nation: Nation): void {
+    const main = this.enemies[0];
+    if (!main || ships.length === 0) return;
+    const side = n % 2 === 0 ? 1 : -1;
+    const step = Math.floor(n / 2) + 1;
+    const at = { x: Math.max(80, Math.min(WORLD.w - 80, main.x + side * step * 320)), y: Math.max(80, main.y - step * 60) };
+    const offsets = FormationSystem.getOffsets(Formation.LineAhead, Math.max(0, ships.length - 1));
+    let lead: BaseShip | null = null;
+    ships.forEach((shipData, i) => {
+      const pos = i === 0 ? at : FormationSystem.getWorldPositionFromValues(at.x, at.y, 180, offsets[i - 1]);
+      const enemy = this.spawnShip(shipData, pos.x, pos.y, NO_MODIFIERS);
+      enemy.aimErrorMul *= this.difficulty.aimMul;
+      enemy.stats.maxHp = Math.round(enemy.stats.maxHp * this.difficulty.hpMul);
+      enemy.stats.currentHp = enemy.stats.maxHp;
+      enemy.setTint(0xdd4444);
+      enemy.setAngle(180);
+      this.enemies.push(enemy);
+      this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData, NO_MODIFIERS, { perf: eraWingPerf(shipData.nation, shipData.year) }));
+      this.enemyRecon.register(enemy);
+      const ai = new AISystem(this.enemyWeapons, TACTICS[nation], WORLD_BOUNDS);
+      ai.patrol = { x: enemy.x, y: WORLD.h / 2 };
+      if (i === 0) lead = enemy;
+      else if (lead) ai.station = { lead, offset: offsets[i - 1] };
       this.aiSystems.push(ai);
     });
   }
@@ -1836,17 +1897,19 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.autoMode && target) {
       // A carrier fights with its aircraft and keeps well clear of the enemy's guns.
-      const range = this.playerAir.hasCarrier(this.flagship) ? CARRIER_STANDOFF : this.playerWeapon.range * AUTO_RANGE_FRACTION;
+      const hp = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);
+      const range = autoEngageRange(this.playerWeapon.range, hp, this.playerAir.hasCarrier(this.flagship) ? CARRIER_STANDOFF : undefined);
       this.flagship.steer(engageSteer(this.flagship, target, range, WORLD_BOUNDS, AUTO_EDGE_MARGIN), dtSec, SHIP_ROTATE_SPEED);
       return;
     }
 
     if (this.autoMode) {
-      // Nothing in sight: search towards the middle of the sea.
-      const centre = { x: WORLD.w / 2, y: WORLD.h / 2 };
-      const s = waypointSteer(this.flagship, centre, 200);
+      // Nothing in sight (#400): search slowly towards where the enemy was last seen; hold once badly hurt.
+      const hp = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);
+      const goal = autoSearchGoal(this.flagship, [...this.lastSeen.values()], { x: WORLD.w / 2, y: WORLD.h / 2 }, hp);
+      const s = goal ? waypointSteer(this.flagship, goal, 200) : null;
       if (s) {
-        this.flagship.steer({ ...s, throttle: Math.min(s.throttle, 0.7) }, dtSec, SHIP_ROTATE_SPEED);
+        this.flagship.steer({ ...s, throttle: Math.min(s.throttle, AUTO_SEARCH_THROTTLE) }, dtSec, SHIP_ROTATE_SPEED);
         return;
       }
     }
@@ -2345,11 +2408,11 @@ export class BattleScene extends Phaser.Scene {
         if (frac <= 0.25 && !this.calledHeavy.has(ship) && !ship.isLand && !ship.isConvoy) {
           this.calledHeavy.add(ship);
           if (own.has(ship)) {
-            this.comment('ownHeavy', { name: this.shortName(ship) });
+            this.comment('ownHeavy', { name: this.shortName(ship) }, ship);
             audio.play('alarm');
             this.feel('ownHeavy', ship);
           } else if (this.seenByPlayer.has(ship)) {
-            this.comment('enemyHeavy', { class: CLASS_JA_SHORT[ship.stats.shipClass] ?? '艦' });
+            this.comment('enemyHeavy', { class: CLASS_JA_SHORT[ship.stats.shipClass] ?? '艦' }, ship);
           }
         }
         continue;
@@ -2358,6 +2421,7 @@ export class BattleScene extends Phaser.Scene {
       this.aliveLastFrame.delete(ship);
       if (ship.isLand || ship.isConvoy) continue;
       const mine = own.has(ship);
+      this.commentary = forgetLines(this.commentary, ship);
       this.sound3d(sinkSound(ship.stats.shipClass, mine), ship.x, ship.y);
       this.feel(mine ? 'ownSunk' : 'enemySunk', ship);
       this.comment(mine ? 'ownSunk' : 'enemySunk', { name: this.shortName(ship), class: CLASS_JA_SHORT[ship.stats.shipClass] ?? '艦' });
@@ -2366,7 +2430,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.flagship.isAlive) {
       const frac = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);
       if (frac < this.flagshipHpSeen - 0.04) {
-        this.comment('ownHit', { name: this.shortName(this.flagship) });
+        this.comment('ownHit', { name: this.shortName(this.flagship) }, this.flagship);
         this.feel('ownHit', this.flagship);
       }
       if (frac <= 0.35 && this.flagshipHpSeen > 0.35) this.comment('flagshipDanger', {});
@@ -2391,9 +2455,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** Raises a battle line (#106) in the player's navy's words. */
-  private comment(kind: CommentaryKind, vars: Record<string, string>): void {
+  private comment(kind: CommentaryKind, vars: Record<string, string>, subject?: BaseShip): void {
     if (this.scenario && kind === 'start') return;
-    this.commentary = raise(this.commentary, { kind, text: battleLine(kind, this.playerNation, vars), at: this.elapsedSec() }, audio.settings.commentaryRate);
+    this.commentary = raise(this.commentary, { kind, text: battleLine(kind, this.playerNation, vars), at: this.elapsedSec(), subject }, audio.settings.commentaryRate);
   }
 
   /** Says the next line and shows it as a subtitle (#106). */
@@ -2578,7 +2642,7 @@ export class BattleScene extends Phaser.Scene {
       ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
       ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['baseAirStrike', this.baseAirSent], ['skillProc', this.skillProcs], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
-      ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)],
+      ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)], ['fleetExerciseWin', won(this.exercise && (this.battleData?.enemySupport?.length ?? 0) >= 2 && this.groups.filter((g) => g.owned).length >= 2)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).
       ['planesDown', this.enemyAir.totalLost()],
