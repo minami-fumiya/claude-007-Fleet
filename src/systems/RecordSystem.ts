@@ -471,6 +471,11 @@ export const MEDALS: IMedalRule[] = [
     ['q_ddflag20', '水雷戦隊司令章', '任務「水雷戦隊司令」を達成する'], ['q_build10', '造船所の顔章', '任務「造船所の顔」を達成する'],
     ['q_research10', '技術立国章', '任務「技術立国」を達成する'], ['q_facility10', '軍港の建設者章', '任務「軍港の建設者」を達成する'],
     ['q_captain30', '名艦長の師章', '任務「名艦長の師」を達成する'],
+    // 0.0.55 (#385): each event's last quest.
+    ['q_event_double', '好機の完遂章', 'イベント任務「報酬 2 倍の完遂」を達成する'], ['q_event_steel', '鋼材祭りの完遂章', 'イベント任務「鋼材祭りの完遂」を達成する'],
+    ['q_event_training', '猛訓練の完遂章', 'イベント任務「熟練度ブーストの完遂」を達成する'], ['q_event_repair', '総点検の完遂章', 'イベント任務「入渠半額の完遂」を達成する'],
+    ['q_event_fuel', '燃料祭りの完遂章', 'イベント任務「燃料祭りの完遂」を達成する'], ['q_event_ammo', '弾薬祭りの完遂章', 'イベント任務「弾薬祭りの完遂」を達成する'],
+    ['q_event_bauxite', 'ボーキ祭りの完遂章', 'イベント任務「ボーキ祭りの完遂」を達成する'], ['q_event_superweapon', '超兵器討伐の完遂章', 'イベント任務「超兵器出現の完遂」を達成する'],
   ] as const).map(([id, name, description]): IMedalRule => ({ id, name, description, category: 'quest', value: (r) => (r.medals.includes(id) ? 1 : 0), goal: 1 })),
   // 0.0.54 図鑑と音楽室 (#383 #384 #387): enemies met, ships sunk by kind, the book's ships, the tunes heard.
   ...ladder('encounter', '会敵章', 'battle', [20, 100, 300], (g) => `${g} 種類の敵 (艦・地上兵器) と戦う (図鑑に載る)`, (r) => (r.encountered ?? []).length),

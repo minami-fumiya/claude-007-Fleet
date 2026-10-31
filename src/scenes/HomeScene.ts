@@ -35,7 +35,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { DEFAULT_HOME_TAB, HOME_MENU, homeTab, IHomeMenuItem } from '@/systems/HomeMenu';
 import { baseOfProgress, fleetBuildTimeMul, fleetDockView, mergeFleetDocks, repairTimeMultiplier } from '@/systems/BaseSystem';
 import {
-  activeQuests, addItems, claimableCount, recordQuestEvent, QUESTS, formatItems, shortReward, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
+  activeQuests, addItems, claimableCount, isEventQuestFor, recordQuestEvent, QUESTS, formatItems, shortReward, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
   gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
 import { MEDALS } from '@/systems/RecordSystem';
@@ -365,7 +365,7 @@ export class HomeScene extends Phaser.Scene {
     const cap = holdCap(progress.facilities);
     // The event tab (#89) shows the running event's quests only.
     const running = activeEvent(now);
-    const board = tab === 'rank' ? [] : questBoard(state, tab, now).filter((q) => tab !== 'event' || (running !== null && q.event === `event_${running.kind}`));
+    const board = tab === 'rank' ? [] : questBoard(state, tab, now).filter((q) => tab !== 'event' || (running !== null && isEventQuestFor(q, running.kind)));
     const rows: IQuestRow[] = tab === 'rank' ? this.rankMissionRows(progress) : board.map((q) => {
       const status = questStatus(state, q);
       const medal = q.medal ? MEDALS.find((m) => m.id === q.medal)?.name : undefined;
@@ -403,7 +403,7 @@ export class HomeScene extends Phaser.Scene {
     const tw = (w - 56 - 8 * (tabs.length - 1)) / tabs.length;
     const tabH = IS_PORTRAIT ? 52 : 40;
     tabs.forEach((k, i) => {
-      const n = k === 'rank' ? 0 : activeQuests(k, now).filter((q) => isClaimable(state, q) && (k !== 'event' || (running !== null && q.event === `event_${running.kind}`))).length;
+      const n = k === 'rank' ? 0 : activeQuests(k, now).filter((q) => isClaimable(state, q) && (k !== 'event' || (running !== null && isEventQuestFor(q, running.kind)))).length;
       const label = k === 'rank' ? '昇進' : QUEST_KIND_LABEL[k];
       // The hourly tab tells when its quests turn over (#180).
       const caption = k === 'hourly' ? `あと ${Math.ceil((nextReset('hourly', now) - now) / 60_000)} 分` : undefined;

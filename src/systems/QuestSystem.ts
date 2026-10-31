@@ -99,6 +99,9 @@ export interface IQuest {
   captains?: number;
   /** ゴールド paid with the reward (#183) */
   gold?: number;
+  /** Event quests (#89 #385): the event kind whose hours they belong to. Those moved by an ordinary event (a win, a
+   * sortie …) count it only while that kind of event runs. */
+  during?: EventKind;
 }
 
 export interface IQuestState {
@@ -196,8 +199,26 @@ export function activeQuests(kind: QuestKind, now: number): IQuest[] {
   return pool.filter((q) => picked.has(q));
 }
 
+/**
+ * The kind of event running at a time (#385). EventSystem knows the schedule but imports this module, so the game
+ * hands the lookup in at start (`setQuestEventClock`); until then no event runs, and only the events' own win counters
+ * move the event quests.
+ */
+let eventClock: (now: number) => EventKind | null = () => null;
+
+export function setQuestEventClock(clock: (now: number) => EventKind | null): void {
+  eventClock = clock;
+}
+
+/** Whether an event quest belongs to the event of `kind` (#385): by its `during`, or by its own win counter. */
+export function isEventQuestFor(q: IQuest, kind: EventKind): boolean {
+  return q.kind === 'event' && (q.during ?? q.event.replace(/^event_/, '')) === kind;
+}
+
 function isActive(q: IQuest, now: number): boolean {
-  return activeQuests(q.kind, now).includes(q);
+  if (!activeQuests(q.kind, now).includes(q)) return false;
+  // An event quest moved by an ordinary event counts it only in its own event's hours (#385).
+  return q.kind !== 'event' || !q.during || q.event.startsWith('event_') || eventClock(now) === q.during;
 }
 
 /** Clears the hourlies of a past hour, the dailies of a past day and the weeklies of a past week. */
