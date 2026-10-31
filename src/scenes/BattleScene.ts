@@ -53,7 +53,7 @@ import { shipSize, sinkSound } from '@/systems/SoundRules';
 import {
   AA_BARRAGE, aiConsumable, BOOST_SPEED, ConsumableKind, hiddenBySmoke, IConsumableSlot, isActive, ISmokeCloud, RADAR_VISION, repairPerSec, shipConsumables, slotLabel, SMOKE_RADIUS, useConsumable,
 } from '@/systems/ConsumableSystem';
-import { pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
+import { eraWingPerf, pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
 import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
@@ -1100,7 +1100,8 @@ export class BattleScene extends Phaser.Scene {
       }
       enemy.setAngle(placed ? placed.angle : 180);
       this.enemies.push(enemy);
-      this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData));
+      // 敵空母の機種 (#368): the planes of the carrier's own year.
+      this.enemyAir.register(enemy, AirOpsSystem.wingFor(shipData, NO_MODIFIERS, { perf: eraWingPerf(shipData.nation, shipData.year) }));
       this.enemyRecon.register(enemy);
       const ai = new AISystem(this.enemyWeapons, profile, WORLD_BOUNDS);
       // Searching ships sweep towards the middle in their own lane instead of all meeting at one point.

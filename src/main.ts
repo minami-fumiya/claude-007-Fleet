@@ -7,6 +7,8 @@ import { ORIENTATION } from './config/GameConstants';
 import { audio } from './systems/AudioSystem';
 import { loadSave, saveSave } from './utils/ProgressStore';
 import { noteTune } from './systems/RecordSystem';
+import { setQuestEventClock } from './systems/QuestSystem';
+import { eventFor } from './systems/EventSystem';
 import { applyFrameLimit } from './utils/FrameLimit';
 import { watchOrientation } from './utils/OrientationWatch';
 import { installRuby } from './ui/RubyText';
@@ -16,6 +18,8 @@ document.body.dataset.layout = ORIENTATION;
 installRuby(audio.settings.ruby);
 // Read (and, for an older release's save, back up and migrate) the save before any screen touches it.
 loadSave();
+// イベントの任務 (#385): ordinary wins and sorties move the running event's quests.
+setQuestEventClock((now) => eventFor(now, loadSave().lastSeenAt)?.kind ?? null);
 // 音楽室 (#383): each tune heard goes into the shared record, for the book's tune list and the medal.
 audio.onTune = (id) => {
   const save = loadSave();
