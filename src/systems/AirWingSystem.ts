@@ -6,8 +6,14 @@ import type { IAircraftPerf } from './AircraftSystem';
  * aloft, and which are being re-armed after landing. Planes shot down are gone for the battle.
  */
 
-/** Planes sent per launch. */
-export const SQUADRON_SIZE = 3;
+/** Planes sent per launch: 6 since 0.0.55 (#368), 3 before. */
+export const SQUADRON_SIZE = 6;
+/**
+ * The squadron of 0.0.54 and earlier: a plane hits with BASE_SQUADRON / SQUADRON_SIZE of its old power and the guns
+ * in range down planes that much faster, so a bigger formation weighs the same as the planes it replaces (#368).
+ */
+export const BASE_SQUADRON = 3;
+export const PLANE_SHARE = BASE_SQUADRON / SQUADRON_SIZE;
 /** Time to refuel and re-arm a squadron after it lands. */
 export const REARM_MS = 18000;
 

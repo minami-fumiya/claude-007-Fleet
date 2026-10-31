@@ -27,7 +27,8 @@ import ijnShips from '@/data/ships/ijn.json';
 import upgradesData from '@/data/upgrades.json';
 import type { IUpgradeData } from '@/types/Modifiers';
 import type { CarrierAircraft } from '@/types/Aircraft';
-import type { IPilot } from '@/systems/AircraftSystem';
+import { grantStarterAircraft, STARTER_AIRCRAFT, type IPilot } from '@/systems/AircraftSystem';
+import { isCarrierId } from './CarrierIds';
 import { EXISTING_PLAYER_HELP, FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
 import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
@@ -71,6 +72,8 @@ export interface INationProgress {
   blueprints: number;
   /** 航空機 (#87): models developed, each carrier's choice per kind, and its air group's pilots */
   aircraftDev: string[];
+  /** 初期機 (#385): false until the first carrier's free fighter is given; missing on a save from before 0.0.55 */
+  airStart?: boolean;
   airGroups: Record<string, Partial<Record<CarrierAircraft, string>>>;
   pilots: Record<string, IPilot>;
   /** 地上兵器 (#251): ground weapon id → times destroyed */
@@ -198,7 +201,7 @@ export function walletOf(p: Pick<IProgress, 'wallet'>): IWallet {
 export function emptyNationProgress(ships: string[] = [], captains: string[] = []): INationProgress {
   return {
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
-    upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
+    upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airStart: false, airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
     focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {},
@@ -249,7 +252,9 @@ export { finishBuilds };
 
 /** Writes a view back into its nation's slot (and the shared record). */
 export function withProgress(save: ISave, progress: IProgress): ISave {
-  const { nation, record, wallet, ...np } = progress;
+  const { nation, record, wallet, ...rest } = progress;
+  // 初期機 (#385): the first carrier brings the first fighter.
+  const np = grantStarterAircraft(rest, nation, isCarrierId);
   // A rank reached is kept (#261): its medal mission is read from the shared record, which a nation's own slot lacks.
   const held = rankOf(progress).index;
   const floor = held > (np.rankFloor ?? 0) ? { rankFloor: held } : {};
@@ -329,7 +334,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     // A save from before #55 had every researched upgrade without limit: it starts with one of each in hand.
     equipment: isObject(data.equipment) ? numbers(data.equipment) : legacyEquipment(strings(data.research)),
     blueprints: isNum(data.blueprints) ? Math.max(0, Math.floor(data.blueprints)) : 0,
-    aircraftDev: [...new Set(strings(data.aircraftDev))],
+    // 初期機 (#385): a navy from before 0.0.55 keeps its carriers flying, every first model developed.
+    aircraftDev: [...new Set([...strings(data.aircraftDev), ...(typeof data.airStart === 'boolean' ? [] : STARTER_AIRCRAFT)])],
+    airStart: typeof data.airStart === 'boolean' ? data.airStart : true,
     airGroups: parseAirGroups(data.airGroups),
     pilots: parsePilots(data.pilots),
     groundKills: numbers(data.groundKills),

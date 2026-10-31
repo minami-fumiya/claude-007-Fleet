@@ -6,7 +6,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { canDevelop, develop, developable, developCost, developRandom, heldCount, randomDevelopCost, stockOf } from '@/systems/EquipmentSystem';
-import { aircraftDevState, AIRCRAFT, carrierModel, chooseModel, developAircraft, developCostOf, IAircraftData, isDeveloped, modelsFor, perfOf } from '@/systems/AircraftSystem';
+import { aircraftDevState, AIRCRAFT, OLD_MODEL_NAME, carrierModel, chooseModel, developAircraft, developCostOf, IAircraftData, isDeveloped, modelsFor, perfOf } from '@/systems/AircraftSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
@@ -232,7 +232,7 @@ export class DevelopScene extends Phaser.Scene {
         const developed = modelsFor(p.nation, kind).filter((m) => isDeveloped(p, m));
         const frame = drawPanel(this.add.graphics(), 0, 0, rw, kindH, { radius: 12, fill: Colors.panelHi, fillAlpha: 0.8, rimAlpha: 0.5 });
         const label = this.add.text(16, kindH / 2, KIND_JA[kind], eyebrowStyle(11, Css.gold)).setOrigin(0, 0.5);
-        const value = this.add.text(rw - 16, kindH / 2, `${model?.name ?? '—'}${developed.length > 1 ? '  ›' : ''}`, textStyle(14, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0.5);
+        const value = this.add.text(rw - 16, kindH / 2, `${model?.name ?? `${OLD_MODEL_NAME[kind]} (未開発)`}${developed.length > 1 ? '  ›' : ''}`, textStyle(14, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0.5);
         if (value.width > rw - 150) value.setScale((rw - 150) / value.width);
         list.addItem(this.add.container(0, y, [frame, label, value]), rw, kindH, () => this.cycle(ship, kind));
         y += kindH + L.gap;
@@ -262,7 +262,8 @@ export class DevelopScene extends Phaser.Scene {
     const p = loadProgress();
     const developed = modelsFor(p.nation, kind).filter((m) => isDeveloped(p, m));
     if (developed.length < 2) {
-      this.say(`${KIND_JA[kind]}は 1 機種だけです (研究と開発で増えます)`);
+      // 初期機も要開発 (#385): with none developed the kind flies old planes.
+      this.say(developed.length === 0 ? `${KIND_JA[kind]}は未開発です (下の一覧で開発すると、旧式機から替わります)` : `${KIND_JA[kind]}は 1 機種だけです (研究と開発で増えます)`);
       return;
     }
     const now = carrierModel(p, ship.id, p.nation, kind);
