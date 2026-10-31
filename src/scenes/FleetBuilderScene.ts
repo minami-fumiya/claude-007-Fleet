@@ -251,6 +251,8 @@ interface ISlotView {
   frame: Phaser.GameObjects.Graphics;
   content: Phaser.GameObjects.Container | null;
   emptyLabel: Phaser.GameObjects.Text;
+  /** 旗艦 / 護衛 N at the card's top left: the refit chip sits right of it (#395). */
+  role: Phaser.GameObjects.Text;
 }
 
 /** One radio option in a settings group. */
@@ -1347,8 +1349,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       const hint = this.gridSlots ? 'タップして艦を選ぶ' : IS_PORTRAIT ? '＋  タップして艦を選ぶ' : '＋  タップ または左の一覧から追加';
       const emptyLabel = this.add.text(r.x + r.w / 2, r.y + r.h / 2 + 10, hint, textStyle(14, Css.dim)).setOrigin(0.5);
       const role = i === 0 ? '旗艦' : `護衛 ${i}`;
-      this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : this.gridSlots ? 8 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
-      this.slotViews.push({ frame, content: null, emptyLabel });
+      const roleText = this.add.text(r.x + 18, r.y + (IS_PORTRAIT ? 12 : this.gridSlots ? 8 : 16), role, eyebrowStyle(10, i === 0 ? Css.gold : Css.cyan));
+      this.slotViews.push({ frame, content: null, emptyLabel, role: roleText });
     }
     // How to get more slots (#30): under the cards in portrait, in the unused room in landscape.
     const next = nextSlotRank(loadProgress());
@@ -1622,8 +1624,15 @@ export class FleetBuilderScene extends Phaser.Scene {
     const icon = p ? this.addShipIcon(62, h * 0.55, ship.spriteKey, tiny ? 80 : 92, 1.3) : this.addShipIcon(54, h * 0.55, ship.spriteKey, 76, 1.3);
     // The crew's morale under the ship (#357): gold when high, red when tired.
     const morale = this.moraleChip(ship, 12, h - (p ? (tiny ? 16 : 20) : 14));
-    // The refit at a glance above it (#395): 改二 · 装備 2/3.
-    const refit = this.refitChip(ship, 12, p ? (tiny ? 12 : 16) : 12);
+    // The refit at a glance (#395): 改二 · 装備 2/3, on the 旗艦 / 護衛 N line.
+    // Right of the 旗艦 / 護衛 N label on its line, and kept left of the name column.
+    const role = this.slotViews[i]?.role;
+    const refitX = role ? 18 + role.width + 8 : 12;
+    const refitY = role ? (p ? 12 : 16) + role.height / 2 : 12;
+    const refit = this.refitChip(ship, refitX, refitY);
+    const refitRoom = (tiny ? nameX : w - (p ? 160 : 110)) - refitX - 6;
+    const refitW = refit.getBounds().width;
+    if (refitW > refitRoom) refit.setScale(refitRoom / refitW);
     return [icon, morale, refit, badge, name, ...texts, ...parts];
   }
 
