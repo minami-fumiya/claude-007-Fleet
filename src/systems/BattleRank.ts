@@ -22,8 +22,8 @@ export interface IRankInput {
   timeWins?: boolean;
 }
 
-/** An S needs at least this much of the fleet's HP left (#295: 60% → 85%), no ship lost and none heavily damaged. */
-export const S_HP_RATIO = 0.85;
+/** An S needs at least this much of the fleet's HP left (#295: 60% → 85%; #407: 80%, the 大佐 seas were out of reach), no ship lost and none heavily damaged. */
+export const S_HP_RATIO = 0.8;
 /** A win with this much of the HP left and no loss counts as flawless (無傷の完勝章, #295). */
 export const FLAWLESS_HP = 0.95;
 /** A ship at or under this share of its HP is heavily damaged (大破): no S. */
