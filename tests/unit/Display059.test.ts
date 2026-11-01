@@ -39,8 +39,8 @@ describe('0.0.59 表示と全体の調整', () => {
     expect(sweepableAreas(p, AREAS, ['pacific'], now).map((x) => x.area.id)).toEqual([a.id]);
   });
 
-  it('an S needs 80% of the HP (#407); a win beside an ally can bring its plans, with a medal (#386)', () => {
-    expect(S_HP_RATIO).toBe(0.8);
+  it('the S line stays at 85% of the HP (#407 was about the promotion, not the S); a win beside an ally can bring its plans, with a medal (#386)', () => {
+    expect(S_HP_RATIO).toBe(0.85);
     expect(MEDALS.some((m) => m.id.startsWith('lend_lease'))).toBe(true);
   });
 });

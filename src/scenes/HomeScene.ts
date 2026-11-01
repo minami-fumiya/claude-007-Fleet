@@ -497,7 +497,7 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(x + 24, y + 20, '階級一覧', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), `現在: ${current.name}  ·  戦功 ${Math.floor(progress.merit ?? 0)}`, displayStyle(IS_PORTRAIT ? 20 : 18)));
     // コスト上限 (#406) next to the slots: the two limits a fleet must fit.
-    const cols = IS_PORTRAIT ? [0, 130, 240, 330, 430] : [0, 150, 250, 330, 420, 520];
+    const cols = IS_PORTRAIT ? [0, 160, 265, 350, 445] : [0, 150, 250, 330, 420, 520];
     const hy = y + head - (IS_PORTRAIT ? 26 : 22);
     const labels = ['階級', '必要戦功', '出撃枠', '建造', 'コスト上限', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
     labels.forEach((l, i) => add(this.add.text(x + 24 + cols[i], hy, l, textStyle(11, Css.muted))));
