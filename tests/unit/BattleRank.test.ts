@@ -9,7 +9,7 @@ const win = { victory: true, fleetSize: 4, shipsLost: 0, hpRatio: 0.9, durationS
 describe('battle rank (#149)', () => {
   it('S for a quick, clean win; A without losses and 60% HP; B one loss or 40% HP; C worse; D for a defeat (#295)', () => {
     expect(battleRank(win)).toBe('S');
-    expect(battleRank({ ...win, hpRatio: 0.79 })).toBe('A');
+    expect(battleRank({ ...win, hpRatio: 0.84 })).toBe('A');
     expect(battleRank({ ...win, minShipHp: 0.25 })).toBe('A');
     expect(battleRank({ ...win, durationSec: 421 })).toBe('A');
     expect(battleRank({ ...win, hpRatio: 0.59 })).toBe('B');
@@ -30,7 +30,7 @@ describe('battle rank (#149)', () => {
   it('says what kept a win from S (#295)', () => {
     expect(rankShortfall(win)).toBe('');
     expect(rankShortfall({ ...win, victory: false })).toBe('');
-    expect(rankShortfall({ ...win, hpRatio: 0.78 })).toBe('S まで: 残り耐久 78% (80% 必要)');
+    expect(rankShortfall({ ...win, hpRatio: 0.78 })).toBe('S まで: 残り耐久 78% (85% 必要)');
     expect(rankShortfall({ ...win, shipsLost: 1, minShipHp: 0.2, durationSec: 500 })).toBe('S まで: 喪失 1 隻 · 大破艦あり · 500 秒 (300 秒以内)');
   });
 
