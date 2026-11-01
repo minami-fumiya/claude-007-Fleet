@@ -2109,6 +2109,10 @@ export class FleetBuilderScene extends Phaser.Scene {
       training: !area && this.training,
       objective: area?.objective ?? Objective.Annihilate,
       support: support.map((g) => ({ ships: g.ships, captainIds: g.captainIds, mission: g.mission })),
+      // 演習 (#404): the enemy brings as many fleets as the player, each matched to one of the player's.
+      enemySupport: area ? undefined : support.map((g) => (this.training
+        ? trainingEnemyFleet(this.shipRegistry, enemyNation, g.ships.length)
+        : exerciseEnemyFleet(this.shipRegistry, enemyNation, mode, g.ships, exerciseEnemyCount(g.ships.length)))),
     };
 
     emitTutorial('sortie', this.registry);

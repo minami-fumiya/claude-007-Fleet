@@ -64,3 +64,14 @@ export function escortSteer(escort: IEscortPose, flagship: IFlagshipPose, offset
   const t = Math.min(1, (d - STATION_RADIUS) / (CATCH_UP_RADIUS - STATION_RADIUS));
   return { headingDeg: toSlot, throttle: Math.max(match, match + (1 - match) * t) };
 }
+
+/**
+ * How far a ship of the player's fleets may stray from its slot to fight (#400): the escorts hunting a submarine and
+ * the ships of a 支援艦隊 come back to their place once they are this far from it.
+ */
+export const FLEET_LEASH = 300;
+
+/** Whether `pos` has strayed further than `leash` from its formation slot. */
+export function beyondLeash(pos: { x: number; y: number }, slot: { x: number; y: number }, leash = FLEET_LEASH): boolean {
+  return Math.hypot(slot.x - pos.x, slot.y - pos.y) > leash;
+}
