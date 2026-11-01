@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, withPreset } from '@/systems/PresetSystem';
+import { applyPreset, IFleetPreset, PRESET_COUNT, PRESET_MAX, presetLabel, presetSlots, withPreset } from '@/systems/PresetSystem';
 import { emptySave, parseSave, switchNation, withProgress, progressView } from '@/utils/ProgressStore';
 import { Formation } from '@/types/Formation';
 import { Nation } from '@/types/Nation';
@@ -12,7 +12,13 @@ describe('PresetSystem (#33)', () => {
     expect(list).toHaveLength(PRESET_COUNT);
     expect(list[0]).toBeNull();
     expect(list[1]).toEqual(preset);
-    expect(withPreset(list, 9, preset)).toEqual(list);
+    expect(withPreset(list, PRESET_MAX, preset)).toEqual(list);
+    // More slots with rank (#401): a later slot pads the list up to it.
+    expect(withPreset(list, 6, preset)).toHaveLength(7);
+    expect(presetSlots(0)).toBe(3);
+    expect(presetSlots(6)).toBe(5);
+    expect(presetSlots(8)).toBe(7);
+    expect(presetSlots(13)).toBe(PRESET_MAX);
   });
 
   it('applies onto the current slot count, dropping ships no longer offered (with their captain)', () => {

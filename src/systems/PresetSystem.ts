@@ -5,7 +5,20 @@ import { Formation } from '@/types/Formation';
  * instead of rebuilding a big fleet slot by slot.
  */
 
+/** Preset buttons shown at a time (a page of the row). */
 export const PRESET_COUNT = 3;
+/** Most presets any rank keeps (#401). */
+export const PRESET_MAX = 10;
+
+/** Saved fleets a rank keeps (#401): 3, then 5 at 少佐, 7 at 大佐 and 10 at 少将. */
+export function presetSlots(rankIndex: number): number {
+  return rankIndex >= 10 ? 10 : rankIndex >= 8 ? 7 : rankIndex >= 6 ? 5 : PRESET_COUNT;
+}
+
+/** The rank index that opens more preset slots after `rankIndex`, or null at the top. */
+export function nextPresetRank(rankIndex: number): number | null {
+  return [6, 8, 10].find((r) => r > rankIndex) ?? null;
+}
 
 export interface IFleetPreset {
   slotIds: (string | null)[];
@@ -13,10 +26,11 @@ export interface IFleetPreset {
   formation: Formation;
 }
 
-/** `presets` with slot `index` replaced (the list is padded with nulls up to PRESET_COUNT). */
+/** `presets` with slot `index` replaced (the list is padded with nulls up to the slot used). */
 export function withPreset(presets: (IFleetPreset | null)[], index: number, preset: IFleetPreset): (IFleetPreset | null)[] {
-  const out = Array.from({ length: PRESET_COUNT }, (_, i) => presets[i] ?? null);
-  if (index >= 0 && index < PRESET_COUNT) out[index] = preset;
+  const ok = index >= 0 && index < PRESET_MAX;
+  const out = Array.from({ length: Math.min(PRESET_MAX, Math.max(PRESET_COUNT, presets.length, ok ? index + 1 : 0)) }, (_, i) => presets[i] ?? null);
+  if (ok) out[index] = preset;
   return out;
 }
 

@@ -2641,7 +2641,7 @@ export class BattleScene extends Phaser.Scene {
       // 無傷の完勝 (#295): no loss and 95% of the fleet's HP left.
       ['flawlessWin', won(rankInput.shipsLost === 0 && rankInput.hpRatio >= FLAWLESS_HP)],
       // #158: rank, losses, purpose, fleet and theater of the win; sinkings of every class.
-      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['baseAirStrike', this.baseAirSent], ['skillProc', this.skillProcs], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
+      ['hardWin', won(this.difficulty === DIFFICULTIES.hard)], ['fireSet', this.firesSet], ['airfieldDown', this.landTargets.filter((t) => !t.isAlive && this.enemyAir.hasCarrier(t)).length], ['baseAirStrike', this.baseAirSent], ['skillProc', this.skillProcs], ['superweaponSunk', this.superweapon && !this.superweapon.isAlive ? 1 : 0], ['superweaponWin', won(this.superweapon !== null)], ['winS', won(rank === 'S')], ['winA', won(rank === 'S' || rank === 'A')], ['perfectWin', won(rankInput.shipsLost === 0)],
       ['campaignWin', won(!!area)], ['objectiveWin', won(!!area && this.objective !== Objective.Annihilate)], ['exerciseWin', won(this.exercise)], ['fleetExerciseWin', won(this.exercise && (this.battleData?.enemySupport?.length ?? 0) >= 2 && this.groups.filter((g) => g.owned).length >= 2)],
       ['convoyWin', won(this.objective === Objective.Convoy && !this.exercise)],
       // Enemy planes shot down, by guns or fighters (#185).

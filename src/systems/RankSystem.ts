@@ -64,6 +64,11 @@ export interface IRankProgress {
   nation?: string;
   /** What the promotion missions count (#142) */
   rankStats?: Partial<Record<RankStat, number>>;
+  /**
+   * The counters when the rank held was reached (#401): the next rank's exam counts from here, so a mission is done
+   * in the exam, not by the whole career (the career totals are for the medals). Missing: counted from zero.
+   */
+  examFrom?: Partial<Record<RankStat, number>>;
   /** The shared service record, for the medal mission of each rank (#261); without it a medal counts as missing */
   record?: { medals: readonly string[] };
 }
@@ -102,23 +107,27 @@ const medal = (id: string): IRankMission => ({ stat: 'medal', goal: 1, medal: id
 
 /**
  * Missions a rank needs on top of its merit (and exam); every one must be done. From 少尉 on, four per rank (#261):
- * three battle counters (per nation, counted from the start, so the goals rise) and one medal (shared by the navies).
+ * three battle counters (per nation) and one medal (shared by the navies). Since #401 the counters count from the
+ * previous promotion (the exam), so the goals are what one rank's worth of play gives, not a career total.
  */
 export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
   2: [win(1), sink(1), areas(1), medal('first_victory')],
   // 中尉 asks what the first areas give (#339): no night battle (the first is deeper than its areas) and no medal.
-  3: [win(5), sink(10), areas(3)],
-  4: [areas(5), sink(40), objective(1), medal('veteran')],
-  5: [win(15), night(1), sweep(5), medal('perfect')],
+  3: [win(4), sink(9), areas(2)],
+  4: [areas(2), sink(25), objective(1), medal('veteran')],
+  5: [win(8), night(1), sweep(5), medal('perfect')],
   // 空母 waits for 准将 (#358 #373): the Royal Navy meets its first carrier in a sea of its own only at 准将.
-  6: [sub(3), objective(3), night(3), medal('fleet_2')],
-  7: [bigS(1), sink(100), sub(10), medal('operations')],
-  8: [bigS(3), battleship(2), win(40), medal('flawless')],
-  9: [carrier(1), battleship(5), sweep(15), medal('science_3')],
-  10: [sink(250), areas(25), night(10), medal('victor_2')],
-  11: [battleship(10), bigS(8), carrier(10), medal('s_rank_2')],
-  12: [sweep(30), sub(25), win(120), medal('explorer_3')],
-  13: [sink(600), bigS(15), battleship(20), medal('research_peak')],
+  6: [sub(3), objective(2), night(2), medal('fleet_2')],
+  // 中佐 (#405 #407): no S against six ships (a 少佐 meets none in its seas); fewer sinkings and submarines.
+  7: [sink(40), sub(5), win(12), medal('operations')],
+  // The six-ship fleets sail only in the seas meant for 大佐 and above (#407): the S against them is asked from 准将 on,
+  // once the rank held reaches those seas.
+  8: [battleship(2), win(15), night(3), medal('flawless')],
+  9: [carrier(1), battleship(3), sweep(8), medal('science_3')],
+  10: [sink(100), areas(8), night(5), medal('victor_2')],
+  11: [battleship(5), bigS(4), carrier(6), medal('s_rank_2')],
+  12: [sweep(12), sub(12), win(40), medal('explorer_3')],
+  13: [sink(200), bigS(6), battleship(8), medal('research_peak')],
 };
 
 /** Every mission's counter at its goal (a granted promotion, tests). */
@@ -138,8 +147,9 @@ export const RANK_MISSION_SUMMARY: Partial<Record<number, string>> = {
 /** Every medal the promotion missions ask for (a granted promotion, tests). */
 export const ALL_MISSION_MEDALS: string[] = Object.values(RANK_MISSIONS).flat().flatMap((m) => (m?.medal ? [m.medal] : []));
 
+/** A mission's counter in the exam now under way (#401): since the rank held was reached. */
 export function missionCount(progress: IRankProgress, stat: RankStat): number {
-  return progress.rankStats?.[stat] ?? 0;
+  return Math.max(0, (progress.rankStats?.[stat] ?? 0) - (progress.examFrom?.[stat] ?? 0));
 }
 
 /** How far a mission is: its counter, or 1 / 0 for a medal held or not. */

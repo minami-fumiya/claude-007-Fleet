@@ -1,19 +1,19 @@
 {
-  "_comment": "The shop (#183): what gold buys, a day's limit of each, and the sell rate (selling has no limit since 0.0.39, #296). No real money anywhere. tests/unit/Shop.test.ts keeps a day's buying under a day of battle income.",
+  "_comment": "The shop (#183): what gold buys, its limit an hour (5 of each since 0.0.58, #396), and the sell rate (5 sales of each resource an hour). No real money anywhere. tests/unit/Shop.test.ts keeps a day's buying under a day of battle income.",
   "entries": [
-    { "id": "fuel_s", "name": "燃料 (小)", "give": { "fuel": 500 }, "price": 150, "daily": 2 },
-    { "id": "ammo_s", "name": "弾薬 (小)", "give": { "ammo": 500 }, "price": 150, "daily": 2 },
-    { "id": "steel_s", "name": "鋼材 (小)", "give": { "steel": 500 }, "price": 200, "daily": 2 },
-    { "id": "bauxite_s", "name": "ボーキ (小)", "give": { "bauxite": 200 }, "price": 150, "daily": 2 },
-    { "id": "fuel_l", "name": "燃料 (大)", "give": { "fuel": 2000 }, "price": 500, "daily": 1 },
-    { "id": "ammo_l", "name": "弾薬 (大)", "give": { "ammo": 2000 }, "price": 500, "daily": 1 },
-    { "id": "steel_l", "name": "鋼材 (大)", "give": { "steel": 2000 }, "price": 650, "daily": 1 },
-    { "id": "bauxite_l", "name": "ボーキ (大)", "give": { "bauxite": 600 }, "price": 400, "daily": 1 },
-    { "id": "fast_repair", "name": "高速修理材", "items": { "fastRepair": 1 }, "price": 120, "daily": 3 },
-    { "id": "fast_build", "name": "高速建造材", "items": { "fastBuild": 1 }, "price": 180, "daily": 2 },
-    { "id": "training_manual", "name": "訓練教範", "items": { "trainingManual": 1 }, "price": 250, "daily": 2 },
+    { "id": "fuel_s", "name": "燃料 (小)", "give": { "fuel": 500 }, "price": 150, "hourly": 5 },
+    { "id": "ammo_s", "name": "弾薬 (小)", "give": { "ammo": 500 }, "price": 150, "hourly": 5 },
+    { "id": "steel_s", "name": "鋼材 (小)", "give": { "steel": 500 }, "price": 200, "hourly": 5 },
+    { "id": "bauxite_s", "name": "ボーキ (小)", "give": { "bauxite": 200 }, "price": 150, "hourly": 5 },
+    { "id": "fuel_l", "name": "燃料 (大)", "give": { "fuel": 2000 }, "price": 500, "hourly": 5 },
+    { "id": "ammo_l", "name": "弾薬 (大)", "give": { "ammo": 2000 }, "price": 500, "hourly": 5 },
+    { "id": "steel_l", "name": "鋼材 (大)", "give": { "steel": 2000 }, "price": 650, "hourly": 5 },
+    { "id": "bauxite_l", "name": "ボーキ (大)", "give": { "bauxite": 600 }, "price": 400, "hourly": 5 },
+    { "id": "fast_repair", "name": "高速修理材", "items": { "fastRepair": 1 }, "price": 120, "hourly": 5 },
+    { "id": "fast_build", "name": "高速建造材", "items": { "fastBuild": 1 }, "price": 180, "hourly": 5 },
+    { "id": "training_manual", "name": "訓練教範", "items": { "trainingManual": 1 }, "price": 250, "hourly": 5 },
     { "id": "supply_ship", "name": "給糧艦", "items": { "supplyShip": 1 }, "price": 300 },
-    { "id": "captain_book", "name": "艦長教本", "items": { "captainBook": 1 }, "price": 600, "daily": 1 }
+    { "id": "captain_book", "name": "艦長教本", "items": { "captainBook": 1 }, "price": 600, "hourly": 5 }
   ],
   "sell": { "amount": 1000, "rates": { "fuel": 120, "ammo": 120, "steel": 160, "bauxite": 300 } },
   "dealDiscount": 0.3

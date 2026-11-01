@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { firstNation, LATER_NATION_THEATERS, nationLocks, newlyUnlocked, STARTER_NATIONS, theaterFinal } from '@/systems/NationUnlock';
+import { firstNation, LATER_NATION_THEATERS, nationLocks, newlyUnlocked, STARTER_NATIONS, startersAllowed, theaterFinal } from '@/systems/NationUnlock';
 import { Nation } from '@/types/Nation';
 import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
@@ -14,14 +14,24 @@ describe('nations open step by step (#134)', () => {
     expect(open(nationLocks({}, MEDALS))).toEqual(PLAYABLE_NATIONS.filter((n) => STARTER_NATIONS.includes(n)));
   });
 
-  it('after the first pick, the other starters wait for 少佐 or a whole theater', () => {
+  it('after the first pick, the other starters open one by one: 少佐, 大佐, 准将 or a whole theater (#405)', () => {
     const locks = nationLocks({ IJN: p(250) }, MEDALS);
     expect(open(locks)).toEqual([Nation.IJN]);
-    expect(locks.USN.condition).toBe('日本が少佐か戦域攻略で解放');
+    expect(locks.USN.condition).toBe('日本が少佐か戦域攻略で解放 (2 国目)');
     expect(locks.USN.progress).toBe('いま 日本 大尉');
+    // 少佐: one more may be chosen, any of the three.
     expect(open(nationLocks({ IJN: p(500) }, MEDALS))).toEqual(expect.arrayContaining(STARTER_NATIONS));
     expect(nationLocks({ IJN: p(500) }, MEDALS).SU.unlocked).toBe(false);
+    // Once it is chosen, the other two wait for 大佐.
+    const two = nationLocks({ IJN: p(500), USN: p(0) }, MEDALS);
+    expect(two.RN.unlocked || two.KM.unlocked).toBe(false);
+    expect(two.RN.condition).toBe('日本が大佐か戦域攻略で解放 (3 国目)');
+    expect(nationLocks({ IJN: p(900), USN: p(0) }, MEDALS).RN.unlocked).toBe(true);
+    // A whole theater counts as a step.
     expect(open(nationLocks({ IJN: p(100, [theaterFinal('pacific')!]) }, MEDALS))).toEqual(expect.arrayContaining(STARTER_NATIONS));
+    expect(startersAllowed(0, 0)).toBe(1);
+    expect(startersAllowed(13, 0)).toBe(4);
+    expect(startersAllowed(0, 5)).toBe(4);
   });
 
   it('France follows the Atlantic or the Mediterranean, Italy the Mediterranean, the Soviet Union its seas (#294)', () => {

@@ -13,8 +13,10 @@ import { unlockedUpgrades } from './ResearchSystem';
 
 /** What developing one copy costs when the data gives none. */
 export const DEFAULT_DEVELOP_COST: IResources = { fuel: 100, ammo: 100, steel: 200, bauxite: 50 };
-/** 「おまかせ」 pays this share of the average price of what it may give. */
-export const RANDOM_DEVELOP_MUL = 0.6;
+/** 「おまかせ」 pays this share of the average price of what it may give (#401: less than half, a lucky dip). */
+export const RANDOM_DEVELOP_MUL = 0.45;
+/** …and now and then it makes two copies at once (当たり, #401). */
+export const RANDOM_LUCKY_CHANCE = 0.25;
 
 /** The stock and fits of one nation (a slice of its progress). */
 export interface IEquipmentHolder {
@@ -83,14 +85,18 @@ export function develop<T extends IEquipmentHolder>(holder: T, catalog: readonly
   return left ? { ...holder, resources: left, equipment: addStock(holder.equipment, id, 1) } : null;
 }
 
-/** 「おまかせ」: one copy of a random developable upgrade, for less. `roll` is in [0, 1). */
-export function developRandom<T extends IEquipmentHolder>(holder: T, catalog: readonly IUpgradeData[], nation: Nation, roll: number): { holder: T; id: string } | null {
+/**
+ * 「おまかせ」: a random developable upgrade, for less; with `luck` under RANDOM_LUCKY_CHANCE two copies (当たり, #401).
+ * `roll` and `luck` are in [0, 1).
+ */
+export function developRandom<T extends IEquipmentHolder>(holder: T, catalog: readonly IUpgradeData[], nation: Nation, roll: number, luck = 1): { holder: T; id: string; count: number } | null {
   const pool = developable(catalog, holder.research, nation);
   if (pool.length === 0) return null;
   const left = pay(holder.resources, randomDevelopCost(pool));
   if (!left) return null;
   const id = pool[Math.min(pool.length - 1, Math.floor(roll * pool.length))].id;
-  return { holder: { ...holder, resources: left, equipment: addStock(holder.equipment, id, 1) }, id };
+  const count = luck < RANDOM_LUCKY_CHANCE ? 2 : 1;
+  return { holder: { ...holder, resources: left, equipment: addStock(holder.equipment, id, count) }, id, count };
 }
 
 export function canDevelop(holder: IEquipmentHolder, catalog: readonly IUpgradeData[], id: string, nation: Nation): boolean {
