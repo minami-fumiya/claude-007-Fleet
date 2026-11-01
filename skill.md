@@ -271,3 +271,12 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Layer new bonuses (learned skills, traits) on top of the old one with `combineModifiers` and test that with none
   of them the result equals the old single bonus exactly — old saves keep the same strength.
 - The E2E text-overflow check pays off on every new detail page: long section headings in portrait were caught there.
+
+## Simulation and worktrees (0.0.57–0.0.59)
+- Compare simulations only with the same flags: `--grown 1` (a fleet grown to the recommended rank) wins the deep
+  seas, a raw fleet loses them by design. A "0% outlier" from a raw run is not a regression.
+- Never touch the tree a simulation runs from (sources or `node_modules`): Vite reloads or the imports break and
+  every later battle reports 0%. A worktree with a `node_modules` symlink must keep that symlink out of git
+  (`.gitignore` has `node_modules/`, a directory pattern, so add `node_modules` to `.git/info/exclude`).
+- Before adding a promotion mission, check that the seas of the rank held can meet it (e.g. six-ship fleets sail
+  only from the 大佐 seas on); `Progress058.test.ts` guards the S-against-six-ships case.
