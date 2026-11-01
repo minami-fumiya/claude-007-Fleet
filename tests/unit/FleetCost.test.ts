@@ -26,8 +26,9 @@ describe('出撃コスト (#306)', () => {
     expect(shipCost(byId('kongo'))).toBeGreaterThanOrEqual(5);
     expect(shipCost(byId('yamato'))).toBeGreaterThan(shipCost(byId('kongo')));
     expect(shipCost(byId('a150'))).toBeGreaterThan(shipCost(byId('yamato')));
-    // Each remodel stage adds one.
-    expect(shipCost(byId('fubuki'), 3)).toBe(5);
+    // A remodel adds 1 for 改 and 改二, 2 for 改三 (#405).
+    expect(shipCost(byId('fubuki'), 2)).toBe(3);
+    expect(shipCost(byId('fubuki'), 3)).toBe(4);
     expect(fleetCost([byId('fubuki'), byId('takao')], { takao: 1 })).toBe(7);
   });
 
@@ -38,12 +39,12 @@ describe('出撃コスト (#306)', () => {
     }
   });
 
-  it('the cap rises with the rank, from a destroyer and more at 准尉 to 48 at 元帥', () => {
+  it('the cap rises with the rank, from a destroyer and more at 准尉 to 50 at 元帥', () => {
     expect(COST_CAPS_COVER_RANKS).toBe(true);
     for (let i = 1; i < COST_CAP.length; i++) expect(COST_CAP[i], RANKS[i].name).toBeGreaterThanOrEqual(COST_CAP[i - 1]);
     expect(costCap(1)).toBe(6);
-    expect(costCap(13)).toBe(48);
-    expect(costCap(99)).toBe(48);
+    expect(costCap(13)).toBe(50);
+    expect(costCap(99)).toBe(50);
     // Every rank's slots can be filled with destroyers, but not with its biggest battleships.
     for (const r of RANKS) expect(r.slots * 2, r.name).toBeLessThanOrEqual(costCap(r.index));
     expect(RANKS[8].slots * shipCost(byId('nagato'))).toBeGreaterThan(costCap(8));
@@ -64,8 +65,8 @@ describe('出撃コスト (#306)', () => {
     const p: IProgress = { ...emptyProgress(), resources: resources({ fuel: 9999, ammo: 9999, steel: 9999, bauxite: 9999 }), rankStats: ALL_MISSIONS_DONE };
     const at = (rankFloor: number): IProgress => ({ ...p, rankFloor, record: { ...p.record, medals: ALL_MISSION_MEDALS } });
     const fleet = [byId('nagato'), byId('mutsu'), byId('takao')];
-    expect(sortieBlockers(at(5), fleet, 0, { exercise: true }).some((r) => r.startsWith('コストが超過'))).toBe(true);
-    expect(sortieBlockers(at(6), fleet, 0, { exercise: true }).some((r) => r.startsWith('コストが超過'))).toBe(false);
+    expect(sortieBlockers(at(4), fleet, 0, { exercise: true }).some((r) => r.startsWith('コストが超過'))).toBe(true);
+    expect(sortieBlockers(at(5), fleet, 0, { exercise: true }).some((r) => r.startsWith('コストが超過'))).toBe(false);
   });
 
   it('brings medals for a fleet at its cap and a light one', () => {

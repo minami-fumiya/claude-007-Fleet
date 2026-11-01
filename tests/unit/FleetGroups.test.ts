@@ -72,7 +72,7 @@ describe('支援艦隊 (#84)', () => {
   });
 
   it('a save without them reads empty', () => {
-    const np = parseSave(JSON.stringify({ version: 1, nations: { IJN: { ships: ['fubuki'], support: [{ preset: 1, mission: 'escort' }, { preset: 9 }] } } })).nations.IJN!;
+    const np = parseSave(JSON.stringify({ version: 1, nations: { IJN: { ships: ['fubuki'], support: [{ preset: 1, mission: 'escort' }, { preset: 10 }] } } })).nations.IJN!;
     expect(np.support).toEqual([{ preset: 1, mission: 'escort' }]);
   });
 });

@@ -38,7 +38,7 @@ import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { filterAndSort, isHeavyCruiser, KIND_FILTERS, KindFilter, kindBreakdown, kindGroups, kindShort, ShipSort, SORT_LABEL } from '@/systems/ShipKind';
 import { FORMATION_ORDER, FORMATION_RULES, formationUnlocked, usableFormation } from '@/systems/FormationRules';
-import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, withPreset } from '@/systems/PresetSystem';
+import { applyPreset, IFleetPreset, PRESET_COUNT, presetLabel, presetSlots, withPreset } from '@/systems/PresetSystem';
 import { filterShips, NO_FILTER } from '@/systems/ListFilter';
 import { filterEntries, kindLabel, summarizeWeapons } from '@/systems/EncyclopediaSystem';
 import { Nation } from '@/types/Nation';
@@ -51,7 +51,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { fleetPowerBreakdown, IPowerBreakdown, POWER_SOURCE_LABEL, POWER_SOURCES, strengthMark } from '@/systems/FleetPower';
-import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportCandidates, supportSlots } from '@/systems/FleetGroups';
+import { ISupportChoice, MISSION_LABEL, MISSION_NOTE, MISSIONS, resolveSupport, sailingIds, supportCandidates, supportSlots, SUPPORT_MAX } from '@/systems/FleetGroups';
 import { EXPEDITIONS, shipsAway } from '@/systems/ExpeditionSystem';
 import { inDorm } from '@/systems/DormSystem';
 import { enemyScale, fleetPower } from '@/systems/DifficultyCurve';
@@ -349,6 +349,9 @@ export class FleetBuilderScene extends Phaser.Scene {
   private listControls: IListControls | null = null;
   /** Preset buttons; while `saveArmed` the next preset tapped is overwritten with the current fleet */
   private presetButtons: UIButton[] = [];
+  private presetPageBtn: UIButton | null = null;
+  /** Which three saved fleets the row shows (#401) */
+  private presetPage = 0;
   private presetSaveBtn: UIButton | null = null;
   private saveArmed = false;
   /** Open ship detail sheet (#33) */
@@ -440,6 +443,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.dragging = false;
     this.presetButtons = [];
     this.presetSaveBtn = null;
+    this.presetPageBtn = null;
+    this.presetPage = 0;
     this.saveArmed = false;
     this.detail = [];
     this.picker = [];
@@ -932,7 +937,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const btnY = p ? 58 : 44;
     const linesY = p ? 90 : 66;
     const presets = progress.presets;
-    for (let i = 0; i < PRESET_COUNT; i++) {
+    for (let i = 0; i < SUPPORT_MAX; i++) {
       const y = d.y + (p ? 120 : 100) + i * (rowH + 10);
       const open = i < slots;
       const choice = progress.support[i];
@@ -1375,11 +1380,20 @@ export class FleetBuilderScene extends Phaser.Scene {
     const saveW = IS_PORTRAIT ? 130 : 76;
     // 支援艦隊 (#84): the setups that sail with this fleet.
     const supW = IS_PORTRAIT ? 130 : 76;
-    const bw = (w - saveW - supW - gap * (PRESET_COUNT + 1)) / PRESET_COUNT;
+    // More saved fleets with rank (#401): three at a time, ›  turns the page.
+    const pages = Math.ceil(presetSlots(this.rankIndex) / PRESET_COUNT);
+    const pageW = pages > 1 ? (IS_PORTRAIT ? 48 : 30) : 0;
+    const bw = (w - saveW - supW - pageW - gap * (PRESET_COUNT + 1 + (pages > 1 ? 1 : 0))) / PRESET_COUNT;
     const font = IS_PORTRAIT ? 13 : 10;
+    if (pages > 1) {
+      this.presetPageBtn = new UIButton(this, x + PRESET_COUNT * (bw + gap) + pageW / 2, y, '›', this.onTap(() => {
+        this.presetPage = (this.presetPage + 1) % pages;
+        this.refreshPresets();
+      }), { variant: 'secondary', width: pageW, height: h, fontSize: font + 2 });
+    }
     this.supportBtn = new UIButton(this, x + w - saveW - gap - supW / 2, y, '支援', this.onTap(() => this.openSupport()), { variant: 'secondary', width: supW, height: h, fontSize: font });
     this.presetButtons = Array.from({ length: PRESET_COUNT }, (_, i) =>
-      new UIButton(this, x + i * (bw + gap) + bw / 2, y, '', this.onTap(() => this.onPreset(i)), { variant: 'secondary', width: bw, height: h, fontSize: font }),
+      new UIButton(this, x + i * (bw + gap) + bw / 2, y, '', this.onTap(() => this.onPreset(this.presetPage * PRESET_COUNT + i)), { variant: 'secondary', width: bw, height: h, fontSize: font }),
     );
     this.presetSaveBtn = new UIButton(this, x + w - saveW / 2, y, '保存', this.onTap(() => {
       this.saveArmed = !this.saveArmed;
@@ -1396,7 +1410,12 @@ export class FleetBuilderScene extends Phaser.Scene {
       const ship = this.shipRegistry.byId(id);
       return ship ? shortName(ship.name) : undefined;
     };
-    this.presetButtons.forEach((b, i) => {
+    const slots = presetSlots(this.rankIndex);
+    const pages = Math.ceil(slots / PRESET_COUNT);
+    this.presetPageBtn?.setLabel(`› ${this.presetPage + 1}/${pages}`);
+    this.presetButtons.forEach((b, k) => {
+      const i = this.presetPage * PRESET_COUNT + k;
+      b.setVisible(i < slots);
       const preset = presets[i] ?? null;
       b.setLabel(this.saveArmed ? `${i + 1}: ここに保存` : `${i + 1}: ${presetLabel(preset, nameOf)}`);
       b.setVariant(this.saveArmed ? 'gold' : preset ? 'primary' : 'secondary');

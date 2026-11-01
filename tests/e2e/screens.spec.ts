@@ -1341,7 +1341,8 @@ test('装備と資材 (0.0.48): development, carrier models, scrapping and the s
   await page.evaluate(() => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('DevelopScene') as unknown as Develop).developRandom());
   await page.waitForTimeout(300);
   const stock = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.equipment as Record<string, number>);
-  expect(Object.values(stock).reduce((a, b) => a + b, 0), `one copy made (${layout})`).toBe(1);
+  // おまかせ開発 is a lucky dip since #401: one copy, or two when lucky.
+  expect([1, 2], `one copy made (${layout})`).toContain(Object.values(stock).reduce((a, b) => a + b, 0));
   expect(await overflowingTexts(page, 'DevelopScene'), `equipment (${layout})`).toEqual([]);
   expect(await overlappingTexts(page, 'DevelopScene'), `equipment overlaps (${layout})`).toEqual([]);
   // 航空機: the carrier's models and the navy's list.

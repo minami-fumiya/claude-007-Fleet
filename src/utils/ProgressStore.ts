@@ -30,7 +30,7 @@ import type { CarrierAircraft } from '@/types/Aircraft';
 import { grantStarterAircraft, STARTER_AIRCRAFT, type IPilot } from '@/systems/AircraftSystem';
 import { isCarrierId } from './CarrierIds';
 import { EXISTING_PLAYER_HELP, FIRST_VERSION, LATEST_VERSION, runMigrations } from './SaveMigration';
-import { IFleetPreset, PRESET_COUNT } from '@/systems/PresetSystem';
+import { IFleetPreset, PRESET_MAX } from '@/systems/PresetSystem';
 import { Formation } from '@/types/Formation';
 import { ICaptainStats } from '@/systems/CaptainSystem';
 import { nationCaptains, starterCaptain } from '@/systems/CaptainRoster';
@@ -123,6 +123,8 @@ export interface INationProgress {
   areaRanks: Record<string, BattleRank>;
   /** What the promotion missions count (#142) */
   rankStats: Partial<Record<RankStat, number>>;
+  /** The counters when the rank held was reached: the next exam counts from here (#401) */
+  examFrom: Partial<Record<RankStat, number>>;
   /** Resource income and spending by hour and category, last 24 hours (#137) */
   ledger: Ledger;
   /** The campaign sortie in progress, if any (#138): it can be continued after closing the game */
@@ -203,7 +205,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     resources: { ...STARTING_RESOURCES }, regenAt: 0, damage: {}, docks: [], research: [], ships: [...ships],
     upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airStart: false, airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
-    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
+    builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, examFrom: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
     focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {},
   };
 }
@@ -257,7 +259,8 @@ export function withProgress(save: ISave, progress: IProgress): ISave {
   const np = grantStarterAircraft(rest, nation, isCarrierId);
   // A rank reached is kept (#261): its medal mission is read from the shared record, which a nation's own slot lacks.
   const held = rankOf(progress).index;
-  const floor = held > (np.rankFloor ?? 0) ? { rankFloor: held } : {};
+  // The next rank's exam starts now (#401): its missions count from these counters.
+  const floor = held > (np.rankFloor ?? 0) ? { rankFloor: held, examFrom: { ...(np.rankStats ?? {}) } } : {};
   return { ...save, nations: { ...save.nations, [nation]: { ...np, ...floor } }, record, wallet: wallet ?? save.wallet };
 }
 
@@ -347,7 +350,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     moraleAt: numbers(data.moraleAt),
     captainXp: numbers(data.captainXp),
     campaign: strings(data.campaign),
-    presets: (Array.isArray(data.presets) ? data.presets : []).slice(0, PRESET_COUNT).map(parsePreset),
+    presets: (Array.isArray(data.presets) ? data.presets : []).slice(0, PRESET_MAX).map(parsePreset),
     merit: isNum(data.merit) ? Math.max(0, data.merit) : 0,
     rankFloor: isNum(data.rankFloor) ? Math.max(0, Math.round(data.rankFloor)) : 0,
     docksOwned: isNum(data.docksOwned) ? Math.max(1, Math.round(data.docksOwned)) : 1,
@@ -364,6 +367,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     items: parseItems(data.items),
     areaRanks: parseAreaRanks(data.areaRanks),
     rankStats: numbers(data.rankStats),
+    examFrom: numbers(data.examFrom),
     ledger: parseLedger(data.ledger),
     sortie: parseSortie(data.sortie),
     shipBases: stringMap(data.shipBases),
@@ -383,7 +387,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
       .map((e) => ({ kind: e.kind, id: e.id, since: e.since })),
     support: (Array.isArray(data.support) ? data.support : []).filter(isObject)
       .map((c) => ({ preset: isNum(c.preset) ? c.preset : -1, mission: MISSIONS.find((m) => m === c.mission) ?? 'strike' }))
-      .filter((c) => c.preset >= 0 && c.preset < PRESET_COUNT),
+      .filter((c) => c.preset >= 0 && c.preset < PRESET_MAX),
     focus: parseFocus(data.focus),
     designs: parseDesigns(data.designs),
     equipStars: Object.fromEntries(Object.entries(numbers(data.equipStars)).map(([k, v]) => [k, Math.min(10, Math.max(0, Math.floor(v)))])),

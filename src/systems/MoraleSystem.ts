@@ -2,7 +2,7 @@ import { IShipModifiers } from '@/types/Modifiers';
 
 /**
  * 士気 (#54, pure): 0..100 per ship, 50 when rested. A sortie tires the crew, a win lifts it, and time brings it back
- * towards 50. High morale (キラキラ) aims and dodges a little better; a tired crew dodges and reloads worse.
+ * towards 50 and then, slowly, on up to 100 (#401). High morale (キラキラ) aims and dodges a little better; a tired crew dodges and reloads worse.
  */
 
 export const MORALE_REST = 50;
@@ -14,6 +14,11 @@ export const MORALE_WIN = 8;
 export const MORALE_S = 12;
 /** Points a minute back towards MORALE_REST (a tired ship is rested in about two hours) */
 export const MORALE_PER_MINUTE = 0.3;
+/**
+ * Above MORALE_REST time keeps lifting the crew up to MORALE_MAX, a third as fast (#401): 50 → 70 (★) in a little over
+ * an hour and a half, so キラキラ is still worth a win or a 給糧艦.
+ */
+export const MORALE_HIGH_PER_MINUTE = MORALE_PER_MINUTE / 3;
 /** At or above: キラキラ. Below: 疲労; below MORALE_WARN the fleet builder warns. */
 export const MORALE_HIGH = 70;
 export const MORALE_TIRED = 30;
@@ -33,9 +38,20 @@ export function moraleOf(state: Partial<IMoraleState>, shipId: string, now: numb
   const stored = state.morale?.[shipId];
   if (stored === undefined) return MORALE_REST;
   const minutes = Math.max(0, (now - (state.moraleAt?.[shipId] ?? now)) / 60_000);
-  const drift = minutes * MORALE_PER_MINUTE;
-  const v = stored > MORALE_REST ? Math.max(MORALE_REST, stored - drift) : Math.min(MORALE_REST, stored + drift);
-  return Math.round(v);
+  return Math.round(restedMorale(stored, minutes));
+}
+
+/** Morale after `minutes` of rest (#401): quickly up to MORALE_REST, then slowly on to MORALE_MAX; never down. */
+export function restedMorale(stored: number, minutes: number): number {
+  let v = stored;
+  let left = minutes;
+  if (v < MORALE_REST) {
+    const toRest = (MORALE_REST - v) / MORALE_PER_MINUTE;
+    if (left <= toRest) return v + left * MORALE_PER_MINUTE;
+    v = MORALE_REST;
+    left -= toRest;
+  }
+  return Math.min(MORALE_MAX, v + left * MORALE_HIGH_PER_MINUTE);
 }
 
 /** Adds `delta` to each ship's current morale (0..100), stamping the time. */
