@@ -10,7 +10,7 @@ import { withQuestEvents } from '@/systems/QuestSystem';
 import { RANKS, rankOf } from '@/systems/RankSystem';
 import { audio } from '@/systems/AudioSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -115,7 +115,7 @@ export class FocusScene extends Phaser.Scene {
     const line = this.status
       || (p.focus.current ? this.clockLine(p.focus.current.id, p.focus.current.endsAt - Date.now()) : `完了 ${p.focus.done.length} / ${tree.length}  ·  方針は 1 つずつ進みます。「または」は片方だけ`);
     const t = add(this.add.text(L.tree.x, L.status, line, textStyle(13, this.status ? (this.statusBad ? Css.danger : Css.success) : p.focus.current ? Css.gold : Css.muted, { fontStyle: 'bold' })));
-    if (t.width > room) t.setScale(room / t.width);
+    fitText(t, room);
     this.clockText = !this.status && p.focus.current ? t : undefined;
     this.drawTree(add, tree, rank);
     const node = tree.find((n) => n.id === this.selected);
@@ -205,10 +205,10 @@ export class FocusScene extends Phaser.Scene {
       }));
       // One line, shrunk to fit: a wrap would split a word (マル五計 | 画, #382).
       const name = add(this.add.text(r.x, r.y, n.name, textStyle(IS_PORTRAIT ? 13 : 12, st === 'closed' ? Css.dim : Css.text, { fontStyle: 'bold' })));
-      if (name.width > r.w - 10) name.setScale((r.w - 10) / name.width);
+      fitText(name, r.w - 10);
       name.setPosition(r.x + (r.w - name.displayWidth) / 2, r.y + (r.h - 14 - name.displayHeight) / 2);
       const stateText = add(this.add.text(r.x + r.w / 2, r.y + r.h - 6, st === 'active' && p.focus.current ? `残り ${clock(Math.max(0, p.focus.current.endsAt - Date.now()))}` : STATE_SHORT[st], eyebrowStyle(9, this.stateColor(st))).setOrigin(0.5, 1));
-      if (stateText.width > r.w - 8) stateText.setScale((r.w - 8) / stateText.width);
+      fitText(stateText, r.w - 8);
       const hit = add(this.add.zone(r.x, r.y, r.w, r.h).setOrigin(0, 0).setInteractive({ useHandCursor: true }));
       hit.on('pointerup', () => this.select(n.id));
       void frame;
@@ -237,7 +237,7 @@ export class FocusScene extends Phaser.Scene {
     const tree = focusTree(p.nation);
     add(this.add.text(x, d.y + 16, `${RANKS[node.rank]?.name ?? ''}  ·  ${node.minutes} 分`, eyebrowStyle(10, Css.muted)));
     const title = add(this.add.text(x, d.y + 36, node.name, textStyle(18, Css.text, { fontStyle: 'bold' })));
-    if (title.width > w) title.setScale(w / title.width);
+    fitText(title, w);
     const lines = [
       `効果: ${node.text}`,
       ...(node.unlocks ? [`建造できる艦: ${this.shipNames(node)}`] : []),

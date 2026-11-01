@@ -14,7 +14,7 @@ import { IScenario, ScenarioTheater } from '@/types/Scenario';
 import { IBattleInitData } from '@/types/Scene';
 import { Formation } from '@/types/Formation';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawPanel, fitText, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 
 interface IRect { x: number; y: number; w: number; h: number }
@@ -114,9 +114,9 @@ export class ScenarioScene extends Phaser.Scene {
         : this.add.text(18, r.h - 28, sides, textStyle(12, Css.muted));
       // Portrait: long country names (e.g. イタリア vs フランス) shrink rather than run into the date.
       const room = r.w - 16 - (date.x + date.width + 12);
-      if (IS_PORTRAIT && vs.width > room) vs.setScale(room / vs.width);
+      if (IS_PORTRAIT) fitText(vs, room);
       const title = this.add.text(18, IS_PORTRAIT ? 38 : 34, sc.name, displayStyle(IS_PORTRAIT ? 18 : 20));
-      if (title.width > r.w - 30) title.setScale((r.w - 30) / title.width);
+      fitText(title, r.w - 30);
       // ★ for a scenario won from a side this nation plays (#200).
       const rec = loadProgress().record.scenarios?.[sc.id];
       const won = playableSides(sc, this.nation).some((si) => (rec?.wins[sc.sides[si].force] ?? 0) > 0);

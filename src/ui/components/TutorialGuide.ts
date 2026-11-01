@@ -4,7 +4,7 @@ import { applyTutorialEvent, currentStep, TUTORIAL_ENABLED, ITutorialResult, ski
 import { formatResources } from '@/systems/ResourceSystem';
 import { loadSave, saveSave } from '@/utils/ProgressStore';
 import { Colors, Css, displayStyle, textStyle } from '@/ui/theme';
-import { addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addPanel, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 
 /** Above every scene's own sheets and HUD. */
 const DEPTH = 400;
@@ -80,7 +80,7 @@ export class TutorialGuide {
   private drawChip(label: string): void {
     const text = this.scene.add.text(0, 0, label, textStyle(IS_PORTRAIT ? 12 : 11, Css.ink, { fontStyle: 'bold' })).setOrigin(0.5);
     const w = Math.min(IS_PORTRAIT ? 300 : 340, text.width + 28);
-    if (text.width > w - 20) text.setScale((w - 20) / text.width);
+    fitText(text, w - 20);
     const h = 22;
     const g = this.scene.add.graphics();
     g.fillStyle(Colors.gold, 0.95);

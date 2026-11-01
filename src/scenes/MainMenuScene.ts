@@ -5,7 +5,7 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CONTROLS } from '@/config/Controls';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { continueLabel, titleTiles } from '@/systems/TitleCopy';
 import { prefersReducedMotion, TitleSea } from '@/ui/components/TitleSea';
 import { drawFlag } from '@/ui/components/NavalFlags';
@@ -243,7 +243,7 @@ export class MainMenuScene extends Phaser.Scene {
       const tx = x + i * cw + cw / 2;
       this.add.text(tx, y + h / 2 - (IS_PORTRAIT ? 14 : 10), tile.title, textStyle(IS_PORTRAIT ? 14 : 13, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5);
       const body = this.add.text(tx, y + h / 2 + (IS_PORTRAIT ? 14 : 12), tile.body, textStyle(11, Css.muted)).setOrigin(0.5);
-      if (body.width > cw - 12) body.setScale((cw - 12) / body.width);
+      fitText(body, cw - 12);
     });
   }
 

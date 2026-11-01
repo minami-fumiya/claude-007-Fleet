@@ -25,7 +25,7 @@ import { buildLook, buildNameShown, hiddenShipName } from '@/systems/RevealSyste
 import { ShipClass } from '@/types/ShipClass';
 import { ITechNode } from '@/types/Progression';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, drawPanel, fitText, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import techTree from '@/data/tech-tree.json';
@@ -222,7 +222,7 @@ export class ShipyardScene extends Phaser.Scene {
     const lineCss = this.status ? (this.statusBad || this.status.startsWith('ドック') ? Css.danger : Css.success) : full ? Css.danger : Css.muted;
     const line = add(this.add.text(info.x + 16, lineY, this.status || (full ? fullLine : rankLine), textStyle(12, lineCss, { fontStyle: this.status || full ? 'bold' : 'normal' })).setOrigin(0, 0.5));
     const room = IS_PORTRAIT ? info.w - 32 : info.w - bw - 46;
-    if (line.width > room) line.setScale(room / line.width);
+    fitText(line, room);
     const buttonY = IS_PORTRAIT ? info.y + 76 : info.y + info.h / 2;
     const buttonH = IS_PORTRAIT ? 52 : info.h - 12;
     if (node && !progress.research.includes(node.id)) {
@@ -303,7 +303,7 @@ export class ShipyardScene extends Phaser.Scene {
     const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints, ship.foreign ? progress.foreignFragments[ship.foreign] ?? 0 : 0), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
-    if (name.width > room) name.setScale(room / name.width);
+    fitText(name, room);
     const lineH = IS_PORTRAIT ? 30 : 22;
     // The class and hull number (#246) once the name is known: "長門型 2 番艦".
     const classLine = `${shown && ship.no ? `${formatNo(ship.no)} · ` : ''}${shown && hull.of > 1 ? `${hull.className} ${hull.number} 番艦 · ` : ''}`;
@@ -344,7 +344,7 @@ export class ShipyardScene extends Phaser.Scene {
   }
 
   private fitWidth(text: Phaser.GameObjects.Text, room: number): Phaser.GameObjects.Text {
-    if (text.width > room) text.setScale(room / text.width);
+    fitText(text, room);
     return text;
   }
 

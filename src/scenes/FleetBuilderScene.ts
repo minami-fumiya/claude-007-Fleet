@@ -45,7 +45,7 @@ import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { IBattleInitData } from '@/types/Scene';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { actionVariant, addBackdrop, addChip, addPanel, drawMeter, drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
+import { actionVariant, addBackdrop, addChip, addPanel, drawMeter, drawPanel, fitText, makeClickable, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { beginSortie } from '@/utils/SortieFlow';
@@ -178,7 +178,7 @@ function shortName(name: string): string {
 function fitName(text: Phaser.GameObjects.Text, name: string, room: number): void {
   if (text.width <= room) return;
   text.setText(shortName(name));
-  if (text.width > room) text.setScale(room / text.width);
+  fitText(text, room);
 }
 
 const RANDOM = 'random' as const;
@@ -1096,7 +1096,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const title = this.add.text(p ? 20 : 12, rowH / 2, g.title, textStyle(p ? 15 : 13, Css.muted, { fontStyle: 'bold' })).setOrigin(0, 0.5);
       const value = this.add.text(w - (p ? 52 : 34), rowH / 2, g.value, textStyle(p ? 17 : 14, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0.5);
       const room = w - (p ? 52 : 34) - title.x - title.width - 16;
-      if (value.width > room) value.setScale(room / value.width);
+      fitText(value, room);
       const arrow = this.add.text(w - (p ? 22 : 14), rowH / 2, open ? '－' : '＋', textStyle(p ? 18 : 14, Css.cyan, { fontStyle: 'bold' })).setOrigin(0.5);
       const row = this.add.container(x, y, [frame, title, value, arrow]);
       makeClickable(row, w, rowH);
@@ -1182,7 +1182,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // The number opens the 1-20 list (#108).
     const valueBg = drawPanel(this.add.graphics(), right - valueW + 4, (h - bh) / 2, valueW - 8, bh, { radius: p ? 12 : 8, fill: Colors.panelHi, fillAlpha: 0.8, rimAlpha: 0.5 });
     const value = this.add.text(right - valueW / 2, h / 2, `${valueText} ▾`, textStyle(p ? 17 : 13, Css.text, { fontStyle: 'bold' })).setOrigin(0.5);
-    if (value.width > valueW - 14) value.setScale((valueW - 14) / value.width);
+    fitText(value, valueW - 14);
     const valueHit = this.add.zone(right - valueW + 4, (h - bh) / 2, valueW - 8, bh).setOrigin(0, 0).setInteractive({ cursor: 'pointer' });
     valueHit.on('pointerup', this.onTap(st.pick));
     right -= valueW;
@@ -1277,7 +1277,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     }
     const label = this.add.text(cx + r + (p ? 10 : 6), h / 2, o.label, textStyle(p ? 14 : 11, o.selected ? Css.text : Css.muted, { fontStyle: o.selected ? 'bold' : 'normal' })).setOrigin(0, 0.5);
     const room = w - label.x - 6;
-    if (label.width > room) label.setScale(room / label.width);
+    fitText(label, room);
     const c = this.add.container(x, y, [g, label]).setAlpha(o.enabled ? 1 : 0.4);
     makeClickable(c, w, h);
     c.on('pointerup', this.onTap(() => {
@@ -1616,7 +1616,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const texts = [status];
     if (full) texts.push(this.add.text(nameX, status.y + status.height + 4, `主兵装  ${this.mainArmament(ship)}`, textStyle(12, Css.muted)));
     const room = w - nameX - 16;
-    for (const t of texts) if (t.width > room) t.setScale(room / t.width);
+    for (const t of texts) fitText(t, room);
 
     const captain = this.captainOf(i);
     const captainLabel = captain ? `艦長 ${captain.name}  Lv${captain.level} ${SKILL_LABEL[captain.skill]}  適性${aptitudeFor(captain, ship.shipClass)}` : '艦長を任命  ›';
@@ -1664,7 +1664,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const name = this.add.text(nameLeft, 36, ship.name, textStyle(13, Css.text, { fontStyle: 'bold' })).setOrigin(0, 0.5);
     fitName(name, ship.name, w - nameLeft - (i > 0 ? 64 : 36));
     const status = this.add.text(nameX, 47, this.slotStatus(ship, true), textStyle(11, this.isDamaged(ship) ? Css.danger : Css.muted));
-    if (status.width > w - nameX - 8) status.setScale((w - nameX - 8) / status.width);
+    fitText(status, w - nameX - 8);
     const captain = this.captainOf(i);
     const btnH = Math.min(24, h - 70);
     const detailW = 48;

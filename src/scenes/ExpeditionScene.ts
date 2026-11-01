@@ -22,7 +22,7 @@ import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { selectedShipIds } from '@/utils/FleetSelection';
-import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { sailingIds } from '@/systems/FleetGroups';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -153,7 +153,7 @@ export class ExpeditionScene extends Phaser.Scene {
       // Out: who sailed (#337), in place of what it asks.
       const line = run ? `出撃中: ${run.shipIds.map(short).join('・')}` : `${e.ships} 隻${this.needsText(e)}`;
       const lineText = this.track(this.add.text(x + 14, y + 36, line, textStyle(12, run ? Css.text : Css.muted)));
-      if (lineText.width > CARD_W - 28) lineText.setScale((CARD_W - 28) / lineText.width);
+      fitText(lineText, CARD_W - 28);
       this.track(this.add.text(x + 14, y + 58, formatResources(e.reward), textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
       const by = y + L.cardH - (IS_PORTRAIT ? 26 : 22);
       const bh = IS_PORTRAIT ? 40 : 32;

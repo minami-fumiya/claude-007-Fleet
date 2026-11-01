@@ -16,7 +16,7 @@ import { AircraftType, CARRIER_AIRCRAFT, CarrierAircraft } from '@/types/Aircraf
 import { IUpgradeData } from '@/types/Modifiers';
 import { IShipData } from '@/types/Ship';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
@@ -57,7 +57,7 @@ function layCard(cw: number, name: Phaser.GameObjects.Text, no: Phaser.GameObjec
   }
   const lines = desc.getWrappedText(desc.text);
   if (lines.length > 2) desc.setText(`${lines[0]}${lines[1].slice(0, -1)}…`);
-  if (foot.width > tw) foot.setScale(tw / foot.width);
+  fitText(foot, tw);
 }
 
 const MODE_JA: Record<Mode, string> = { equipment: '装備', aircraft: '航空機', improve: '改修' };
@@ -151,7 +151,7 @@ export class DevelopScene extends Phaser.Scene {
     const y = L.status + (IS_PORTRAIT ? 6 : 4);
     const t = add(this.add.text(L.list.x, y, this.status || fallback, textStyle(13, this.status ? (this.statusBad ? Css.danger : Css.success) : Css.muted, { fontStyle: this.status ? 'bold' : 'normal' })));
     const room = CANVAS_W - L.list.x * 2;
-    if (t.width > room) t.setScale(room / t.width);
+    fitText(t, room);
   }
 
   private drawEquipment(add: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
@@ -248,7 +248,7 @@ export class DevelopScene extends Phaser.Scene {
     add(new UIButton(this, L.list.x + sw / 2, L.action.y, '‹', () => step(-1), { variant: 'secondary', width: sw, height: L.action.h, fontSize: 18 })).setEnabled(carriers.length > 1);
     add(new UIButton(this, L.list.x + w - sw / 2, L.action.y, '›', () => step(1), { variant: 'secondary', width: sw, height: L.action.h, fontSize: 18 })).setEnabled(carriers.length > 1);
     const name = add(this.add.text(CANVAS_W / 2, L.action.y, ship ? `${ship.name.replace(/\s*\(.*\)\s*$/, '')}  ${this.carrier + 1} / ${carriers.length}` : '空母なし', textStyle(15, ship ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5));
-    if (name.width > w - sw * 2 - 24) name.setScale((w - sw * 2 - 24) / name.width);
+    fitText(name, w - sw * 2 - 24);
 
     const list = this.list!;
     const keep = list.offset;
@@ -263,7 +263,7 @@ export class DevelopScene extends Phaser.Scene {
         const frame = drawPanel(this.add.graphics(), 0, 0, rw, kindH, { radius: 12, fill: Colors.panelHi, fillAlpha: 0.8, rimAlpha: 0.5 });
         const label = this.add.text(16, kindH / 2, KIND_JA[kind], eyebrowStyle(11, Css.gold)).setOrigin(0, 0.5);
         const value = this.add.text(rw - 16, kindH / 2, `${model?.name ?? `${OLD_MODEL_NAME[kind]} (未開発)`}${developed.length > 1 ? '  ›' : ''}`, textStyle(14, Css.text, { fontStyle: 'bold' })).setOrigin(1, 0.5);
-        if (value.width > rw - 150) value.setScale((rw - 150) / value.width);
+        fitText(value, rw - 150);
         list.addItem(this.add.container(0, y, [frame, label, value]), rw, kindH, () => this.cycle(ship, kind));
         y += kindH + L.gap;
       }

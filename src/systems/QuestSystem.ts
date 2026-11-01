@@ -70,6 +70,8 @@ export const QUEST_EVENTS = [
   'superweaponWin',
   // おまかせ開発の当たり (#401)
   'luckyDevelop',
+  // 友軍の設計図 (#386)
+  'allyFragment',
   // 0.0.48: ships scrapped (#42), equipment developed (#55), parts and blueprint fragments taken (#150), superweapon areas
   // won (#148), aircraft developed and aces born (#87), consumables used (#47)
   'scrap', 'develop', 'partDrop', 'blueprint', 'swAreaWin', 'aircraftDev', 'aceBorn', 'consumableUse',
