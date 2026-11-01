@@ -64,6 +64,9 @@ export interface IBattleResultData {
   /** Battle rank S〜D (#149) and what it came from */
   rank?: string;
   rankNote?: string;
+  /** The objective's own numbers (#421): the three stat cards and how far the objective was achieved */
+  objectiveStats?: Array<{ label: string; value: string }>;
+  achievement?: string;
   /** What kept a win from S (#295): "S まで: 残り耐久 78% (85% 必要)" */
   rankShortfall?: string;
   /** Resources gained / spent replacing aircraft, already formatted */

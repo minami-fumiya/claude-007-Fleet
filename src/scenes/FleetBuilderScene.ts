@@ -836,16 +836,18 @@ export class FleetBuilderScene extends Phaser.Scene {
       variant: 'secondary', width: closeW, height: IS_PORTRAIT ? 56 : 40, fontSize: 15,
     }));
     // 編成中の艦 (#419): list the ships another slot or a support fleet holds (to swap them in), or leave them out.
-    const showW = IS_PORTRAIT ? 230 : 190;
-    const show = add(new UIButton(this, d.x + d.w - 20 - closeW - 12 - showW / 2, d.y + (IS_PORTRAIT ? 44 : 34), '', () => {
+    // Portrait: on its own row under the title, which is too wide to share.
+    const showW = IS_PORTRAIT ? d.w - 48 : 190;
+    const showAt = IS_PORTRAIT ? { x: d.x + d.w / 2, y: d.y + 112 } : { x: d.x + d.w - 20 - closeW - 12 - showW / 2, y: d.y + 34 };
+    const show = add(new UIButton(this, showAt.x, showAt.y, '', () => {
       const p = loadProgress();
       saveProgress({ ...p, pickerShowAssigned: !p.pickerShowAssigned });
       this.fillPicker();
-    }, { variant: 'secondary', width: showW, height: IS_PORTRAIT ? 56 : 40, fontSize: 13 }));
+    }, { variant: 'secondary', width: showW, height: IS_PORTRAIT ? 48 : 40, fontSize: 13 }));
     this.pickerShowButton = show;
     const x = d.x + PANEL_PAD + 8;
     const w = d.w - (PANEL_PAD + 8) * 2;
-    const top = d.y + (IS_PORTRAIT ? 92 : 70);
+    const top = d.y + (IS_PORTRAIT ? 150 : 70);
     this.pickerControls = this.addListControls(x, top, w, SHEET_DEPTH + 1, () => this.fillPicker());
     for (const b of [...this.pickerControls.filters, ...this.pickerControls.sorts]) this.picker.push(b);
     const listTop = top + 2 * this.L.filterH + (IS_PORTRAIT ? 10 : 6) + 12;

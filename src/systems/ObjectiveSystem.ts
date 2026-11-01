@@ -19,8 +19,14 @@ export interface IObjectiveState {
   convoyMaxHp?: number;
   /** Shore bombardment */
   landTargetsAlive?: number;
+  /** Shore targets in all (#421) */
+  landTargetsTotal?: number;
   /** Scenario objectives */
   targetsAlive?: number;
+  /** Objective ships in all (#421) */
+  targetsTotal?: number;
+  /** How far the escaping target got toward its zone (0 at the start, 1 there), for PreventEscape / Delay (#421) */
+  escapeProgress?: number;
   flagshipInZone?: boolean;
   /** An enemy objective ship reached the zone */
   enemyInZone?: boolean;
@@ -180,4 +186,72 @@ export function battleBanner(b: IBattleBannerInput): [string, string] {
       : [b.areaName, b.sortie && b.sortie.battles > 1 ? `第 ${b.sortie.node} / ${b.sortie.battles} 戦` : '', b.sortie ? (b.sortie.boss ? '主力戦' : '前哨戦') : '主力戦'].filter((t) => t).join('  ·  ');
   const limit = b.timeLimitSec ? `  (制限 ${Math.floor(b.timeLimitSec / 60)}分${b.timeLimitSec % 60 ? `${b.timeLimitSec % 60}秒` : ''})` : '';
   return [kind, `勝利条件: ${b.goal}${limit}`];
+}
+
+/** One of the results' three stat cards (#421). */
+export interface IObjectiveStat {
+  label: string;
+  value: string;
+}
+
+/** The objective's own numbers for the results (#421): three cards and how far the objective was achieved. */
+export interface IObjectiveResult {
+  stats: [IObjectiveStat, IObjectiveStat, IObjectiveStat];
+  /** One line under the rank: "船団の残り耐久 82%・4 隻中 3 隻" */
+  achievement: string;
+}
+
+/** The share of the convoy's HP left, 0..1 (1 with no convoy). */
+export function convoyHpRatio(s: IObjectiveState): number {
+  const max = s.convoyMaxHp ?? 0;
+  return max > 0 ? Math.max(0, s.convoyHp ?? 0) / max : 1;
+}
+
+/**
+ * What the results show for each objective (#421): a convoy its HP and ships left, a breakthrough the time it took
+ * and the time to spare, a bombardment the shore targets destroyed, and so on. `fleet` is the player's ships left.
+ */
+export function objectiveResult(objective: Objective, s: IObjectiveState, fleet: { alive: number; total: number }): IObjectiveResult {
+  const limit = s.timeLimitSec ?? 0;
+  const elapsed = s.elapsedSec ?? 0;
+  const pct = (v: number): string => `${Math.round(v * 100)}%`;
+  const time: IObjectiveStat = { label: '戦闘時間', value: clock(elapsed) };
+  const spare: IObjectiveStat = { label: '残り時間', value: limit > 0 ? clock(limit - elapsed) : '—' };
+  const sunk: IObjectiveStat = { label: '撃沈', value: `${s.enemiesTotal - s.enemiesAlive} / ${s.enemiesTotal}` };
+  const left: IObjectiveStat = { label: '残存', value: `${fleet.alive} / ${fleet.total}` };
+  switch (objective) {
+    case Objective.Convoy: {
+      const total = s.convoyTotal ?? 0;
+      const kept = total - (s.convoyLost ?? 0);
+      return {
+        stats: [{ label: '船団の残り耐久', value: pct(convoyHpRatio(s)) }, { label: '残った輸送船', value: `${kept} / ${total}` }, time],
+        achievement: `船団の残り耐久 ${pct(convoyHpRatio(s))}・輸送船 ${total} 隻中 ${kept} 隻`,
+      };
+    }
+    case Objective.Breakthrough:
+      return {
+        stats: [{ label: '突入までの時間', value: s.flagshipInZone ? clock(elapsed) : '—' }, spare, left],
+        achievement: s.flagshipInZone ? `${clock(elapsed)} で突入${limit > 0 ? ` (制限 ${clock(limit)})` : ''}` : '突入できず',
+      };
+    case Objective.Bombard: {
+      const total = s.landTargetsTotal ?? 0;
+      const down = total - (s.landTargetsAlive ?? 0);
+      return { stats: [{ label: '地上目標', value: `${down} / ${total}` }, sunk, time], achievement: `地上目標 ${total} 中 ${down} を破壊` };
+    }
+    case Objective.SinkTargets: {
+      const total = s.targetsTotal ?? 0;
+      const down = total - (s.targetsAlive ?? 0);
+      return { stats: [{ label: '撃沈目標', value: `${down} / ${total}` }, time, spare], achievement: `目標 ${total} 隻中 ${down} 隻を ${clock(elapsed)} で撃沈` };
+    }
+    case Objective.PreventEscape: {
+      const away = 1 - Math.min(1, Math.max(0, s.escapeProgress ?? 0));
+      return { stats: [{ label: '逃げ切りまで', value: s.enemyInZone ? '0%' : pct(away) }, spare, left], achievement: s.enemyInZone ? '目標に逃げ切られた' : `逃げ切りまで残り ${pct(away)} の地点で阻止` };
+    }
+    case Objective.Delay: {
+      const held = limit > 0 ? Math.min(elapsed, limit) : elapsed;
+      return { stats: [{ label: '守った時間', value: limit > 0 ? `${clock(held)} / ${clock(limit)}` : clock(held) }, sunk, left], achievement: limit > 0 ? `目標の時間 ${clock(limit)} のうち ${clock(held)} を守った` : `${clock(held)} 守った` };
+    }
+    default:
+      return { stats: [sunk, left, time], achievement: `敵艦 ${s.enemiesTotal} 隻中 ${s.enemiesTotal - s.enemiesAlive} 隻を撃沈` };
+  }
 }

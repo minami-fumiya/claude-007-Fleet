@@ -103,7 +103,7 @@ import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/syste
 import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
 import { LAST_STAND_HP, lastStandArmor, luckChance, skillModifiers, skillOf } from '@/systems/ShipSkillSystem';
-import { battleBanner, evaluateObjective, goalThrottle, IObjectiveState, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
+import { battleBanner, convoyHpRatio, evaluateObjective, goalThrottle, IObjectiveState, objectiveResult, objectiveStatus, outcomeReason, pauseLines } from '@/systems/ObjectiveSystem';
 import { OBJECTIVE_LABEL, objectiveText } from '@/scenes/CampaignMapScene';
 import { addProficiency, evadeChance, proficiencyGain, TRAINING_MANUAL_DROP_CHANCE } from '@/systems/ProficiencySystem';
 import { Objective } from '@/types/Campaign';
@@ -299,6 +299,9 @@ export class BattleScene extends Phaser.Scene {
   private scenarioTargets: BaseShip[] = [];
   private convoy: BaseShip[] = [];
   private convoyEscaped = 0;
+  /** How far the escaping target was from its zone at first, and how far it got (#421) */
+  private escapeStart: number | null = null;
+  private escapeProgress = 0;
   private landTargets: BaseShip[] = [];
   private objectiveText: Phaser.GameObjects.Text | null = null;
   /** Captains in command of player ships this battle */
@@ -414,6 +417,8 @@ export class BattleScene extends Phaser.Scene {
     this.seenByPlayer = new Set();
     this.convoy = [];
     this.convoyEscaped = 0;
+    this.escapeStart = null;
+    this.escapeProgress = 0;
     this.landTargets = [];
     this.objectiveText = null;
     this.scenarioTargets = [];
@@ -2231,12 +2236,29 @@ export class BattleScene extends Phaser.Scene {
       convoyHp: this.convoy.reduce((n, c) => n + Math.max(0, c.stats.currentHp), 0),
       convoyMaxHp: this.convoy.reduce((n, c) => n + c.stats.maxHp, 0),
       landTargetsAlive: this.landTargets.filter((t) => t.isAlive).length,
+      landTargetsTotal: this.landTargets.length,
       targetsAlive: this.scenarioTargets.filter((t) => t.isAlive).length,
+      targetsTotal: this.scenarioTargets.length,
+      escapeProgress: this.trackEscape(),
       flagshipInZone: zone ? inZone(this.flagship.x, this.flagship.y, zone, WORLD.w, WORLD.h) : false,
       enemyInZone: zone ? this.scenarioTargets.some((t) => t.isAlive && inZone(t.x, t.y, zone, WORLD.w, WORLD.h)) : false,
       elapsedSec: this.elapsedSec(),
       timeLimitSec: this.side?.timeLimitSec ?? 0,
     };
+  }
+
+  /** How far the closest live objective ship has got toward its zone, 0..1 (#421); kept once it sinks. */
+  private trackEscape(): number {
+    const zone = this.side?.zone;
+    if (!zone || (this.objective !== Objective.PreventEscape && this.objective !== Objective.Delay)) return 0;
+    const c = placeAt(zone, WORLD.w, WORLD.h);
+    const r = zoneRadius(zone.r, WORLD.w, WORLD.h);
+    const alive = this.scenarioTargets.filter((t) => t.isAlive);
+    if (alive.length === 0) return this.escapeProgress;
+    const d = Math.max(0, Math.min(...alive.map((t) => Math.hypot(t.x - c.x, t.y - c.y))) - r);
+    if (this.escapeStart === null) this.escapeStart = Math.max(1, d);
+    this.escapeProgress = Math.min(1, Math.max(this.escapeProgress, 1 - d / this.escapeStart));
+    return this.escapeProgress;
   }
 
   private checkWinLoss(): void {
@@ -2548,8 +2570,14 @@ export class BattleScene extends Phaser.Scene {
       minShipHp: Math.min(1, ...fleet.filter((s) => s.isAlive && s.stats.maxHp > 0).map((s) => s.stats.currentHp / s.stats.maxHp)),
       timeLimitSec: this.side?.timeLimitSec ?? 0,
       timeWins: this.objective === Objective.Delay,
+      // 船団護衛 (#421): an S keeps the convoy whole too.
+      convoyHp: this.objective === Objective.Convoy && this.convoy.length > 0 ? convoyHpRatio(this.objectiveState()) : undefined,
     };
     const rank = battleRank(rankInput);
+    // The objective's own numbers (#421) on the results' cards and under the rank.
+    const objResult = objectiveResult(this.objective, this.objectiveState(), { alive: result.survivors, total: result.fleetSize });
+    result.objectiveStats = objResult.stats;
+    result.achievement = objResult.achievement;
     result.rank = rank;
     result.rankNote = rankBreakdown(rankInput);
     result.rankShortfall = rankShortfall(rankInput);
