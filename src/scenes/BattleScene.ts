@@ -189,6 +189,8 @@ interface IFleetGroup {
   ais: AISystem[];
   owned: boolean;
   mission: FleetMission;
+  /** Whose ships they are (友軍艦隊 of another navy leave its plans after a shared win, #386) */
+  nation?: Nation;
 }
 
 /** 友軍艦隊 (#64) are tinted green. */
@@ -763,7 +765,7 @@ export class BattleScene extends Phaser.Scene {
   private spawnGroup(ships: IShipData[], label: string, mission: FleetMission, owned: boolean, nation: Nation, captainIds: (string | null)[] = []): void {
     const at = this.groupSpawn(this.groups.length);
     const offsets = FormationSystem.getOffsets(Formation.LineAhead, Math.max(0, ships.length - 1));
-    const group: IFleetGroup = { label, ships: [], ais: [], owned, mission };
+    const group: IFleetGroup = { label, ships: [], ais: [], owned, mission, nation };
     ships.forEach((raw, i) => {
       const data = owned ? this.rebuilt(raw) : raw;
       const pos = i === 0 ? at : FormationSystem.getWorldPositionFromValues(at.x, at.y, 0, offsets[i - 1]);
@@ -2770,6 +2772,16 @@ export class BattleScene extends Phaser.Scene {
         // What the fragments lead to (#394): never "can be built" before the ship can be.
         const note = fragmentNote(DataLoader.getRegistry(this).all(), enemyNation as Nation, have - fragment, have);
         recruitLines.push(`${NATION_INFO[enemyNation as Nation]?.jaShort ?? enemyNation}の設計図の断片 +${fragment} (計 ${have}・${note})`);
+      }
+      // 友軍の設計図 (#386): a navy that fought beside the player shares its plans now and then after a win (史実の供与艦).
+      const allies = [...new Set(this.groups.filter((g) => !g.owned && g.nation && g.nation !== progress.nation).map((g) => g.nation as Nation))];
+      for (const ally of allies) {
+        const got = rollFragment(1, rank, victory, Math.random);
+        if (got <= 0) continue;
+        const have = (progress.foreignFragments[ally] ?? 0) + got;
+        progress = withQuestEvents({ ...progress, foreignFragments: { ...progress.foreignFragments, [ally]: have } }, [['foreignFragment', got], ['allyFragment', got]], now);
+        const note = fragmentNote(DataLoader.getRegistry(this).all(), ally, have - got, have);
+        recruitLines.push(`友軍 ${NATION_INFO[ally]?.jaShort ?? ally}の設計図の断片 +${got} (計 ${have}・${note})`);
       }
     }
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');
