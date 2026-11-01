@@ -49,4 +49,15 @@ describe('0.0.58 進行と経済', () => {
       if (t.level >= 9) expect(t.rank, `${t.branch} ${t.level}`).toBe(t.level);
     }
   });
+
+  it('a promotion asks for an S against six ships only once the rank held meets such fleets in its seas (#407)', async () => {
+    const { RANK_MISSIONS } = await import('@/systems/RankSystem');
+    const { areaDepth, recommendedRank } = await import('@/systems/DifficultyCurve');
+    const data = (await import('@/data/campaign.json')).default as unknown as Parameters<typeof areaDepth>[0];
+    const big = data.areas.filter((a) => !(a as { training?: boolean }).training && a.enemy.ships.length >= 6);
+    const firstRank = Math.min(...big.map((a) => recommendedRank(areaDepth(data, a)).index));
+    for (const [index, list] of Object.entries(RANK_MISSIONS)) {
+      if (list?.some((m) => m.stat === 'bigS')) expect(Number(index) - 1, `rank ${index}`).toBeGreaterThanOrEqual(firstRank);
+    }
+  });
 });

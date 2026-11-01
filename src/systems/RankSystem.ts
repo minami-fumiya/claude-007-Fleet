@@ -118,9 +118,11 @@ export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
   5: [win(8), night(1), sweep(5), medal('perfect')],
   // 空母 waits for 准将 (#358 #373): the Royal Navy meets its first carrier in a sea of its own only at 准将.
   6: [sub(3), objective(2), night(2), medal('fleet_2')],
-  // 中佐 (#405): the S against six ships waits for 大佐; fewer sinkings and submarines.
+  // 中佐 (#405 #407): no S against six ships (a 少佐 meets none in its seas); fewer sinkings and submarines.
   7: [sink(40), sub(5), win(12), medal('operations')],
-  8: [bigS(2), battleship(2), win(15), medal('flawless')],
+  // The six-ship fleets sail only in the seas meant for 大佐 and above (#407): the S against them is asked from 准将 on,
+  // once the rank held reaches those seas.
+  8: [battleship(2), win(15), night(3), medal('flawless')],
   9: [carrier(1), battleship(3), sweep(8), medal('science_3')],
   10: [sink(100), areas(8), night(5), medal('victor_2')],
   11: [battleship(5), bigS(4), carrier(6), medal('s_rank_2')],
