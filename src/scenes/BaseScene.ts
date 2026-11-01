@@ -15,7 +15,7 @@ import { formatResources } from '@/systems/ResourceSystem';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { facilityMedal, medalName } from '@/systems/MedalGate';
@@ -180,7 +180,7 @@ export class BaseScene extends Phaser.Scene {
       const seas = (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') || '本国の軍港';
       const sub = open ? seas : BASE_STATE_TEXT[state] ?? baseLockShort(b, progress);
       const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
-      if (subText.width > cw - 32) subText.setScale((cw - 32) / subText.width);
+      fitText(subText, cw - 32);
       if (state === 'building' && progress.baseWork) {
         this.workTimer = { text: subText, endsAt: progress.baseWork.endsAt, name: b.name };
         subText.setText(`工事中 残り ${clock(progress.baseWork.endsAt - Date.now())}`);
@@ -231,7 +231,7 @@ export class BaseScene extends Phaser.Scene {
       })).setEnabled(enabled);
       // The name never runs under the button (#297).
       const room = w - workW - 12;
-      if (title.width > room) title.setScale(room / title.width);
+      fitText(title, room);
     }
     // Below the button in portrait (it is taller than the name).
     let y = Math.max(title.y + title.height + 10, !open && IS_PORTRAIT ? d.y + 80 : 0);
@@ -273,7 +273,7 @@ export class BaseScene extends Phaser.Scene {
       this.track(this.add.text(x + 14, y + (IS_PORTRAIT ? 10 : 5), `${r.name}  Lv${lv} / ${max}`, textStyle(IS_PORTRAIT ? 14 : 13, lv > 0 ? Css.text : Css.muted, { fontStyle: 'bold' })));
       const effect = this.track(this.add.text(x + 14, y + rowH - (IS_PORTRAIT ? 14 : 9), r.id === 'unique' && lv >= max ? '最大まで強化済み' : r.effect, textStyle(11, Css.dim)).setOrigin(0, 1));
       const room = w - bw - 40;
-      if (effect.width > room) effect.setScale(room / effect.width);
+      fitText(effect, room);
       if (lv < max) {
         // Facilities being raised read 建設中; the others show their price, waiting while every slot is taken.
         // The upper levels may need a medal first (#169).
@@ -322,8 +322,8 @@ export class BaseScene extends Phaser.Scene {
         variant: state === 'ready' ? 'gold' : 'secondary', width: workW, height: IS_PORTRAIT ? 60 : 40, fontSize: 12,
       })).setEnabled(enabled);
       const room = w - workW - 12;
-      if (title.width > room) title.setScale(room / title.width);
-    } else if (title.width > w) title.setScale(w / title.width);
+      fitText(title, room);
+    } else fitText(title, w);
     let y = Math.max(title.y + title.height + 10, !open && IS_PORTRAIT ? d.y + 80 : 0);
     const forward = openBases(progress).filter(isForward).map((b) => b.id);
     const shop = forwardTotal(facilities, 'frontShop', forward);
@@ -344,7 +344,7 @@ export class BaseScene extends Phaser.Scene {
       this.track(this.add.text(x + 14, y + (IS_PORTRAIT ? 10 : 5), `${f.name}  Lv${lv} / ${max}`, textStyle(IS_PORTRAIT ? 14 : 13, lv > 0 ? Css.text : Css.muted, { fontStyle: 'bold' })));
       const effect = this.track(this.add.text(x + 14, y + rowH - (IS_PORTRAIT ? 14 : 9), f.effect, textStyle(11, Css.dim)).setOrigin(0, 1));
       const room = w - bw - 40;
-      if (effect.width > room) effect.setScale(room / effect.width);
+      fitText(effect, room);
       if (lv < max) {
         const label = jobs.some((j) => j.id === f.id) ? '建設中…' : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(f.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(facilityCost(f.id, lv + 1))}`;
         this.track(new UIButton(this, x + w - 8 - bw / 2, y + (rowH - 6) / 2, label, () => this.build(base, f.id), {

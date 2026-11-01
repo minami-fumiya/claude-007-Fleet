@@ -7,6 +7,7 @@ import { examText, maxBuildGrade, RANKS, START_RANK } from './RankSystem';
 import { FORMATION_ORDER, FORMATION_RULES } from './FormationRules';
 import { expeditionsAt } from './ExpeditionSystem';
 import { presetSlots } from './PresetSystem';
+import { costCap } from './FleetCost';
 
 /** One row of the rank list (#128): what a rank needs and what it brings. */
 export interface IRankRow {
@@ -15,6 +16,8 @@ export interface IRankRow {
   minMerit: number;
   slots: number;
   grade: number;
+  /** The fleet's sortie cost cap (#406) */
+  costCap: number;
   /** "ドック増設・軍港: 舞鶴鎮守府・昇進試験: …" */
   unlocks: string;
   /** 士官候補生 while the tutorial is off: listed, but nobody starts there */
@@ -37,7 +40,7 @@ export function rankTable(nation: string): IRankRow[] {
     if (r.index > 0 && presetSlots(r.index) > presetSlots(r.index - 1)) unlocks.push(`編成の保存枠 ${presetSlots(r.index)}`);
     if (r.exam) unlocks.push(`昇進試験: ${examText(r.exam)}`);
     return {
-      index: r.index, name: r.name, minMerit: r.minMerit, slots: r.slots, grade: maxBuildGrade(r.index),
+      index: r.index, name: r.name, minMerit: r.minMerit, slots: r.slots, grade: maxBuildGrade(r.index), costCap: costCap(r.index),
       unlocks: unlocks.join('・'), beforeStart: r.index < START_RANK,
     };
   });

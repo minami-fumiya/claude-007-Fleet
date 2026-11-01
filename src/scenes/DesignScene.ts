@@ -13,7 +13,7 @@ import { formatResources } from '@/systems/ResourceSystem';
 import { IShipData } from '@/types/Ship';
 import { IShipDesign } from '@/types/Design';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
@@ -123,12 +123,12 @@ export class DesignScene extends Phaser.Scene {
     const line = this.status || (full ? `設計は ${designLimit(tier)} つまで (方針と研究で増えます)` : problem ?? `設計段階 ${tier}  ·  重量 ${weight} / ${cap}  ·  保存すると建造の画面に並びます`);
     const bad = this.status ? this.statusBad : !!problem || full;
     const st = add(this.add.text(x0, L.status, line, textStyle(13, bad ? Css.danger : this.status ? Css.success : Css.muted, { fontStyle: 'bold' })));
-    if (st.width > w) st.setScale(w / st.width);
+    fitText(st, w);
     const ship = designShip({ ...this.draft, id: this.draft.id ?? 'draft', shipClass: h.shipClass, name: this.draft.name || h.name }, p.nation, this.roster());
     const cost = buildCostAt(p, ship);
     const air = ship.airWing ? `  ·  搭載 ${ship.airWing.fighters + ship.airWing.diveBombers + ship.airWing.torpedoBombers} 機` : '';
     const pv = add(this.add.text(x0, L.preview, `耐久 ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}  格 ${shipGrade(ship)}${air}\n建造 ${formatResources(cost)}`, textStyle(13, Css.text, { lineSpacing: 4 })));
-    if (pv.width > w) pv.setScale(w / pv.width);
+    fitText(pv, w);
     add(drawPanel(this.add.graphics(), x0 - 4, L.preview - 6, w + 8, pv.height + 12, { radius: 10, fillAlpha: 0.35, rimAlpha: 0.2 })).setDepth(pv.depth - 1);
 
     // The modules: weapons the navy's ships carry, then fittings; tap to fit or take off.
@@ -157,7 +157,7 @@ export class DesignScene extends Phaser.Scene {
     add(new UIButton(this, x + sw / 2, y, '‹', () => step(-1), { variant: 'secondary', width: sw, height: L.h, fontSize: 18 })).setEnabled(enabled);
     add(new UIButton(this, x + w - sw / 2, y, '›', () => step(1), { variant: 'secondary', width: sw, height: L.h, fontSize: 18 })).setEnabled(enabled);
     const t = add(this.add.text(x + w / 2, y, title, textStyle(14, Css.text, { fontStyle: 'bold' })).setOrigin(0.5));
-    if (t.width > w - sw * 2 - 16) t.setScale((w - sw * 2 - 16) / t.width);
+    fitText(t, w - sw * 2 - 16);
   }
 
   /** Steps through the saved designs, with a new one after the last. */

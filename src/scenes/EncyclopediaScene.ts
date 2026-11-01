@@ -36,7 +36,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { ICaptainData } from '@/types/Captain';
 import { AircraftType } from '@/types/Aircraft';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawMeter, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawMeter, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { ScrollList } from '@/ui/components/ScrollList';
 import campaignData from '@/data/campaign.json';
 import aircraftData from '@/data/aircraft.json';
@@ -412,7 +412,7 @@ export class EncyclopediaScene extends Phaser.Scene {
       // (#355: the two ran together as one word).
       if (e.name.includes(e.sub)) sub.setText('');
       const room = colW - 52 - (sub.text ? sub.width + 24 : 0) - 12;
-      if (name.width > room) name.setScale(room / name.width);
+      fitText(name, room);
       parts.push(name, sub);
       const card = this.add.container(col * (colW + 8), row * (L.rowH + ROW_GAP), parts);
       this.list.addItem(card, colW, L.rowH, () => {

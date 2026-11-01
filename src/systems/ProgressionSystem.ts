@@ -221,3 +221,17 @@ export function sweepArea(progress: IProgress, area: ICampaignArea, enemy: IShip
   ], now);
   return { progress: next, reward, cost, merit, promotedTo: promoted.promotedTo, lost: gain.lost };
 }
+
+/**
+ * 掃討できる海域 (#406): every area of the given theaters with a sweep banked, most banked first (then the theaters'
+ * order), so a full bank in another sea is one tap away.
+ */
+export function sweepableAreas(
+  progress: Pick<IProgress, 'campaign' | 'perfect' | 'sweepCharges'>, areas: readonly ICampaignArea[], theaters: readonly string[], now: number,
+): Array<{ area: ICampaignArea; left: number }> {
+  return areas
+    .filter((a) => theaters.includes(a.theater) && canSweep(progress, a))
+    .map((a) => ({ area: a, left: sweepsLeft(progress, a.id, now) }))
+    .filter((x) => x.left > 0)
+    .sort((x, y) => y.left - x.left || theaters.indexOf(x.area.theater) - theaters.indexOf(y.area.theater));
+}

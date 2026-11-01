@@ -108,6 +108,32 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
 }
 
 /**
+ * 文字の最小サイズ (#406): texts of `key` drawn smaller than `min` canvas px once every scale on the way is counted
+ * (a text squeezed with setScale to fit, inside a scaled container). The theme's own floor (uiFontSize) keeps the
+ * nominal sizes up; this catches what a layout shrank afterwards.
+ */
+async function tinyTexts(page: Page, key: string, min = 12): Promise<string[]> {
+  return page.evaluate(({ k, m }) => {
+    const scene = (window as unknown as { game: Phaser.Game }).game.scene.getScene(k);
+    const out: string[] = [];
+    const visit = (o: Phaser.GameObjects.GameObject, scale: number, visible: boolean): void => {
+      const v = visible && (o as unknown as { visible?: boolean }).visible !== false && ((o as unknown as { alpha?: number }).alpha ?? 1) > 0;
+      const own = (o as unknown as { scaleY?: number }).scaleY ?? 1;
+      if (o.type === 'Container') {
+        (o as Phaser.GameObjects.Container).list.forEach((c) => visit(c, scale * own, v));
+        return;
+      }
+      const t = o as Phaser.GameObjects.Text;
+      if (!v || o.type !== 'Text' || t.text.trim() === '') return;
+      const px = parseFloat(String(t.style.fontSize)) * scale * own;
+      if (px < m - 0.01) out.push(`${t.text.replace(/\n/g, ' ').slice(0, 30)} (${px.toFixed(1)}px)`);
+    };
+    scene.children.list.forEach((o) => visit(o, 1, true));
+    return out;
+  }, { k: key, m: min });
+}
+
+/**
  * Wrapped texts of `key` whose second or later line starts with a character a Japanese line may not start with
  * (#248 禁則処理): "。", "、", small kana, "ー", closing brackets; or a line that ends inside a word (#349).
  */
@@ -1762,5 +1788,19 @@ test('戦闘の隊形 (0.0.57): an exercise with 支援艦隊 meets as many enem
   });
   expect(spread).toBeLessThan(600);
   await page.screenshot({ path: info.outputPath('exercise-fleets.png') });
+  expect(errors).toEqual([]);
+});
+
+test('文字の最小サイズ (0.0.59): no menu screen draws a text below 12 canvas px (#406)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS });
+  const tiny: string[] = [];
+  for (const key of SCREENS) {
+    await open(page, key);
+    tiny.push(...(await tinyTexts(page, key)).map((t) => `${key}: ${t}`));
+  }
+  console.log(`TINY ${layout} ${tiny.length}\n${tiny.join('\n')}`);
+  expect(tiny, `small texts (${layout})`).toEqual([]);
   expect(errors).toEqual([]);
 });

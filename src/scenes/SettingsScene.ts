@@ -17,7 +17,7 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { backupLabel, ISaveBackup } from '@/utils/SaveBackup';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, addPanel, drawMeter, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, addPanel, drawMeter, fitText, UIButton } from '@/ui/components/UIKit';
 
 /** Landscape lays the settings out in two columns (sound / controls / builder | save data), so nothing runs off the bottom. */
 const P = IS_PORTRAIT ? { x: 16, y: 140, w: CANVAS_W - 32, h: CANVAS_H - 156 } : { x: 40, y: 96, w: CANVAS_W - 80, h: 604 };
@@ -293,7 +293,7 @@ export class SettingsScene extends Phaser.Scene {
     const meterW = w - labelW - btn * 2 - 20 - valueW - (onW ? onW + 10 : 0);
     const cy = y + btn / 2;
     const name = this.track(this.add.text(x, cy, label, textStyle(16, on ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 0.5));
-    if (name.width > labelW - 8) name.setScale((labelW - 8) / name.width);
+    fitText(name, labelW - 8);
     this.track(new UIButton(this, x + labelW + btn / 2, cy, '−', () => this.setVolume(set, stepVolume(value, -1)), { variant: 'secondary', width: btn, height: btn, fontSize: 20 }));
     this.track(new UIButton(this, meterX + meterW + 10 + btn / 2, cy, '+', () => this.setVolume(set, stepVolume(value, 1)), { variant: 'secondary', width: btn, height: btn, fontSize: 20 }));
     const g = this.track(this.add.graphics());

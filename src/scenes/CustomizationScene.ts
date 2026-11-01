@@ -25,7 +25,7 @@ import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { actionVariant, addBackdrop, addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
+import { actionVariant, addBackdrop, addPanel, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -302,7 +302,7 @@ export class CustomizationScene extends Phaser.Scene {
    */
   private layCard(r: IRect, name: Phaser.GameObjects.Text, desc: Phaser.GameObjects.Text, mark: Phaser.GameObjects.Text, count?: Phaser.GameObjects.Text): void {
     if (!IS_PORTRAIT) {
-      if (name.width > r.w - 150) name.setScale((r.w - 150) / name.width);
+      fitText(name, r.w - 150);
       return;
     }
     const tw = r.w - 36;
@@ -498,7 +498,7 @@ export class CustomizationScene extends Phaser.Scene {
       add(drawPanel(this.add.graphics(), r.x + 20, y, r.w - 40, rowH, { radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.8 : 0.2 }));
       add(this.add.text(r.x + 36, y + 10, `${o.suffix}  ${o.label}`, textStyle(IS_PORTRAIT ? 14 : 13, Css.text, { fontStyle: 'bold', wordWrap: { width: r.w - 220, useAdvancedWrap: true } })));
       const fx = add(this.add.text(r.x + 36, y + rowH - 10, describeModifiers(o.effects).join('  '), textStyle(11, Css.cyan)).setOrigin(0, 1));
-      if (fx.width > r.w - 220) fx.setScale((r.w - 220) / fx.width);
+      fitText(fx, r.w - 220);
       add(new UIButton(this, r.x + r.w - 100, y + rowH / 2, on ? '選択中' : reached ? '変更' : '改造', () => this.chooseBranch(o.id), {
         variant: on ? 'secondary' : actionVariant(can), width: 140, height: IS_PORTRAIT ? 52 : 40, fontSize: 14,
       })).setEnabled(!on && can);
