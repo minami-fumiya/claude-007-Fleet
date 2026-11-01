@@ -107,9 +107,9 @@ export class ScrollList {
 
   /**
    * Adds a row laid out from its top-left at content y = `obj.y`, `w` x `h` px, that calls `onTap`
-   * when tapped (not dragged) inside the viewport.
+   * when tapped (not dragged) inside the viewport, with where in the row it was tapped (★ in a ship row, #419).
    */
-  addItem(obj: Phaser.GameObjects.Container, w: number, h: number, onTap: () => void): this {
+  addItem(obj: Phaser.GameObjects.Container, w: number, h: number, onTap: (x: number, y: number) => void): this {
     this.content.add(obj);
     this.items.push({ obj, h });
     obj.setSize(w, h);
@@ -123,10 +123,11 @@ export class ScrollList {
     obj.on('pointerdown', () => {
       this.pressed = obj;
     });
-    obj.on('pointerup', () => {
+    obj.on('pointerup', (_p: Phaser.Input.Pointer, lx: number, ly: number) => {
       const tapped = this.pressed === obj && !this.dragging && !this.caughtGlide;
       this.pressed = null;
-      if (tapped) onTap();
+      // The hit area is shifted by half the row (see above), and so are the local coordinates.
+      if (tapped) onTap(lx - w / 2, ly - h / 2);
     });
     this.layout();
     return this;

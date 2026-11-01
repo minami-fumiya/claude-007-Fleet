@@ -181,11 +181,11 @@ export function bauxiteCarriersPerHour(b: IHourBudget): number {
 }
 
 /**
- * Fuel the shop turns 1,000 surplus steel into (#321): sold at the steel rate, the gold buys the large fuel pack
+ * Fuel the shop turns 1,000 surplus steel into (#321): sold at the steel rate, the gold buys the medium fuel pack
  * (its daily limit aside).
  */
 export function steelToFuel(): number {
-  const pack = SHOP_ENTRIES.find((e) => e.id === 'fuel_l');
+  const pack = SHOP_ENTRIES.find((e) => e.id === 'fuel_m');
   const fuelPerGold = pack?.give?.fuel && pack.price ? pack.give.fuel / pack.price : 0;
   return Math.round(SELL.rates.steel * fuelPerGold * (1000 / SELL.amount));
 }

@@ -29,6 +29,7 @@ import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
 import { MORALE_TIRED, MORALE_WARN, moraleLabel, moraleMood, moraleOf } from '@/systems/MoraleSystem';
 import { autoFleet } from '@/systems/AutoFleet';
+import { isFavorite, toggleFavorite } from '@/systems/FavoriteSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { fleetSlots, needText, nextSlotRank, RANKS, rankOf } from '@/systems/RankSystem';
 import { completeRepairs, hpFraction, isDocked } from '@/systems/DockSystem';
@@ -364,6 +365,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private pickerList: ScrollList | null = null;
   private pickerControls: IListControls | null = null;
   private pickerSlot = -1;
+  /** The picker's 編成中の艦 toggle (#419) */
+  private pickerShowButton: UIButton | null = null;
   /** Page scroll before the picker opened (the sheet is laid out at scroll 0) */
   private pickerScroll = 0;
   /** Settings panel objects (rebuilt when a value changes or a group opens) and the open group */
@@ -667,7 +670,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // 士気順 (#357) reads the morale as it stands now.
     const progress = loadProgress();
     const now = Date.now();
-    return filterShips(filterAndSort(ships, this.kindFilter, this.sort, (id) => moraleOf(progress, id, now)), { ...NO_FILTER, query: this.query }, { owned: [], roster: this.shipRegistry.byNation(this.nation) });
+    return filterShips(filterAndSort(ships, this.kindFilter, this.sort, (id) => moraleOf(progress, id, now), progress.favorites), { ...NO_FILTER, query: this.query }, { owned: [], roster: this.shipRegistry.byNation(this.nation) });
   }
 
   private rebuildShipList(): void {
@@ -724,6 +727,9 @@ export class FleetBuilderScene extends Phaser.Scene {
     hover.setVisible(false);
 
     const icon = this.addShipIcon(statX / 2, itemH / 2, ship.spriteKey, statX - 20, 1.2);
+    // ★ お気に入り (#419): tapping the star's corner marks or unmarks the ship (see FAV_HIT).
+    const fav = isFavorite(loadProgress().favorites, ship.id);
+    const star = this.add.text(8, 4, fav ? '★' : '☆', textStyle(IS_PORTRAIT ? 22 : 16, fav ? Css.gold : Css.dim, { fontStyle: 'bold' }));
     const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
     const kc = kindColor(ship);
     const badge = addChip(this, 0, name.y + name.height / 2, kindShort(ship), kc.color, kc.css);
@@ -762,7 +768,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       plus.strokeCircle(plusX, itemH / 2, plusR);
       end.push(plus, this.add.text(plusX, itemH / 2 - 1, '+', textStyle(22, Css.cyan, { fontStyle: 'bold' })).setOrigin(0.5));
     }
-    const card = this.add.container(0, 0, [bg, hover, icon, name, badge, costChip, meters, ...statLabels, ...end]);
+    const card = this.add.container(0, 0, [bg, hover, icon, star, name, badge, costChip, meters, ...statLabels, ...end]);
     card.on('pointerover', () => hover.setVisible(true));
     card.on('pointerout', () => hover.setVisible(false));
     return card;
@@ -778,7 +784,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const shown = this.listed(this.ships);
     shown.forEach((ship, i) => {
       const card = this.shipRow(ship, w, itemH, null).setY(i * (itemH + ITEM_GAP));
-      list.addItem(card, w, itemH, this.onTap(() => this.addShipToFleet(ship)));
+      list.addItem(card, w, itemH, (tx, ty) => (FleetBuilderScene.onStar(tx, ty) ? this.toggleFav(ship) : this.addShipToFleet(ship)));
       this.shipCards.push({ id: ship.id, card });
     });
     list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
@@ -829,6 +835,14 @@ export class FleetBuilderScene extends Phaser.Scene {
     add(new UIButton(this, d.x + d.w - 20 - closeW / 2, d.y + (IS_PORTRAIT ? 44 : 34), '閉じる', () => this.closePicker(), {
       variant: 'secondary', width: closeW, height: IS_PORTRAIT ? 56 : 40, fontSize: 15,
     }));
+    // 編成中の艦 (#419): list the ships another slot or a support fleet holds (to swap them in), or leave them out.
+    const showW = IS_PORTRAIT ? 230 : 190;
+    const show = add(new UIButton(this, d.x + d.w - 20 - closeW - 12 - showW / 2, d.y + (IS_PORTRAIT ? 44 : 34), '', () => {
+      const p = loadProgress();
+      saveProgress({ ...p, pickerShowAssigned: !p.pickerShowAssigned });
+      this.fillPicker();
+    }, { variant: 'secondary', width: showW, height: IS_PORTRAIT ? 56 : 40, fontSize: 13 }));
+    this.pickerShowButton = show;
     const x = d.x + PANEL_PAD + 8;
     const w = d.w - (PANEL_PAD + 8) * 2;
     const top = d.y + (IS_PORTRAIT ? 92 : 70);
@@ -845,9 +859,23 @@ export class FleetBuilderScene extends Phaser.Scene {
     list.clear();
     const itemH = this.L.shipItemH;
     const w = (IS_PORTRAIT ? CANVAS_W - 32 : 812) - (PANEL_PAD + 8) * 2 - 12;
-    const shown = this.listed(this.ships);
+    const progress0 = loadProgress();
+    const showAssigned = progress0.pickerShowAssigned;
+    this.pickerShowButton?.setLabel(`編成中の艦: ${showAssigned ? '出す' : '出さない'}`).setVariant(showAssigned ? 'primary' : 'secondary');
+    // Ships a support fleet takes now (#419), by the fleet's number (第 2 艦隊 …).
+    const supportOf = new Map<string, number>();
+    for (const r of this.supportFleets()) {
+      const n = progress0.support.findIndex((c) => c.preset === r.preset) + 2;
+      for (const sh of r.ships) supportOf.set(sh.id, n);
+    }
+    const shown = this.listed(this.ships).filter((ship) => {
+      if (showAssigned) return true;
+      const at = this.slotOf(ship);
+      return (at === -1 || at === this.pickerSlot) && !supportOf.has(ship.id);
+    });
     shown.forEach((ship, i) => {
       const at = this.slotOf(ship);
+      const inSupport = at === -1 ? supportOf.get(ship.id) : undefined;
       // A ship already in another slot swaps places with this one (#147); it is never in two slots (#76).
       // A ship that would take the fleet past its cost cap (#306) says by how much.
       const fleet = this.slots.filter((s): s is IShipData => s !== null);
@@ -859,17 +887,39 @@ export class FleetBuilderScene extends Phaser.Scene {
       const run = (progress.expeditions ?? []).find((r) => r.shipIds.includes(ship.id));
       const dorm = inDorm(progress.dorm, 'ship', ship.id);
       const elsewhere = run ? `遠征中: ${EXPEDITIONS.find((e) => e.id === run.id)?.name ?? '遠征'}` : dorm ? '寮舎で訓練中' : null;
-      const tag = heavy ? `コストが ${short} 足りません` : at === -1 ? elsewhere : at === this.pickerSlot ? '第 1 艦隊: 選択中' : `第 1 艦隊: ${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
+      const tag = heavy ? `コストが ${short} 足りません` : at === -1 ? elsewhere ?? (inSupport ? `第 ${inSupport} 艦隊から入れ替え` : null) : at === this.pickerSlot ? '第 1 艦隊: 選択中' : `第 1 艦隊: ${at === 0 ? '旗艦' : `護衛 ${at}`}と入れ替え`;
       const tagCss = at === -1 && !heavy && run ? Css.success : at === -1 && !heavy && dorm ? Css.muted : Css.gold;
       const card = this.shipRow(ship, w, itemH, tag, tagCss).setY(i * (itemH + ITEM_GAP));
       if (heavy) card.setAlpha(0.5);
       else if (at !== -1 && at !== this.pickerSlot) card.setAlpha(0.8);
-      list.addItem(card, w, itemH, () => this.pickShip(ship));
+      list.addItem(card, w, itemH, (tx, ty) => (FleetBuilderScene.onStar(tx, ty) ? this.toggleFav(ship) : this.pickShip(ship)));
     });
     list.setContentHeight(Math.max(0, shown.length * (itemH + ITEM_GAP) - ITEM_GAP));
     list.setOffset(0);
     this.refreshListControls(this.pickerControls);
     this.refreshListControls(this.listControls);
+  }
+
+  /** A tap in a ship row's top-left corner, where its ★ is (#419). */
+  private static onStar(x: number, y: number): boolean {
+    const r = IS_PORTRAIT ? 52 : 36;
+    return x >= 0 && x < r && y >= 0 && y < r;
+  }
+
+  /** Marks or unmarks a favourite (#419) and redraws the lists. */
+  private toggleFav(ship: IShipData): void {
+    const p = loadProgress();
+    saveProgress({ ...p, favorites: toggleFavorite(p.favorites, ship.id) });
+    if (this.pickerList) {
+      const offset = this.pickerList.offset;
+      this.fillPicker();
+      this.pickerList.setOffset(offset);
+    }
+    if (this.shipList) {
+      const offset = this.shipList.offset;
+      this.rebuildShipList();
+      this.shipList.setOffset(offset);
+    }
   }
 
   private pickShip(ship: IShipData): void {
@@ -1000,6 +1050,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.pickerList?.destroy();
     this.pickerList = null;
     this.pickerControls = null;
+    this.pickerShowButton = null;
     this.pickerSlot = -1;
     this.cameras.main.setScroll(0, this.pickerScroll);
     // The landscape list shares the filter; keep it in step with what the sheet showed.
@@ -1754,9 +1805,17 @@ export class FleetBuilderScene extends Phaser.Scene {
     y += 22;
     add(this.add.text(x, y, captain ? `${captain.name}  Lv${captain.level}  ${SKILL_LABEL[captain.skill]}` : '未任命 (カードの「艦長を任命」で選べます)', textStyle(14, captain ? Css.text : Css.muted, wrap)));
 
-    const closeW = IS_PORTRAIT ? d.w - 56 : 240;
-    add(new UIButton(this, d.x + d.w / 2, d.y + d.h - (IS_PORTRAIT ? 50 : 40), '閉じる', () => this.closeDetail(), {
-      variant: 'secondary', width: closeW, height: IS_PORTRAIT ? 64 : 48, fontSize: 16,
+    // ★ お気に入り (#419) beside 閉じる.
+    const bw = IS_PORTRAIT ? (d.w - 56 - 12) / 2 : 240;
+    const by = d.y + d.h - (IS_PORTRAIT ? 50 : 40);
+    const fav = isFavorite(loadProgress().favorites, ship.id);
+    add(new UIButton(this, d.x + d.w / 2 - 6 - bw / 2, by, fav ? '★ お気に入り' : '☆ お気に入りにする', () => {
+      this.toggleFav(ship);
+      this.refreshSlots();
+      this.openDetail(ship, slot);
+    }, { variant: fav ? 'gold' : 'secondary', width: bw, height: IS_PORTRAIT ? 64 : 48, fontSize: 16 }));
+    add(new UIButton(this, d.x + d.w / 2 + 6 + bw / 2, by, '閉じる', () => this.closeDetail(), {
+      variant: 'secondary', width: bw, height: IS_PORTRAIT ? 64 : 48, fontSize: 16,
     }));
   }
 
@@ -1996,7 +2055,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.72).setOrigin(0, 0).setInteractive().on('pointerup', () => this.closeDetail()));
     const w = IS_PORTRAIT ? CANVAS_W - 64 : 520;
     const bh = IS_PORTRAIT ? 64 : 44;
-    const h = IS_PORTRAIT ? 470 : 330;
+    const h = IS_PORTRAIT ? 560 : 400;
     const x = (CANVAS_W - w) / 2;
     const y = (CANVAS_H - h) / 2;
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
@@ -2006,6 +2065,8 @@ export class FleetBuilderScene extends Phaser.Scene {
       ['艦だけ', () => this.autoShips(false)],
       ['艦と艦長', () => this.autoShips(true)],
       ['艦長だけ', () => this.autoCaptains()],
+      // お気に入り (#419): only the ships marked ★, with their captains.
+      ['お気に入りの艦だけ (艦長も)', () => this.autoShips(true, true)],
     ];
     choices.forEach(([label, run], i) => {
       add(new UIButton(this, x + w / 2, y + (IS_PORTRAIT ? 150 : 120) + i * (bh + 16), label, () => { this.closeDetail(); run(); }, {
@@ -2017,20 +2078,31 @@ export class FleetBuilderScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(81));
   }
 
+  /** A short notice over the screen that fades away. */
+  private toast(message: string): void {
+    const t = this.add.text(CANVAS_W / 2, CANVAS_H / 2, message, textStyle(15, Css.gold, { fontStyle: 'bold', backgroundColor: '#0b1622', padding: { x: 14, y: 10 }, wordWrap: { width: CANVAS_W - 80, useAdvancedWrap: true } }))
+      .setOrigin(0.5).setScrollFactor(0).setDepth(90);
+    this.tweens.add({ targets: t, alpha: 0, delay: 2400, duration: 500, onComplete: () => t.destroy() });
+  }
+
   /** Fills the fleet with the strongest ships that can sail now (#357), then the captains when asked. */
-  private autoShips(captains: boolean): void {
+  private autoShips(captains: boolean, favoritesOnly = false): void {
     const progress = { ...loadProgress(), ...completeRepairs(loadProgress(), Date.now()) };
     const now = Date.now();
     const exercise = this.area === null;
     const away = new Set([...sailingIds(progress.sortie), ...shipsAway(progress.expeditions)]);
     const catalog = DataLoader.getUpgrades(this);
     const candidates = this.ships
+      .filter((s) => !favoritesOnly || isFavorite(progress.favorites, s.id))
       .filter((s) => !away.has(s.id) && !inDorm(progress.dorm, 'ship', s.id) && moraleOf(progress, s.id, now) >= MORALE_TIRED)
       // An exercise sails at full HP; a campaign leaves the docked and the badly hurt at home.
       .filter((s) => exercise || (!isDocked(progress, s.id) && hpFraction(progress, s.id) > 0.25))
       .map((ship) => ({ ship, cost: shipCost(ship, progress.refits[ship.id] ?? 0), power: fleetPowerBreakdown([ship], progress, catalog, { now }).total }));
     const fleet = autoFleet(candidates, this.slotCount, this.costCap, this.enemyPower());
-    if (fleet.length === 0) return;
+    if (fleet.length === 0) {
+      if (favoritesOnly) this.toast('出撃できるお気に入りの艦がありません (艦の一覧の ☆ を押して登録)');
+      return;
+    }
     this.slots = Array.from({ length: this.slotCount }, (_, i) => fleet[i] ?? null);
     this.captainIds = Array.from({ length: this.slotCount }, () => null);
     if (captains) this.captainIds = assignCaptains(this.slots.map((s) => s?.shipClass ?? null), this.ownedCaptains());

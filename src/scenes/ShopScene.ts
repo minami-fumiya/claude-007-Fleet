@@ -15,9 +15,14 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { IResources } from '@/types/Progression';
 
 const L = IS_PORTRAIT
-  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, info: 290, top: 350, cols: 3, cardH: 128, gap: 12, left: 16, sellY: 1000 }
-  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, info: 166, top: 206, cols: 5, cardH: 118, gap: 10, left: 24, sellY: 640 };
-const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
+  ? { bar: { x: 16, y: 150, w: CANVAS_W - 32 }, barCols: 2, info: 290, tabs: 366, top: 400, cardH: 128, gap: 12, left: 16, sellY: 1000 }
+  : { bar: { x: 24, y: 96, w: CANVAS_W - 48 }, barCols: 4, info: 166, tabs: 220, top: 240, cardH: 118, gap: 10, left: 24, sellY: 640 };
+
+/** The shop's two tabs (#420): resources in rows of small / medium / large, items singly and 5 at a time. */
+type ShopTab = 'resource' | 'item';
+const TAB_NAME: Record<ShopTab, string> = { resource: '資源', item: 'アイテム' };
+const TAB_COLS: Record<ShopTab, number> = IS_PORTRAIT ? { resource: 3, item: 2 } : { resource: 6, item: 4 };
+const cardW = (cols: number): number => (CANVAS_W - L.left * 2 - L.gap * (cols - 1)) / cols;
 
 const REFUSAL: Record<Exclude<ShopRefusal, null>, string> = { gold: 'ゴールド不足', limit: '本日分は終了', cap: '保有上限' };
 
@@ -29,6 +34,7 @@ export class ShopScene extends Phaser.Scene {
   private bar!: ResourceBar;
   private layer: Phaser.GameObjects.GameObject[] = [];
   private status = '';
+  private tab: ShopTab = 'resource';
 
   constructor() {
     super({ key: SceneKeys.SHOP });
@@ -62,9 +68,19 @@ export class ShopScene extends Phaser.Scene {
     this.track(this.add.text(L.left, L.info, `ゴールド ${w.gold.toLocaleString('en-US')}`, textStyle(20, Css.gold, { fontStyle: 'bold' })));
     this.track(this.add.text(CANVAS_W - L.left, L.info + 4, `本日のお買い得: ${deal.name} 3 割引`, textStyle(12, Css.muted)).setOrigin(1, 0));
     if (this.status) this.track(this.add.text(L.left, L.info + 32, this.status, textStyle(12, Css.success)));
-    SHOP_ENTRIES.forEach((e, i) => {
-      const x = L.left + (i % L.cols) * (CARD_W + L.gap);
-      const y = L.top + Math.floor(i / L.cols) * (L.cardH + L.gap);
+    const tw = IS_PORTRAIT ? 200 : 150;
+    (Object.keys(TAB_NAME) as ShopTab[]).forEach((t, i) => {
+      // Right-aligned, clear of the purchase message on the left.
+      this.track(new UIButton(this, CANVAS_W - L.left - tw / 2 - (1 - i) * (tw + L.gap), L.tabs, TAB_NAME[t], () => { this.tab = t; this.draw(); }, {
+        variant: this.tab === t ? 'gold' : 'secondary', width: tw, height: IS_PORTRAIT ? 44 : 30, fontSize: 14,
+      }));
+    });
+    const entries = SHOP_ENTRIES.filter((e) => (e.give ? 'resource' : 'item') === this.tab);
+    const cols = TAB_COLS[this.tab];
+    const CARD_W = cardW(cols);
+    entries.forEach((e, i) => {
+      const x = L.left + (i % cols) * (CARD_W + L.gap);
+      const y = L.top + Math.floor(i / cols) * (L.cardH + L.gap);
       const isDeal = e.id === deal.id;
       this.track(drawPanel(this.add.graphics(), x, y, CARD_W, L.cardH, { radius: 14, fillAlpha: 0.6, rim: isDeal ? Colors.gold : undefined, rimAlpha: isDeal ? 0.8 : 0.2 }));
       this.track(this.add.text(x + 14, y + 10, e.name, textStyle(15, Css.text, { fontStyle: 'bold' })));
@@ -79,7 +95,7 @@ export class ShopScene extends Phaser.Scene {
       })).setEnabled(refusal === null);
     });
     // 売る: spare resources back to gold, as often as there is enough (#296), below the last row of cards.
-    const rows = Math.ceil(SHOP_ENTRIES.length / L.cols);
+    const rows = Math.ceil(entries.length / cols);
     const sellY = Math.max(L.sellY, L.top + rows * (L.cardH + L.gap) + (IS_PORTRAIT ? 34 : 26) + 6);
     this.track(this.add.text(L.left, sellY - (IS_PORTRAIT ? 34 : 26), `資源を売る (${SELL.amount.toLocaleString('en-US')} ずつ・各 1 時間 ${SELL_HOURLY} 回)  ·  補充まで ${Math.ceil(shopRefillMs(now) / 60_000)} 分`, eyebrowStyle(11, Css.gold)));
     const bw = (CANVAS_W - L.left * 2 - L.gap * 3) / 4;

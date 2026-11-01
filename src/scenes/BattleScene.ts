@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { battleMoodFor } from '@/systems/MusicScore';
 import { improvedCatalog } from '@/systems/ImprovementSystem';
 import { withSwaps } from '@/systems/GunSwapSystem';
-import { fragmentNote, rollFragment } from '@/systems/ForeignShipSystem';
+import { fragmentNote, offerFor, rollFragment } from '@/systems/ForeignShipSystem';
+import { isFavorite } from '@/systems/FavoriteSystem';
 import { focusModifiers } from '@/systems/NationFocusSystem';
 import { CAPTAIN_DROP_CHANCE, CAPTAIN_MIN_DEPTH, CAPTAIN_PROMOTION_RANK, DUPLICATE_CAPTAIN_XP, MAX_RECRUITS_PER_BATTLE, recruitCaptains } from '@/systems/CaptainRoster';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
@@ -2650,7 +2651,7 @@ export class BattleScene extends Phaser.Scene {
       ['planesDown', this.enemyAir.totalLost()],
       // 消耗品 (#47): used by the player's ships.
       ['consumableUse', this.consumableUses],
-      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
+      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ['favoriteFlagWin', won(!!this.flagship?.dataId && isFavorite(progress.favorites, this.flagship.dataId))], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['trainingWin', won(this.exercise && this.battleData?.training === true)],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
@@ -2764,24 +2765,24 @@ export class BattleScene extends Phaser.Scene {
       progress = withQuestEvents(applyDrops(progress, drops), [['partDrop', drops.parts.length], ['blueprint', drops.blueprints], ['swAreaWin', won(swArea)]], now);
       const line = dropLine(catalog, drops, progress.blueprints);
       if (line) recruitLines.push(line);
-      // 他国の設計図 (#368): another navy's plans, found on its ships sunk.
-      const fragment = enemyNation !== progress.nation ? rollFragment(sunk.length, rank, victory, Math.random) : 0;
-      if (fragment > 0) {
-        const have = (progress.foreignFragments[enemyNation] ?? 0) + fragment;
-        progress = withQuestEvents({ ...progress, foreignFragments: { ...progress.foreignFragments, [enemyNation]: have } }, [['foreignFragment', fragment]], now);
-        // What the fragments lead to (#394): never "can be built" before the ship can be.
-        const note = fragmentNote(DataLoader.getRegistry(this).all(), enemyNation as Nation, have - fragment, have);
-        recruitLines.push(`${NATION_INFO[enemyNation as Nation]?.jaShort ?? enemyNation}の設計図の断片 +${fragment} (計 ${have}・${note})`);
-      }
-      // 友軍の設計図 (#386): a navy that fought beside the player shares its plans now and then after a win (史実の供与艦).
+      // 他国の設計図 (#368 #420): the plans of a ship like one sunk, counted for that ship alone.
+      const all = DataLoader.getRegistry(this).all();
+      const dataOf = (s: BaseShip): Pick<IShipData, 'id' | 'shipClass' | 'subtype'> => all.find((d) => d.id === s.dataId) ?? { id: s.dataId ?? '', shipClass: s.stats.shipClass };
+      const gainPlans = (from: Nation, offer: IShipData, ally: boolean): void => {
+        const before = progress.foreignFragments[offer.id] ?? 0;
+        progress = withQuestEvents({ ...progress, foreignFragments: { ...progress.foreignFragments, [offer.id]: before + 1 } }, [['foreignFragment', 1], ['allyFragment', ally ? 1 : 0]], now);
+        recruitLines.push(`${ally ? '友軍 ' : ''}${NATION_INFO[from]?.jaShort ?? from}: ${fragmentNote(offer, before, before + 1)}`);
+      };
+      const plans = enemyNation !== progress.nation ? rollFragment(all, enemyNation as Nation, sunk.map(dataOf), rank, victory, Math.random) : null;
+      if (plans) gainPlans(enemyNation as Nation, plans, false);
+      // 友軍の設計図 (#386): a navy that fought beside the player shares a ship's plans now and then after a win (史実の供与艦).
       const allies = [...new Set(this.groups.filter((g) => !g.owned && g.nation && g.nation !== progress.nation).map((g) => g.nation as Nation))];
       for (const ally of allies) {
-        const got = rollFragment(1, rank, victory, Math.random);
-        if (got <= 0) continue;
-        const have = (progress.foreignFragments[ally] ?? 0) + got;
-        progress = withQuestEvents({ ...progress, foreignFragments: { ...progress.foreignFragments, [ally]: have } }, [['foreignFragment', got], ['allyFragment', got]], now);
-        const note = fragmentNote(DataLoader.getRegistry(this).all(), ally, have - got, have);
-        recruitLines.push(`友軍 ${NATION_INFO[ally]?.jaShort ?? ally}の設計図の断片 +${got} (計 ${have}・${note})`);
+        const theirs = this.groups.filter((g) => !g.owned && g.nation === ally).flatMap((g) => g.ships).map(dataOf);
+        const eligible = theirs.filter((d) => offerFor(all, ally, d));
+        const pick = eligible[Math.floor(Math.random() * eligible.length)];
+        const got = pick ? rollFragment(all, ally, [pick], rank, victory, Math.random) : null;
+        if (got) gainPlans(ally, got, true);
       }
     }
     if (recruitLines.length > 0) result.recruits = recruitLines.join('\n');

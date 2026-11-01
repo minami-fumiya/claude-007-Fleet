@@ -82,6 +82,8 @@ export const QUEST_EVENTS = [
   // 0.0.52: national focuses done and taken back (#49), designs drawn (#51), equipment improved, main guns swapped
   // and other navies' plans taken (#368)
   'focusDone', 'focusReset', 'designMade', 'equipImprove', 'gunSwap', 'foreignFragment',
+  // 0.0.60: wins with a favourite (#419) as the flagship
+  'favoriteFlagWin',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

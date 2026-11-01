@@ -65,7 +65,7 @@ describe('他国の設計図 (#368)', () => {
   it('every offered ship exists in its navy, and each navy can build the others\'', () => {
     for (const [n, ids] of Object.entries(FOREIGN_OFFERS)) for (const id of ids) expect(SHIPS.find((s) => s.id === id)?.nation, id).toBe(n);
     const ijn = foreignShips(SHIPS, Nation.IJN);
-    expect(ijn.length).toBe(12);
+    expect(ijn.length).toBe(17);
     const f = ijn.find((s) => s.id === foreignId('fletcher', Nation.IJN))!;
     expect(f.nation).toBe(Nation.IJN);
     expect(f.foreign).toBe(Nation.USN);
@@ -76,9 +76,10 @@ describe('他国の設計図 (#368)', () => {
   });
 
   it('a won battle may leave one fragment; a lost one none', () => {
-    expect(rollFragment(3, 'S', false, () => 0)).toBe(0);
-    expect(rollFragment(3, 'S', true, () => 0)).toBe(1);
-    expect(rollFragment(3, 'D', true, () => 0)).toBe(0);
-    expect(rollFragment(0, 'S', true, () => 0)).toBe(0);
+    const dd = [{ id: 'x', shipClass: ShipClass.Destroyer }];
+    expect(rollFragment(SHIPS, Nation.USN, dd, 'S', false, () => 0)).toBeNull();
+    expect(rollFragment(SHIPS, Nation.USN, dd, 'S', true, () => 0)?.id).toBe('fletcher');
+    expect(rollFragment(SHIPS, Nation.USN, dd, 'D', true, () => 0)).toBeNull();
+    expect(rollFragment(SHIPS, Nation.USN, [], 'S', true, () => 0)).toBeNull();
   });
 });
