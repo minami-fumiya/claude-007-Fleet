@@ -26,6 +26,8 @@ export interface IBattleInitData {
   swArea?: boolean;
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
+  /** 演習 (#404): one enemy fleet for each 支援艦隊 the player brings, each matched to it */
+  enemySupport?: IShipData[][];
   /** Captain id per player fleet slot (same indices as playerFleet.slots) */
   captainIds?: (string | null)[];
   /** Node of a multi-battle campaign sortie (#53): battle number, battles in all, and whether it is the boss */

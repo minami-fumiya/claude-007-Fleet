@@ -5,7 +5,8 @@ import { IFormationSlotOffset } from '@/types/Formation';
 import { AI_AIM_ERROR, aiSelf, fireAt, IShipView } from './AISystem';
 import { chooseTarget, isEngageable, ITacticsProfile, TURN_RATE_DEG } from './AIBrain';
 import { headingTo } from './AutoPilot';
-import { escortSteer, nextFormationHeading } from './EscortSteering';
+import { beyondLeash, escortSteer, FLEET_LEASH, nextFormationHeading } from './EscortSteering';
+import { FormationSystem } from './FormationSystem';
 /** Escorts with depth charges leave the formation to attack a submarine on sonar this close. */
 const ASW_BREAK_DISTANCE = 380;
 
@@ -33,7 +34,9 @@ export class EscortAISystem {
     const self = aiSelf(escort);
 
     this.formationHeading = nextFormationHeading(this.formationHeading ?? flagship.angle, flagship.angle, dtSec);
-    const sub = self.hasDepthCharges ? this.nearbySubmarine(escort, foes) : null;
+    // A hunt ends once the escort is too far from its place (#400): the boat is left to the ships nearer to it.
+    const slot = FormationSystem.getWorldPositionFromValues(flagship.x, flagship.y, this.formationHeading, this.offset);
+    const sub = self.hasDepthCharges && !beyondLeash(escort, slot, FLEET_LEASH + ASW_BREAK_DISTANCE / 2) ? this.nearbySubmarine(escort, foes) : null;
     this.hunting = sub !== null;
     if (sub) {
       escort.steer({ headingDeg: headingTo(escort, sub), throttle: 1 }, dtSec, turnRate);

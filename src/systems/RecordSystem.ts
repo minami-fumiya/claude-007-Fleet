@@ -377,6 +377,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('nations', '連合章', 'special', [2, 4, 7], (g) => `${g} か国で艦隊を率いる`, (_r, c) => c.nationsPlayed ?? 0),
   ...ladder('torpedo_squadron', '水雷戦隊章', 'special', [10, 50], (g) => `駆逐艦が旗艦の艦隊で ${g} 回勝利する`, (_r, c) => total(c, 'ddFlagWin')),
   ...ladder('drill', '演習章', 'special', [20, 100], (g) => `演習で ${g} 回勝利する`, (_r, c) => total(c, 'exerciseWin')),
+  // 0.0.57 (#404): the enemy brings as many fleets as the player.
+  ...ladder('grand_drill', '総力演習章', 'special', [1, 5, 20], (g) => `3 艦隊以上どうしの演習で ${g} 回勝利する`, (_r, c) => total(c, 'fleetExerciseWin')),
   ...ladder('historian', '戦史章', 'special', [3, 6, 10, ALL_SCENARIOS.length], (g) => `史実のシナリオを ${g} 種類勝利する`, (r) => scenarioWins(r).won),
   ...ladder('both_sides', '両陣営章', 'special', [1, 5], (g) => `史実のシナリオ ${g} 種類で両方の陣営から勝利する`, (r) => scenarioWins(r).bothSides),
   ...ladder('history_battles', '史実従軍章', 'special', [10, 50], (g) => `史実のシナリオで ${g} 回勝利する`, (r) => r.byMode?.scenario?.victories ?? 0),

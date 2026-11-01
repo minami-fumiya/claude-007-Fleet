@@ -9,6 +9,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { aimErrorMul } from './ProficiencySystem';
 import { FormationSystem } from './FormationSystem';
 import { IFormationSlotOffset } from '@/types/Formation';
+import { beyondLeash } from './EscortSteering';
 
 /** One ship as seen by the other side this frame. */
 export interface IShipView extends IAITarget {
@@ -111,6 +112,11 @@ export class AISystem {
    * on its own (散開).
    */
   station: { lead: BaseShip; offset: IFormationSlotOffset } | null = null;
+  /**
+   * How far a ship of the player's fleets may leave its station to fight (#400): beyond it, it turns back to its slot
+   * and fires on the way, so a fleet stays together around its flagship. Unset: no limit (enemy escorts break off).
+   */
+  leash: number | null = null;
 
   /** The ship this AI is attacking (null when it has no target). */
   get targetShip(): BaseShip | null {
@@ -171,6 +177,14 @@ export class AISystem {
       ship.steer({ headingDeg: headingTo(ship, this.goal), throttle: this.goalThrottle }, dtSec, turnRate);
       fireAt(this.weapons, ship, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
       return;
+    }
+    if (this.leash !== null && this.station?.lead.isAlive) {
+      const slot = FormationSystem.getWorldPosition(this.station.lead, this.station.offset);
+      if (beyondLeash(ship, slot, this.leash)) {
+        ship.steer({ headingDeg: headingTo(ship, slot), throttle: 1 }, dtSec, turnRate);
+        fireAt(this.weapons, ship, target, this.profile.torpedoEagerness, time, AI_AIM_ERROR);
+        return;
+      }
     }
     const range = ship.stats.shipClass === ShipClass.Carrier ? Math.max(decision.preferredRange, CARRIER_STANDOFF) : decision.preferredRange;
     const steer = engageSteer(ship, target, range, this.bounds, EDGE_MARGIN);
