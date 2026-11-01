@@ -1804,3 +1804,106 @@ test('文字の最小サイズ (0.0.59): no menu screen draws a text below 12 ca
   expect(tiny, `small texts (${layout})`).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('編成と表示 (0.0.60): favourites and the picker toggle, the shop tabs, a crowded result and paged help (#419 #420 #421)', async ({ page }, info) => {
+  test.setTimeout(180_000);
+  const layout = info.project.metadata.layout as string;
+  const seen = [...SCREENS, 'ResultsScene'];
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: seen, nations: { IJN: { ...SAVE.nations.IJN, favorites: ['akagi'] } } });
+  type G = { game: Phaser.Game };
+  const texts = (key: string): Promise<string[]> => page.evaluate((k) => {
+    const out: string[] = [];
+    const visit = (o: Phaser.GameObjects.GameObject): void => {
+      if ((o as unknown as { visible?: boolean }).visible === false) return;
+      if (o.type === 'Container') (o as Phaser.GameObjects.Container).list.forEach(visit);
+      else if (o.type === 'Text') out.push((o as Phaser.GameObjects.Text).text);
+    };
+    (window as unknown as G).game.scene.getScene(k).children.list.forEach(visit);
+    return out;
+  }, key);
+  const press = (key: string, label: string): Promise<void> => page.evaluate(([k, l]) => {
+    const scene = (window as unknown as G).game.scene.getScene(k);
+    const btn = scene.children.list.find((o) => o.type === 'Container' && (o as Phaser.GameObjects.Container).visible && (o as Phaser.GameObjects.Container).list.some((c) => (c as Phaser.GameObjects.Text).text?.startsWith(l)));
+    btn!.emit('pointerdown');
+    btn!.emit('pointerup');
+  }, [key, label] as const);
+
+  // 編成: the picker lists the favourite first, with the 編成中の艦 toggle; hiding takes the other slots' ships out.
+  await open(page, 'FleetBuilderScene');
+  type FB = { slots: Array<{ id: string } | null>; openPicker(i: number): void; pickerList: { items: unknown[] } | null };
+  const before = await page.evaluate(() => {
+    const s = (window as unknown as G).game.scene.getScene('FleetBuilderScene') as unknown as FB;
+    s.openPicker(1);
+    return { rows: s.pickerList!.items.length, elsewhere: s.slots.filter((x, i) => x && i !== 1).length };
+  });
+  await page.waitForTimeout(300);
+  const labels = await texts('FleetBuilderScene');
+  expect(labels.some((t) => t.startsWith('編成中の艦: 出す')), `toggle (${layout})`).toBe(true);
+  expect(labels).toContain('★');
+  expect(await overlappingTexts(page, 'FleetBuilderScene')).toEqual([]);
+  await page.screenshot({ path: info.outputPath('picker-favourites.png') });
+  await press('FleetBuilderScene', '編成中の艦');
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => ((window as unknown as G).game.scene.getScene('FleetBuilderScene') as unknown as FB).pickerList!.items.length);
+  // Every ship in another slot (all but the one being picked for) leaves the list.
+  expect(after).toBe(before.rows - before.elsewhere);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.pickerShowAssigned)).toBe(false);
+
+  // ショップ: two tabs, each fitting the screen.
+  await open(page, 'ShopScene');
+  for (const tab of ['資源', 'アイテム']) {
+    await press('ShopScene', tab);
+    await page.waitForTimeout(200);
+    const shown = await texts('ShopScene');
+    expect(shown.some((t) => (tab === '資源' ? t === '燃料 (大)' : t === '高速修理材 ×5')), `${tab} (${layout})`).toBe(true);
+    expect(await overflowingTexts(page, 'ShopScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'ShopScene')).toEqual([]);
+  }
+  await page.screenshot({ path: info.outputPath('shop-items.png') });
+
+  // 戦闘結果: the most lines at once (fragments, medals, a promotion, a nation opened) still fit, the rest behind 詳細.
+  await open(page, 'ResultsScene', {
+    victory: true, rank: 'A', rankNote: '残り耐久 82% · 喪失 0', rankShortfall: 'S まで: 船団の残り耐久 72% (80% 必要)', achievement: '船団の残り耐久 72%・輸送船 4 隻中 3 隻',
+    objectiveStats: [{ label: '船団の残り耐久', value: '72%' }, { label: '残った輸送船', value: '3 / 4' }, { label: '戦闘時間', value: '4:12' }],
+    reason: '輸送船 3 隻が無事に抜けた！', enemiesSunk: 5, enemiesTotal: 6, survivors: 6, fleetSize: 6, durationSec: 252,
+    campaign: '海域攻略: 珊瑚海  初回報酬 鋼材 2,000', reward: '燃料 1,200 · 弾薬 900 · 鋼材 800 · ボーキ 300', event: '大規模作戦 報酬 ×1.5',
+    medals: ['他国の設計図章', '旗艦の誉れ', '輸送護衛章'], merit: '戦功 +120 (昇進: 中佐 → 大佐)',
+    recruits: '新しい艦長: 山口多聞\n米国: フレッチャーの設計図 +1 (5 / 5)・建造できるようになりました (工廠 › 建造)\n友軍 英国: ジャベリンの設計図 +1 (2 / 5)\n部品: 61cm 四連装魚雷\n新しい国が着任可能: フランス',
+    advanceNote: '次は敵の主力艦隊です', advance: true, returnScene: 'CampaignMapScene',
+    captainReports: [1, 2, 3, 4, 5, 6].map((i) => ({ name: `艦長${i}`, level: 10 + i, gained: 40, leveledUp: i % 2 === 0, maxed: false })),
+    log: ['0:01 戦闘開始'],
+  });
+  expect(await overflowingTexts(page, 'ResultsScene'), `results overflow (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'ResultsScene'), `results overlap (${layout})`).toEqual([]);
+  const shownResults = await texts('ResultsScene');
+  expect(shownResults).toContain('船団の残り耐久');
+  expect(shownResults.some((t) => t.startsWith('達成度'))).toBe(true);
+  await page.screenshot({ path: info.outputPath('results-crowded.png') });
+  if (shownResults.some((t) => t.startsWith('詳細'))) {
+    await press('ResultsScene', '詳細');
+    await page.waitForTimeout(200);
+    expect((await texts('ResultsScene')).some((t) => t.startsWith('艦長 艦長6'))).toBe(true);
+  }
+
+  // ヘルプ: the first-visit sheet turns pages, and the help screen's tabs are paged with nothing running over.
+  await page.evaluate(async () => {
+    const store = await import('/src/utils/ProgressStore.ts');
+    store.saveSave({ ...store.loadSave(), seenHelp: [] });
+  });
+  await open(page, 'FleetBuilderScene');
+  expect((await texts('FleetBuilderScene')).some((t) => /^1 \/ \d+$/.test(t)), `help pages (${layout})`).toBe(true);
+  await press('FleetBuilderScene', '›');
+  await page.waitForTimeout(200);
+  expect((await texts('FleetBuilderScene')).some((t) => /^2 \/ \d+$/.test(t))).toBe(true);
+  expect(await overflowingTexts(page, 'FleetBuilderScene')).toEqual([]);
+  await page.screenshot({ path: info.outputPath('help-sheet.png') });
+  await open(page, 'HelpScene');
+  for (const tab of ['操作', '戦闘', '作戦目標']) {
+    await press('HelpScene', tab);
+    await page.waitForTimeout(200);
+    expect(await overflowingTexts(page, 'HelpScene'), `${tab} (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'HelpScene'), `${tab} (${layout})`).toEqual([]);
+  }
+  await page.screenshot({ path: info.outputPath('help-battle.png') });
+  expect(errors).toEqual([]);
+});

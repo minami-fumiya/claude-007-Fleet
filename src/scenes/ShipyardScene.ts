@@ -38,6 +38,7 @@ import { voice } from '@/systems/VoiceSystem';
 import { narrationLine } from '@/systems/CommentarySystem';
 import { SCRAP_BLOCK_LABEL, scrapBlock, scrapRefund, scrapShip } from '@/systems/ScrapSystem';
 import { selectedShipIds } from '@/utils/FleetSelection';
+import { fragmentsOf } from '@/systems/ForeignShipSystem';
 
 const TREE = techTree.tech as ITechNode[];
 const TECH_NAMES: Record<string, string> = Object.fromEntries(TREE.map((n) => [n.id, n.name]));
@@ -168,7 +169,7 @@ export class ShipyardScene extends Phaser.Scene {
     // Class by class, oldest first, hulls in order (#246). 他国艦 (#368) are listed once their navy's plans start
     // coming in (#386 #395): no fragment, no ship (and owned ones always).
     const owned = progress.ships;
-    return shipOrder(roster.filter((s) => s.shipClass === this.shipClass && (!s.foreign || owned.includes(s.id) || (progress.foreignFragments[s.foreign] ?? 0) > 0)));
+    return shipOrder(roster.filter((s) => s.shipClass === this.shipClass && (!s.foreign || owned.includes(s.id) || fragmentsOf(progress.foreignFragments, s) > 0)));
   }
 
   /** The tab's ships that pass the filter bar (#263). */
@@ -300,7 +301,7 @@ export class ShipyardScene extends Phaser.Scene {
     const hull = hullNumber(roster, ship);
     const title = shown ? ship.name : hiddenShipName(roster, ship, ownedList);
     const name = this.add.text(pad, 10, title, textStyle(15, lit ? Css.text : Css.dim, { fontStyle: 'bold' }));
-    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints, ship.foreign ? progress.foreignFragments[ship.foreign] ?? 0 : 0), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
+    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints, ship.foreign ? fragmentsOf(progress.foreignFragments, ship) : 0), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
     fitText(name, room);

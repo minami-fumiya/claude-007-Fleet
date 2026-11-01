@@ -109,6 +109,8 @@ export enum KindFilter {
   LightCruiser = 'LightCruiser',
   Destroyer = 'Destroyer',
   Submarine = 'Submarine',
+  /** お気に入り (#419): the ships marked ★ */
+  Favorite = 'Favorite',
 }
 
 export const KIND_FILTERS: Array<{ id: KindFilter; label: string }> = [
@@ -119,11 +121,14 @@ export const KIND_FILTERS: Array<{ id: KindFilter; label: string }> = [
   { id: KindFilter.LightCruiser, label: '軽巡' },
   { id: KindFilter.Destroyer, label: '駆逐' },
   { id: KindFilter.Submarine, label: '潜水' },
+  { id: KindFilter.Favorite, label: '★' },
 ];
 
 export function matchesKind(ship: Pick<IShipData, 'shipClass' | 'subtype'>, filter: KindFilter): boolean {
   switch (filter) {
     case KindFilter.All: return true;
+    // Which ships are favourites is the caller's (filterAndSort's `favorites`).
+    case KindFilter.Favorite: return true;
     case KindFilter.HeavyCruiser: return isHeavyCruiser(ship);
     case KindFilter.LightCruiser: return isLightCruiser(ship);
     case KindFilter.Battleship: return ship.shipClass === ShipClass.Battleship;
@@ -149,11 +154,13 @@ export const SORT_LABEL: Record<ShipSort, string> = {
   [ShipSort.Morale]: '士気順',
 };
 
-/** Filtered and sorted copy; ties keep roster order. */
-export function filterAndSort<T extends Pick<IShipData, 'id' | 'shipClass' | 'subtype' | 'hp' | 'speed'>>(ships: T[], filter: KindFilter, sort: ShipSort, morale: (id: string) => number = () => 0): T[] {
-  const list = ships.map((s, i) => ({ s, i })).filter(({ s }) => matchesKind(s, filter));
+/** Filtered and sorted copy; favourites (#419) come first under every sort; ties keep roster order. */
+export function filterAndSort<T extends Pick<IShipData, 'id' | 'shipClass' | 'subtype' | 'hp' | 'speed'>>(ships: T[], filter: KindFilter, sort: ShipSort, morale: (id: string) => number = () => 0, favorites: readonly string[] = []): T[] {
+  const fav = new Set(favorites);
+  const list = ships.map((s, i) => ({ s, i })).filter(({ s }) => matchesKind(s, filter) && (filter !== KindFilter.Favorite || fav.has(s.id)));
   const key = (s: T): number => (sort === ShipSort.Hp ? s.hp : sort === ShipSort.Speed ? s.speed : sort === ShipSort.Morale ? morale(s.id) : 0);
-  return list.sort((a, b) => key(b.s) - key(a.s) || a.i - b.i).map(({ s }) => s);
+  const star = (s: T): number => (fav.has(s.id) ? 1 : 0);
+  return list.sort((a, b) => star(b.s) - star(a.s) || key(b.s) - key(a.s) || a.i - b.i).map(({ s }) => s);
 }
 
 /** Display order of kinds in an enemy lineup: capital ships first (#68). */

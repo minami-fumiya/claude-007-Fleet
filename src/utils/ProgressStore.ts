@@ -44,6 +44,7 @@ import { emptyQuestState, IQuestState, parseQuestState } from '@/systems/QuestSy
 import { IFocusState, parseFocus } from '@/systems/NationFocusSystem';
 import type { IShipDesign } from '@/types/Design';
 import { parseDesigns } from '@/systems/DesignSystem';
+import { migrateFragments } from '@/systems/ForeignShipSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -156,8 +157,12 @@ export interface INationProgress {
   equipStars: Record<string, number>;
   /** 型の載せ替え (#368): ship id → original weapon id → the weapon fitted in its place */
   gunSwaps: Record<string, Record<string, string>>;
-  /** 他国の設計図 (#368): nation → fragments of its blueprints */
+  /** 他国の設計図 (#368 #420): offered ship id ("fletcher") → fragments of its plans (per navy before 0.0.60) */
   foreignFragments: Record<string, number>;
+  /** お気に入り (#419): ship ids marked ★ */
+  favorites: string[];
+  /** The ship picker lists ships already in a fleet (to swap them, #419); remembered between visits */
+  pickerShowAssigned: boolean;
 }
 
 /** The whole save (v2 and later). */
@@ -206,7 +211,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airStart: false, airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, examFrom: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
-    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {},
+    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true,
   };
 }
 
@@ -392,7 +397,9 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     designs: parseDesigns(data.designs),
     equipStars: Object.fromEntries(Object.entries(numbers(data.equipStars)).map(([k, v]) => [k, Math.min(10, Math.max(0, Math.floor(v)))])),
     gunSwaps: isObject(data.gunSwaps) ? Object.fromEntries(Object.entries(data.gunSwaps).map(([k, v]) => [k, stringMap(v)])) : {},
-    foreignFragments: numbers(data.foreignFragments),
+    foreignFragments: migrateFragments(numbers(data.foreignFragments)),
+    favorites: [...new Set(strings(data.favorites))],
+    pickerShowAssigned: data.pickerShowAssigned !== false,
   };
 }
 
