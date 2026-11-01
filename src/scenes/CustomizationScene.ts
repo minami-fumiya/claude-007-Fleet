@@ -24,6 +24,7 @@ import { CARRIER_AIRCRAFT } from '@/types/Aircraft';
 import { branchesFor, canRefit, currentStage, maxStage, nextStage, refit, REFIT_TABLE, refitModifiers, refitName, refitShipData, stagesFor, switchBranch, switchCost } from '@/systems/RefitSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
+import { favoriteMark, favoritesFirst } from '@/systems/FavoriteSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { actionVariant, addBackdrop, addPanel, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -111,7 +112,8 @@ export class CustomizationScene extends Phaser.Scene {
     const registry = DataLoader.getRegistry(this);
     // Only the current nation's own ships (#18 / #27): the selection may be from another nation's fleet.
     // In list order (#246): by kind, then class by class, hulls in order.
-    const owned = filterEntries(ownedShips(loadProgress(), registry.byNation(loadProgress().nation)), null);
+    // お気に入り (#419) first.
+    const owned = favoritesFirst(filterEntries(ownedShips(loadProgress(), registry.byNation(loadProgress().nation)), null), loadProgress().favorites);
     this.fleetIds = (selection?.slotIds ?? []).filter((id): id is string => !!id);
     this.ships = customizeShips(owned, this.fleetIds, this.showAll);
     // A ship asked for by id (#178) is shown even when it is not in the fleet.
@@ -241,7 +243,7 @@ export class CustomizationScene extends Phaser.Scene {
     shown.forEach(({ s, i }, row) => {
       const on = i === this.selected;
       const frame = drawPanel(this.add.graphics(), 0, 0, rowW, rowH, { radius: 12, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.5, rimAlpha: on ? 0.8 : 0.15 });
-      const label = shortName(refitName(this.refitTable, s.name, s, refits[s.id] ?? 0, loadProgress().refitBranches[s.id]));
+      const label = favoriteMark(loadProgress().favorites, s.id) + shortName(refitName(this.refitTable, s.name, s, refits[s.id] ?? 0, loadProgress().refitBranches[s.id]));
       const name = this.add.text(16, rowH / 2, `${label}${this.fleetIds.includes(s.id) ? '  ⚑' : ''}`, textStyle(15, on ? Css.text : Css.muted)).setOrigin(0, 0.5);
       const sub = this.add.text(rowW - 14, rowH / 2, kindLabel(s), eyebrowStyle(10, Css.dim)).setOrigin(1, 0.5);
       list.addItem(this.add.container(0, row * (rowH + 6), [frame, name, sub]), rowW, rowH, () => {

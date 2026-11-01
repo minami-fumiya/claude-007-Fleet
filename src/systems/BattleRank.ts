@@ -20,7 +20,12 @@ export interface IRankInput {
   timeLimitSec?: number;
   /** The objective is won by holding out until the time limit (遅滞): time never costs the S */
   timeWins?: boolean;
+  /** 船団護衛 (#421): the share of the convoy's HP left; an S needs CONVOY_S_HP of it */
+  convoyHp?: number;
 }
+
+/** An S in a convoy escort needs this much of the convoy's HP left (#421). */
+export const CONVOY_S_HP = 0.8;
 
 /** An S needs at least this much of the fleet's HP left (#295: 60% → 85%), no ship lost and none heavily damaged. */
 export const S_HP_RATIO = 0.85;
@@ -55,6 +60,7 @@ function misses(i: IRankInput, rank: BattleRank): string[] {
     if ((i.minShipHp ?? 1) <= HEAVY_DAMAGE) out.push('大破艦あり');
     const t = sRankTime(i);
     if (i.durationSec > t) out.push(`${Math.ceil(i.durationSec)} 秒 (${t} 秒以内)`);
+    if (i.convoyHp !== undefined && i.convoyHp < CONVOY_S_HP) out.push(`船団の残り耐久 ${pct(i.convoyHp)}% (${pct(CONVOY_S_HP)}% 必要)`);
   }
   if (rank === 'B' && i.shipsLost > 1 && i.hpRatio < B_HP_RATIO) out.push(`喪失 ${i.shipsLost} 隻・残り耐久 ${pct(i.hpRatio)}%`);
   return out;

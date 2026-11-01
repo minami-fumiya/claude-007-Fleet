@@ -15,7 +15,7 @@ import { EVENT_NAME, EventKind, eventHelp } from '@/systems/EventSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
-import { ScrollList } from '@/ui/components/ScrollList';
+import { pageLabel, paginate } from '@/systems/ScreenHelp';
 
 const P = IS_PORTRAIT ? { x: 16, y: 240, w: CANVAS_W - 32, h: CANVAS_H - 256 } : { x: 140, y: 150, w: 1000, h: 550 };
 const TABS_Y = IS_PORTRAIT ? 166 : 118;
@@ -90,9 +90,9 @@ const TABS: Array<[Tab, string]> = [
 /** ヘルプ: controls, ship classes and operation objectives at a glance. Every battle also ends with the flagship rule. */
 export class HelpScene extends Phaser.Scene {
   private tab: Tab = 'controls';
+  /** The tab's page (#421) */
+  private page = 0;
   private dynamic: Phaser.GameObjects.GameObject[] = [];
-  /** The tab's rows scroll when they are taller than the panel (portrait, the battle tab) */
-  private list: ScrollList | null = null;
 
   constructor() {
     super({ key: SceneKeys.HELP });
@@ -101,6 +101,7 @@ export class HelpScene extends Phaser.Scene {
   create(): void {
     audio.music('menu');
     this.dynamic = [];
+    this.page = 0;
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), {
@@ -121,8 +122,6 @@ export class HelpScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
-    this.list?.destroy();
-    this.list = null;
     // Seven tabs (#316): one row in landscape, two in portrait.
     const perRow = IS_PORTRAIT ? 4 : TABS.length;
     const bw = (P.w - 8 * (perRow - 1)) / perRow;
@@ -132,6 +131,7 @@ export class HelpScene extends Phaser.Scene {
       this.dynamic.push(
         new UIButton(this, P.x + (i % perRow) * (bw + 8) + bw / 2, TABS_Y - (IS_PORTRAIT ? 26 : 0) + row * (th + 8), label, () => {
           this.tab = id;
+          this.page = 0;
           this.refresh();
         }, { variant: id === this.tab ? 'primary' : 'secondary', width: bw, height: th, fontSize: IS_PORTRAIT ? 15 : 14 }),
       );
@@ -154,17 +154,40 @@ export class HelpScene extends Phaser.Scene {
     const w = P.w - 56;
     const labelW = IS_PORTRAIT ? 0 : 150;
     const top = P.y + 24;
-    const list = new ScrollList(this, { x, y: top, w, h: P.y + P.h - 16 - top });
-    this.list = list;
-    let y = 0;
-    for (const [label, text] of rows) {
-      const l = this.add.text(0, y, label, eyebrowStyle(IS_PORTRAIT ? 12 : 13, Css.gold));
-      const t = this.add.text(labelW, IS_PORTRAIT ? y + 24 : y, text, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, {
+    // Pages of whole items (#421) instead of one long scroll, turned with ‹ 1 / 3 › at the panel's foot.
+    const navH = IS_PORTRAIT ? 56 : 44;
+    const room = P.y + P.h - 20 - navH - 12 - top;
+    const gapY = IS_PORTRAIT ? 22 : 16;
+    const made = rows.map(([label, text]) => {
+      const l = this.add.text(x, 0, label, eyebrowStyle(IS_PORTRAIT ? 12 : 13, Css.gold));
+      const t = this.add.text(x + labelW, 0, text, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, {
         wordWrap: { width: w - labelW - 12, useAdvancedWrap: true }, lineSpacing: 4,
       }));
-      list.add(l).add(t);
-      y = t.y + t.height + (IS_PORTRAIT ? 22 : 16);
+      this.dynamic.push(l, t);
+      return { l, t, h: (IS_PORTRAIT ? 24 : 0) + t.height + gapY };
+    });
+    const pages = paginate(made, (r) => r.h, room);
+    this.page = Math.min(this.page, pages.length - 1);
+    pages.forEach((pg, i) => {
+      let y = top;
+      for (const r of pg) {
+        r.l.setY(y).setVisible(i === this.page);
+        r.t.setY(IS_PORTRAIT ? y + 24 : y).setVisible(i === this.page);
+        y += r.h;
+      }
+    });
+    if (pages.length > 1) {
+      const ny = P.y + P.h - 20 - navH / 2;
+      const nw = IS_PORTRAIT ? 160 : 140;
+      const turn = (d: number): void => {
+        this.page = Math.max(0, Math.min(pages.length - 1, this.page + d));
+        this.refresh();
+      };
+      this.dynamic.push(
+        new UIButton(this, P.x + 28 + nw / 2, ny, '‹  前へ', () => turn(-1), { variant: 'secondary', width: nw, height: navH, fontSize: 15 }).setEnabled(this.page > 0),
+        new UIButton(this, P.x + P.w - 28 - nw / 2, ny, '次へ  ›', () => turn(1), { variant: 'primary', width: nw, height: navH, fontSize: 15 }).setEnabled(this.page < pages.length - 1),
+        this.add.text(P.x + P.w / 2, ny, pageLabel(this.page, pages.length), textStyle(15, Css.muted, { fontStyle: 'bold' })).setOrigin(0.5),
+      );
     }
-    list.setContentHeight(y);
   }
 }

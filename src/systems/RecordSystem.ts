@@ -466,7 +466,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('improve_max', '改修の極み章', 'base', [5, 10], (g) => `装備を 1 つ ★${g} まで改修する`, (_r, c) => c.equipStarsMax ?? 0),
   ...ladder('gun_swap', '換装章', 'base', [1, 10], (g) => `主砲の型を ${g} 回載せ替える`, (_r, c) => total(c, 'gunSwap')),
   ...ladder('foreign_plans', '他国の設計図章', 'battle', [5, 30, 100], (g) => `他国の設計図の断片を ${g} 個手に入れる`, (_r, c) => total(c, 'foreignFragment')),
-  ...ladder('foreign_ship', '他国艦章', 'base', [1, 5], (g) => `他国の艦を ${g} 隻建造する`, (_r, c) => c.foreignOwned ?? 0),
+  // 旗艦の誉れ (#419): wins with a favourite as the flagship.
+  ...ladder('favorite_flag', '旗艦の誉れ', 'battle', [10, 50], (g) => `お気に入りの艦を旗艦にして ${g} 回勝つ`, (_r, c) => total(c, 'favoriteFlagWin')),
+  ...ladder('foreign_ship', '他国艦章', 'base', [1, 5, 10], (g) => `他国の艦を ${g} 隻建造する`, (_r, c) => c.foreignOwned ?? 0),
   ...ladder('quest_clerk', '任務精励章', 'special', [50, 300, 1000], (g) => `任務を ${g} 件達成する (報酬を受け取る)`, (_r, c) => total(c, 'questClaim')),
   // 任務 (#158): awarded only by claiming the quest that names them
   ...([

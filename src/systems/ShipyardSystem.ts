@@ -4,9 +4,7 @@ import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH, MID_BUILD_TECH } from './ResearchSystem';
-import { fragmentNeed } from './ForeignShipSystem';
-import { NATION_INFO } from '@/config/NationInfo';
-import { Nation } from '@/types/Nation';
+import { fragmentNeed, fragmentsOf } from './ForeignShipSystem';
 import { EMPTY_FOCUS, focusBuildMul, focusUnlocks, unlockingFocus } from './NationFocusSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
 import { assignShips, baseOfProgress, buildMultiplier, currentBaseId, dockTotal, scaleCost } from './BaseSystem';
@@ -215,7 +213,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   const opened = ship.fictional && focusUnlocks(progress.nation, progress.focus ?? EMPTY_FOCUS, ship.id);
   if (isRewardOnly(ship) && !opened) return 'reward';
   // Another navy's ship waits for enough of its plans (#368).
-  if (ship.foreign && (progress.foreignFragments?.[ship.foreign] ?? 0) < fragmentNeed(ship)) return 'foreign';
+  if (ship.foreign && fragmentsOf(progress.foreignFragments, ship) < fragmentNeed(ship)) return 'foreign';
   // The own superweapon (#148) waits for its blueprint fragments (#150).
   if (ship.blueprint && (progress.blueprints ?? 0) < BLUEPRINT_NEED) return 'blueprint';
   const tech = buildTechFor(ship);
@@ -250,7 +248,7 @@ export function buildStateLabel(state: BuildState, ship: IShipData, techNames: R
       const id = buildTechFor(ship) ?? '';
       return `要研究: ${techNames[id] ?? id}`;
     }
-    case 'foreign': return `要設計図: ${NATION_INFO[ship.foreign as Nation]?.jaShort ?? ship.foreign} ${Math.min(foreignHave, fragmentNeed(ship))} / ${fragmentNeed(ship)}`;
+    case 'foreign': return `要設計図: ${Math.min(foreignHave, fragmentNeed(ship))} / ${fragmentNeed(ship)}`;
     case 'focus': return `要方針: ${unlockingFocus(ship.nation, ship.id)?.name ?? '国家方針'}`;
     case 'rank': return `要階級: ${gradeRankName(shipGrade(ship))}`;
     case 'sister': {

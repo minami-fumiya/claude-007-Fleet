@@ -15,7 +15,11 @@ import { withQuestEvents } from '@/systems/QuestSystem';
 
 // Portrait text is enlarged (see uiFontSize), so the card and its stat tiles grow with it.
 const CARD_W = IS_PORTRAIT ? 664 : 620;
-const CARD_H = IS_PORTRAIT ? 680 : 560;
+const CARD_H = IS_PORTRAIT ? 710 : 590;
+/** The card never runs past the screen (#421): lines that don't fit go behind a 詳細 button. */
+const SCREEN_MARGIN = 12;
+/** Where the header's rows sit (#421): the rank's note, the reason and the objective's achievement each have their own. */
+const HEAD = { rankNote: 232, reason: 272, achievement: 302, stats: 330 };
 const STAT = IS_PORTRAIT ? { w: 202, h: 104, gap: 12 } : { w: 168, h: 72, gap: 14 };
 const BACK_LABEL: Record<string, string> = {
   [SceneKeys.HOME]: '鎮守府へ戻る',
@@ -26,7 +30,7 @@ const BACK_LABEL: Record<string, string> = {
 const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
 /** Landscape: more than 3 captains (fleets of up to 8) go in two columns so the card still fits. */
 const REPORT_COLS_FROM = 4;
-const BUTTONS = IS_PORTRAIT ? { y1: 480, h1: 80, y2: 584, h2: 68 } : { y1: 430, h1: 60, y2: 504, h2: 52 };
+const BUTTONS = IS_PORTRAIT ? { y1: 510, h1: 80, y2: 614, h2: 68 } : { y1: 460, h1: 60, y2: 534, h2: 52 };
 
 /** 戦闘ログ (#106) */
 const LOG_BUTTON_W = IS_PORTRAIT ? 170 : 150;
@@ -65,13 +69,35 @@ export class ResultsScene extends Phaser.Scene {
       if (data?.recruits && rewardLines[i] === data.recruits) t.setColor(Css.gold);
       if (data?.rankShortfall && rewardLines[i] === data.rankShortfall) t.setColor(Css.muted).setFontSize(12);
     });
-    const rewardH = rewardTexts.reduce((sum, t) => sum + Math.max(REPORT_LINE_H, t.height + 6), 0);
     const reportCols = !IS_PORTRAIT && reports.length >= REPORT_COLS_FROM ? 2 : 1;
-    const reportLines = Math.ceil(reports.length / reportCols);
-    const reportH = reportLines + rewardTexts.length > 0 ? 18 + rewardH + reportLines * REPORT_LINE_H : 0;
+    const captainLine = (r: (typeof reports)[number], short: boolean): string => {
+      const up = r.leveledUp ? (short ? '  ▲' : '  ▲ 昇級') : '';
+      return r.maxed ? `艦長 ${r.name}  Lv ${r.level} (最大)` : `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`;
+    };
+    // What fits under the stat cards (#421): the report lines in order while they fit, the rest (and the captains)
+    // behind 詳細; nothing runs past the screen or into the buttons.
+    const lineH = (t: Phaser.GameObjects.Text): number => Math.max(REPORT_LINE_H, t.height + 6);
+    const budget = CANVAS_H - SCREEN_MARGIN * 2 - CARD_H - 18;
+    const fullH = rewardTexts.reduce((sum, t) => sum + lineH(t), 0) + Math.ceil(reports.length / reportCols) * REPORT_LINE_H;
+    let shownTexts = rewardTexts;
+    let shownReports = reports;
+    let hidden: string[] = [];
+    if (fullH > budget) {
+      let used = REPORT_LINE_H + 8;
+      const keep = rewardTexts.findIndex((t) => (used += lineH(t)) > budget);
+      const cut = keep === -1 ? rewardTexts.length : keep;
+      shownTexts = rewardTexts.slice(0, cut);
+      for (const t of rewardTexts.slice(cut)) t.destroy();
+      hidden = [...rewardLines.slice(cut), ...reports.map((r) => captainLine(r, false))];
+      shownReports = [];
+    }
+    const rewardH = shownTexts.reduce((sum, t) => sum + lineH(t), 0);
+    const reportLines = Math.ceil(shownReports.length / reportCols);
+    const moreH = hidden.length > 0 ? REPORT_LINE_H + 8 : 0;
+    const reportH = reportLines + shownTexts.length > 0 || moreH > 0 ? 18 + rewardH + reportLines * REPORT_LINE_H + moreH : 0;
     const cardH = CARD_H + reportH;
     const x = (CANVAS_W - CARD_W) / 2;
-    const y = (CANVAS_H - cardH) / 2;
+    const y = Math.max(SCREEN_MARGIN, (CANVAS_H - cardH) / 2);
     addPanel(this, x, y, CARD_W, cardH, { radius: 32, fillAlpha: 0.7, rim: accent, rimAlpha: 0.45, glow: 1 });
 
     this.drawEmblem(CANVAS_W / 2, y + 84, accent, victory);
@@ -87,14 +113,16 @@ export class ResultsScene extends Phaser.Scene {
       // Battle rank (#149) beside the outcome.
       const rankCss: Record<string, string> = { S: Css.gold, A: Css.cyan, B: Css.text, C: Css.muted, D: Css.danger };
       const rx = CANVAS_W / 2 + (IS_PORTRAIT ? 200 : 190);
-      this.add.text(rx, y + 168, '評価', eyebrowStyle(11, Css.muted)).setOrigin(0.5);
-      this.add.text(rx, y + 212, data.rank, displayStyle(56, rankCss[data.rank] ?? Css.text)).setOrigin(0.5);
+      this.add.text(rx, y + 136, '評価', eyebrowStyle(11, Css.muted)).setOrigin(0.5);
+      this.add.text(rx, y + 190, data.rank, displayStyle(56, rankCss[data.rank] ?? Css.text)).setOrigin(0.5);
       // What the stat cards don't show: damage taken and ships lost.
-      if (data.rankNote) this.add.text(rx, y + 250, data.rankNote, textStyle(11, Css.muted)).setOrigin(0.5, 0);
+      if (data.rankNote) fitText(this.add.text(rx, y + HEAD.rankNote, data.rankNote, textStyle(11, Css.muted)).setOrigin(0.5, 0), 210);
     }
-    this.add
-      .text(CANVAS_W / 2, y + 262, data?.reason ?? (victory ? '敵艦隊を殲滅した！' : '旗艦が撃沈された…'), textStyle(18, Css.text, { fontStyle: 'bold' }))
-      .setOrigin(0.5);
+    fitText(this.add
+      .text(CANVAS_W / 2, y + HEAD.reason, data?.reason ?? (victory ? '敵艦隊を殲滅した！' : '旗艦が撃沈された…'), textStyle(18, Css.text, { fontStyle: 'bold' }))
+      .setOrigin(0.5), CARD_W - 56);
+    // How far the objective was achieved (#421), on its own row under the reason.
+    if (data?.achievement) fitText(this.add.text(CANVAS_W / 2, y + HEAD.achievement, `達成度  ${data.achievement}`, textStyle(13, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5), CARD_W - 56);
 
     const sunk = data?.enemiesSunk ?? 0;
     const total = data?.enemiesTotal ?? 0;
@@ -108,25 +136,34 @@ export class ResultsScene extends Phaser.Scene {
     const startX = CANVAS_W / 2 - (cardW * 3 + gap * 2) / 2;
     // Land targets show beside the ships, not in their count (#278).
     const land = data?.landTotal ? `  陸 ${data.landKills ?? 0}/${data.landTotal}` : '';
-    addStatCard(this, startX, y + 300, cardW, STAT.h, '撃沈', `${sunk} / ${total}${land}`, Css.gold);
-    addStatCard(this, startX + cardW + gap, y + 300, cardW, STAT.h, '残存', `${survivors} / ${fleetSize}`, Css.success);
-    addStatCard(this, startX + (cardW + gap) * 2, y + 300, cardW, STAT.h, '戦闘時間', time, Css.cyan);
+    // The objective's own numbers (#421), else the ships sunk, those left and the time.
+    const cards = data?.objectiveStats?.length === 3 ? data.objectiveStats : [{ label: '撃沈', value: `${sunk} / ${total}` }, { label: '残存', value: `${survivors} / ${fleetSize}` }, { label: '戦闘時間', value: time }];
+    const cardCss = [Css.gold, Css.success, Css.cyan];
+    cards.forEach((c, i) => {
+      const value = c.label === '撃沈' ? `${c.value}${land}` : c.value;
+      addStatCard(this, startX + (cardW + gap) * i, y + HEAD.stats, cardW, STAT.h, c.label, value, cardCss[i]);
+    });
 
-    let ty = y + 300 + STAT.h + 22;
-    for (const t of rewardTexts) {
+    let ty = y + HEAD.stats + STAT.h + 22;
+    for (const t of shownTexts) {
       t.setY(ty).setDepth(1);
       ty += Math.max(REPORT_LINE_H, t.height + 6);
     }
     const colW = (CARD_W - 40) / reportCols;
-    reports.forEach((r, j) => {
+    shownReports.forEach((r, j) => {
       const ry = ty + Math.floor(j / reportCols) * REPORT_LINE_H;
       const cx = reportCols === 1 ? CANVAS_W / 2 : x + 20 + colW * (j % reportCols) + colW / 2;
-      const up = r.leveledUp ? (reportCols === 1 ? '  ▲ 昇級' : '  ▲') : '';
       const t = this.add
-        .text(cx, ry, r.maxed ? `艦長 ${r.name}  Lv ${r.level} (最大)` : `艦長 ${r.name}  Lv ${r.level}  +${r.gained} XP${up}`, textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
+        .text(cx, ry, captainLine(r, reportCols !== 1), textStyle(reportCols === 1 ? 14 : 12, r.leveledUp ? Css.gold : Css.muted, { fontStyle: 'bold' }))
         .setOrigin(0.5, 0);
       fitText(t, colW - 8);
     });
+    ty += reportLines * REPORT_LINE_H;
+    if (hidden.length > 0) {
+      new UIButton(this, CANVAS_W / 2, ty + REPORT_LINE_H / 2, `詳細 (ほか ${hidden.length} 件)  ›`, () => this.openList('結果の詳細', hidden), {
+        variant: 'secondary', width: IS_PORTRAIT ? 300 : 240, height: REPORT_LINE_H + 4, fontSize: 13,
+      });
+    }
 
     // Mid-sortie (#53): advance to the next node, or withdraw keeping what was won.
     const advance = data?.advance === true;
@@ -183,6 +220,11 @@ export class ResultsScene extends Phaser.Scene {
   private openLog(lines: string[]): void {
     // 戦闘記録章 (#106) counts the logs read.
     saveProgress(withQuestEvents(loadProgress(), [['logView', 1]], Date.now()));
+    this.openList(`戦闘ログ (${lines.length})`, lines);
+  }
+
+  /** A scrolling sheet of lines (the battle log, or the results that did not fit the card, #421). */
+  private openList(title: string, lines: string[]): void {
     const layer: Phaser.GameObjects.GameObject[] = [];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(LOG_DEPTH);
@@ -192,14 +234,20 @@ export class ResultsScene extends Phaser.Scene {
     add(this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.85).setOrigin(0, 0).setInteractive());
     const r = IS_PORTRAIT ? { x: 24, y: 120, w: CANVAS_W - 48, h: CANVAS_H - 240 } : { x: 240, y: 60, w: 800, h: 600 };
     add(addPanel(this, r.x, r.y, r.w, r.h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
-    add(this.add.text(r.x + 24, r.y + 20, `戦闘ログ (${lines.length})`, eyebrowStyle(11, Css.cyan)));
+    add(this.add.text(r.x + 24, r.y + 20, title, eyebrowStyle(11, Css.cyan)));
     const top = r.y + 56;
     const bottom = r.y + r.h - (IS_PORTRAIT ? 90 : 70);
     const list = new ScrollList(this, { x: r.x + 20, y: top, w: r.w - 40, h: bottom - top });
     list.setDepth(LOG_DEPTH + 1);
+    // Long lines (the recruits, #421) wrap and take the room they need.
     const rowH = IS_PORTRAIT ? 34 : 28;
-    lines.forEach((line, i) => list.add(this.add.text(0, i * rowH, line, textStyle(13, Css.text)).setOrigin(0, 0)));
-    list.setContentHeight(lines.length * rowH);
+    let ly = 0;
+    for (const line of lines) {
+      const t = this.add.text(0, ly, line, textStyle(13, Css.text, { wordWrap: { width: r.w - 48, useAdvancedWrap: true } })).setOrigin(0, 0);
+      list.add(t);
+      ly += Math.max(rowH, t.height + 8);
+    }
+    list.setContentHeight(ly);
     add(new UIButton(this, r.x + r.w / 2, r.y + r.h - (IS_PORTRAIT ? 44 : 34), '閉じる', () => {
       list.destroy();
       layer.forEach((o) => o.destroy());
