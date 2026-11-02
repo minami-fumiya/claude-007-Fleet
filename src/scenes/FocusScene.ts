@@ -10,7 +10,7 @@ import { withQuestEvents } from '@/systems/QuestSystem';
 import { RANKS, rankOf } from '@/systems/RankSystem';
 import { audio } from '@/systems/AudioSystem';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { addBackdrop, drawPanel, fitText, UIButton } from '@/ui/components/UIKit';
+import { addBackdrop, drawPanel, fitText, fitTwoLines, UIButton } from '@/ui/components/UIKit';
 import { ResourceBar } from '@/ui/components/ResourceBar';
 import { addArsenalTabs } from '@/ui/components/ArsenalTabs';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -203,9 +203,9 @@ export class FocusScene extends Phaser.Scene {
         rimAlpha: on ? 0.95 : st === 'done' || st === 'active' ? 0.75 : 0.2,
         glow: on ? 0.6 : 0,
       }));
-      // One line, shrunk to fit: a wrap would split a word (マル五計 | 画, #382).
-      const name = add(this.add.text(r.x, r.y, n.name, textStyle(IS_PORTRAIT ? 13 : 12, st === 'closed' ? Css.dim : Css.text, { fontStyle: 'bold' })));
-      fitText(name, r.w - 10);
+      // One line when it fits, else two broken after a particle (#382: a wrap split マル五計 | 画; #425: no "…").
+      const name = add(this.add.text(r.x, r.y, n.name, textStyle(IS_PORTRAIT ? 13 : 12, st === 'closed' ? Css.dim : Css.text, { fontStyle: 'bold', align: 'center' })));
+      fitTwoLines(name, r.w - 10);
       name.setPosition(r.x + (r.w - name.displayWidth) / 2, r.y + (r.h - 14 - name.displayHeight) / 2);
       const stateText = add(this.add.text(r.x + r.w / 2, r.y + r.h - 6, st === 'active' && p.focus.current ? `残り ${clock(Math.max(0, p.focus.current.endsAt - Date.now()))}` : STATE_SHORT[st], eyebrowStyle(9, this.stateColor(st))).setOrigin(0.5, 1));
       fitText(stateText, r.w - 8);

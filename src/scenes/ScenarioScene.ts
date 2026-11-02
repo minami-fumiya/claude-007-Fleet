@@ -21,7 +21,7 @@ interface IRect { x: number; y: number; w: number; h: number }
 
 const L = IS_PORTRAIT
   ? { list: { x: 16, y: 150, w: CANVAS_W - 32, h: 340 } as IRect, cols: 2, rows: 2, cardH: 92, tabH: 44, navH: 44, detail: { x: 16, y: 500, w: CANVAS_W - 32, h: CANVAS_H - 516 } as IRect }
-  : { list: { x: 24, y: 96, w: 380, h: 604 } as IRect, cols: 1, rows: 4, cardH: 104, tabH: 34, navH: 36, detail: { x: 420, y: 96, w: 836, h: 604 } as IRect };
+  : { list: { x: 24, y: 96, w: 380, h: 604 } as IRect, cols: 1, rows: 4, cardH: 96, tabH: 34, navH: 36, detail: { x: 420, y: 96, w: 836, h: 604 } as IRect };
 const GAP = 10;
 const CARD_W = (L.list.w - GAP * (L.cols - 1)) / L.cols;
 
@@ -86,10 +86,15 @@ export class ScenarioScene extends Phaser.Scene {
       return o;
     };
     const tabs: Array<ScenarioTheater | 'all'> = ['all', 'pacific', 'atlantic', 'mediterranean', 'arctic', 'baltic', 'blacksea'];
-    const tw = (L.list.w - 6 * (tabs.length - 1)) / tabs.length;
+    // Landscape's narrow list takes the tabs in two rows (#425: one row cut バルト海 with "…").
+    const perRow = IS_PORTRAIT ? tabs.length : 4;
+    const tabRows = Math.ceil(tabs.length / perRow);
+    const tw = (L.list.w - 6 * (perRow - 1)) / perRow;
     tabs.forEach((t, i) => {
       const n = scenariosIn(this.scenarios, t).length;
-      track(new UIButton(this, L.list.x + i * (tw + 6) + tw / 2, L.list.y + L.tabH / 2, `${t === 'all' ? '全て' : SCENARIO_THEATER_LABEL[t]} ${n}`, () => {
+      const tx = L.list.x + (i % perRow) * (tw + 6) + tw / 2;
+      const ty = L.list.y + Math.floor(i / perRow) * (L.tabH + 6) + L.tabH / 2;
+      track(new UIButton(this, tx, ty, `${t === 'all' ? '全て' : SCENARIO_THEATER_LABEL[t]} ${n}`, () => {
         this.theater = t;
         this.page = 0;
         this.drawList();
@@ -99,7 +104,7 @@ export class ScenarioScene extends Phaser.Scene {
     const perPage = L.cols * L.rows;
     const pages = Math.max(1, Math.ceil(list.length / perPage));
     this.page = Math.min(this.page, pages - 1);
-    const top = L.list.y + L.tabH + GAP;
+    const top = L.list.y + tabRows * L.tabH + (tabRows - 1) * 6 + GAP;
     list.slice(this.page * perPage, (this.page + 1) * perPage).forEach((sc, k) => {
       const i = this.scenarios.indexOf(sc);
       const col = k % L.cols;

@@ -273,7 +273,8 @@ export class HomeScene extends Phaser.Scene {
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(8, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
-    add(this.add.text(x + 24, y + 20, 'イベントの予定 (日本時間・1 時間ごと)', eyebrowStyle(11)));
+    // Short enough to clear the 今日 / 明日 buttons on a phone (#425); the hours are Japan time.
+    add(this.add.text(x + 24, y + 20, 'イベントの予定 (1 時間ごと)', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), ahead === 0 ? '今日のイベント' : '明日のイベント', displayStyle(IS_PORTRAIT ? 20 : 18)));
     const tw = IS_PORTRAIT ? 150 : 120;
     const bh = IS_PORTRAIT ? 48 : 36;
@@ -825,7 +826,7 @@ export class HomeScene extends Phaser.Scene {
     const next = nextDock(progress);
     if (next) {
       const label = `第${docks + 1}ドック増設  ${formatResources(next.cost)}`;
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 14 : 8), next.state === 'rank' ? `第${docks + 1}ドック: ${next.rankName}に昇進すると増設できます` : label, textStyle(12, next.state === 'rank' ? Css.dim : Css.muted)).setOrigin(0, 0.5));
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 14 : 8), next.state === 'rank' ? `第${docks + 1}ドック: ${next.rankName}に昇進すると増設できます` : label, textStyle(12, Css.muted)).setOrigin(0, 0.5));
       if (next.state !== 'rank') {
         add(new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 14 : 8), '増設', () => this.buildDock(), {
           variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 40 : 28, fontSize: 13,
@@ -840,7 +841,7 @@ export class HomeScene extends Phaser.Scene {
     const noteText = damaged.length > 0
       ? `損傷艦 ${damaged.length} 隻。行をタップで入渠 (資材と時間は失った耐久で決まり、大きな艦ほど多い)`
       : progress.docks.length > 0 ? '入渠中の艦は、行をタップで高速修理 (高速修理材 1 個、なければ資材)' : '修理が必要な艦はいません';
-    const note = add(this.add.text(d.x + pad, y, noteText, textStyle(11, Css.dim, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
+    const note = add(this.add.text(d.x + pad, y, noteText, textStyle(11, Css.muted, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
     y += note.height + 8;
 
     const list = new ScrollList(this, { x: d.x + pad - 4, y, w: d.w - pad * 2 + 8, h: d.y + d.h - 12 - y });

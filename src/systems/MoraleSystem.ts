@@ -86,6 +86,12 @@ export function moraleMood(value: number): MoraleMood {
 }
 
 /** "士気 72 ★" / "士気 25 疲労" */
+/** "★ 75" / "疲労 25" / "士気 50": the short form for chips (#425: the long one ran into its neighbours). */
+export function moraleShort(value: number): string {
+  const mood = moraleMood(value);
+  return mood === 'high' ? `★ ${value}` : mood === 'tired' ? `疲労 ${value}` : `士気 ${value}`;
+}
+
 export function moraleLabel(value: number): string {
   const mood = moraleMood(value);
   return `士気 ${value}${mood === 'high' ? ' ★' : mood === 'tired' ? ' 疲労' : ''}`;

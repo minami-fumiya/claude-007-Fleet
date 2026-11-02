@@ -181,6 +181,12 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
     .join('  ');
 }
 
+/** "燃1200 弾600 鋼1800 ボ300": the short form for a narrow button (#425: the long one was cut with "…"). */
+export function shortResources(r: Partial<IResources>): string {
+  const x = resources(r);
+  return RESOURCE_KEYS.filter((k) => x[k] !== 0).map((k) => `${RESOURCE_LABEL[k].slice(0, 1)}${x[k]}`).join(' ');
+}
+
 // ---------------------------------------------------------------------------
 // Natural regeneration (#28)
 // ---------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import { SCREEN_HELP } from './ScreenHelp';
 import { EVENT_KINDS } from './EventKinds';
 import { IBattleRecordInput, ICareerStats, IMedal, IModeRecord, IScenarioBest, IScenarioRecord, IServiceRecord, RecordMode } from '@/types/Record';
 import { ALL_SCENARIOS } from '@/data/scenarios';
@@ -469,6 +470,8 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.61 (#426): the submarines' sinkings (the 潜水 research asks for them), the new 水上機母艦 and 大型空母.
   ...ladder('sub_ace', '潜水艦戦章', 'battle', [5, 30], (g) => `潜水艦で敵艦を ${g} 隻沈める`, (_r, c) => total(c, 'subSink')),
   ...ladder('tender_win', '水上機母艦章', 'battle', [10], (g) => `水上機母艦を入れた艦隊で ${g} 回勝つ`, (_r, c) => total(c, 'tenderWin')),
+  // 熟読章 (#425): every screen's help read to its last page.
+  ...ladder('help_reader', '熟読章', 'base', [SCREEN_HELP.length], (g) => `画面のヘルプを ${g} 画面ぶん最後まで読む`, (_r, c) => total(c, 'helpRead')),
   ...ladder('expedition_training', '遠征練成章', 'base', [100, 500], (g) => `遠征で熟練度を ${g} ためる`, (_r, c) => total(c, 'expeditionProficiency')),
   ...ladder('large_carrier_flag', '大型空母章', 'battle', [10], (g) => `大型空母を旗艦にして ${g} 回勝つ`, (_r, c) => total(c, 'largeCarrierFlagWin')),
   // 旗艦の誉れ (#419): wins with a favourite as the flagship.

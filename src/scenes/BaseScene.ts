@@ -11,7 +11,7 @@ import {
   boostedBase, COMMON_FACILITIES, facilityCost, facilityLevel, facilityMinutes, facilitySlots, facilityState, FacilityId, FORWARD_FACILITIES, forwardTotal, maxLevelOf, facilityPreview, holdCap, regenRules, startFacility,
   UNIQUE_REGEN_CAP, uniqueStrength,
 } from '@/systems/FacilitySystem';
-import { formatResources } from '@/systems/ResourceSystem';
+import { formatResources, shortResources } from '@/systems/ResourceSystem';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
@@ -179,7 +179,7 @@ export class BaseScene extends Phaser.Scene {
       // A home port past the first opens no sea since #373: it reads 本国の軍港.
       const seas = (b.theaters ?? []).map((t) => THEATER_NAME[t] ?? t).join('・') || '本国の軍港';
       const sub = open ? seas : BASE_STATE_TEXT[state] ?? baseLockShort(b, progress);
-      const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.dim)).setOrigin(0, 1));
+      const subText = this.track(this.add.text(bx + 16, by + rh - 12, sub, textStyle(12, open ? Css.muted : state === 'ready' || state === 'building' ? Css.cyan : Css.muted)).setOrigin(0, 1));
       fitText(subText, cw - 32);
       if (state === 'building' && progress.baseWork) {
         this.workTimer = { text: subText, endsAt: progress.baseWork.endsAt, name: b.name };
@@ -271,7 +271,7 @@ export class BaseScene extends Phaser.Scene {
       const cost = facilityCost(r.id, lv + 1);
       this.track(drawPanel(this.add.graphics(), x, y, w, rowH - 6, { radius: 10, fill: Colors.panel, fillAlpha: 0.45, rimAlpha: 0.12 }));
       this.track(this.add.text(x + 14, y + (IS_PORTRAIT ? 10 : 5), `${r.name}  Lv${lv} / ${max}`, textStyle(IS_PORTRAIT ? 14 : 13, lv > 0 ? Css.text : Css.muted, { fontStyle: 'bold' })));
-      const effect = this.track(this.add.text(x + 14, y + rowH - (IS_PORTRAIT ? 14 : 9), r.id === 'unique' && lv >= max ? '最大まで強化済み' : r.effect, textStyle(11, Css.dim)).setOrigin(0, 1));
+      const effect = this.track(this.add.text(x + 14, y + rowH - (IS_PORTRAIT ? 14 : 9), r.id === 'unique' && lv >= max ? '最大まで強化済み' : r.effect, textStyle(11, Css.muted)).setOrigin(0, 1));
       const room = w - bw - 40;
       fitText(effect, room);
       if (lv < max) {
@@ -280,7 +280,7 @@ export class BaseScene extends Phaser.Scene {
         const medal = state === 'medal' ? facilityMedal(base.id, r.id, lv + 1) : undefined;
         const label = jobs.some((j) => j.id === r.id) ? '建設中…'
           : medal ? `Lv${lv + 1} 要勲章${IS_PORTRAIT ? '\n' : ' '}「${medalName(medal)}」`
-            : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(r.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(cost)}`;
+            : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(r.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${IS_PORTRAIT ? formatResources(cost) : shortResources(cost)}`;
         this.track(new UIButton(this, x + w - 8 - bw / 2, y + (rowH - 6) / 2, label, () => this.build(base, r.id), {
           variant: state === 'ready' ? 'primary' : 'secondary', width: bw, height: rowH - 14, fontSize: IS_PORTRAIT ? 11 : 10,
         })).setEnabled(state === 'ready');
@@ -342,11 +342,11 @@ export class BaseScene extends Phaser.Scene {
       const fState = open ? facilityState(facilities, progress.facilityJobs, base.id, f.id, progress.resources, progress.record.medals) : 'busy';
       this.track(drawPanel(this.add.graphics(), x, y, w, rowH - 6, { radius: 10, fill: Colors.panel, fillAlpha: 0.45, rimAlpha: 0.12 }));
       this.track(this.add.text(x + 14, y + (IS_PORTRAIT ? 10 : 5), `${f.name}  Lv${lv} / ${max}`, textStyle(IS_PORTRAIT ? 14 : 13, lv > 0 ? Css.text : Css.muted, { fontStyle: 'bold' })));
-      const effect = this.track(this.add.text(x + 14, y + rowH - (IS_PORTRAIT ? 14 : 9), f.effect, textStyle(11, Css.dim)).setOrigin(0, 1));
+      const effect = this.track(this.add.text(x + 14, y + rowH - (IS_PORTRAIT ? 14 : 9), f.effect, textStyle(11, Css.muted)).setOrigin(0, 1));
       const room = w - bw - 40;
       fitText(effect, room);
       if (lv < max) {
-        const label = jobs.some((j) => j.id === f.id) ? '建設中…' : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(f.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${formatResources(facilityCost(f.id, lv + 1))}`;
+        const label = jobs.some((j) => j.id === f.id) ? '建設中…' : `${lv === 0 ? '建設' : '強化'} ${facilityMinutes(f.id, lv + 1)}分${IS_PORTRAIT ? '\n' : '  '}${IS_PORTRAIT ? formatResources(facilityCost(f.id, lv + 1)) : shortResources(facilityCost(f.id, lv + 1))}`;
         this.track(new UIButton(this, x + w - 8 - bw / 2, y + (rowH - 6) / 2, label, () => this.build(base, f.id), {
           variant: fState === 'ready' ? 'primary' : 'secondary', width: bw, height: rowH - 14, fontSize: IS_PORTRAIT ? 11 : 10,
         })).setEnabled(fState === 'ready');

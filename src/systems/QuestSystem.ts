@@ -88,6 +88,8 @@ export const QUEST_EVENTS = [
   'subSink', 'tenderWin', 'largeCarrierFlagWin',
   // 0.0.61 (#426): proficiency the expeditions trained
   'expeditionProficiency',
+  // 0.0.61 (#425): screens' help read to the last page
+  'helpRead',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
