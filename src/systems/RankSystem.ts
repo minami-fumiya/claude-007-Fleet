@@ -242,13 +242,18 @@ export function examText(exam: RankExam): string {
 
 export function rankOf(progress: IRankProgress, missions = true): IRank {
   const merit = progress.merit ?? 0;
+  const floor = RANKS[Math.min(RANKS.length - 1, Math.max(START_RANK, progress.rankFloor ?? 0))];
+  // One step at a time (#426): with the missions counted, the climb stops one rank above the rank held, so a battle
+  // that meets two ranks' conditions at once (their missions both count from the last promotion) promotes once; the
+  // next rank's missions then count from that promotion (examFrom). Save migrations read the rank without missions, and
+  // a bare progress with no rank held yet (`rankFloor` absent, as in a computed preview) climbs freely.
+  const top = missions && progress.rankFloor !== undefined ? Math.max(floor.index + 1, START_RANK) : RANKS.length - 1;
   let rank = RANKS[0];
   for (const r of RANKS) {
     // Ranks are climbed in order: a failed exam or an open promotion mission (#142) stops the climb there.
-    if (merit < r.minMerit || !examPassed(r, progress) || (missions && openMissions(r, progress).length > 0)) break;
+    if (r.index > top || merit < r.minMerit || !examPassed(r, progress) || (missions && openMissions(r, progress).length > 0)) break;
     rank = r;
   }
-  const floor = RANKS[Math.min(RANKS.length - 1, Math.max(START_RANK, progress.rankFloor ?? 0))];
   return floor.index > rank.index ? floor : rank;
 }
 

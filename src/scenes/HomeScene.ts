@@ -38,7 +38,8 @@ import {
   activeQuests, addItems, claimableCount, isEventQuestFor, recordQuestEvent, QUESTS, formatItems, shortReward, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
   gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
-import { MEDALS } from '@/systems/RecordSystem';
+import { medalProgress, MEDALS } from '@/systems/RecordSystem';
+import { medalContext } from '@/utils/MedalContext';
 import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -102,6 +103,8 @@ interface IQuestRow {
   status: QuestStatus;
   /** The reward would not all fit under the holding cap (#221) */
   overflow?: boolean;
+  /** A promotion mission's medal (#426): the row opens it in 戦績 */
+  medal?: string;
 }
 
 export class HomeScene extends Phaser.Scene {
@@ -422,7 +425,7 @@ export class HomeScene extends Phaser.Scene {
       const tx = rx + 16;
       const textW = colW - 32 - bw - 12;
       add(this.add.text(tx, ry + 8, r.name, textStyle(15, claimed ? Css.dim : r.status === 'idle' ? Css.muted : Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(tx + textW, ry + 12, `${Math.min(r.goal, r.value)} / ${r.goal}`, textStyle(12, color)).setOrigin(1, 0));
+      add(this.add.text(tx + textW, ry + 12, r.medal ? (claimed ? '取得済' : '未取得') : `${Math.min(r.goal, r.value)} / ${r.goal}`, textStyle(12, color)).setOrigin(1, 0));
       // Description and reward stay left of the status button (long weekly rewards ran under it in portrait).
       const fit = <T extends Phaser.GameObjects.Text>(t: T): T => (t.width > textW ? t.setScale(textW / t.width) : t);
       add(fit(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted))));
@@ -438,9 +441,11 @@ export class HomeScene extends Phaser.Scene {
       const label = { claimable: claimLabel, progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
       // Portrait: the button keeps to the top of the row, clear of the reward line.
       const btnH = IS_PORTRAIT ? rowH - 44 : rowH - 24;
-      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, IS_PORTRAIT ? ry + 10 + btnH / 2 : ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
-        variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: btnH, fontSize: 14,
-      })).setEnabled(r.status === 'claimable' && tab !== 'rank');
+      // A promotion medal not held yet opens its card in 戦績 (#426).
+      const medalLink = tab === 'rank' && !claimed && r.medal !== undefined;
+      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, IS_PORTRAIT ? ry + 10 + btnH / 2 : ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : medalLink ? '勲章を見る ›' : label, () => (medalLink ? this.scene.start(SceneKeys.RECORD, { view: 'medals', medal: r.medal }) : this.claimQuest(r.id)), {
+        variant: r.status === 'claimable' ? 'gold' : medalLink ? 'primary' : 'secondary', width: bw, height: btnH, fontSize: medalLink ? 13 : 14,
+      })).setEnabled((r.status === 'claimable' && tab !== 'rank') || medalLink);
       if (claimed) btn.setAlpha(0.5);
     });
     if (rows.length === 0) add(this.add.text(x + w / 2, y + head + 40, '表示できる任務はありません', textStyle(14, Css.muted)).setOrigin(0.5, 0));
@@ -463,11 +468,18 @@ export class HomeScene extends Phaser.Scene {
   /** The promotion missions (#142) of the next rank only (#261), for the 昇進 tab (#158). */
   private rankMissionRows(progress: IProgress): IQuestRow[] {
     const next = rankOf(progress).index + 1;
+    const ctx = medalContext(loadSave());
     return (RANK_MISSIONS[next] ?? []).map((m) => {
-      const value = Math.min(m.goal, missionValue(progress, m));
+      // A medal mission (#426) shows what the medal asks and how far it is, and opens it in 戦績.
+      const medal = m.medal ? MEDALS.find((x) => x.id === m.medal) : undefined;
+      const held = medal ? progress.record.medals.includes(medal.id) : false;
+      const [mv, mg] = medal ? medalProgress(medal.id, progress.record, ctx) : [0, 1];
+      const value = medal ? (held ? 1 : mv / mg) : Math.min(m.goal, missionValue(progress, m));
       return {
-        id: `${next}_${m.medal ?? m.stat}`, name: `${RANKS[next].name}への昇進任務`, text: m.text, value, goal: m.goal, reward: '',
-        status: value >= m.goal ? 'claimed' : value > 0 ? 'progress' : 'idle',
+        id: `${next}_${m.medal ?? m.stat}`, name: `${RANKS[next].name}への昇進任務`,
+        text: medal ? `勲章「${medal.name}」: ${medal.description}${held ? '' : ` (${mv.toLocaleString()} / ${mg.toLocaleString()})`}` : m.text,
+        value: held ? 1 : value, goal: medal ? 1 : m.goal, reward: '', medal: medal?.id,
+        status: (medal ? held : value >= m.goal) ? 'claimed' : value > 0 ? 'progress' : 'idle',
       };
     });
   }

@@ -22,7 +22,7 @@ const byId = (id: string): IShipData => IJN.find((s) => s.id === id)!;
 const admiral = (patch: Partial<IProgress> = {}): IProgress => ({
   ...progressView(switchNation(emptySave(), Nation.IJN, 'fubuki', T0)),
   // Every base built (#217), so the admiral can work from any of them.
-  merit: 900, rankStats: ALL_MISSIONS_DONE, record: { ...emptyRecord(), medals: ALL_MISSION_MEDALS }, base: 'ijn_heavy', basesOpen: nationBases(Nation.IJN).map((b) => b.id), resources: resources({ fuel: 5000, ammo: 5000, steel: 5000, bauxite: 5000 }),
+  merit: 900, rankFloor: 8, rankStats: ALL_MISSIONS_DONE, record: { ...emptyRecord(), medals: ALL_MISSION_MEDALS }, base: 'ijn_heavy', basesOpen: nationBases(Nation.IJN).map((b) => b.id), resources: resources({ fuel: 5000, ammo: 5000, steel: 5000, bauxite: 5000 }),
   ships: ['fubuki', 'yukikaze', 'nagato'], shipBases: { fubuki: 'ijn_home', yukikaze: 'ijn_home', nagato: 'ijn_heavy' },
   ...patch,
 });
