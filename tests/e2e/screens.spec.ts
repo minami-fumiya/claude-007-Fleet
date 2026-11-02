@@ -108,6 +108,28 @@ async function overflowingTexts(page: Page, key: string): Promise<string[]> {
 }
 
 /**
+ * 「…」で略さない (#425): visible texts that `fitText` had to cut, as "full text". A cut text is shortened or its field
+ * widened instead.
+ */
+async function cutTexts(page: Page, key: string): Promise<string[]> {
+  return page.evaluate((k) => {
+    const g = (window as unknown as { game: Phaser.Game }).game;
+    const out: string[] = [];
+    const visit = (o: Phaser.GameObjects.GameObject, visible: boolean): void => {
+      const v = visible && (o as unknown as { visible?: boolean }).visible !== false;
+      if (o.type === 'Container') {
+        (o as Phaser.GameObjects.Container).list.forEach((c) => visit(c, v));
+        return;
+      }
+      const cut = o.getData?.('cut') as string | undefined;
+      if (v && o.type === 'Text' && cut && (o as Phaser.GameObjects.Text).text.endsWith('…')) out.push(cut.replace(/\n/g, ' '));
+    };
+    g.scene.getScene(k).children.list.forEach((o) => visit(o, true));
+    return out;
+  }, key);
+}
+
+/**
  * 文字の最小サイズ (#406): texts of `key` drawn smaller than `min` canvas px once every scale on the way is counted
  * (a text squeezed with setScale to fit, inside a scaled container). The theme's own floor (uiFontSize) keeps the
  * nominal sizes up; this catches what a layout shrank afterwards.
@@ -1892,7 +1914,7 @@ test('編成と表示 (0.0.60): favourites and the picker toggle, the shop tabs,
   });
   await open(page, 'FleetBuilderScene');
   expect((await texts('FleetBuilderScene')).some((t) => /^1 \/ \d+$/.test(t)), `help pages (${layout})`).toBe(true);
-  await press('FleetBuilderScene', '›');
+  await press('FleetBuilderScene', '次へ');
   await page.waitForTimeout(200);
   expect((await texts('FleetBuilderScene')).some((t) => /^2 \/ \d+$/.test(t))).toBe(true);
   expect(await overflowingTexts(page, 'FleetBuilderScene')).toEqual([]);
@@ -1905,5 +1927,51 @@ test('編成と表示 (0.0.60): favourites and the picker toggle, the shop tabs,
     expect(await overlappingTexts(page, 'HelpScene'), `${tab} (${layout})`).toEqual([]);
   }
   await page.screenshot({ path: info.outputPath('help-battle.png') });
+  expect(errors).toEqual([]);
+});
+
+test('「…」で略さない (0.0.61): no menu screen cuts a text short (#425)', async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS });
+  const cut: string[] = [];
+  for (const key of SCREENS) {
+    await open(page, key);
+    cut.push(...(await cutTexts(page, key)).map((t) => `${key}: ${t}`));
+  }
+  console.log(`CUT ${layout} ${cut.length}\n${cut.join('\n')}`);
+  expect(cut, `cut texts (${layout})`).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('今日のイベントと士気 (0.0.61): the event schedule and a fleet of high and low morale fit (#425)', async ({ page }, info) => {
+  test.setTimeout(180_000);
+  const layout = info.project.metadata.layout as string;
+  const now = Date.now();
+  const save = { ...SAVE, version: 7, seenHelp: [...SCREENS, 'ResultsScene'], nations: { IJN: { ...SAVE.nations.IJN, morale: { yamato: 95, nagato: 15, akagi: 72 }, moraleAt: { yamato: now, nagato: now, akagi: now } } } };
+  const errors = await boot(page, layout, save);
+  type G = { game: Phaser.Game };
+  await open(page, 'HomeScene');
+  for (const [ahead, half] of [[0, 0], [0, 1], [1, 0], [1, 1]]) {
+    await page.evaluate(([a, h]) => {
+      const s = (window as unknown as G).game.scene.getScene('HomeScene') as unknown as { openEventSchedule(a: number, h?: number): void; closeNationPicker(): void };
+      s.closeNationPicker();
+      s.openEventSchedule(a, h);
+    }, [ahead, half] as const);
+    await page.waitForTimeout(200);
+    expect(await overlappingTexts(page, 'HomeScene'), `events ${ahead}/${half} (${layout})`).toEqual([]);
+    expect(await overflowingTexts(page, 'HomeScene')).toEqual([]);
+    expect(await cutTexts(page, 'HomeScene')).toEqual([]);
+  }
+  await page.screenshot({ path: info.outputPath('events.png') });
+  await open(page, 'FleetBuilderScene');
+  await page.evaluate(() => {
+    const s = (window as unknown as G).game.scene.getScene('FleetBuilderScene') as unknown as { openPicker(i: number): void };
+    s.openPicker(0);
+  });
+  await page.waitForTimeout(300);
+  expect(await overlappingTexts(page, 'FleetBuilderScene'), `picker (${layout})`).toEqual([]);
+  expect(await cutTexts(page, 'FleetBuilderScene')).toEqual([]);
+  await page.screenshot({ path: info.outputPath('picker-morale.png') });
   expect(errors).toEqual([]);
 });

@@ -1,4 +1,4 @@
-import { IShipData, isHistorical } from '@/types/Ship';
+import { IShipData, isHistorical, ShipSubtype } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
 import { ShipClass } from '@/types/ShipClass';
 import { BattleMode } from '@/types/Battle';
@@ -77,8 +77,9 @@ export function generateEnemyFleet(
   size = ENEMY_FLEET_SIZE,
 ): IShipData[] {
   const count = enemyFleetSize(size);
-  // Fictional ships are the player's research reward; the enemy only fields historical ones.
-  const roster = registry.byNation(nation).filter((s) => isHistorical(s));
+  // Fictional ships are the player's research reward; the enemy only fields historical ones, and no 水上機母艦 (#426: a
+  // tender is no carrier to lead a strike).
+  const roster = registry.byNation(nation).filter((s) => isHistorical(s) && s.subtype !== ShipSubtype.SeaplaneTender);
   const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);
   const used = new Set<string>();
   const slots: ShipClass[][] =
@@ -117,7 +118,7 @@ export function exerciseEnemyFleet(
   size: number,
   rng: () => number = Math.random,
 ): IShipData[] {
-  const roster = registry.byNation(nation).filter((s) => isHistorical(s));
+  const roster = registry.byNation(nation).filter((s) => isHistorical(s) && s.subtype !== ShipSubtype.SeaplaneTender);
   if (roster.length === 0 || playerShips.length === 0) return [];
   const smallest = playerShips.reduce((a, b) => (b.hp < a.hp ? b : a));
   const surface = roster.filter((s) => s.shipClass !== ShipClass.Submarine);

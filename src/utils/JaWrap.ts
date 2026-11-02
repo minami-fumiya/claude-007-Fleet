@@ -156,3 +156,16 @@ export function jaWordWrap(text: string, target: IWrapTarget): string[] {
   const width = target.style.wordWrapWidth ?? Number.POSITIVE_INFINITY;
   return wrapJa(text, width, (s) => target.context.measureText(s).width);
 }
+
+/** Where a short Japanese name breaks best into two lines (#425): after a particle or a mark, near the middle. */
+export function twoLineBreak(s: string): number {
+  const mid = s.length / 2;
+  let best = -1;
+  for (let i = 1; i < s.length; i++) {
+    const prev = s[i - 1];
+    const good = ('のをにはとへ・、 '.includes(prev) && s.slice(i, i + 2) !== 'よる') || s.slice(i - 3, i) === 'による';
+    if (good && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  }
+  return best > 0 ? best : Math.ceil(mid);
+}
+

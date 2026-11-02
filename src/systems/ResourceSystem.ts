@@ -34,6 +34,8 @@ const SUBTYPE_SORTIE_COST: Partial<Record<ShipSubtype, Partial<IResources>>> = {
   [ShipSubtype.LightCruiser]: { fuel: 30, ammo: 36 },
   [ShipSubtype.AACruiser]: { fuel: 30, ammo: 36 },
   [ShipSubtype.Escort]: { fuel: 11, ammo: 14 },
+  // 水上機母艦 (#426): a light hull with a few seaplanes.
+  [ShipSubtype.SeaplaneTender]: { fuel: 20, ammo: 16 },
 };
 /** Bauxite to replace one aircraft lost in battle. */
 export const BAUXITE_PER_PLANE = 6;
@@ -177,6 +179,12 @@ export function formatResources(r: Partial<IResources>, onlyNonZero = true): str
   return RESOURCE_KEYS.filter((k) => !onlyNonZero || x[k] !== 0)
     .map((k) => `${RESOURCE_LABEL[k]} ${x[k]}`)
     .join('  ');
+}
+
+/** "燃1200 弾600 鋼1800 ボ300": the short form for a narrow button (#425: the long one was cut with "…"). */
+export function shortResources(r: Partial<IResources>): string {
+  const x = resources(r);
+  return RESOURCE_KEYS.filter((k) => x[k] !== 0).map((k) => `${RESOURCE_LABEL[k].slice(0, 1)}${x[k]}`).join(' ');
 }
 
 // ---------------------------------------------------------------------------

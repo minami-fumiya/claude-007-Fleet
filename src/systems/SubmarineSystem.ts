@@ -19,28 +19,34 @@ export interface ISubmarineState {
   air: number;
   /** True after an emergency surfacing until air reaches DIVE_MIN_AIR */
   forcedSurface: boolean;
+  /** Seconds a full air supply lasts (潜水研究, #426); SUBMERGED_ENDURANCE_SEC when absent */
+  endurance?: number;
+  /** Speed multiplier under water (潜水研究, #426); SUBMERGED_SPEED_FACTOR when absent */
+  submergedSpeed?: number;
 }
 
-export function createSubmarineState(submerged = false): ISubmarineState {
-  return { submerged, air: 1, forcedSurface: false };
+/** `diveMul` / `speedMul`: the submarine research (#426) lengthening the dive and quickening the boat under water. */
+export function createSubmarineState(submerged = false, diveMul = 1, speedMul = 1): ISubmarineState {
+  return { submerged, air: 1, forcedSurface: false, endurance: SUBMERGED_ENDURANCE_SEC * diveMul, submergedSpeed: Math.min(1, SUBMERGED_SPEED_FACTOR * speedMul) };
 }
 
 /** Advances the dive state by `dtSec`. Returns the new state (the input is not modified). */
 export function updateSubmarine(state: ISubmarineState, dtSec: number, wantSubmerged: boolean): ISubmarineState {
   let { air, forcedSurface } = state;
   let submerged = wantSubmerged && !forcedSurface;
+  const endurance = state.endurance ?? SUBMERGED_ENDURANCE_SEC;
 
   if (submerged) {
-    air = Math.max(0, air - dtSec / SUBMERGED_ENDURANCE_SEC);
+    air = Math.max(0, air - dtSec / endurance);
     if (air <= 0) {
       submerged = false;
       forcedSurface = true;
     }
   } else {
-    air = Math.min(1, air + (dtSec * RECHARGE_RATE) / SUBMERGED_ENDURANCE_SEC);
+    air = Math.min(1, air + (dtSec * RECHARGE_RATE) / endurance);
     if (forcedSurface && air >= DIVE_MIN_AIR) forcedSurface = false;
   }
-  return { submerged, air, forcedSurface };
+  return { ...state, submerged, air, forcedSurface };
 }
 
 /** Can the boat start a dive right now? */
@@ -49,5 +55,5 @@ export function canDive(state: ISubmarineState): boolean {
 }
 
 export function speedFactor(state: ISubmarineState): number {
-  return state.submerged ? SUBMERGED_SPEED_FACTOR : 1;
+  return state.submerged ? state.submergedSpeed ?? SUBMERGED_SPEED_FACTOR : 1;
 }

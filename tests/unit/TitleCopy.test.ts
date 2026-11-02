@@ -7,7 +7,8 @@ describe('title copy (#197)', () => {
   it('counts the formations and objectives the game really has', () => {
     for (const portrait of [true, false]) {
       const [, formation, objective] = titleTiles(portrait);
-      expect(formation.body).toContain(`全 ${Object.values(Formation).length} 種`);
+      // The phone's copy is shorter (#425): "単縦陣など 6 種".
+      expect(formation.body).toContain(`${Object.values(Formation).length} 種`);
       expect(formation.body).not.toContain('ほか');
       expect(objective.body).toContain(`${Object.values(Objective).length} 種`);
     }

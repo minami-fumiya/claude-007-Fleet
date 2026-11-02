@@ -5,7 +5,7 @@ import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { theaterFacility, nationForwardBases } from '@/systems/BaseSystem';
-import { OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions } from '@/systems/ExpeditionSystem';
+import { OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions, expeditionProficiencyGain, expeditionTraining } from '@/systems/ExpeditionSystem';
 import { DORM_PROFICIENCY_CAP, DORM_PROFICIENCY_PER_HOUR, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
@@ -88,8 +88,10 @@ export class ExpeditionScene extends Phaser.Scene {
     // 前進遠征拠点 Lv2 (#373): a sea's expedition pays more.
     const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now, (e) => (e.theater && theaterFacility(p, e.theater, 'outpost') >= 2 ? OUTPOST_REWARD_MUL : 1));
     const ledger = recordLedger(recordLedger(p.ledger, 'expedition', addResources(c.gained, c.lost, -1), now), 'overflow', c.lost, now);
-    saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger }, [['expeditionDone', c.done]], now));
-    this.status = `遠征から帰還 (${c.done}): ${formatResources(c.gained)}`;
+    // 遠征の練成 (#426): the ships come home a little more practised.
+    const trained = expeditionTraining(p.proficiency, p.expeditions, now);
+    saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger, proficiency: trained.proficiency }, [['expeditionDone', c.done], ['expeditionProficiency', trained.gained]], now));
+    this.status = `遠征から帰還 (${c.done}): ${formatResources(c.gained)}${trained.gained > 0 ? `・熟練度 +${trained.gained}` : ''}`;
   }
 
   /** Ships free for an expedition or the dorm: owned, not sailing, docked, away or training. */
@@ -154,7 +156,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const line = run ? `出撃中: ${run.shipIds.map(short).join('・')}` : `${e.ships} 隻${this.needsText(e)}`;
       const lineText = this.track(this.add.text(x + 14, y + 36, line, textStyle(12, run ? Css.text : Css.muted)));
       fitText(lineText, CARD_W - 28);
-      this.track(this.add.text(x + 14, y + 58, formatResources(e.reward), textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
+      this.track(this.add.text(x + 14, y + 58, `${formatResources(e.reward)}・熟練度 +${expeditionProficiencyGain(e)}`, textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
       const by = y + L.cardH - (IS_PORTRAIT ? 26 : 22);
       const bh = IS_PORTRAIT ? 40 : 32;
       if (run) {

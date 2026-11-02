@@ -12,7 +12,8 @@ import type { IUpgradeData } from '@/types/Modifiers';
 
 describe('0.0.58 進行と経済', () => {
   it('morale rests up to 50 quickly, then on towards 100 a third as fast (#401)', () => {
-    expect(restedMorale(20, 100)).toBe(MORALE_REST);
+    // #426: back to 50 in an hour from 20.
+    expect(restedMorale(20, 60)).toBe(MORALE_REST);
     // 50 → ★ (70) in a little over an hour and a half.
     const toHigh = (MORALE_HIGH - MORALE_REST) / (0.3 / 3);
     expect(toHigh).toBeGreaterThan(90);

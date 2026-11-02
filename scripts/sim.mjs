@@ -148,7 +148,7 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   const { enemyNationFor, enemyShips, areaMode } = await import('/src/systems/CampaignSystem.ts');
   const curve = await import('/src/systems/DifficultyCurve.ts');
   const { RANKS } = await import('/src/systems/RankSystem.ts');
-  const { shipGrade, gradeAllowed, isRewardOnly } = await import('/src/systems/ShipyardSystem.ts');
+  const { shipGrade, gradeAllowed, isRewardOnly, buildTechFor } = await import('/src/systems/ShipyardSystem.ts');
   const { costCap, shipCost } = await import('/src/systems/FleetCost.ts');
   const data = (await import('/src/data/campaign.json')).default;
   const area = data.areas.find((a) => a.id === areaId);
@@ -161,9 +161,10 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   // 初期機 (#385): the first carrier models developed, as a player with carriers would have them.
   const { STARTER_AIRCRAFT } = await import('/src/systems/AircraftSystem.ts');
   save = { ...save, seenHelp: [...helps, 'BattleScene'], nations: { ...save.nations, [nation]: { ...save.nations[nation], merit: RANKS[rank.index].minMerit, rankFloor: rank.index, aircraftDev: STARTER_AIRCRAFT, airStart: true } } };
+  let tech = null;
   if (grown) {
     // The research the rank allows (#346), every branch.
-    const tech = (await import('/src/data/tech-tree.json')).default.tech.filter((n) => (n.rank ?? 0) <= rank.index && !(n.medal)).map((n) => n.id);
+    tech = (await import('/src/data/tech-tree.json')).default.tech.filter((n) => (n.rank ?? 0) <= rank.index && !(n.medal)).map((n) => n.id);
     save.nations[nation] = { ...save.nations[nation], research: tech };
   }
   ps.saveSave(save);
@@ -175,6 +176,9 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   const pool = registry.byNation(nation)
     // Real ships only: no planned ships, designs (#51) or other navies' copies (#368).
     .filter((s) => !s.fictional && !s.designed && !s.foreign && !isRewardOnly(s) && s.shipClass !== 'Submarine' && gradeAllowed(shipGrade(s), rank.index))
+    // A grown player has built only the kinds its research opens (#426): a kind whose build research comes after the
+    // rank is not in the fleet yet.
+    .filter((s) => !tech || !buildTechFor(s) || tech.includes(buildTechFor(s)))
     .sort((x, y) => curve.fleetPower([y]) - curve.fleetPower([x]));
   const guns = pool.filter((s) => s.shipClass !== 'Carrier');
   const carriers = pool.filter((s) => s.shipClass === 'Carrier').slice(0, Math.floor(slots / 3));

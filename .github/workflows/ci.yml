@@ -36,7 +36,8 @@ jobs:
   e2e:
     name: E2E (screens)
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # The suite grows with each version (106 tests in 0.0.61 took 23〜40 minutes on the runner).
+    timeout-minutes: 60
 
     steps:
       - name: Checkout

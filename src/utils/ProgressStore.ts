@@ -45,6 +45,7 @@ import { IFocusState, parseFocus } from '@/systems/NationFocusSystem';
 import type { IShipDesign } from '@/types/Design';
 import { parseDesigns } from '@/systems/DesignSystem';
 import { migrateFragments } from '@/systems/ForeignShipSystem';
+import { migrateResearch } from '@/systems/ResearchSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -177,6 +178,8 @@ export interface ISave {
   tutorial: ITutorialState;
   /** Screens whose first-visit help was shown (#61) */
   seenHelp: string[];
+  /** Screens whose help was read to its last page (#425); a help closed early stays 未読 in ヘルプ › 画面 */
+  helpRead: string[];
   /** Newest clock time the game has seen (#89): a clock set back gets no event */
   lastSeenAt: number;
   /** ゴールドとショップ (#183), shared by every nation */
@@ -216,7 +219,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
 }
 
 export function emptySave(): ISave {
-  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [], lastSeenAt: 0, wallet: emptyWallet() };
+  return { version: SAVE_VERSION, current: PLAYABLE_NATIONS[0] ?? Nation.IJN, nations: {}, record: emptyRecord(), tutorial: { step: 0, done: false }, seenHelp: [], helpRead: [], lastSeenAt: 0, wallet: emptyWallet() };
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +339,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     regenAt: isNum(data.regenAt) ? data.regenAt : 0,
     damage,
     docks,
-    research: strings(data.research),
+    research: migrateResearch(strings(data.research)),
     ships: [...new Set(strings(data.ships))],
     upgrades,
     // A save from before #55 had every researched upgrade without limit: it starts with one of each in hand.
@@ -571,6 +574,7 @@ export function migrateV1(data: Record<string, unknown>): ISave {
     record: parseRecord(data.record),
     tutorial: { step: 0, done: true },
     seenHelp: [...EXISTING_PLAYER_HELP],
+    helpRead: [],
     lastSeenAt: 0,
     wallet: emptyWallet(),
   };
@@ -594,6 +598,7 @@ function parseLatest(data: Record<string, unknown>): ISave {
     tutorial: parseTutorial(data.tutorial),
     // A save without the list is an existing player's: the screens they know are not explained again.
     seenHelp: Array.isArray(data.seenHelp) ? [...new Set(strings(data.seenHelp))] : [...EXISTING_PLAYER_HELP],
+    helpRead: [...new Set(strings(data.helpRead))],
     lastSeenAt: isNum(data.lastSeenAt) ? data.lastSeenAt : 0,
     wallet: parseWallet(data.wallet),
   };

@@ -15,7 +15,7 @@ import { EVENT_NAME, EventKind, eventHelp } from '@/systems/EventSystem';
 import { ShipClass } from '@/types/ShipClass';
 import { Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, UIButton } from '@/ui/components/UIKit';
-import { pageLabel, paginate } from '@/systems/ScreenHelp';
+import { pageLabel, paginate, SCREEN_HELP } from '@/systems/ScreenHelp';
 
 const P = IS_PORTRAIT ? { x: 16, y: 240, w: CANVAS_W - 32, h: CANVAS_H - 256 } : { x: 140, y: 150, w: 1000, h: 550 };
 const TABS_Y = IS_PORTRAIT ? 166 : 118;
@@ -82,10 +82,16 @@ const BATTLE_HELP: Array<[string, string]> = [
   ['実況と字幕', '戦闘の様子を声と字幕で伝える。音量・頻度・字幕は設定の「音」で変えられる。結果の画面の「戦闘ログ」で見返せる'],
 ];
 
-type Tab = 'controls' | 'classes' | 'formations' | 'objectives' | 'ranks' | 'battle' | 'events';
+type Tab = 'controls' | 'classes' | 'formations' | 'objectives' | 'ranks' | 'battle' | 'events' | 'screens';
 const TABS: Array<[Tab, string]> = [
-  ['controls', '操作'], ['classes', '艦種'], ['formations', '陣形'], ['objectives', '作戦目標'], ['ranks', '評価'], ['battle', '戦闘'], ['events', 'イベント'],
+  ['controls', '操作'], ['classes', '艦種'], ['formations', '陣形'], ['objectives', '作戦目標'], ['ranks', '評価'], ['battle', '戦闘'], ['events', 'イベント'], ['screens', '画面'],
 ];
+
+/** 画面 (#425): every screen's help, page by page, a screen not read to its end marked 未読. */
+function screenRows(): Array<[string, string]> {
+  const read = loadSave().helpRead;
+  return SCREEN_HELP.flatMap((h) => h.pages.map((pg, i): [string, string] => [`${h.title}${i === 0 && !read.includes(h.id) ? '  (未読)' : ''} › ${pg.title}`, pg.text]));
+}
 
 /** ヘルプ: controls, ship classes and operation objectives at a glance. Every battle also ends with the flagship rule. */
 export class HelpScene extends Phaser.Scene {
@@ -122,7 +128,7 @@ export class HelpScene extends Phaser.Scene {
   private refresh(): void {
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
-    // Seven tabs (#316): one row in landscape, two in portrait.
+    // Eight tabs (#316 #425): one row in landscape, two in portrait.
     const perRow = IS_PORTRAIT ? 4 : TABS.length;
     const bw = (P.w - 8 * (perRow - 1)) / perRow;
     const th = IS_PORTRAIT ? 44 : 44;
@@ -147,6 +153,8 @@ export class HelpScene extends Phaser.Scene {
               ? rankHelp()
               : this.tab === 'battle'
                 ? BATTLE_HELP
+                : this.tab === 'screens'
+                  ? screenRows()
                 : this.tab === 'events'
                   ? [...(Object.keys(EVENT_NAME) as EventKind[]).map((k): [string, string] => [EVENT_NAME[k], eventHelp(k)]), ['予定', '1 時間ごとに 1 つ開催 (同じものは続かない)。鎮守府の上の「予定」で先の予定を見られる'], ['任務', 'イベントごとに 10 件。その時間だけ進み、時間が変わると消える。6 件達成すると最後の 1 件 (勲章付き) が達成になる']]
                   : [...Object.values(Objective).map((o): [string, string] => [OBJECTIVE_LABEL[o], OBJECTIVE_HELP[o]]), ['共通', '旗艦が撃沈されると、どの作戦でも敗北。']];

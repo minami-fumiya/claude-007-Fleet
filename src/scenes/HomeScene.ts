@@ -38,7 +38,9 @@ import {
   activeQuests, addItems, claimableCount, isEventQuestFor, recordQuestEvent, QUESTS, formatItems, shortReward, claimQuest, isClaimable, nextReset, QUEST_KIND_LABEL, QUEST_KINDS, questBoard, QuestKind, questProgress, QUESTS_SHOWN,
   gameDay, QuestStatus, questStatus, refreshQuests, withQuestEvents,
 } from '@/systems/QuestSystem';
-import { MEDALS } from '@/systems/RecordSystem';
+import { medalProgress, MEDALS } from '@/systems/RecordSystem';
+import { medalContext } from '@/utils/MedalContext';
+import { researchRepairTimeMul } from '@/systems/ShipyardResearch';
 import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -102,6 +104,8 @@ interface IQuestRow {
   status: QuestStatus;
   /** The reward would not all fit under the holding cap (#221) */
   overflow?: boolean;
+  /** A promotion mission's medal (#426): the row opens it in 戦績 */
+  medal?: string;
 }
 
 export class HomeScene extends Phaser.Scene {
@@ -269,7 +273,8 @@ export class HomeScene extends Phaser.Scene {
     const x = (CANVAS_W - w) / 2;
     const y = Math.max(8, (CANVAS_H - h) / 2);
     add(addPanel(this, x, y, w, h, { radius: 24, fillAlpha: 0.96, glow: 0.8 }));
-    add(this.add.text(x + 24, y + 20, 'イベントの予定 (日本時間・1 時間ごと)', eyebrowStyle(11)));
+    // Short enough to clear the 今日 / 明日 buttons on a phone (#425); the hours are Japan time.
+    add(this.add.text(x + 24, y + 20, 'イベントの予定 (1 時間ごと)', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), ahead === 0 ? '今日のイベント' : '明日のイベント', displayStyle(IS_PORTRAIT ? 20 : 18)));
     const tw = IS_PORTRAIT ? 150 : 120;
     const bh = IS_PORTRAIT ? 48 : 36;
@@ -422,7 +427,7 @@ export class HomeScene extends Phaser.Scene {
       const tx = rx + 16;
       const textW = colW - 32 - bw - 12;
       add(this.add.text(tx, ry + 8, r.name, textStyle(15, claimed ? Css.dim : r.status === 'idle' ? Css.muted : Css.text, { fontStyle: 'bold' })));
-      add(this.add.text(tx + textW, ry + 12, `${Math.min(r.goal, r.value)} / ${r.goal}`, textStyle(12, color)).setOrigin(1, 0));
+      add(this.add.text(tx + textW, ry + 12, r.medal ? (claimed ? '取得済' : '未取得') : `${Math.min(r.goal, r.value)} / ${r.goal}`, textStyle(12, color)).setOrigin(1, 0));
       // Description and reward stay left of the status button (long weekly rewards ran under it in portrait).
       const fit = <T extends Phaser.GameObjects.Text>(t: T): T => (t.width > textW ? t.setScale(textW / t.width) : t);
       add(fit(this.add.text(tx, ry + (IS_PORTRAIT ? 38 : 32), r.text, textStyle(11, claimed ? Css.dim : Css.muted))));
@@ -438,9 +443,11 @@ export class HomeScene extends Phaser.Scene {
       const label = { claimable: claimLabel, progress: '進行中', idle: '未着手', claimed: '✓ 受取済' }[r.status];
       // Portrait: the button keeps to the top of the row, clear of the reward line.
       const btnH = IS_PORTRAIT ? rowH - 44 : rowH - 24;
-      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, IS_PORTRAIT ? ry + 10 + btnH / 2 : ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : label, () => this.claimQuest(r.id), {
-        variant: r.status === 'claimable' ? 'gold' : 'secondary', width: bw, height: btnH, fontSize: 14,
-      })).setEnabled(r.status === 'claimable' && tab !== 'rank');
+      // A promotion medal not held yet opens its card in 戦績 (#426).
+      const medalLink = tab === 'rank' && !claimed && r.medal !== undefined;
+      const btn = add(new UIButton(this, rx + colW - 12 - bw / 2, IS_PORTRAIT ? ry + 10 + btnH / 2 : ry + rowH / 2, tab === 'rank' && claimed ? '✓ 達成' : medalLink ? '勲章を見る ›' : label, () => (medalLink ? this.scene.start(SceneKeys.RECORD, { view: 'medals', medal: r.medal }) : this.claimQuest(r.id)), {
+        variant: r.status === 'claimable' ? 'gold' : medalLink ? 'primary' : 'secondary', width: bw, height: btnH, fontSize: medalLink ? 13 : 14,
+      })).setEnabled((r.status === 'claimable' && tab !== 'rank') || medalLink);
       if (claimed) btn.setAlpha(0.5);
     });
     if (rows.length === 0) add(this.add.text(x + w / 2, y + head + 40, '表示できる任務はありません', textStyle(14, Css.muted)).setOrigin(0.5, 0));
@@ -463,11 +470,18 @@ export class HomeScene extends Phaser.Scene {
   /** The promotion missions (#142) of the next rank only (#261), for the 昇進 tab (#158). */
   private rankMissionRows(progress: IProgress): IQuestRow[] {
     const next = rankOf(progress).index + 1;
+    const ctx = medalContext(loadSave());
     return (RANK_MISSIONS[next] ?? []).map((m) => {
-      const value = Math.min(m.goal, missionValue(progress, m));
+      // A medal mission (#426) shows what the medal asks and how far it is, and opens it in 戦績.
+      const medal = m.medal ? MEDALS.find((x) => x.id === m.medal) : undefined;
+      const held = medal ? progress.record.medals.includes(medal.id) : false;
+      const [mv, mg] = medal ? medalProgress(medal.id, progress.record, ctx) : [0, 1];
+      const value = medal ? (held ? 1 : mv / mg) : Math.min(m.goal, missionValue(progress, m));
       return {
-        id: `${next}_${m.medal ?? m.stat}`, name: `${RANKS[next].name}への昇進任務`, text: m.text, value, goal: m.goal, reward: '',
-        status: value >= m.goal ? 'claimed' : value > 0 ? 'progress' : 'idle',
+        id: `${next}_${m.medal ?? m.stat}`, name: `${RANKS[next].name}への昇進任務`,
+        text: medal ? `勲章「${medal.name}」: ${medal.description}${held ? '' : ` (${mv.toLocaleString()} / ${mg.toLocaleString()})`}` : m.text,
+        value: held ? 1 : value, goal: medal ? 1 : m.goal, reward: '', medal: medal?.id,
+        status: (medal ? held : value >= m.goal) ? 'claimed' : value > 0 ? 'progress' : 'idle',
       };
     });
   }
@@ -497,9 +511,10 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(x + 24, y + 20, '階級一覧', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), `現在: ${current.name}  ·  戦功 ${Math.floor(progress.merit ?? 0)}`, displayStyle(IS_PORTRAIT ? 20 : 18)));
     // コスト上限 (#406) next to the slots: the two limits a fleet must fit.
-    const cols = IS_PORTRAIT ? [0, 160, 265, 350, 445] : [0, 150, 250, 330, 420, 520];
+    // 艦隊 and 友軍 (#426): how many fleets sail together, and the most ally fleets in the rank's seas.
+    const cols = IS_PORTRAIT ? [0, 140, 235, 310, 385, 480, 555] : [0, 120, 205, 270, 335, 425, 490, 560];
     const hy = y + head - (IS_PORTRAIT ? 26 : 22);
-    const labels = ['階級', '必要戦功', '出撃枠', '建造', 'コスト上限', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
+    const labels = ['階級', '必要戦功', '出撃枠', '建造', 'コスト上限', '艦隊', '友軍', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
     labels.forEach((l, i) => add(this.add.text(x + 24 + cols[i], hy, l, textStyle(11, Css.muted))));
     rows.forEach((r, i) => {
       const ry = y + head + rowTop(i);
@@ -517,6 +532,8 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[4], ry + 4, String(r.costCap), textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[5], ry + 4, String(r.fleets), textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[6], ry + 4, r.allies > 0 ? `最大 ${r.allies}` : '—', textStyle(IS_PORTRAIT ? 14 : 13, css)));
       // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
       const missions = r.index === current.index + 1 ? missionLines(r.index, progress).map((m) => (m.startsWith('済') ? m : `任務: ${m}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
@@ -525,8 +542,8 @@ export class HomeScene extends Phaser.Scene {
       const captain = r.index >= CAPTAIN_PROMOTION_RANK && ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
       const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
-        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[5];
-        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[5];
+        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[7];
+        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[7];
         const color = missions.some((m) => m.startsWith('任務')) ? Css.cyan : css;
         if (next) {
           // Wrapped over two lines rather than shrunk.
@@ -796,7 +813,7 @@ export class HomeScene extends Phaser.Scene {
 
     // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
     const event = activeEffects();
-    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research);
     // Docks (#38), shared by repairs and builds since #211: a summary line, the next dock, then one scrolling list
     // with every ship in a dock, every build and every damaged ship, each on its own row (#297: no more "ほか n 隻").
     const docks = dockCount(progress);
@@ -809,7 +826,7 @@ export class HomeScene extends Phaser.Scene {
     const next = nextDock(progress);
     if (next) {
       const label = `第${docks + 1}ドック増設  ${formatResources(next.cost)}`;
-      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 14 : 8), next.state === 'rank' ? `第${docks + 1}ドック: ${next.rankName}に昇進すると増設できます` : label, textStyle(12, next.state === 'rank' ? Css.dim : Css.muted)).setOrigin(0, 0.5));
+      add(this.add.text(d.x + pad, y + (IS_PORTRAIT ? 14 : 8), next.state === 'rank' ? `第${docks + 1}ドック: ${next.rankName}に昇進すると増設できます` : label, textStyle(12, Css.muted)).setOrigin(0, 0.5));
       if (next.state !== 'rank') {
         add(new UIButton(this, d.x + d.w - pad - (IS_PORTRAIT ? 80 : 90), y + (IS_PORTRAIT ? 14 : 8), '増設', () => this.buildDock(), {
           variant: 'primary', width: IS_PORTRAIT ? 160 : 180, height: IS_PORTRAIT ? 40 : 28, fontSize: 13,
@@ -824,7 +841,7 @@ export class HomeScene extends Phaser.Scene {
     const noteText = damaged.length > 0
       ? `損傷艦 ${damaged.length} 隻。行をタップで入渠 (資材と時間は失った耐久で決まり、大きな艦ほど多い)`
       : progress.docks.length > 0 ? '入渠中の艦は、行をタップで高速修理 (高速修理材 1 個、なければ資材)' : '修理が必要な艦はいません';
-    const note = add(this.add.text(d.x + pad, y, noteText, textStyle(11, Css.dim, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
+    const note = add(this.add.text(d.x + pad, y, noteText, textStyle(11, Css.muted, { wordWrap: { width: d.w - pad * 2, useAdvancedWrap: true } })));
     y += note.height + 8;
 
     const list = new ScrollList(this, { x: d.x + pad - 4, y, w: d.w - pad * 2 + 8, h: d.y + d.h - 12 - y });
@@ -916,7 +933,7 @@ export class HomeScene extends Phaser.Scene {
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
     // Builds hold docks too (#211).
-    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass, buildsHere(progress).length) : null;
+    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research), ship.shipClass, buildsHere(progress).length) : null;
     if (!paid || !docked) return;
     saveProgress(withQuestEvents({ ...mergeFleetDocks(progress, { ...progress, ...docked }), resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();

@@ -27,7 +27,7 @@ import { supplyMul } from '@/systems/BaseSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
-import { MORALE_TIRED, MORALE_WARN, moraleLabel, moraleMood, moraleOf } from '@/systems/MoraleSystem';
+import { MORALE_TIRED, MORALE_WARN, moraleMood, moraleOf, moraleShort } from '@/systems/MoraleSystem';
 import { autoFleet } from '@/systems/AutoFleet';
 import { isFavorite, toggleFavorite } from '@/systems/FavoriteSystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
@@ -140,7 +140,7 @@ function builderLayout(slotCount: number, promotionHint: boolean): IBuilderLayou
   const slotRoom = L_FLEET_H - PANEL_HEADER_H - presetH - 8 - 14;
   return {
     ships: { x: 24, y: 92, w: 404, h: 512 },
-    shipItemH: 62,
+    shipItemH: 78,
     tabH: 30,
     filterH: 26,
     fleet: { x: 444, y: 92, w: 412, h: L_FLEET_H },
@@ -640,7 +640,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         onChange();
       }),
       // The sort row ends with a name search (#263).
-      sorts: row(y + h + rowGap, [...SORTS.map((k, i) => (i === 0 ? `並び: ${SORT_LABEL[k]}` : SORT_LABEL[k])), '名前で検索'], (i) => {
+      sorts: row(y + h + rowGap, [...SORTS.map((k, i) => (i === 0 ? `並び: ${SORT_LABEL[k]}` : SORT_LABEL[k])), IS_PORTRAIT ? '名前で検索' : '検索'], (i) => {
         if (i < SORTS.length) this.sort = SORTS[i];
         else {
           void askShipName(this.query, shipSearchNames(this.ships)).then((query) => {
@@ -662,7 +662,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     FleetBuilderScene.setToggle(c.filters, KIND_FILTERS.findIndex((k) => k.id === this.kindFilter));
     FleetBuilderScene.setToggle(c.sorts, SORTS.indexOf(this.sort));
     const search = c.sorts[SORTS.length];
-    search?.setLabel(this.query ? `検索: ${this.query}` : '名前で検索').setVariant(this.query ? 'primary' : 'secondary');
+    search?.setLabel(this.query ? `検索: ${this.query}` : IS_PORTRAIT ? '名前で検索' : '検索').setVariant(this.query ? 'primary' : 'secondary');
   }
 
   /** The kind filter, the sort and the name search (#263) over `ships`. */
@@ -730,19 +730,19 @@ export class FleetBuilderScene extends Phaser.Scene {
     // ★ お気に入り (#419): tapping the star's corner marks or unmarks the ship (see FAV_HIT).
     const fav = isFavorite(loadProgress().favorites, ship.id);
     const star = this.add.text(8, 4, fav ? '★' : '☆', textStyle(IS_PORTRAIT ? 22 : 16, fav ? Css.gold : Css.dim, { fontStyle: 'bold' }));
-    const name = this.add.text(statX, itemH * 0.12, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
+    const name = this.add.text(statX, itemH * 0.06, ship.name, textStyle(15, Css.text, { fontStyle: 'bold' }));
     const kc = kindColor(ship);
     const badge = addChip(this, 0, name.y + name.height / 2, kindShort(ship), kc.color, kc.css);
-    // The ship's sortie cost (#306) and morale (#54) next to its kind.
+    // The ship's sortie cost (#306) and morale (#54) on a line of their own under the name (#425: beside it they cut
+    // the name short, and a high morale's ★ ran into the stats).
     const p = loadProgress();
     const morale = moraleOf(p, ship.id, Date.now());
     const mood = moraleMood(morale);
-    const costChip = addChip(this, 0, name.y + name.height / 2, `コスト ${shipCost(ship, p.refits[ship.id] ?? 0)} · ${moraleLabel(morale)}`,
+    const costChip = addChip(this, statX, itemH * 0.36, `コスト ${shipCost(ship, p.refits[ship.id] ?? 0)} · ${moraleShort(morale)}`,
       mood === 'tired' ? Colors.danger : Colors.gold, mood === 'tired' ? Css.danger : Css.gold);
     // Long names drop their English part so the kind badge clears the + button.
-    fitName(name, ship.name, w - statX - plusR * 2 - 30 - chipWidth(badge) - chipWidth(costChip) - 16);
+    fitName(name, ship.name, w - statX - plusR * 2 - 30 - chipWidth(badge) - 16);
     badge.setX(statX + name.displayWidth + 10);
-    costChip.setX(badge.x + chipWidth(badge) + 6);
 
     const meters = this.add.graphics();
     const stats: Array<[string, number, number, number]> = [
@@ -753,8 +753,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     const statLabels: Phaser.GameObjects.Text[] = [];
     stats.forEach(([label, value, max, color], si) => {
       const mx = statX + si * statSpacing;
-      statLabels.push(this.add.text(mx, itemH * 0.5, `${label} ${value}`, textStyle(11, Css.muted)));
-      drawMeter(meters, mx, itemH * 0.8, statSpacing - 12, IS_PORTRAIT ? 8 : 5, value / max, color);
+      statLabels.push(this.add.text(mx, itemH * 0.52, `${label} ${value}`, textStyle(11, Css.muted)));
+      drawMeter(meters, mx, itemH * 0.86, statSpacing - 12, IS_PORTRAIT ? 8 : 5, value / max, color);
     });
 
     const end: Phaser.GameObjects.GameObject[] = [];
@@ -1628,7 +1628,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const m = moraleOf(loadProgress(), ship.id, Date.now());
     const mood = moraleMood(m);
     const [color, css] = mood === 'high' ? [Colors.gold, Css.gold] : mood === 'tired' ? [Colors.danger, Css.danger] : [Colors.rim, Css.muted];
-    return addChip(this, x, y, moraleLabel(m), color, css);
+    return addChip(this, x, y, moraleShort(m), color, css);
   }
 
   /** "改二 · 装備 2/3" as a chip (#395): gold once remodelled, plain before. */

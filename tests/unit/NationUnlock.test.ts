@@ -5,7 +5,8 @@ import { ALL_MISSION_MEDALS, ALL_MISSIONS_DONE } from '@/systems/RankSystem';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
 import campaignData from '@/data/campaign.json';
 
-const p = (merit: number, campaign: string[] = []) => ({ merit, campaign, rankFloor: 0, rankStats: ALL_MISSIONS_DONE });
+// No rank held yet (`rankFloor` absent): the rank follows the merit alone, as a save's held rank would.
+const p = (merit: number, campaign: string[] = []) => ({ merit, campaign, rankStats: ALL_MISSIONS_DONE });
 const MEDALS = { medals: ALL_MISSION_MEDALS };
 const open = (locks: ReturnType<typeof nationLocks>): Nation[] => PLAYABLE_NATIONS.filter((n) => locks[n].unlocked);
 

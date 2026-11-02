@@ -165,3 +165,36 @@ export function collectExpeditions(
 export function expeditionLength(minutes: number): string {
   return minutes >= 60 ? `${minutes / 60} 時間` : `${minutes} 分`;
 }
+
+/** 遠征の練成 (#426): proficiency an hour away, and the most an expedition trains a ship to (the dorm goes to 50). */
+export const EXPEDITION_PROFICIENCY_PER_HOUR = 3;
+export const EXPEDITION_PROFICIENCY_CAP = 40;
+
+/** What `exp` trains each ship it takes, at least 1 for the shortest (#426). */
+export function expeditionProficiencyGain(exp: Pick<IExpedition, 'minutes'>): number {
+  return Math.max(1, Math.round((exp.minutes / 60) * EXPEDITION_PROFICIENCY_PER_HOUR));
+}
+
+/**
+ * The ships of every expedition back by `now` gain proficiency (#426), up to EXPEDITION_PROFICIENCY_CAP (a ship already
+ * past it keeps what it has). Returns the new proficiencies and the points gained in all.
+ */
+export function expeditionTraining(
+  proficiency: Readonly<Record<string, number>>, runs: readonly IExpeditionRun[], now: number,
+): { proficiency: Record<string, number>; gained: number } {
+  const out = { ...proficiency };
+  let gained = 0;
+  for (const r of runs.filter((x) => x.endsAt <= now)) {
+    const exp = EXPEDITIONS.find((e) => e.id === r.id);
+    if (!exp) continue;
+    for (const id of r.shipIds) {
+      const have = out[id] ?? 0;
+      const add = Math.max(0, Math.min(expeditionProficiencyGain(exp), EXPEDITION_PROFICIENCY_CAP - have));
+      if (add > 0) {
+        out[id] = have + add;
+        gained += add;
+      }
+    }
+  }
+  return { proficiency: out, gained };
+}

@@ -554,7 +554,7 @@
       "name": "信濃 (Shinano)",
       "nation": "IJN",
       "shipClass": "Carrier",
-      "subtype": "ArmoredCarrier",
+      "subtype": "LargeCarrier",
       "hp": 570,
       "armor": 50,
       "speed": 135,
@@ -3972,7 +3972,7 @@
       "name": "改大鳳型 (Kai-Taiho)",
       "nation": "IJN",
       "shipClass": "Carrier",
-      "subtype": "ArmoredCarrier",
+      "subtype": "LargeCarrier",
       "hp": 565,
       "armor": 42,
       "speed": 152,
@@ -4067,6 +4067,50 @@
       "fictional": true,
       "description": "水中で高速を出す潜高型を大きくした計画の潜水艦。設計のみで終わった (計画艦)。",
       "year": 1946
+    },
+    {
+      "id": "mizuho",
+      "no": 1113001,
+      "name": "瑞穂 (Mizuho)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 390,
+      "armor": 15,
+      "speed": 110,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "mizuho",
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "水上機母艦。水上機 24 機を積み、機関はディーゼルだけで速力は遅かった。1942年5月、御前崎沖で潜水艦に撃沈された。",
+      "year": 1939
+    },
+    {
+      "id": "nisshin",
+      "no": 1113002,
+      "name": "日進 (Nisshin)",
+      "nation": "IJN",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 395,
+      "armor": 16,
+      "speed": 140,
+      "weapons": [
+        "12cm_gun"
+      ],
+      "spriteKey": "nisshin",
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "水上機母艦。甲標的 (特殊潜航艇) の母艦も兼ねた。1943年7月、ブーゲンビル島沖で空襲により沈没。",
+      "year": 1942
     }
   ]
 }

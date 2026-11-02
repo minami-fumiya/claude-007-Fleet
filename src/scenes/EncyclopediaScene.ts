@@ -331,7 +331,8 @@ export class EncyclopediaScene extends Phaser.Scene {
       });
     };
     // Row 0: what to look at, and owned-only / everything (#44).
-    const kinds = [...TABS.map((t) => TAB_LABEL[t]), this.ownedOnly ? '既知' : '全て'];
+    // Landscape's narrow tab reads 航空 (#425: 航空機 was cut with "…").
+    const kinds = [...TABS.map((t) => (!IS_PORTRAIT && t === 'aircraft' ? '航空' : TAB_LABEL[t])), this.ownedOnly ? '既知' : '全て'];
     tab(0, kinds, TABS.indexOf(this.tab), (i) => {
       if (i < TABS.length) this.tab = TABS[i];
       else {

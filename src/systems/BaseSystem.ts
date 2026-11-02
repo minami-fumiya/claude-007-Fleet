@@ -1,3 +1,4 @@
+import { researchBuildTimeMul } from './ShipyardResearch';
 import baseData from '@/data/bases.json';
 import campaignData from '@/data/campaign.json';
 import { ShipClass } from '@/types/ShipClass';
@@ -171,9 +172,10 @@ export function baseOfProgress(progress: IRankProgress & IBaseWorks & { nation: 
 }
 
 /** Build time from the workshops of every open base (#146 #281): 5% a level, summed, to DISCOUNT_CAP.buildTime. */
-export function fleetBuildTimeMul(progress: IRankProgress & IBaseWorks & { nation: string; facilities?: Facilities }): number {
+export function fleetBuildTimeMul(progress: IRankProgress & IBaseWorks & { nation: string; facilities?: Facilities; research?: string[] }): number {
   const levels = openBases(progress).reduce((sum, b) => sum + facilityLevel(progress.facilities ?? {}, b.id, 'workshop'), 0);
-  return Math.max(1 - DISCOUNT_CAP.buildTime, 1 - 0.05 * levels);
+  // 造船研究 (#426) on top of the workshops.
+  return Math.max(1 - DISCOUNT_CAP.buildTime, 1 - 0.05 * levels) * researchBuildTimeMul(progress.research);
 }
 
 export function buildMultiplier(base: IBase | undefined, shipClass: ShipClass): number {

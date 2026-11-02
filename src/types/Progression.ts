@@ -56,9 +56,12 @@ export type TechBranch =
   | 'asw'
   | 'night'
   | 'logistics'
+  /** 建造 (#426): every kind of ship in one branch of ten steps (水上艦 and 空母・潜水 until 0.0.60) */
   | 'shipbuilding'
-  /** 建造 (空母・潜水艦), split off the surface ships in 0.0.42 (#298): ten levels each */
-  | 'shipbuilding_air';
+  /** 造船 (#426): build cost, build time and repair time */
+  | 'shipyard'
+  /** 潜水 (#426): the submarines' dive endurance and submerged speed */
+  | 'submarine';
 
 /** One research project (src/data/tech-tree.json). */
 export interface ITechNode {
@@ -77,4 +80,8 @@ export interface ITechNode {
   effects: Partial<IShipModifiers>;
   /** Logistics: multiplies the natural resource regeneration (see `regenMultiplier`) */
   regenMul?: number;
+  /** 造船 (#426): multiply build cost, build time and repair time (see ShipyardResearch) */
+  buildCostMul?: number;
+  buildTimeMul?: number;
+  repairTimeMul?: number;
 }
