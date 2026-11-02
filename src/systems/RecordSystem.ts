@@ -466,6 +466,11 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('improve_max', '改修の極み章', 'base', [5, 10], (g) => `装備を 1 つ ★${g} まで改修する`, (_r, c) => c.equipStarsMax ?? 0),
   ...ladder('gun_swap', '換装章', 'base', [1, 10], (g) => `主砲の型を ${g} 回載せ替える`, (_r, c) => total(c, 'gunSwap')),
   ...ladder('foreign_plans', '他国の設計図章', 'battle', [5, 30, 100], (g) => `他国の設計図の断片を ${g} 個手に入れる`, (_r, c) => total(c, 'foreignFragment')),
+  // 0.0.61 (#426): the submarines' sinkings (the 潜水 research asks for them), the new 水上機母艦 and 大型空母.
+  ...ladder('sub_ace', '潜水艦戦章', 'battle', [5, 30], (g) => `潜水艦で敵艦を ${g} 隻沈める`, (_r, c) => total(c, 'subSink')),
+  ...ladder('tender_win', '水上機母艦章', 'battle', [10], (g) => `水上機母艦を入れた艦隊で ${g} 回勝つ`, (_r, c) => total(c, 'tenderWin')),
+  ...ladder('expedition_training', '遠征練成章', 'base', [100, 500], (g) => `遠征で熟練度を ${g} ためる`, (_r, c) => total(c, 'expeditionProficiency')),
+  ...ladder('large_carrier_flag', '大型空母章', 'battle', [10], (g) => `大型空母を旗艦にして ${g} 回勝つ`, (_r, c) => total(c, 'largeCarrierFlagWin')),
   // 旗艦の誉れ (#419): wins with a favourite as the flagship.
   ...ladder('favorite_flag', '旗艦の誉れ', 'battle', [10, 50], (g) => `お気に入りの艦を旗艦にして ${g} 回勝つ`, (_r, c) => total(c, 'favoriteFlagWin')),
   ...ladder('foreign_ship', '他国艦章', 'base', [1, 5, 10], (g) => `他国の艦を ${g} 隻建造する`, (_r, c) => c.foreignOwned ?? 0),

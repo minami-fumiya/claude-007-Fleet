@@ -960,6 +960,28 @@
       "fictional": true,
       "description": "東アフリカに置く植民地用の巡洋艦の計画。設計段階で終わった (計画艦)。",
       "year": 1944
+    },
+    {
+      "id": "giuseppe_miraglia",
+      "no": 1513001,
+      "name": "ジュゼッペ・ミラーリア (Giuseppe Miraglia)",
+      "nation": "RM",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 380,
+      "armor": 12,
+      "speed": 110,
+      "weapons": [
+        "100mm_m1928"
+      ],
+      "spriteKey": "giuseppe_miraglia",
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "貨客船から改装されたイタリア海軍の水上機母艦。水上機の輸送と訓練に使われ、大戦を生き残った。",
+      "year": 1927
     }
   ]
 }

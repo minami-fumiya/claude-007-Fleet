@@ -4,6 +4,7 @@ import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
 import { canAfford, pay, resources, RESOURCE_KEYS } from './ResourceSystem';
 import { FICTIONAL_TECH, MID_BUILD_TECH } from './ResearchSystem';
+import { researchBuildCostMul } from './ShipyardResearch';
 import { fragmentNeed, fragmentsOf } from './ForeignShipSystem';
 import { EMPTY_FOCUS, focusBuildMul, focusUnlocks, unlockingFocus } from './NationFocusSystem';
 import { GRADE_RANK, rankForGrade, rankOf } from './RankSystem';
@@ -22,12 +23,11 @@ import { BLUEPRINT_NEED } from './SuperweaponSystem';
  * construction research and by the admiral's rank against the ship's grade, or granted as first-clear rewards.
  */
 
-/** Research that allows building each class's plain kind; destroyers need none (the 中分類 have their own, #260). */
+/** Research that allows building each class's plain kind; destroyers and submarines need none (#260 #426). */
 export const BUILD_TECH: Partial<Record<ShipClass, string>> = {
   [ShipClass.Cruiser]: 'build_cruiser',
   [ShipClass.Battleship]: 'build_battleship',
   [ShipClass.Carrier]: 'build_carrier',
-  [ShipClass.Submarine]: 'build_submarine',
 };
 
 /** Heavy cruisers need their own research on top of the (light) cruiser one (#37). */
@@ -94,7 +94,8 @@ export function buildCost(ship: IShipData): IResources {
 export function buildCostAt(progress: Pick<IProgress, 'nation' | 'base' | 'campaign' | 'merit' | 'rankFloor' | 'basesOpen' | 'facilities'> & Partial<Pick<IProgress, 'research' | 'focus'>>, ship: IShipData): IResources {
   // Every open base's build discount adds up (#281); national focuses (#49) and the 架空艦計画 research cut it further.
   const planned = !isHistorical(ship) && (progress.research ?? []).includes(FICTIONAL_TECH) ? PLANNED_COST_MUL : 1;
-  return scaleCost(buildCost(ship), buildMultiplier(baseOfProgress(progress), ship.shipClass) * focusBuildMul(progress.nation, progress.focus ?? EMPTY_FOCUS) * planned);
+  // 造船研究 (#426) on top of the bases' discounts.
+  return scaleCost(buildCost(ship), buildMultiplier(baseOfProgress(progress), ship.shipClass) * focusBuildMul(progress.nation, progress.focus ?? EMPTY_FOCUS) * planned * researchBuildCostMul(progress.research));
 }
 
 /**
@@ -152,6 +153,15 @@ export function isRewardOnly(ship: Pick<IShipData, 'id' | 'nation'>): boolean {
   return rewardAreaOf(ship) !== undefined;
 }
 
+/**
+ * 報酬艦の同型艦 (#426, 案 A): once a ship of its class is in the fleet (a reward taken, or a sister built), a
+ * reward-only ship can be built like its sisters. The ship itself is still also a reward.
+ */
+export function rewardClassOpen(progress: Pick<IProgress, 'ships'>, roster: IShipData[], ship: IShipData): boolean {
+  const key = classKey(ship);
+  return ownedIds(progress, roster).some((id) => id !== ship.id && classKey(roster.find((s) => s.id === id) ?? { id }) === key);
+}
+
 export type BuildState = 'owned' | 'building' | 'reward' | 'blueprint' | 'research' | 'focus' | 'foreign' | 'rank' | 'sister' | 'kills' | 'medal' | 'resources' | 'dock' | 'ready';
 
 /**
@@ -185,6 +195,8 @@ export const MID_KILLS: Partial<Record<MidClass, { target: ShipClass; count: num
   LightCarrier: { target: ShipClass.Carrier, count: 2 },
   FleetCarrier: { target: ShipClass.Carrier, count: 5 },
   ArmoredCarrier: { target: ShipClass.Carrier, count: 15 },
+  LargeCarrier: { target: ShipClass.Carrier, count: 20 },
+  SeaplaneTender: { target: ShipClass.Submarine, count: 2 },
   Submarine: { target: ShipClass.Destroyer, count: 5 },
   LargeSubmarine: { target: ShipClass.Cruiser, count: 5 },
   SubmarineCarrier: { target: ShipClass.Carrier, count: 10 },
@@ -211,7 +223,7 @@ export function buildState(progress: IProgress, roster: IShipData[], ship: IShip
   if ((progress.builds ?? []).some((b) => b.shipId === ship.id)) return 'building';
   // A planned ship kept for a first clear can also be built once its national focus is done (#309).
   const opened = ship.fictional && focusUnlocks(progress.nation, progress.focus ?? EMPTY_FOCUS, ship.id);
-  if (isRewardOnly(ship) && !opened) return 'reward';
+  if (isRewardOnly(ship) && !opened && !rewardClassOpen(progress, roster, ship)) return 'reward';
   // Another navy's ship waits for enough of its plans (#368).
   if (ship.foreign && fragmentsOf(progress.foreignFragments, ship) < fragmentNeed(ship)) return 'foreign';
   // The own superweapon (#148) waits for its blueprint fragments (#150).

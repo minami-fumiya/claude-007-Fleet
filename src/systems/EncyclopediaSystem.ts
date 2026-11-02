@@ -79,6 +79,7 @@ const MOD_LABEL: Partial<Record<keyof IShipModifiers, string>> = {
   hpMul: '耐久', armorAdd: '装甲', speedMul: '速力', gunPowerMul: '砲火力', gunReloadMul: '主砲装填', torpedoPowerMul: '魚雷',
   visionMul: '視界', aaMul: '対空', airPowerMul: '航空攻撃', planesAdd: '艦載機', rearmMul: '再出撃準備', sonarMul: 'ソナー',
   depthChargeMul: '爆雷', nightAimMul: '夜間の照準誤差', nightVisionMul: '夜間の視界', evadeAdd: '回避',
+  diveMul: '潜航時間', submergedSpeedMul: '潜航速力',
 };
 
 /** "砲火力 +15%" / "主砲装填 −5%" / "装甲 +2" for every field that differs from no bonus. */

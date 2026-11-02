@@ -17,10 +17,10 @@ describe('士気 (#54)', () => {
     for (let i = 0; i < 3; i++) s = addMorale(s, ['a'], battleMoraleDelta(false, 'D'), T0);
     expect(moraleOf(s, 'a', T0)).toBe(5);
     expect(moraleMood(moraleOf(s, 'a', T0))).toBe('tired');
-    // About two hours and a half later it is rested again; then it rises a third as fast, up to 100.
+    // An hour and a half later it is rested again (#426: 0.5 a minute); then it rises 0.2 a minute, up to 100.
     expect(moraleOf(s, 'a', T0 + 60 * MIN)).toBeGreaterThan(5);
-    expect(moraleOf(s, 'a', T0 + 150 * MIN)).toBe(MORALE_REST);
-    expect(moraleOf(s, 'a', T0 + 210 * MIN)).toBe(MORALE_REST + 6);
+    expect(moraleOf(s, 'a', T0 + 90 * MIN)).toBe(MORALE_REST);
+    expect(moraleOf(s, 'a', T0 + 150 * MIN)).toBe(MORALE_REST + 12);
     expect(moraleOf(s, 'a', T0 + 999 * MIN)).toBe(100);
   });
 

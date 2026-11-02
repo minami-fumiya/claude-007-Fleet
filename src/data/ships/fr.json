@@ -797,6 +797,28 @@
       "fictional": true,
       "description": "1937 年に計画された大型の潜水艦。降伏で工事が止まった (未成艦)。",
       "year": 1942
+    },
+    {
+      "id": "commandant_teste",
+      "no": 1713001,
+      "name": "コマンダン・テスト (Commandant Teste)",
+      "nation": "FR",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 400,
+      "armor": 18,
+      "speed": 105,
+      "weapons": [
+        "130mm_m1932"
+      ],
+      "spriteKey": "commandant_teste",
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "フランス海軍の水上機母艦。水上機 26 機を積み、カタパルト 4 基を備えた。1942年11月、トゥーロンで自沈。",
+      "year": 1932
     }
   ]
 }

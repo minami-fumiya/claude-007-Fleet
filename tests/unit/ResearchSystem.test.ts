@@ -97,7 +97,7 @@ describe('tech tree breadth (Sprint 12)', () => {
 
   it('has every branch, each with exactly one project at every level 1〜10 (#298)', () => {
     expect(TECH_BRANCHES.map((b) => b.id)).toEqual([
-      'gunnery', 'torpedo', 'armor', 'damage_control', 'engine', 'radar', 'aa', 'aviation', 'asw', 'night', 'logistics', 'shipbuilding', 'shipbuilding_air',
+      'gunnery', 'torpedo', 'armor', 'damage_control', 'engine', 'radar', 'aa', 'aviation', 'asw', 'night', 'logistics', 'shipyard', 'shipbuilding', 'submarine',
     ]);
     for (const b of TECH_BRANCHES) {
       expect(branchNodes(tree, b.id).map((n) => n.level), b.id).toEqual(Array.from({ length: TECH_LEVELS }, (_, i) => i + 1));
@@ -162,26 +162,32 @@ describe('tech tree breadth (Sprint 12)', () => {
     }
   });
 
-  it('shipbuilding: one project per 中分類 in two branches, no stat effect but the larger air wing (#260 #298)', () => {
-    // By ship size (#341): the 水上艦 branch starts at 海防艦.
-    expect(node('build_escort').requires).toEqual([]);
-    expect(node(BUILD_TECH.cruiser).requires).toEqual(['build_aa_destroyer']);
-    expect(node(BUILD_TECH.submarine).requires).toEqual([]);
+  it('建造: ten steps, each opening a group of kinds, one rank apart; plain destroyers and submarines need none (#426)', () => {
+    const steps = branchNodes(tree, 'shipbuilding');
+    expect(steps.map((n) => n.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(steps.map((n) => n.id)).toEqual([
+      'build_escort', BUILD_TECH.cruiser, 'build_leader_destroyer', 'build_heavy_cruiser', 'build_light_carrier',
+      BUILD_TECH.carrier, BUILD_TECH.battleship, 'build_armored_carrier', 'build_fast_battleship', 'fictional_ships',
+    ]);
     for (const [mid, id] of Object.entries(MID_BUILD_TECH)) {
       if (!id) continue;
-      expect(['shipbuilding', 'shipbuilding_air'], mid).toContain(node(id).branch);
-      expect(node(id).effects, id).toEqual({});
+      expect(node(id).branch, mid).toBe('shipbuilding');
     }
-    expect(new Set(Object.values(MID_BUILD_TECH).filter(Boolean)).size).toBe(Object.values(MID_BUILD_TECH).filter(Boolean).length);
-    expect(researchModifiers(tree, Object.values(BUILD_TECH))).toEqual(researchModifiers(tree, []));
+    expect(MID_BUILD_TECH.Destroyer).toBeUndefined();
+    expect(MID_BUILD_TECH.Submarine).toBeUndefined();
+    // Only the 装甲空母 step carries a stat: the larger air wing (it was 艦載機の大型化).
+    expect(researchModifiers(tree, steps.map((n) => n.id)).planesAdd).toBe(1);
     const ship = (shipClass: ShipClass, subtype?: ShipSubtype) => ({ shipClass, subtype });
     expect(buildUnlocked(ship(ShipClass.Destroyer), [])).toBe(true);
+    expect(buildUnlocked(ship(ShipClass.Submarine), [])).toBe(true);
     expect(buildUnlocked(ship(ShipClass.Destroyer, ShipSubtype.Escort), [])).toBe(false);
-    expect(buildUnlocked(ship(ShipClass.Battleship), ['build_cruiser'])).toBe(false);
-    expect(buildUnlocked(ship(ShipClass.Battleship), ['build_battleship'])).toBe(true);
+    expect(buildUnlocked(ship(ShipClass.Cruiser, ShipSubtype.AACruiser), ['build_cruiser'])).toBe(true);
+    expect(buildUnlocked(ship(ShipClass.Battleship, ShipSubtype.BattleCruiser), ['build_battleship'])).toBe(true);
     expect(buildUnlocked(ship(ShipClass.Battleship, ShipSubtype.FastBattleship), ['build_battleship'])).toBe(false);
+    expect(buildUnlocked(ship(ShipClass.Carrier, ShipSubtype.SeaplaneTender), ['build_light_carrier'])).toBe(true);
+    expect(buildUnlocked(ship(ShipClass.Carrier, ShipSubtype.LargeCarrier), ['build_armored_carrier'])).toBe(false);
     // Carriers come before the air research (#85).
-    expect(node('aviation_1').requires).toContain('build_escort_carrier');
+    expect(node('aviation_1').requires).toContain('build_light_carrier');
   });
 
   it('logistics research multiplies resource regeneration', () => {

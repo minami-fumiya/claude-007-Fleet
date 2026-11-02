@@ -15,7 +15,7 @@ const MID_COST: Partial<Record<string, number>> = {
   Destroyer: 2, [ShipSubtype.EscortDestroyer]: 2, [ShipSubtype.LeaderDestroyer]: 2, [ShipSubtype.AADestroyer]: 2,
   Submarine: 2, [ShipSubtype.LargeSubmarine]: 2, [ShipSubtype.SubmarineCarrier]: 3,
   [ShipSubtype.LightCruiser]: 3, [ShipSubtype.AACruiser]: 3, [ShipSubtype.HeavyCruiser]: 4,
-  [ShipSubtype.EscortCarrier]: 3, [ShipSubtype.LightCarrier]: 4, FleetCarrier: 5, [ShipSubtype.ArmoredCarrier]: 6,
+  [ShipSubtype.SeaplaneTender]: 2, [ShipSubtype.EscortCarrier]: 3, [ShipSubtype.LightCarrier]: 4, FleetCarrier: 5, [ShipSubtype.ArmoredCarrier]: 6, [ShipSubtype.LargeCarrier]: 6,
   Battleship: 5, [ShipSubtype.FastBattleship]: 5, [ShipSubtype.BattleCruiser]: 5, [ShipSubtype.AviationBattleship]: 5,
 };
 
@@ -36,7 +36,7 @@ export function remodelCost(stage: number): number {
  */
 export function shipCost(ship: Pick<IShipData, 'shipClass' | 'subtype' | 'fictional'> & Partial<IShipData>, stage = 0): number {
   const base = MID_COST[midClass(ship)] ?? 3;
-  const big = ship.shipClass === ShipClass.Battleship || midClass(ship) === 'FleetCarrier' || ship.subtype === ShipSubtype.ArmoredCarrier;
+  const big = ship.shipClass === ShipClass.Battleship || midClass(ship) === 'FleetCarrier' || ship.subtype === ShipSubtype.ArmoredCarrier || ship.subtype === ShipSubtype.LargeCarrier;
   const grade = big && ship.hp !== undefined ? Math.max(0, shipGrade(ship as IShipData) - 2) : 0;
   return base + grade + (ship.fictional ? FICTIONAL_COST : 0) + remodelCost(stage);
 }

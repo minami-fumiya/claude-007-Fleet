@@ -77,8 +77,10 @@ describe('balance', () => {
 
   it('orders hull strength by class: battleship > carrier > cruiser > destroyer > submarine', () => {
     const order = [ShipClass.Battleship, ShipClass.Carrier, ShipClass.Cruiser, ShipClass.Destroyer, ShipClass.Submarine];
+    // 水上機母艦 (#426) are carriers in name only: light tenders of a few seaplanes, left out of the order.
+    const hulls = (c: ShipClass) => of(c).filter((s) => s.subtype !== ShipSubtype.SeaplaneTender);
     for (let i = 0; i < order.length - 1; i++) {
-      const weakestBig = Math.min(...of(order[i]).map((s) => s.hp));
+      const weakestBig = Math.min(...hulls(order[i]).map((s) => s.hp));
       const strongestSmall = Math.max(...of(order[i + 1]).map((s) => s.hp));
       expect(weakestBig, `${order[i]} > ${order[i + 1]}`).toBeGreaterThan(strongestSmall);
     }

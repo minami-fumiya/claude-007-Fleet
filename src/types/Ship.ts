@@ -32,6 +32,10 @@ export enum ShipSubtype {
   LargeSubmarine = 'LargeSubmarine',
   /** 潜水空母 (#260): I-400 */
   SubmarineCarrier = 'SubmarineCarrier',
+  /** 水上機母艦 (#426): a tender of seaplanes (瑞穂, Curtiss, Commandant Teste); a small air wing, slow and lightly built */
+  SeaplaneTender = 'SeaplaneTender',
+  /** 大型空母 (#426): the largest carriers (信濃, Midway, Malta), opened last by research */
+  LargeCarrier = 'LargeCarrier',
 }
 
 export const SUBTYPE_JA: Record<ShipSubtype, string> = {
@@ -48,6 +52,8 @@ export const SUBTYPE_JA: Record<ShipSubtype, string> = {
   [ShipSubtype.EscortCarrier]: '護衛空母',
   [ShipSubtype.ArmoredCarrier]: '装甲空母',
   [ShipSubtype.Escort]: '海防艦',
+  [ShipSubtype.SeaplaneTender]: '水上機母艦',
+  [ShipSubtype.LargeCarrier]: '大型空母',
   [ShipSubtype.LargeSubmarine]: '大型潜水艦',
   [ShipSubtype.SubmarineCarrier]: '潜水空母',
 };

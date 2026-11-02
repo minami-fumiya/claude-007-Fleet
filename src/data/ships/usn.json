@@ -301,7 +301,7 @@
       "name": "ミッドウェイ (Midway)",
       "nation": "USN",
       "shipClass": "Carrier",
-      "subtype": "ArmoredCarrier",
+      "subtype": "LargeCarrier",
       "hp": 575,
       "armor": 36,
       "speed": 155,
@@ -1339,7 +1339,7 @@
       "name": "フランクリン・D・ルーズベルト (Franklin D. Roosevelt)",
       "nation": "USN",
       "shipClass": "Carrier",
-      "subtype": "ArmoredCarrier",
+      "subtype": "LargeCarrier",
       "hp": 575,
       "armor": 36,
       "speed": 155,
@@ -4117,6 +4117,28 @@
       "fictional": true,
       "description": "6 インチ両用砲を持つ大型軽巡洋艦。戦争中に起工され、完成は戦後になった (未成艦)。",
       "year": 1946
+    },
+    {
+      "id": "curtiss",
+      "no": 1213001,
+      "name": "カーチス (Curtiss)",
+      "nation": "USN",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 395,
+      "armor": 15,
+      "speed": 120,
+      "weapons": [
+        "5in_38"
+      ],
+      "spriteKey": "curtiss",
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "カーチス級水上機母艦の 1 番艦。真珠湾で損傷したが、太平洋で飛行艇の部隊を支え続けた。",
+      "year": 1940
     }
   ]
 }

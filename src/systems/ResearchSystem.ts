@@ -23,8 +23,9 @@ export const TECH_BRANCHES: ReadonlyArray<{ id: TechBranch; name: string }> = [
   { id: 'asw', name: '対潜' },
   { id: 'night', name: '夜戦' },
   { id: 'logistics', name: '補給' },
-  { id: 'shipbuilding', name: '水上艦' },
-  { id: 'shipbuilding_air', name: '空母・潜水' },
+  { id: 'shipyard', name: '造船' },
+  { id: 'shipbuilding', name: '建造' },
+  { id: 'submarine', name: '潜水' },
 ];
 
 /**
@@ -68,34 +69,63 @@ export const BUILD_TECH = {
   cruiser: 'build_cruiser',
   battleship: 'build_battleship',
   carrier: 'build_carrier',
-  submarine: 'build_submarine',
 } as const;
 
 /**
- * Research needed to build each 中分類 (#260 #298): one project per kind in the two shipbuilding branches; plain
- * destroyers need none.
+ * Research needed to build each 中分類 (#260 #298 #426): the 建造 branch's ten steps, each opening a group of kinds
+ * (小型艦, 巡洋艦, 大型駆逐艦・大型潜水艦, 重巡, 小型空母, 正規空母, 戦艦, 装甲空母・航空戦艦, 高速戦艦, 大型空母). Plain
+ * destroyers and submarines need none.
  */
 export const MID_BUILD_TECH: Record<MidClass, string | undefined> = {
   Battleship: BUILD_TECH.battleship,
   [ShipSubtype.FastBattleship]: 'build_fast_battleship',
-  [ShipSubtype.BattleCruiser]: 'build_battlecruiser',
-  [ShipSubtype.AviationBattleship]: 'build_aviation_battleship',
+  [ShipSubtype.BattleCruiser]: BUILD_TECH.battleship,
+  [ShipSubtype.AviationBattleship]: 'build_armored_carrier',
   [ShipSubtype.HeavyCruiser]: 'build_heavy_cruiser',
   [ShipSubtype.LightCruiser]: BUILD_TECH.cruiser,
-  [ShipSubtype.AACruiser]: 'build_aa_cruiser',
+  [ShipSubtype.AACruiser]: BUILD_TECH.cruiser,
   Destroyer: undefined,
   [ShipSubtype.LeaderDestroyer]: 'build_leader_destroyer',
-  [ShipSubtype.AADestroyer]: 'build_aa_destroyer',
-  [ShipSubtype.EscortDestroyer]: 'build_escort_destroyer',
+  [ShipSubtype.AADestroyer]: 'build_leader_destroyer',
+  [ShipSubtype.EscortDestroyer]: 'build_escort',
   [ShipSubtype.Escort]: 'build_escort',
   FleetCarrier: BUILD_TECH.carrier,
   [ShipSubtype.ArmoredCarrier]: 'build_armored_carrier',
+  [ShipSubtype.LargeCarrier]: 'fictional_ships',
   [ShipSubtype.LightCarrier]: 'build_light_carrier',
-  [ShipSubtype.EscortCarrier]: 'build_escort_carrier',
-  Submarine: BUILD_TECH.submarine,
-  [ShipSubtype.LargeSubmarine]: 'build_large_submarine',
-  [ShipSubtype.SubmarineCarrier]: 'build_submarine_carrier',
+  [ShipSubtype.EscortCarrier]: 'build_light_carrier',
+  [ShipSubtype.SeaplaneTender]: 'build_light_carrier',
+  Submarine: undefined,
+  [ShipSubtype.LargeSubmarine]: 'build_leader_destroyer',
+  [ShipSubtype.SubmarineCarrier]: 'build_leader_destroyer',
 };
+
+/**
+ * The projects the 0.0.61 建造 branch folded into others (#426): a save that finished one holds its new home, so a kind
+ * it could build stays buildable. 潜水艦 no longer needs research.
+ */
+const FOLDED_RESEARCH: Record<string, string | null> = {
+  build_escort_destroyer: 'build_escort',
+  build_aa_destroyer: 'build_leader_destroyer',
+  build_large_submarine: 'build_leader_destroyer',
+  build_submarine_carrier: 'build_leader_destroyer',
+  build_aa_cruiser: 'build_cruiser',
+  build_battlecruiser: 'build_battleship',
+  build_escort_carrier: 'build_light_carrier',
+  build_aviation_battleship: 'build_armored_carrier',
+  carrier_aircraft: 'build_armored_carrier',
+  build_submarine: null,
+};
+
+/** A save's research list with the folded projects read as their new homes (#426). */
+export function migrateResearch(done: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const id of done) {
+    const to = id in FOLDED_RESEARCH ? FOLDED_RESEARCH[id] : id;
+    if (to && !out.includes(to)) out.push(to);
+  }
+  return out;
+}
 
 /** Whether a ship of this kind may be built with `done` research. */
 export function buildUnlocked(ship: Pick<IShipData, 'shipClass' | 'subtype'>, done: string[]): boolean {

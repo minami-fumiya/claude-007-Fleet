@@ -171,6 +171,8 @@ const CLASS_SPRITES: Record<ShipClass, { w: number; h: number; draw: Draw }> = {
 const SUBTYPE_SCALE: Partial<Record<ShipSubtype, number>> = {
   [ShipSubtype.LightCarrier]: 0.88,
   [ShipSubtype.EscortCarrier]: 0.8,
+  [ShipSubtype.SeaplaneTender]: 0.74,
+  [ShipSubtype.LargeCarrier]: 1.08,
   [ShipSubtype.Escort]: 0.86,
 };
 

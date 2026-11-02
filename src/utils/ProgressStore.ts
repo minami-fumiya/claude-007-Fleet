@@ -45,6 +45,7 @@ import { IFocusState, parseFocus } from '@/systems/NationFocusSystem';
 import type { IShipDesign } from '@/types/Design';
 import { parseDesigns } from '@/systems/DesignSystem';
 import { migrateFragments } from '@/systems/ForeignShipSystem';
+import { migrateResearch } from '@/systems/ResearchSystem';
 
 export const STORAGE_KEY = 'ww2fleet.progress.v2';
 /** The v1 key is read (never written or deleted) to migrate old saves. */
@@ -336,7 +337,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     regenAt: isNum(data.regenAt) ? data.regenAt : 0,
     damage,
     docks,
-    research: strings(data.research),
+    research: migrateResearch(strings(data.research)),
     ships: [...new Set(strings(data.ships))],
     upgrades,
     // A save from before #55 had every researched upgrade without limit: it starts with one of each in hand.

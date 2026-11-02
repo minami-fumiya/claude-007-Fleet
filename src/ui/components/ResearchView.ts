@@ -16,6 +16,7 @@ import { describeModifiers } from '@/systems/CustomizationSystem';
 import { medalName, researchMedal } from '@/systems/MedalGate';
 import { canAfford, formatResources, scaleCost } from '@/systems/ResourceSystem';
 import { RANKS } from '@/systems/RankSystem';
+import { shipyardLines } from '@/systems/ShipyardResearch';
 import { Colors, Css, eyebrowStyle, textStyle } from '@/ui/theme';
 import { drawPanel, makeClickable, UIButton } from '@/ui/components/UIKit';
 
@@ -27,7 +28,7 @@ export interface IResearchViewArea {
 }
 
 /** Tabs per row: one row of 13 in landscape, two rows of 7 in portrait. */
-const TAB_COLS = IS_PORTRAIT ? 7 : 13;
+const TAB_COLS = IS_PORTRAIT ? 7 : 14;
 const TAB_H = IS_PORTRAIT ? 58 : 44;
 const TAB_GAP = IS_PORTRAIT ? 6 : 8;
 /** Node cards: ten levels a branch (#298) — two columns of five in portrait, five columns of two in landscape. */
@@ -224,8 +225,10 @@ export class ResearchView {
     if (lastBranch === 'logistics') {
       const m = regenMultiplier(finished.map((n) => n.id), this.tree);
       effect = m !== 1 ? [`資源の自然回復 ×${m.toFixed(2)}`] : [];
-    } else if (lastBranch === 'shipbuilding' || lastBranch === 'shipbuilding_air') {
+    } else if (lastBranch === 'shipbuilding') {
       effect = finished.map((n) => n.name);
+    } else if (lastBranch === 'shipyard') {
+      effect = shipyardLines(finished.map((n) => n.id), this.tree);
     } else {
       effect = describeModifiers(researchModifiers(this.tree, finished.map((n) => n.id)));
     }

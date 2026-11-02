@@ -1678,7 +1678,8 @@
       },
       "fictional": true,
       "description": "英国で最大となるはずだった大型空母。4 隻が発注されたが、終戦で取り消された (計画艦)。",
-      "year": 1947
+      "year": 1947,
+      "subtype": "LargeCarrier"
     },
     {
       "id": "audacious",
@@ -1759,6 +1760,28 @@
       "fictional": true,
       "description": "6 インチ砲 12 門を持つ大型巡洋艦の計画。終戦で取り消された (計画艦)。",
       "year": 1946
+    },
+    {
+      "id": "albatross",
+      "no": 1413001,
+      "name": "アルバトロス (Albatross)",
+      "nation": "RN",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 380,
+      "armor": 14,
+      "speed": 110,
+      "weapons": [
+        "4in_mk16"
+      ],
+      "spriteKey": "albatross",
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      },
+      "description": "オーストラリア海軍が建造し、のちに英海軍が水上機母艦として使った艦。大戦では船団の護衛や修理艦として働いた。",
+      "year": 1928
     }
   ]
 }

@@ -35,10 +35,13 @@ export const RESEARCH_MEDALS: Readonly<Record<string, string>> = {
   night_10: 'night_fighter_2',
   logistics_5: 'shipwright_2',
   logistics_10: 'build_done_2',
-  build_cruiser: 'cruiser_slayer',
-  build_fast_battleship: 'battleship_slayer',
+  // 建造 (#426): the small carriers at Lv5, the largest carriers at Lv10.
   build_light_carrier: 'carrier_slayer',
   fictional_ships: 'ace',
+  shipyard_5: 'shipwright',
+  shipyard_10: 'build_done',
+  submarine_5: 'sub_ace',
+  submarine_10: 'sub_ace_2',
 };
 
 /** Ship grade from which battleships and carriers need their class's sinking medal. */

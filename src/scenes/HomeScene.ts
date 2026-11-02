@@ -40,6 +40,7 @@ import {
 } from '@/systems/QuestSystem';
 import { medalProgress, MEDALS } from '@/systems/RecordSystem';
 import { medalContext } from '@/utils/MedalContext';
+import { researchRepairTimeMul } from '@/systems/ShipyardResearch';
 import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -509,9 +510,10 @@ export class HomeScene extends Phaser.Scene {
     add(this.add.text(x + 24, y + 20, '階級一覧', eyebrowStyle(11)));
     add(this.add.text(x + 24, y + (IS_PORTRAIT ? 44 : 40), `現在: ${current.name}  ·  戦功 ${Math.floor(progress.merit ?? 0)}`, displayStyle(IS_PORTRAIT ? 20 : 18)));
     // コスト上限 (#406) next to the slots: the two limits a fleet must fit.
-    const cols = IS_PORTRAIT ? [0, 160, 265, 350, 445] : [0, 150, 250, 330, 420, 520];
+    // 艦隊 and 友軍 (#426): how many fleets sail together, and the most ally fleets in the rank's seas.
+    const cols = IS_PORTRAIT ? [0, 140, 235, 310, 385, 480, 555] : [0, 120, 205, 270, 335, 425, 490, 560];
     const hy = y + head - (IS_PORTRAIT ? 26 : 22);
-    const labels = ['階級', '必要戦功', '出撃枠', '建造', 'コスト上限', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
+    const labels = ['階級', '必要戦功', '出撃枠', '建造', 'コスト上限', '艦隊', '友軍', ...(IS_PORTRAIT ? [] : ['解放されるもの'])];
     labels.forEach((l, i) => add(this.add.text(x + 24 + cols[i], hy, l, textStyle(11, Css.muted))));
     rows.forEach((r, i) => {
       const ry = y + head + rowTop(i);
@@ -529,6 +531,8 @@ export class HomeScene extends Phaser.Scene {
       add(this.add.text(x + 24 + cols[2], ry + 4, `${r.slots} 隻`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[3], ry + 4, `格 ${r.grade}`, textStyle(IS_PORTRAIT ? 14 : 13, css)));
       add(this.add.text(x + 24 + cols[4], ry + 4, String(r.costCap), textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[5], ry + 4, String(r.fleets), textStyle(IS_PORTRAIT ? 14 : 13, css)));
+      add(this.add.text(x + 24 + cols[6], ry + 4, r.allies > 0 ? `最大 ${r.allies}` : '—', textStyle(IS_PORTRAIT ? 14 : 13, css)));
       // Promotion missions (#142): only the next rank's (#261), done (✓) or how far along.
       const missions = r.index === current.index + 1 ? missionLines(r.index, progress).map((m) => (m.startsWith('済') ? m : `任務: ${m}`)) : [];
       // Each promotion ahead brings a captain while any is left to join (#179).
@@ -537,8 +541,8 @@ export class HomeScene extends Phaser.Scene {
       const captain = r.index >= CAPTAIN_PROMOTION_RANK && ahead > 0 && ahead <= captainsLeft(progress.nation, progress.captains) ? '艦長 +1' : '';
       const extra = [...missions, r.unlocks, captain].filter((t) => t).join('  ·  ');
       if (extra) {
-        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[5];
-        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[5];
+        const ux = IS_PORTRAIT ? x + 24 : x + 24 + cols[7];
+        const room = IS_PORTRAIT ? w - 48 : w - 48 - cols[7];
         const color = missions.some((m) => m.startsWith('任務')) ? Css.cyan : css;
         if (next) {
           // Wrapped over two lines rather than shrunk.
@@ -808,7 +812,7 @@ export class HomeScene extends Phaser.Scene {
 
     // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
     const event = activeEffects();
-    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul;
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research);
     // Docks (#38), shared by repairs and builds since #211: a summary line, the next dock, then one scrolling list
     // with every ship in a dock, every build and every damaged ship, each on its own row (#297: no more "ほか n 隻").
     const docks = dockCount(progress);
@@ -928,7 +932,7 @@ export class HomeScene extends Phaser.Scene {
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
     // Builds hold docks too (#211).
-    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul, ship.shipClass, buildsHere(progress).length) : null;
+    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research), ship.shipClass, buildsHere(progress).length) : null;
     if (!paid || !docked) return;
     saveProgress(withQuestEvents({ ...mergeFleetDocks(progress, { ...progress, ...docked }), resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();

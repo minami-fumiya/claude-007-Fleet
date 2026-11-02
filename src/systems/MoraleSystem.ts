@@ -12,13 +12,16 @@ export const MORALE_SORTIE = -15;
 /** A win, and more for an S */
 export const MORALE_WIN = 8;
 export const MORALE_S = 12;
-/** Points a minute back towards MORALE_REST (a tired ship is rested in about two hours) */
-export const MORALE_PER_MINUTE = 0.3;
 /**
- * Above MORALE_REST time keeps lifting the crew up to MORALE_MAX, a third as fast (#401): 50 → 70 (★) in a little over
- * an hour and a half, so キラキラ is still worth a win or a 給糧艦.
+ * Points a minute back towards MORALE_REST (#426: 0.3 → 0.5): one sortie's 15 is back in half an hour, a tired ship
+ * (20) rested in an hour.
  */
-export const MORALE_HIGH_PER_MINUTE = MORALE_PER_MINUTE / 3;
+export const MORALE_PER_MINUTE = 0.5;
+/**
+ * Above MORALE_REST time keeps lifting the crew up to MORALE_MAX, more slowly (#401; #426: 0.1 → 0.2): 50 → 70 (★) in
+ * 100 minutes, so キラキラ is still worth a win or a 給糧艦.
+ */
+export const MORALE_HIGH_PER_MINUTE = 0.2;
 /** At or above: キラキラ. Below: 疲労; below MORALE_WARN the fleet builder warns. */
 export const MORALE_HIGH = 70;
 export const MORALE_TIRED = 30;
