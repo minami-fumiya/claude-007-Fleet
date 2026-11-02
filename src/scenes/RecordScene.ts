@@ -46,8 +46,19 @@ export class RecordScene extends Phaser.Scene {
     super({ key: SceneKeys.RECORD });
   }
 
-  init(data?: { view?: RecordView }): void {
+  /** A medal to show (#426: a promotion mission's medal opens here, its category and page, the card outlined) */
+  private focusMedal: string | null = null;
+
+  init(data?: { view?: RecordView; medal?: string }): void {
     this.view = data?.view ?? 'medals';
+    this.focusMedal = data?.medal ?? null;
+    const m = this.focusMedal ? MEDALS.find((x) => x.id === this.focusMedal) : undefined;
+    if (m) {
+      this.view = 'medals';
+      this.medalCategory = m.category;
+      const perPage = 5 * L.medalCols;
+      this.medalPage = Math.floor(MEDALS.filter((x) => x.category === m.category).findIndex((x) => x.id === m.id) / perPage);
+    }
   }
 
   create(): void {
@@ -356,8 +367,9 @@ export class RecordScene extends Phaser.Scene {
       const on = earned.includes(m.id);
       const x = p.x + 22 + (i % L.medalCols) * (cw + gap);
       const y = gridTop + Math.floor(i / L.medalCols) * (ch + gap);
+      const focus = m.id === this.focusMedal;
       this.track(drawPanel(this.add.graphics(), x, y, cw, ch, {
-        radius: 14, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.35, rimAlpha: on ? 0.8 : 0.12, glow: on ? 0.8 : 0,
+        radius: 14, fill: on ? Colors.panelHi : Colors.panel, fillAlpha: on ? 0.9 : 0.35, rim: focus ? Colors.gold : undefined, rimAlpha: focus ? 1 : on ? 0.8 : 0.12, glow: on || focus ? 0.8 : 0,
       }));
       const g = this.track(this.add.graphics());
       const cx = x + 28;
@@ -369,7 +381,7 @@ export class RecordScene extends Phaser.Scene {
       const tx = x + 52;
       const tw = cw - 62;
       this.track(this.add.text(tx, y + 8, m.name, textStyle(14, on ? Css.text : Css.muted, { fontStyle: 'bold' })));
-      this.track(this.add.text(tx, y + (IS_PORTRAIT ? 34 : 30), m.description, textStyle(11, on ? Css.muted : Css.dim)));
+      this.track(this.add.text(tx, y + (IS_PORTRAIT ? 34 : 30), m.description, textStyle(11, on ? Css.text : Css.muted)));
       // What the medal opens (#169): as many as fit the card, then "ほか n 件".
       const opens = unlocksOf(m.id);
       const items = [...opens.research.map((id) => TECH_TREE.find((n) => n.id === id)?.name ?? id), ...opens.other];

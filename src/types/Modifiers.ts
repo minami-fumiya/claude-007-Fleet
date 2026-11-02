@@ -28,6 +28,10 @@ export interface IShipModifiers {
   evadeAdd: number;
   /** Damage control (#48): chance and length of fires and flooding (lower is better) */
   fireFloodMul: number;
+  /** 潜水 (#426): how long a submarine stays under (its air supply) */
+  diveMul: number;
+  /** 潜水 (#426): a submarine's speed under water */
+  submergedSpeedMul: number;
 }
 
 export const NO_MODIFIERS: IShipModifiers = {
@@ -48,6 +52,8 @@ export const NO_MODIFIERS: IShipModifiers = {
   nightVisionMul: 1,
   evadeAdd: 0,
   fireFloodMul: 1,
+  diveMul: 1,
+  submergedSpeedMul: 1,
 };
 
 /** Fields that are added when modifiers combine; every other field multiplies. */

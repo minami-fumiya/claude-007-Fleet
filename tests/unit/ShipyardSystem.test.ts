@@ -84,10 +84,10 @@ describe('ShipyardSystem (#18 / #29)', () => {
     }
   });
 
-  it('class research gates (build_battleship needs build_battlecruiser) exist in the tech tree', () => {
+  it('class research gates (build_battleship needs build_carrier, #426) exist in the tech tree', () => {
     const tree = techTree.tech as ITechNode[];
     for (const id of Object.values(BUILD_TECH)) expect(tree.some((n) => n.id === id)).toBe(true);
-    expect(tree.find((n) => n.id === 'build_battleship')!.requires).toContain('build_battlecruiser');
+    expect(tree.find((n) => n.id === 'build_battleship')!.requires).toContain('build_carrier');
     expect(isBuildTech('build_carrier')).toBe(true);
     expect(isBuildTech('gunnery_1')).toBe(false);
   });
@@ -102,8 +102,9 @@ describe('ShipyardSystem (#18 / #29)', () => {
     expect(buildState({ ...p, research: ['build_cruiser'], merit: 100 }, IJN, byId('sendai'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'] }, IJN, byId('atago'))).toBe('rank');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_heavy_cruiser'], merit: 100 }, IJN, byId('atago'))).toBe('ready');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battlecruiser'], rankFloor: 6 }, IJN, byId('kongo'))).toBe('rank');
-    expect(buildState({ ...p, research: ['build_cruiser', 'build_battlecruiser'], rankFloor: 7 }, IJN, byId('kongo'))).toBe('ready');
+    // 巡洋戦艦 open with the battleships (#426).
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 6 }, IJN, byId('kongo'))).toBe('rank');
+    expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 7 }, IJN, byId('kongo'))).toBe('ready');
     expect(buildState({ ...p, research: ['build_cruiser', 'build_battleship'], rankFloor: 11 }, IJN, byId('a150'))).toBe('focus');
     expect(buildState({ ...p, resources: resources() }, IJN, byId('yukikaze'))).toBe('resources');
     expect(buildStateLabel('research', byId('sendai'), { build_cruiser: '軽巡洋艦建造' })).toBe('要研究: 軽巡洋艦建造');
@@ -114,8 +115,8 @@ describe('ShipyardSystem (#18 / #29)', () => {
 
   it('the heavy-cruiser research exists, needs the light one, and light cruisers cost less to build (#37)', () => {
     const tree = techTree.tech as Array<{ id: string; requires: string[] }>;
-    // The 水上艦 branch is a chain by ship size (#341): 海防艦 → … → 軽巡 → 防空巡 → 重巡.
-    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_aa_cruiser']);
+    // The 建造 branch (#426): 小型艦 → 巡洋艦 → 大型駆逐艦・大型潜水艦 → 重巡 …
+    expect(tree.find((n) => n.id === HEAVY_CRUISER_TECH)?.requires).toEqual(['build_leader_destroyer']);
     expect(tree.find((n) => n.id === 'build_escort')?.requires).toEqual([]);
     expect(buildTechFor(byId('etorofu'))).toBe('build_escort');
     expect(isBuildTech(HEAVY_CRUISER_TECH)).toBe(true);

@@ -23,6 +23,8 @@ export const SUBTYPE_SHORT: Record<ShipSubtype, string> = {
   [ShipSubtype.Escort]: '海防艦',
   [ShipSubtype.LargeSubmarine]: '大型潜',
   [ShipSubtype.SubmarineCarrier]: '潜水空母',
+  [ShipSubtype.SeaplaneTender]: '水母',
+  [ShipSubtype.LargeCarrier]: '大型空母',
 };
 
 // ---------------------------------------------------------------------------
@@ -37,7 +39,7 @@ export const MID_CLASSES: Record<ShipClass, MidClass[]> = {
   [ShipClass.Battleship]: ['Battleship', ShipSubtype.FastBattleship, ShipSubtype.BattleCruiser, ShipSubtype.AviationBattleship],
   [ShipClass.Cruiser]: [ShipSubtype.HeavyCruiser, ShipSubtype.LightCruiser, ShipSubtype.AACruiser],
   [ShipClass.Destroyer]: ['Destroyer', ShipSubtype.LeaderDestroyer, ShipSubtype.AADestroyer, ShipSubtype.EscortDestroyer, ShipSubtype.Escort],
-  [ShipClass.Carrier]: ['FleetCarrier', ShipSubtype.ArmoredCarrier, ShipSubtype.LightCarrier, ShipSubtype.EscortCarrier],
+  [ShipClass.Carrier]: [ShipSubtype.LargeCarrier, 'FleetCarrier', ShipSubtype.ArmoredCarrier, ShipSubtype.LightCarrier, ShipSubtype.EscortCarrier, ShipSubtype.SeaplaneTender],
   [ShipClass.Submarine]: ['Submarine', ShipSubtype.LargeSubmarine, ShipSubtype.SubmarineCarrier],
 };
 

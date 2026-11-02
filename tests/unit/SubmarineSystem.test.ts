@@ -13,7 +13,7 @@ import {
 describe('SubmarineSystem', () => {
   it('starts surfaced with full air', () => {
     const s = createSubmarineState();
-    expect(s).toEqual({ submerged: false, air: 1, forcedSurface: false });
+    expect(s).toEqual({ submerged: false, air: 1, forcedSurface: false, endurance: 20, submergedSpeed: 0.6 });
     expect(canDive(s)).toBe(true);
   });
 

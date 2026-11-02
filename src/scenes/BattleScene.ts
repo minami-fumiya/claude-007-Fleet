@@ -29,7 +29,7 @@ import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
-import { canDive, updateSubmarine } from '@/systems/SubmarineSystem';
+import { canDive, createSubmarineState, updateSubmarine } from '@/systems/SubmarineSystem';
 import { applyCritical, applyStatus, CRITICAL_LABEL, effectiveShell, LAND_CRITICAL_LABEL, nextShellMode, rollCriticalHit, rollStatus, SHELL_LABEL, statusDamage, STATUS_LABEL, damageReadout, weaponReadout } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
 import { AIRCRAFT_VISION, isVisible, shipVision, VisionSource } from '@/systems/VisionSystem';
@@ -73,7 +73,7 @@ import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSte
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
-import { IShipData, IShipStats } from '@/types/Ship';
+import { IShipData, IShipStats, ShipSubtype } from '@/types/Ship';
 import { midModifiers } from '@/systems/ShipKind';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 import { IFleet } from '@/types/Fleet';
@@ -998,9 +998,16 @@ export class BattleScene extends Phaser.Scene {
     ship.visionMul = mods.visionMul * (night ? mods.nightVisionMul : 1);
     ship.aimErrorMul = night ? mods.nightAimMul : 1;
     ship.aaMul = mods.aaMul;
+    // 潜水研究 (#426): longer dives and a quicker boat under water.
+    if (ship.sub && (mods.diveMul !== 1 || mods.submergedSpeedMul !== 1)) ship.sub = createSubmarineState(false, mods.diveMul, mods.submergedSpeedMul);
     ship.setDepth(DEPTH_SHIPS).setOrigin(0.5, 0.5);
     (ship.body as Phaser.Physics.Arcade.Body).setDrag(200, 200);
     return ship;
+  }
+
+  /** A ship's 中分類 subtype from its data (#426). */
+  private subtypeOf(ship: BaseShip): ShipSubtype | undefined {
+    return ship.dataId ? DataLoader.getRegistry(this).byId(ship.dataId)?.subtype : undefined;
   }
 
   /** Captain of fleet slot `index`, with saved progress. */
@@ -2679,7 +2686,11 @@ export class BattleScene extends Phaser.Scene {
       ['planesDown', this.enemyAir.totalLost()],
       // 消耗品 (#47): used by the player's ships.
       ['consumableUse', this.consumableUses],
-      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ['favoriteFlagWin', won(!!this.flagship?.dataId && isFavorite(progress.favorites, this.flagship.dataId))], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
+      ['ddFlagWin', won(this.flagship?.stats.shipClass === ShipClass.Destroyer)], ['favoriteFlagWin', won(!!this.flagship?.dataId && isFavorite(progress.favorites, this.flagship.dataId))],
+      // 0.0.61 (#426): what the submarines sank, and wins with the new kinds.
+      ['subSink', sunk.filter((e) => e.lastHitBy?.stats.shipClass === ShipClass.Submarine && fleet.includes(e.lastHitBy)).length],
+      ['tenderWin', won(fleet.some((s) => this.subtypeOf(s) === ShipSubtype.SeaplaneTender))],
+      ['largeCarrierFlagWin', won(!!this.flagship && this.subtypeOf(this.flagship) === ShipSubtype.LargeCarrier)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['trainingWin', won(this.exercise && this.battleData?.training === true)],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],

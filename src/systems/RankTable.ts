@@ -8,6 +8,11 @@ import { FORMATION_ORDER, FORMATION_RULES } from './FormationRules';
 import { expeditionsAt } from './ExpeditionSystem';
 import { presetSlots } from './PresetSystem';
 import { costCap } from './FleetCost';
+import { supportSlots } from './FleetGroups';
+import { areaDepth, recommendedRank } from './DifficultyCurve';
+import { theatersFor } from './CampaignSystem';
+import { Nation } from '@/types/Nation';
+import { ICampaignData } from '@/types/Campaign';
 
 /** One row of the rank list (#128): what a rank needs and what it brings. */
 export interface IRankRow {
@@ -18,10 +23,26 @@ export interface IRankRow {
   grade: number;
   /** The fleet's sortie cost cap (#406) */
   costCap: number;
+  /** Fleets that sail together (#426): the main fleet and the 支援艦隊 the rank opens */
+  fleets: number;
+  /** The most 友軍艦隊 that join a battle in the seas meant for this rank (#426), 0 when none do */
+  allies: number;
   /** "ドック増設・軍港: 舞鶴鎮守府・昇進試験: …" */
   unlocks: string;
   /** 士官候補生 while the tutorial is off: listed, but nobody starts there */
   beforeStart: boolean;
+}
+
+/** The most ally fleets (#64) in one area of the nation's seas recommended for `rankIndex` (#426). */
+export function allyFleetsAt(nation: string, rankIndex: number): number {
+  const data = campaignData as unknown as ICampaignData;
+  const theaters = new Set(theatersFor(data, nation as Nation).map((t) => t.id));
+  let most = 0;
+  for (const a of data.areas) {
+    if (a.training || !theaters.has(a.theater) || recommendedRank(areaDepth(data, a, nation)).index !== rankIndex) continue;
+    most = Math.max(most, (a.allies ?? []).filter((x) => !x.for || x.for.includes(nation)).length);
+  }
+  return most;
 }
 
 export function rankTable(nation: string): IRankRow[] {
@@ -41,6 +62,7 @@ export function rankTable(nation: string): IRankRow[] {
     if (r.exam) unlocks.push(`昇進試験: ${examText(r.exam)}`);
     return {
       index: r.index, name: r.name, minMerit: r.minMerit, slots: r.slots, grade: maxBuildGrade(r.index), costCap: costCap(r.index),
+      fleets: 1 + supportSlots(r.index), allies: allyFleetsAt(nation, r.index),
       unlocks: unlocks.join('・'), beforeStart: r.index < START_RANK,
     };
   });

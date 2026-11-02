@@ -50,6 +50,7 @@ export const SHIP_TYPE_CODE = {
   Carrier: 9,
   [ShipSubtype.LightCarrier]: 10,
   [ShipSubtype.EscortCarrier]: 11,
+  [ShipSubtype.SeaplaneTender]: 13,
   Submarine: 12,
   Superweapon: 90,
 } as const;
@@ -116,6 +117,8 @@ const NUMBERED_AS: Partial<Record<ShipSubtype, keyof typeof SHIP_TYPE_CODE>> = {
   [ShipSubtype.AADestroyer]: 'Destroyer',
   [ShipSubtype.EscortDestroyer]: 'Destroyer',
   [ShipSubtype.ArmoredCarrier]: 'Carrier',
+  // Numbered before #426 as armoured or fleet carriers; their numbers stay.
+  [ShipSubtype.LargeCarrier]: 'Carrier',
   [ShipSubtype.LargeSubmarine]: 'Submarine',
   [ShipSubtype.SubmarineCarrier]: 'Submarine',
 };

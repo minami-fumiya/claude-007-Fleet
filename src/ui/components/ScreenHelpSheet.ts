@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { markHelpSeen, pageLabel, unseenHelp } from '@/systems/ScreenHelp';
-import { loadSave, saveSave } from '@/utils/ProgressStore';
+import { withQuestEvents } from '@/systems/QuestSystem';
+import { isStarted, loadProgress, loadSave, saveProgress, saveSave } from '@/utils/ProgressStore';
 import { Colors, Css, displayStyle, textStyle } from '@/ui/theme';
 import { addPanel, drawPanel, UIButton } from '@/ui/components/UIKit';
 
@@ -50,21 +51,37 @@ export function showScreenHelp(scene: Phaser.Scene, id: string = scene.scene.key
   // Measured before the panel was drawn, so lift them above the panel.
   for (const b of bodies) add(b.setPosition(x + pad, y + headH), DEPTH + 1);
   const by = y + headH + bodyH + 24 + bh / 2;
-  const navW = IS_PORTRAIT ? 120 : 96;
-  const okW = IS_PORTRAIT ? w - pad * 2 - (pages.length > 1 ? (navW + 12) * 2 : 0) : 240;
+  const navW = IS_PORTRAIT ? 140 : 110;
   let page = 0;
-  const prev = pages.length > 1 ? add(new UIButton(scene, x + pad + navW / 2, by, '‹', () => show(page - 1), { variant: 'secondary', width: navW, height: bh, fontSize: 20 })) : null;
-  const next = pages.length > 1 ? add(new UIButton(scene, x + w - pad - navW / 2, by, '›', () => show(page + 1), { variant: 'primary', width: navW, height: bh, fontSize: 20 })) : null;
-  add(new UIButton(scene, CANVAS_W / 2, by, 'わかった', close, { variant: 'gold', width: okW, height: bh, fontSize: IS_PORTRAIT ? 18 : 16 }));
-  const counter = pages.length > 1 ? add(scene.add.text(x + w - pad, y + 50, '', textStyle(14, Css.muted, { fontStyle: 'bold' })).setOrigin(1, 0)) : null;
+  // Read on to the end (#425): ‹ back, and one button that reads 次へ › until the last page, then 閉じる; ✕ in the
+  // corner closes early (the help stays 未読 in ヘルプ › 画面).
+  const prev = pages.length > 1 ? add(new UIButton(scene, x + pad + navW / 2, by, '‹ 前へ', () => show(page - 1), { variant: 'secondary', width: navW, height: bh, fontSize: 16 })) : null;
+  const mainW = IS_PORTRAIT ? (pages.length > 1 ? w - pad * 2 - navW - 12 : w - pad * 2) : 240;
+  const mainX = pages.length > 1 && IS_PORTRAIT ? x + pad + navW + 12 + mainW / 2 : pages.length > 1 ? x + w - pad - mainW / 2 : CANVAS_W / 2;
+  const main = add(new UIButton(scene, mainX, by, '', () => (page < pages.length - 1 ? show(page + 1) : close()), { variant: 'gold', width: mainW, height: bh, fontSize: IS_PORTRAIT ? 18 : 16 }));
+  const xs = IS_PORTRAIT ? 52 : 40;
+  add(new UIButton(scene, x + w - pad / 2 - xs / 2 - 4, y + 26, '✕', close, { variant: 'secondary', width: xs, height: xs, fontSize: 15 }));
+  const counter = pages.length > 1 ? add(scene.add.text(x + w - pad - xs - 12, y + 50, '', textStyle(14, Css.muted, { fontStyle: 'bold' })).setOrigin(1, 0)) : null;
   function show(i: number): void {
     page = Math.max(0, Math.min(pages.length - 1, i));
     bodies.forEach((b, j) => b.setVisible(j === page));
     heading.setText(pages[page].title);
     counter?.setText(pageLabel(page, pages.length));
     prev?.setEnabled(page > 0);
-    next?.setEnabled(page < pages.length - 1);
+    const last = page === pages.length - 1;
+    main.setLabel(last ? '閉じる' : '次へ  ›').setVariant(last ? 'gold' : 'primary');
+    // Read to the end (#425): remembered once, and it counts for 熟読章.
+    if (last) markHelpRead(id);
   }
   show(0);
   return true;
+}
+
+/** Remembers a screen's help as read to its last page (#425), counting it once for 熟読章. */
+export function markHelpRead(id: string): void {
+  const save = loadSave();
+  if (save.helpRead.includes(id)) return;
+  saveSave({ ...save, helpRead: [...save.helpRead, id] });
+  const after = loadSave();
+  if (isStarted(after, after.current)) saveProgress(withQuestEvents(loadProgress(), [['helpRead', 1]], Date.now()));
 }

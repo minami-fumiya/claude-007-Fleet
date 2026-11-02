@@ -53,7 +53,8 @@ describe('medals as prerequisites (#169)', () => {
     expect(medalNeedText('battleship_slayer', r, { clearedTheaters: [] })).toBe('要勲章: 戦艦撃沈章 三等 (戦艦を 5 隻撃沈する — 3 / 5)');
     expect(hasMedal(r, undefined)).toBe(true);
     expect(hasMedal(r, 'battleship_slayer')).toBe(false);
-    expect(unlocksOf('battleship_slayer').research).toContain('build_fast_battleship');
+    // The biggest battleships need it (#169); the research no longer does (#426: 建造 asks medals at Lv5 and Lv10 only).
     expect(unlocksOf('battleship_slayer').other.length).toBeGreaterThan(0);
+    expect(unlocksOf('carrier_slayer').research).toContain('build_light_carrier');
   });
 });

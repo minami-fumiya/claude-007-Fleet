@@ -7,7 +7,7 @@ import { jaWordWrap } from '@/utils/JaWrap';
  * Dark "night ocean" base, glassy panels with a thin cyan rim, gold as the hero accent. A light theme (#94) swaps the
  * values at start-up (applyTheme, before the game is made), so every screen reads them as before.
  */
-const DARK_COLORS = {
+export const DARK_COLORS = {
   bgDeep: 0x020814,
   bgMid: 0x061a33,
   panel: 0x0b1d38,
@@ -20,11 +20,12 @@ const DARK_COLORS = {
   success: 0x5df2b0,
   text: 0xf5fbff,
   muted: 0x8aa0c7,
-  dim: 0x4a5f85,
+  // #425: readable on a panel (3.9:1); 0x4a5f85 (2.6:1) was too faint for the conditions written in it.
+  dim: 0x637aa2,
 };
 
 /** Light theme (#94): dark ink on paper-white panels; accents darkened to keep 4.5:1 against white (WCAG). */
-const LIGHT_COLORS: typeof DARK_COLORS = {
+export const LIGHT_COLORS: typeof DARK_COLORS = {
   bgDeep: 0xe6edf6,
   bgMid: 0xd5e2f0,
   panel: 0xffffff,

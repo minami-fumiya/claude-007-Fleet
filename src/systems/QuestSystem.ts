@@ -84,6 +84,12 @@ export const QUEST_EVENTS = [
   'focusDone', 'focusReset', 'designMade', 'equipImprove', 'gunSwap', 'foreignFragment',
   // 0.0.60: wins with a favourite (#419) as the flagship
   'favoriteFlagWin',
+  // 0.0.61 (#426): enemies the player's submarines sank, wins with a 水上機母艦, wins with a 大型空母 flagship
+  'subSink', 'tenderWin', 'largeCarrierFlagWin',
+  // 0.0.61 (#426): proficiency the expeditions trained
+  'expeditionProficiency',
+  // 0.0.61 (#425): screens' help read to the last page
+  'helpRead',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

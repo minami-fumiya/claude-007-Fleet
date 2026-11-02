@@ -1,3 +1,4 @@
+import { twoLineBreak } from '@/utils/JaWrap';
 import Phaser from 'phaser';
 import { CANVAS_W, CANVAS_H } from '@/config/GameConstants';
 import { Colors, Css, eyebrowStyle, Surface, textStyle } from '@/ui/theme';
@@ -543,6 +544,23 @@ export const MIN_TEXT_PX = 12;
  * Fits `text` into `room` px wide (#406): shrinks it, but never below MIN_TEXT_PX; past that it is cut with "…" so
  * nothing is drawn too small to read.
  */
+/**
+ * Fits `text` in `room` px on one line when it can (shrunk no further than MIN_TEXT_PX), else on two, broken after a
+ * particle near the middle (#425: a long name is never cut with "…").
+ */
+export function fitTwoLines(text: Phaser.GameObjects.Text, room: number, minPx = MIN_TEXT_PX): void {
+  const full = text.text.replace(/\n/g, '');
+  text.setText(full).setScale(1);
+  const px = parseFloat(String(text.style.fontSize)) || minPx;
+  if (text.width * Math.max(room / text.width, Math.min(1, minPx / px)) <= room || full.length < 4) {
+    fitText(text, room, minPx);
+    return;
+  }
+  const at = twoLineBreak(full);
+  text.setText(`${full.slice(0, at)}\n${full.slice(at)}`);
+  fitText(text, room, minPx);
+}
+
 export function fitText(text: Phaser.GameObjects.Text, room: number, minPx = MIN_TEXT_PX): void {
   text.setScale(1);
   if (text.width <= room || room <= 0) return;
@@ -556,4 +574,6 @@ export function fitText(text: Phaser.GameObjects.Text, room: number, minPx = MIN
     n--;
     text.setText(`${full.slice(0, n)}…`);
   }
+  // Cut texts are found by the E2E (#425: nothing is to be cut; shorten the words or widen the field instead).
+  text.setData('cut', full);
 }
