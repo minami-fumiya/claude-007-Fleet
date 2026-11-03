@@ -240,6 +240,8 @@ export interface IMedalContext {
   goldEarned?: number;
   /** 国家方針 (#49): focuses one nation has done, best nation */
   focusDone?: number;
+  /** 制海権 (#50): the most seas one navy holds */
+  seasHeld?: number;
   /** 架空艦 (#309): planned ships one nation owns, best nation */
   plannedOwned?: number;
   /** 設計艦 (#51): designs one nation has drawn, and ships of them owned in all */
@@ -473,6 +475,10 @@ export const MEDALS: IMedalRule[] = [
   // 熟読章 (#425): every screen's help read to its last page.
   ...ladder('help_reader', '熟読章', 'base', [SCREEN_HELP.length], (g) => `画面のヘルプを ${g} 画面ぶん最後まで読む`, (_r, c) => total(c, 'helpRead')),
   ...ladder('expedition_training', '遠征練成章', 'base', [100, 500], (g) => `遠征で熟練度を ${g} ためる`, (_r, c) => total(c, 'expeditionProficiency')),
+  // 0.0.62 制海権と敵の反攻 (#50)
+  ...ladder('sea_held', '制海権章', 'campaign', [10, 30, 60], (g) => `1 つの国で、${g} か所の海域の制海権を持つ`, (_r, c) => c.seasHeld ?? 0),
+  ...ladder('sea_defender', '防衛章', 'campaign', [3, 15, 50], (g) => `敵の反攻から海域を ${g} 回守る`, (_r, c) => total(c, 'defenseWin')),
+  ...ladder('sea_retake', '奪還章', 'campaign', [1, 10], (g) => `敵に奪われた海域を ${g} 回取り返す`, (_r, c) => total(c, 'seaRetake')),
   ...ladder('large_carrier_flag', '大型空母章', 'battle', [10], (g) => `大型空母を旗艦にして ${g} 回勝つ`, (_r, c) => total(c, 'largeCarrierFlagWin')),
   // 旗艦の誉れ (#419): wins with a favourite as the flagship.
   ...ladder('favorite_flag', '旗艦の誉れ', 'battle', [10, 50], (g) => `お気に入りの艦を旗艦にして ${g} 回勝つ`, (_r, c) => total(c, 'favoriteFlagWin')),

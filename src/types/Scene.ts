@@ -24,6 +24,8 @@ export interface IBattleInitData {
   superweapon?: boolean;
   /** 超兵器海域 (#148): the theater's final area fought again against its giant, outside any sortie */
   swArea?: boolean;
+  /** 防衛戦 (#50): the defence of a sea held against the enemy's counterattack */
+  defense?: boolean;
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** 演習 (#404): one enemy fleet for each 支援艦隊 the player brings, each matched to it */
@@ -76,6 +78,8 @@ export interface IBattleResultData {
   cost?: string;
   /** Campaign / scenario line, e.g. "海域攻略: 南洋前哨  初回報酬 …" */
   campaign?: string;
+  /** 制海権 (#50): a defence won or lost, a sea won back, a counterattack begun */
+  sea?: string;
   /** Medals awarded in this battle */
   medals?: string[];
   /** Merit line, e.g. "戦功 +115  ·  昇進: 少尉 → 中尉" (#36) */

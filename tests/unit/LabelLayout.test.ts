@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import data from '@/data/campaign.json';
-import { layoutOverlap, placeLabels } from '@/utils/LabelLayout';
+import { layoutOverlap, mapNodePos, mapObstacles, placeLabels } from '@/utils/LabelLayout';
 
 describe('LabelLayout (#162)', () => {
   it('keeps a label below its node when nothing is in the way', () => {
@@ -15,19 +15,22 @@ describe('LabelLayout (#162)', () => {
     expect(layoutOverlap([{ x: 100, y: 100 }, { x: 100, y: 150 }], p, 20)).toBe(0);
   });
 
-  it('lays out every theater of the portrait map without overlaps', () => {
-    const m = { x: 16, y: 216, w: 688, h: 480 };
-    const theaters = new Set(data.areas.map((a) => (a as { theater?: string }).theater ?? 'pacific'));
-    for (const t of theaters) {
-      const areas = (data.areas as Array<{ theater?: string; x: number; y: number; name: string }>).filter((a) => (a.theater ?? 'pacific') === t);
-      // As CampaignMapScene.nodePos in portrait: the theater's nodes stretched over the map
-      const span = (vs: number[]) => (v: number) => (v - Math.min(...vs)) / (Math.max(...vs) - Math.min(...vs));
-      const fx = span(areas.map((a) => a.x));
-      const fy = span(areas.map((a) => a.y));
-      const nodes = areas.map((a) => ({ x: m.x + 60 + fx(a.x) * (m.w - 120), y: m.y + 60 + fy(a.y) * (m.h - 120) }));
-      // 12px bold: about 13px per character
-      const labels = placeLabels(nodes, areas.map((a) => ({ w: a.name.length * 13, h: 16 })), 26, m);
-      expect(layoutOverlap(nodes, labels, 26), t).toBe(0);
+  it('lays out every theater, portrait and landscape, with no name on a node, a name, the 制海権 line or the sweep button (0.0.62)', () => {
+    for (const portrait of [true, false]) {
+      // As CampaignMapScene: the map's rect and node radius in each orientation.
+      const m = portrait ? { x: 16, y: 216, w: 688, h: 480 } : { x: 24, y: 160, w: 780, h: 540 };
+      const r = portrait ? 26 : 22;
+      const obstacles = mapObstacles(m, portrait, portrait ? 330 : 420);
+      for (const t of new Set(data.areas.map((a) => a.theater))) {
+        const areas = data.areas.filter((a) => a.theater === t);
+        const nodes = areas.map((a) => mapNodePos(a, areas, m, portrait, 28));
+        // 12px bold: about 12.5px a kanji or kana, 7.5px a digit or Latin letter.
+        const sizes = areas.map((a) => ({ w: [...a.name].reduce((n, c) => n + (c.charCodeAt(0) > 255 ? 12.5 : 7.5), 0), h: 17 }));
+        const labels = placeLabels(nodes, sizes, r, { x: m.x + 8, y: m.y + 8, w: m.w - 16, h: m.h - 16 - 28 }, obstacles);
+        expect(layoutOverlap(nodes, labels, r, obstacles), `${portrait ? '縦' : '横'} ${t}`).toBe(0);
+        // No node under the 制海権 line or the sweep button either.
+        expect(layoutOverlap([], nodes.map((n) => ({ x: n.x - r, y: n.y - r, w: r * 2, h: r * 2 })), r, obstacles), `${portrait ? '縦' : '横'} ${t} nodes`).toBe(0);
+      }
     }
   });
 });

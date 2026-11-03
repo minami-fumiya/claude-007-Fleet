@@ -1975,3 +1975,54 @@ test('今日のイベントと士気 (0.0.61): the event schedule and a fleet of
   await page.screenshot({ path: info.outputPath('picker-morale.png') });
   expect(errors).toEqual([]);
 });
+
+test('制海権と反攻 (0.0.62): the seas held, a counterattack with its 防衛戦 and a sea lost show on the map (#50)', async ({ page }, info) => {
+  test.setTimeout(180_000);
+  const layout = info.project.metadata.layout as string;
+  const now = Date.now();
+  const sea = { lost: ['p4'], counter: { areaId: 'p3', startedAt: now, endsAt: now + 2 * 3_600_000 }, sorties: 0, count: 1, incomeAt: now };
+  const save = { ...SAVE, version: 7, seenHelp: [...SCREENS, 'ResultsScene'], nations: { IJN: { ...SAVE.nations.IJN, campaign: ['p1', 'p2', 'p3', 'p4', 'p5'], sea } } };
+  const errors = await boot(page, layout, save);
+  type G = { game: Phaser.Game };
+  const texts = (): Promise<string[]> => page.evaluate(() => {
+    const scene = (window as unknown as G).game.scene.getScene('CampaignMapScene');
+    const out: string[] = [];
+    const walk = (list: Phaser.GameObjects.GameObject[]): void => {
+      for (const o of list) {
+        if (o.type === 'Text' && (o as Phaser.GameObjects.Text).visible) out.push((o as Phaser.GameObjects.Text).text);
+        if (o.type === 'Container') walk((o as Phaser.GameObjects.Container).list);
+      }
+    };
+    walk(scene.children.list);
+    return out;
+  });
+  await open(page, 'CampaignMapScene', { areaId: 'p3' });
+  const shown = await texts();
+  expect(shown.some((t) => t.startsWith('制海権 4 海域')), shown.join(' | ')).toBe(true);
+  expect(shown).toContain('敵の反攻');
+  expect(shown.some((t) => t.includes('防衛戦'))).toBe(true);
+  expect(await overlappingTexts(page, 'CampaignMapScene'), `counter (${layout})`).toEqual([]);
+  expect(await overflowingTexts(page, 'CampaignMapScene')).toEqual([]);
+  expect(await cutTexts(page, 'CampaignMapScene')).toEqual([]);
+  await page.screenshot({ path: info.outputPath('counter.png') });
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('CampaignMapScene') as unknown as { selectArea(id: string): void }).selectArea('p4'));
+  await page.waitForTimeout(200);
+  expect(await texts()).toContain('敵の制海権');
+  expect(await overlappingTexts(page, 'CampaignMapScene'), `lost (${layout})`).toEqual([]);
+  expect(await cutTexts(page, 'CampaignMapScene')).toEqual([]);
+  // The home screen calls the admiral to the defence.
+  await open(page, 'HomeScene');
+  expect(await page.evaluate(() => {
+    const scene = (window as unknown as G).game.scene.getScene('HomeScene');
+    const out: string[] = [];
+    const walk = (list: Phaser.GameObjects.GameObject[]): void => {
+      for (const o of list) {
+        if (o.type === 'Text' && (o as Phaser.GameObjects.Text).visible) out.push((o as Phaser.GameObjects.Text).text);
+        if (o.type === 'Container') walk((o as Phaser.GameObjects.Container).list);
+      }
+    };
+    walk(scene.children.list);
+    return out.some((t) => t.includes('敵の反攻'));
+  })).toBe(true);
+  expect(errors).toEqual([]);
+});
