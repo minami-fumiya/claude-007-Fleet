@@ -90,6 +90,8 @@ export const QUEST_EVENTS = [
   'expeditionProficiency',
   // 0.0.61 (#425): screens' help read to the last page
   'helpRead',
+  // 0.0.62 (#50): counterattacks beaten and seas won back
+  'defenseWin', 'seaRetake',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

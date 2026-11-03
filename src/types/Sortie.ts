@@ -17,4 +17,6 @@ export interface ISortieState {
   fought?: boolean;
   /** 支援艦隊 (#84) sailing with the main fleet */
   support?: Array<{ shipIds: string[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
+  /** 防衛戦 (#50): the enemy's counterattack on a sea held, fought against its main fleet alone */
+  defense?: boolean;
 }

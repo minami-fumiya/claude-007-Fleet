@@ -12,7 +12,7 @@ import { rankOf } from './RankSystem';
  * empty docks and a base ready to be built (captain books left the strip in 0.0.40, #303: the captain screen shows them).
  */
 
-export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus';
+export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus' | 'counter';
 
 export interface IPendingItem {
   id: PendingId;
@@ -30,7 +30,10 @@ export function pendingSummary(progress: IProgress, now: number, freeDocks: numb
   const sweeps = charged.reduce((n, a) => n + a.n, 0);
   const topSweep = charged.reduce<{ id: string; n: number } | null>((best, a) => (a.n > (best?.n ?? 0) ? a : best), null);
   const basesReady = nationBases(progress.nation).filter((b) => baseState(b, progress) === 'ready').length;
+  const counter = progress.sea?.counter && progress.sea.counter.endsAt > now ? progress.sea.counter : null;
   const items: IPendingItem[] = [
+    // 敵の反攻 (#50): a sea under attack, first; a tap opens the map on it.
+    { id: 'counter', label: '敵の反攻', count: counter ? 1 : 0, scene: SceneKeys.CAMPAIGN, data: counter ? { areaId: counter.areaId } : undefined },
     { id: 'quests', label: '任務', count: claimableCount(progress.quests, now), scene: SceneKeys.HOME },
     { id: 'sweeps', label: '掃討', count: sweeps, scene: SceneKeys.CAMPAIGN, data: topSweep ? { areaId: topSweep.id } : undefined },
     { id: 'docks', label: '空きドック', count: Math.max(0, freeDocks), scene: SceneKeys.SHIPYARD },
