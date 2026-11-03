@@ -160,7 +160,9 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   let save = ps.switchNation(ps.emptySave(), nation, undefined, Date.now());
   // 初期機 (#385): the first carrier models developed, as a player with carriers would have them.
   const { STARTER_AIRCRAFT } = await import('/src/systems/AircraftSystem.ts');
-  save = { ...save, seenHelp: [...helps, 'BattleScene'], nations: { ...save.nations, [nation]: { ...save.nations[nation], merit: RANKS[rank.index].minMerit, rankFloor: rank.index, aircraftDev: STARTER_AIRCRAFT, airStart: true } } };
+  // No hourly event (#430): the clock-rollback guard (a save that has seen the far future) keeps every event away, so a
+  // superweapon event or a reward event never changes the table with the hour it is run in.
+  save = { ...save, lastSeenAt: Date.now() + 1000 * 86_400_000, seenHelp: [...helps, 'BattleScene'], nations: { ...save.nations, [nation]: { ...save.nations[nation], merit: RANKS[rank.index].minMerit, rankFloor: rank.index, aircraftDev: STARTER_AIRCRAFT, airStart: true } } };
   let tech = null;
   if (grown) {
     // The research the rank allows (#346), every branch.

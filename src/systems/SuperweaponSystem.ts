@@ -103,3 +103,13 @@ export function ownSuperweapons(): IShipData[] {
 export function superweaponSeaOpen(data: { areas: ReadonlyArray<{ id: string; theater: string; training?: boolean }> }, area: { id: string; theater: string; training?: boolean }, cleared: readonly string[]): boolean {
   return !area.training && theaterFinalArea(data, area.theater) === area.id && cleared.includes(area.id);
 }
+
+/**
+ * 超兵器出現 (#148 #89): while the event runs, the main fleets of its theater bring their giant, but only from this
+ * depth on (#430: one in a 少尉's first areas sank the whole fleet in seconds). Training areas never.
+ */
+export const EVENT_GIANT_MIN_DEPTH = 6;
+
+export function eventGiantJoins(area: { theater: string; training?: boolean } | undefined, depth: number, eventTheater: string | undefined): boolean {
+  return area !== undefined && !area.training && eventTheater === area.theater && depth >= EVENT_GIANT_MIN_DEPTH;
+}

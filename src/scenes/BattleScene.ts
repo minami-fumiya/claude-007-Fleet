@@ -57,7 +57,7 @@ import {
   AA_BARRAGE, aiConsumable, BOOST_SPEED, ConsumableKind, hiddenBySmoke, IConsumableSlot, isActive, ISmokeCloud, RADAR_VISION, repairPerSec, shipConsumables, slotLabel, SMOKE_RADIUS, useConsumable,
 } from '@/systems/ConsumableSystem';
 import { eraWingPerf, pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
-import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
+import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, eventGiantJoins, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -490,7 +490,8 @@ export class BattleScene extends Phaser.Scene {
     this.difficulty = battleDifficulty(audio.settings.difficulty, this.scenario !== null);
     // 超兵器出現 (#148 #89): a main fleet in the event's theater brings its superweapon (not training areas).
     const event = eventEffects(activeEvent());
-    this.bringsSuperweapon = this.battleData?.superweapon === true || (bossNode && battleArea !== undefined && !battleArea.training && event.superweaponTheater === battleArea.theater);
+    // Not in the shallow seas (#430).
+    this.bringsSuperweapon = this.battleData?.superweapon === true || (bossNode && battleArea !== undefined && eventGiantJoins(battleArea, areaDepth(campaignData as ICampaignData, battleArea, playerFleet.nation), event.superweaponTheater));
     this.objective = this.side?.objective ?? this.battleData?.objective ?? Objective.Annihilate;
     this.formation = formation;
     this.spawnPlayerFleet(playerFleet, formation);

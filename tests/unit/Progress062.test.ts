@@ -113,3 +113,16 @@ describe('0.0.62 敵の反攻と防衛戦 (#50)', () => {
     expect(QUEST_EVENTS).toContain('seaRetake');
   });
 });
+
+describe('0.0.62 超兵器出現は深い海域だけ (#430)', () => {
+  it('the event\'s giant joins the main fleets from depth 6 on, never a 少尉\'s first areas or a training area', async () => {
+    const { eventGiantJoins, EVENT_GIANT_MIN_DEPTH } = await import('@/systems/SuperweaponSystem');
+    const { areaDepth } = await import('@/systems/DifficultyCurve');
+    const np1 = DATA.areas.find((a) => a.id === 'np1')!;
+    expect(areaDepth(DATA, np1, 'USN')).toBeLessThan(EVENT_GIANT_MIN_DEPTH);
+    expect(eventGiantJoins(np1, areaDepth(DATA, np1, 'USN'), 'north_pacific')).toBe(false);
+    expect(eventGiantJoins({ theater: 'north_pacific' }, EVENT_GIANT_MIN_DEPTH, 'north_pacific')).toBe(true);
+    expect(eventGiantJoins({ theater: 'north_pacific', training: true }, 12, 'north_pacific')).toBe(false);
+    expect(eventGiantJoins({ theater: 'pacific' }, 12, 'north_pacific')).toBe(false);
+  });
+});

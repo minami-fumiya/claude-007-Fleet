@@ -10,7 +10,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, loadSave, saveProgress } from '@/utils/ProgressStore';
 import { clock } from '@/utils/TimeFormat';
 import { enemyFormation } from '@/systems/EnemyFormation';
-import { BLUEPRINT_NEED, BLUEPRINT_PER_GIANT_AREA, SUPERWEAPON_GOLD, superweaponOf, superweaponSeaOpen } from '@/systems/SuperweaponSystem';
+import { BLUEPRINT_NEED, BLUEPRINT_PER_GIANT_AREA, eventGiantJoins, SUPERWEAPON_GOLD, superweaponOf, superweaponSeaOpen } from '@/systems/SuperweaponSystem';
 import { TimeOfDay } from '@/types/Weather';
 import { FORMATION_RULES } from '@/systems/FormationRules';
 import { GOLD_SWEEP } from '@/systems/GoldSystem';
@@ -34,7 +34,7 @@ import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { addBackdrop, addPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import campaignData from '@/data/campaign.json';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
-import { placeLabels } from '@/utils/LabelLayout';
+import { mapNodePos, mapObstacles, placeLabels } from '@/utils/LabelLayout';
 import { dashes, rimSegment } from '@/utils/RouteLine';
 import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 import { defenseReward, emptySeaControl, heldAreas, seaIncome, seaState } from '@/systems/SeaControlSystem';
@@ -218,18 +218,7 @@ export class CampaignMapScene extends Phaser.Scene {
   }
 
   private nodePos(a: ICampaignArea): { x: number; y: number } {
-    const m = L.map;
-    const pad = 60;
-    // Portrait stretches the theater's nodes over the whole map: the narrow screen has no room to waste (#162).
-    const fit = (v: number, lo: number, hi: number): number => (IS_PORTRAIT && hi - lo > 0.2 ? (v - lo) / (hi - lo) : v);
-    const areas = areasOf(DATA, a.theater);
-    const xs = areas.map((n) => n.x);
-    const ys = areas.map((n) => n.y);
-    return {
-      x: m.x + pad + fit(a.x, Math.min(...xs), Math.max(...xs)) * (m.w - pad * 2),
-      // The bottom strip is the note's (other seas, #282): nodes and their names keep above it (#336).
-      y: m.y + pad + fit(a.y, Math.min(...ys), Math.max(...ys)) * (m.h - pad * 2 - NOTE_STRIP),
-    };
+    return mapNodePos(a, areasOf(DATA, a.theater), L.map, IS_PORTRAIT, NOTE_STRIP);
   }
 
   private drawMap(): void {
@@ -298,7 +287,7 @@ export class CampaignMapScene extends Phaser.Scene {
     fitText(seaLine, L.map.w - (IS_PORTRAIT ? 250 : 210));
     this.mapLayer.push(seaLine);
     // Names go wherever they overlap nothing (#162): dense theaters crowd the portrait map.
-    const placed = placeLabels(areas.map((a) => this.nodePos(a)), names.map((t) => ({ w: t.width, h: t.height })), NODE_R, { x: L.map.x + 8, y: L.map.y + 8, w: L.map.w - 16, h: L.map.h - 16 - NOTE_STRIP });
+    const placed = placeLabels(areas.map((a) => this.nodePos(a)), names.map((t) => ({ w: t.width, h: t.height })), NODE_R, { x: L.map.x + 8, y: L.map.y + 8, w: L.map.w - 16, h: L.map.h - 16 - NOTE_STRIP }, mapObstacles(L.map, IS_PORTRAIT, seaLine.displayWidth));
     placed.forEach((p, i) => names[i].setPosition(p.x, p.y).setScale(p.scale));
   }
 
@@ -350,7 +339,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const sea = progress.sea ?? emptySeaControl();
     const seaHere = seaState(a.id, cleared, sea, a.training);
     const giantEvent = activeEvent();
-    const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;
+    const giantHere = giantEvent?.kind === 'superweapon' && eventGiantJoins(a, depth, giantEvent.theater) ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [
       ['目標', objectiveText(a)],
       // Portrait keeps to the kinds (the names ran the sweep line into the buttons).

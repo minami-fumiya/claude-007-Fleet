@@ -141,7 +141,7 @@ export function eventHelp(kind: EventKind): string {
     case 'bauxite': return `戦闘で得るボーキが ${pct(e.bauxiteMul)} 増える。`;
     case 'training': return `艦の熟練度と艦長の経験値が ${pct(e.xpMul)} 増える。`;
     case 'repair': return `入渠の時間と資源が ${pct(e.repairMul)} 減る。`;
-    case 'superweapon': return `1 つの戦域の主力艦隊に、その国の超兵器が加わる。撃沈するとゴールドが入る (${SUPERWEAPON_EVERY} 時間ごと、1 日 ${MIN_SUPERWEAPON}〜${MAX_SUPERWEAPON} 回)。`;
+    case 'superweapon': return `1 つの戦域の中佐以上の海域の主力艦隊に、その国の超兵器が加わる。撃沈するとゴールドが入る (${SUPERWEAPON_EVERY} 時間ごと、1 日 ${MIN_SUPERWEAPON}〜${MAX_SUPERWEAPON} 回)。`;
   }
 }
 
