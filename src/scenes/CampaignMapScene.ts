@@ -37,11 +37,15 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 import { placeLabels } from '@/utils/LabelLayout';
 import { dashes, rimSegment } from '@/utils/RouteLine';
 import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
+import { defenseReward, emptySeaControl, heldAreas, seaIncome, seaState } from '@/systems/SeaControlSystem';
+import { shortResources } from '@/systems/ResourceSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
 export const CAMPAIGN_AREA_KEY = 'campaign.area';
 /** Registry key: the area is sortied to as its superweapon sea (#148) */
 export const SW_AREA_KEY = 'campaign.swArea';
+/** Registry key: the area is sortied to as a defence against the enemy's counterattack (#50) */
+export const DEFENSE_AREA_KEY = 'campaign.defense';
 
 const DATA = campaignData as ICampaignData;
 
@@ -192,6 +196,7 @@ export class CampaignMapScene extends Phaser.Scene {
     const banked = (t: string): number => ready.filter((x) => x.area.theater === t).reduce((n, x) => n + x.left, 0);
     const cleared = loadProgress().campaign;
     const base = baseOfProgress(loadProgress());
+    const sea = loadProgress().sea ?? emptySeaControl();
     this.theaters.forEach((t, i) => {
       const pct = Math.round(theaterProgress(DATA, t.id, cleared) * 100);
       // Up to six theaters a navy (#250): portrait puts the percentage under the name. 内海 marks the Baltic and the
@@ -200,11 +205,13 @@ export class CampaignMapScene extends Phaser.Scene {
       const name = `${t.name}${t.inland && !IS_PORTRAIT ? '(内海)' : ''}`;
       // The sweeps banked in the sea (#406), on its tab.
       const sw = banked(t.id) > 0 ? ` 掃${banked(t.id)}` : '';
-      this.tabs[i].setLabel(IS_PORTRAIT ? `${name}\n${pct}%${away}${sw}` : `${name} ${pct}%${away}${sw}`).setVariant(t.id === id ? 'primary' : 'secondary');
+      // 敵の反攻 (#50): the sea under attack is marked on its tab.
+      const counterHere = DATA.areas.find((a) => a.id === sea.counter?.areaId)?.theater === t.id ? ' 反攻' : '';
+      this.tabs[i].setLabel(IS_PORTRAIT ? `${name}\n${pct}%${away}${sw}${counterHere}` : `${name} ${pct}%${away}${sw}${counterHere}`).setVariant(t.id === id ? 'primary' : 'secondary');
     });
     const areas = areasOf(DATA, id);
     const pending = pendingSortie(this);
-    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => a.id === this.focusArea && isUnlocked(a, cleared)) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
+    this.selected = areas.find((a) => a.id === pending?.areaId) ?? areas.find((a) => a.id === this.focusArea && isUnlocked(a, cleared)) ?? areas.find((a) => a.id === sea.counter?.areaId) ?? areas.find((a) => isUnlocked(a, cleared) && !isCleared(a, cleared)) ?? areas[0] ?? null;
     this.focusArea = null;
     this.drawMap();
     this.drawDetail();
@@ -229,6 +236,7 @@ export class CampaignMapScene extends Phaser.Scene {
     for (const o of this.mapLayer) o.destroy();
     this.mapLayer = [];
     const cleared = loadProgress().campaign;
+    const sea = loadProgress().sea ?? emptySeaControl();
     // Areas not open yet are left off the map, with the routes into them (#382): what lies ahead stays unknown. The
     // area a sortie was left in shows whatever happens.
     const pendingId = pendingSortie(this)?.areaId;
@@ -260,27 +268,35 @@ export class CampaignMapScene extends Phaser.Scene {
       const { x, y } = this.nodePos(a);
       const done = isCleared(a, cleared);
       const open = isUnlocked(a, cleared);
-      const color = done ? Colors.gold : open ? Colors.cyan : Colors.muted;
+      // 制海権 (#50): a sea held is gold, one under attack red, one the enemy took back dim red.
+      const state = seaState(a.id, cleared, sea, a.training);
+      const color = state === 'attacked' || state === 'lost' ? Colors.danger : done ? Colors.gold : open ? Colors.cyan : Colors.muted;
       const node = this.add.graphics();
-      node.fillStyle(color, done || open ? 0.25 : 0.1);
+      node.fillStyle(color, state === 'lost' ? 0.12 : done || open ? 0.25 : 0.1);
       node.fillCircle(x, y, NODE_R);
       node.lineStyle(a === this.selected ? 4 : 2, color, open ? 1 : 0.4);
       node.strokeCircle(x, y, NODE_R);
       // A cleared area shows its best battle rank (#149), or ✓ when it has none yet.
       const best = done ? loadProgress().areaRanks[a.id] : undefined;
       // A training area (#202) reads 訓 instead of a number.
-      const label = this.add.text(x, y, best ?? (done ? '✓' : a.training ? '訓' : String(i + 1)), textStyle(16, done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
+      const mark = state === 'attacked' ? '!' : state === 'lost' ? '奪' : undefined;
+      const label = this.add.text(x, y, mark ?? best ?? (done ? '✓' : a.training ? '訓' : String(i + 1)), textStyle(16, mark ? Css.danger : done ? Css.gold : open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0.5);
       const name = this.add.text(x, y + NODE_R + 8, a.name, textStyle(12, open ? Css.text : Css.dim, { fontStyle: 'bold' })).setOrigin(0, 0);
       names.push(name);
       const hit = this.add.zone(x, y, NODE_R * 3, NODE_R * 3).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => this.selectArea(a.id));
       this.mapLayer.push(node, label, name, hit);
-      if (open && !done) {
-        const pulse = this.add.circle(x, y, NODE_R).setStrokeStyle(2, Colors.cyan, 0.8);
+      if ((open && !done) || state === 'attacked') {
+        const pulse = this.add.circle(x, y, NODE_R).setStrokeStyle(2, state === 'attacked' ? Colors.danger : Colors.cyan, 0.8);
         this.tweens.add({ targets: pulse, scale: 1.6, alpha: 0, duration: 1400, repeat: -1 });
         this.mapLayer.push(pulse);
       }
     });
+    // 制海権 (#50): the seas this navy holds and what they pay an hour, at the map's top left.
+    const held = heldAreas(DATA.areas, cleared, sea).length;
+    const seaLine = this.add.text(L.map.x + 18, L.map.y + 12, `制海権 ${held} 海域  ·  ${IS_PORTRAIT ? '' : '1 時間に '}${shortResources(seaIncome(held))}`, textStyle(12, Css.gold, { fontStyle: 'bold' }));
+    fitText(seaLine, L.map.w - (IS_PORTRAIT ? 250 : 210));
+    this.mapLayer.push(seaLine);
     // Names go wherever they overlap nothing (#162): dense theaters crowd the portrait map.
     const placed = placeLabels(areas.map((a) => this.nodePos(a)), names.map((t) => ({ w: t.width, h: t.height })), NODE_R, { x: L.map.x + 8, y: L.map.y + 8, w: L.map.w - 16, h: L.map.h - 16 - NOTE_STRIP });
     placed.forEach((p, i) => names[i].setPosition(p.x, p.y).setScale(p.scale));
@@ -331,6 +347,8 @@ export class CampaignMapScene extends Phaser.Scene {
     const ownPower = ownShips.length > 0 ? fleetPowerBreakdown(ownShips, progress, DataLoader.getUpgrades(this)).total : 0;
     const tone = powerTone(ownPower, enemyPower);
     const swOpen = superweaponSeaOpen(DATA, a, cleared) && superweaponOf(enemyNation) !== undefined;
+    const sea = progress.sea ?? emptySeaControl();
+    const seaHere = seaState(a.id, cleared, sea, a.training);
     const giantEvent = activeEvent();
     const giantHere = giantEvent?.kind === 'superweapon' && giantEvent.theater === a.theater && !a.training ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [
@@ -352,6 +370,10 @@ export class CampaignMapScene extends Phaser.Scene {
           // The fleet last set up, weighed the same way (#280).
           ...(ownPower > 0 ? [['戦力の比較', powerCompareText(ownPower, enemyPower)] as [string, string]] : [])] as Array<[string, string]>),
       ...(open ? [] : [['解放の条件', lockText(DATA, a, cleared)] as [string, string]]),
+      // 制海権 (#50): held, under the enemy's counterattack, or taken back by it.
+      ...(seaHere === 'attacked' ? [['敵の反攻', `残り ${clock(Math.max(0, (sea.counter?.endsAt ?? 0) - Date.now()))} で制海権を失います。防衛戦は敵の主力艦隊との 1 戦 (勝てば ${formatResources(defenseReward(a.reward))})`] as [string, string]]
+        : seaHere === 'lost' ? [['制海権', '敵に奪われました。もう一度攻略すると取り返せます (それまで収入と掃討なし)'] as [string, string]]
+        : seaHere === 'held' ? [['制海権', `保持  ·  1 時間に ${formatResources(seaIncome(1))}`] as [string, string]] : []),
       ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
@@ -359,7 +381,8 @@ export class CampaignMapScene extends Phaser.Scene {
       return o;
     };
     const bestRank = progress.areaRanks[a.id];
-    add(this.add.text(x, d.y + 20, isCleared(a, cleared) ? `攻略済${bestRank ? `  ·  最高評価 ${bestRank}` : ''}` : open ? '作戦' : '未解放', eyebrowStyle(11, isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
+    const eyebrow = seaHere === 'attacked' ? '敵の反攻' : seaHere === 'lost' ? '敵の制海権' : isCleared(a, cleared) ? `攻略済${bestRank ? `  ·  最高評価 ${bestRank}` : ''}` : open ? '作戦' : '未解放';
+    add(this.add.text(x, d.y + 20, eyebrow, eyebrowStyle(11, seaHere === 'attacked' || seaHere === 'lost' ? Css.danger : isCleared(a, cleared) ? Css.gold : open ? Css.cyan : Css.dim)));
     const title = add(this.add.text(x, d.y + 44, a.name, displayStyle(24)));
     const desc = add(this.add.text(x, title.y + title.height + 10, a.description, textStyle(13, Css.muted, wrap)));
     let y = desc.y + desc.height + 18;
@@ -375,7 +398,8 @@ export class CampaignMapScene extends Phaser.Scene {
       y = t.y + t.height + 10;
     }
     // 掃討 (#57): an area won without losses can be swept, skipping the battle.
-    const sweepable = canSweep(progress, a);
+    // A sea the enemy took back (#50) can't be swept until it is won again.
+    const sweepable = canSweep(progress, a) && seaHere !== 'lost';
     const left = sweepsLeft(progress, a.id, Date.now());
     const wait = nextSweepMs(progress.sweepCharges[a.id], Date.now());
     const sweepNote = sweepable
@@ -414,7 +438,8 @@ export class CampaignMapScene extends Phaser.Scene {
       return;
     }
     // The sortie, the superweapon sea (#148) and the sweep share the row.
-    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0);
+    const defend = seaHere === 'attacked';
+    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0) + (defend ? 1 : 0);
     const bw = (d.w - 48 - 12 * (count - 1)) / count;
     const bx = (i: number): number => d.x + 24 + i * (bw + 12) + bw / 2;
     const bh = IS_PORTRAIT ? 76 : 60;
@@ -428,8 +453,14 @@ export class CampaignMapScene extends Phaser.Scene {
       }),
     );
     btn.setEnabled(open && reach);
+    // 防衛戦 (#50): the counterattack's main fleet, one battle.
+    if (defend) {
+      add(new UIButton(this, bx(1), by, '防衛戦  ›', () => this.prepare(a, false, true), {
+        variant: 'danger', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
+      })).setEnabled(reach);
+    }
     if (swOpen) {
-      add(new UIButton(this, bx(1), by, '超兵器海域', () => this.prepare(a, true), {
+      add(new UIButton(this, bx(defend ? 2 : 1), by, '超兵器海域', () => this.prepare(a, true), {
         variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
       })).setEnabled(reach);
     }
@@ -468,11 +499,13 @@ export class CampaignMapScene extends Phaser.Scene {
   }
 
   /** To the fleet builder for the area; `giant`: its superweapon sea (#148). */
-  private prepare(a: ICampaignArea, giant = false): void {
+  private prepare(a: ICampaignArea, giant = false, defense = false): void {
     if (!isUnlocked(a, loadProgress().campaign)) return;
     this.registry.set(CAMPAIGN_AREA_KEY, a.id);
     if (giant) this.registry.set(SW_AREA_KEY, true);
     else this.registry.remove(SW_AREA_KEY);
+    if (defense) this.registry.set(DEFENSE_AREA_KEY, true);
+    else this.registry.remove(DEFENSE_AREA_KEY);
     this.scene.start(SceneKeys.FLEET_BUILDER);
   }
 }

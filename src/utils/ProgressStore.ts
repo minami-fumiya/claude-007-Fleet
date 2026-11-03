@@ -16,10 +16,12 @@ import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
 import { IBaseWork, nationBases } from '@/systems/BaseSystem';
 import { completeTimers, finishBuilds } from '@/systems/TimerSystem';
-import { Facilities, FacilityId, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
+import { Facilities, FacilityId, holdCap, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
-import { LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
+import { accrueSeaIncome, emptySeaControl, expireCounter, heldAreas, ISeaControl, parseSeaControl } from '@/systems/SeaControlSystem';
+import campaignData from '@/data/campaign.json';
+import { gainResources, LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
 import { IServiceRecord } from '@/types/Record';
 import { PLAYABLE_NATIONS } from '@/config/NationInfo';
@@ -164,6 +166,8 @@ export interface INationProgress {
   favorites: string[];
   /** The ship picker lists ships already in a fleet (to swap them, #419); remembered between visits */
   pickerShowAssigned: boolean;
+  /** 制海権と敵の反攻 (#50): seas taken back, the counterattack under way and the hourly income's clock */
+  sea: ISeaControl;
 }
 
 /** The whole save (v2 and later). */
@@ -214,7 +218,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airStart: false, airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, examFrom: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
-    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true,
+    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true, sea: emptySeaControl(),
   };
 }
 
@@ -254,7 +258,24 @@ export function progressView(save: ISave, now?: number): IProgress {
   const regen = r.resources === built.resources && r.regenAt === built.regenAt
     ? built
     : { ...built, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(built.ledger, 'regen', resourceDelta(built.resources, r.resources).gained, now) };
-  return regen;
+  return applySeaControl(regen, now);
+}
+
+/**
+ * 制海権 (#50): a counterattack past its deadline takes its sea, then the seas held pay the hours of income since the
+ * last (up to the holding cap, the rest in the ledger's overflow).
+ */
+export function applySeaControl<T extends INationProgress>(p: T, now: number): T {
+  const sea0 = p.sea ?? emptySeaControl();
+  const expired = expireCounter(sea0, now).sea;
+  const held = heldAreas((campaignData as { areas: Array<{ id: string; theater: string; training?: boolean; requires: string[] }> }).areas, p.campaign, expired).length;
+  const acc = accrueSeaIncome(expired, held, now);
+  if (acc.sea === sea0) return p;
+  const any = Object.values(acc.gain).some((v) => v > 0);
+  if (!any) return { ...p, sea: acc.sea };
+  const g = gainResources(p.resources, acc.gain, holdCap(p.facilities));
+  const taken = resourceDelta(p.resources, g.resources).gained;
+  return { ...p, sea: acc.sea, resources: g.resources, ledger: recordLedger(recordLedger(p.ledger, 'seaControl', taken, now), 'overflow', g.lost, now) };
 }
 
 /** Kept here for callers of the store; the timers live in TimerSystem (#310). */
@@ -403,6 +424,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     foreignFragments: migrateFragments(numbers(data.foreignFragments)),
     favorites: [...new Set(strings(data.favorites))],
     pickerShowAssigned: data.pickerShowAssigned !== false,
+    sea: parseSeaControl(data.sea),
   };
 }
 
@@ -718,7 +740,7 @@ export function loadProgress(): IProgress {
   const save = loadSave();
   const view = progressView(save, Date.now());
   const np = save.nations[save.current];
-  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.docks !== np.docks || view.quests !== np.quests || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs || view.baseWork !== np.baseWork)) saveSave(withProgress(save, view));
+  if (np && (view.regenAt !== np.regenAt || view.resources !== np.resources || view.builds !== np.builds || view.docks !== np.docks || view.quests !== np.quests || view.ledger !== np.ledger || view.facilityJobs !== np.facilityJobs || view.baseWork !== np.baseWork || view.sea !== np.sea)) saveSave(withProgress(save, view));
   return view;
 }
 

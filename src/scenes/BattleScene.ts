@@ -99,7 +99,8 @@ import { addResources, formatResources, gainResources, lostNote } from '@/system
 import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
-import { campaignSide, firstSReward, recordClear, TRAINING_SCALE } from '@/systems/CampaignSystem';
+import { campaignSide, firstSReward, recordClear, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
+import { COUNTER_HOURS, counterTargets, countSortie, defenseReward, emptySeaControl, retakeArea, settleDefense } from '@/systems/SeaControlSystem';
 import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
 import { LAST_STAND_HP, lastStandArmor, luckChance, skillModifiers, skillOf } from '@/systems/ShipSkillSystem';
@@ -1006,6 +1007,38 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** A ship's 中分類 subtype from its data (#426). */
+  /** 制海権 (#50): what this campaign battle does to the seas held (see SeaControlSystem). */
+  private seaAfterBattle(progress: IProgress, area: ICampaignArea, victory: boolean, now: number): { progress: IProgress; line: string } {
+    let sea = progress.sea ?? emptySeaControl();
+    const lines: string[] = [];
+    if (this.battleData?.defense) {
+      const held = sea.counter?.areaId === area.id;
+      sea = settleDefense(sea, area.id, victory);
+      if (victory && held) {
+        const reward = defenseReward(area.reward);
+        const g = gainResources(progress.resources, reward, holdCap(progress.facilities));
+        progress = { ...progress, resources: g.resources, ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(reward, g.lost, -1), now), 'overflow', g.lost, now) };
+        progress = withQuestEvents(progress, [['defenseWin', 1]], now);
+        lines.push(`制海権を守りました: ${area.name}  防衛の報酬 ${formatResources(reward)}${lostNote(g.lost)}`);
+      } else if (!victory && held) {
+        lines.push(`制海権を失いました: ${area.name} (もう一度攻略すると取り返せます)`);
+      }
+    } else {
+      if (victory && sea.lost.includes(area.id)) {
+        sea = retakeArea(sea, area.id);
+        progress = withQuestEvents(progress, [['seaRetake', 1]], now);
+        lines.push(`制海権を取り返しました: ${area.name}`);
+      }
+      const data = campaignData as ICampaignData;
+      const theaters = theatersFor(data, progress.nation).map((t) => t.id);
+      const counted = countSortie(sea, counterTargets(data.areas, progress.campaign, sea, theaters), now);
+      sea = counted.sea;
+      const target = counted.started ? data.areas.find((a) => a.id === counted.started!.areaId) : undefined;
+      if (target) lines.push(`敵の反攻: ${target.name} に敵艦隊が迫っています。${COUNTER_HOURS} 時間以内に作戦の地図から防衛戦へ`);
+    }
+    return { progress: { ...progress, sea }, line: lines.join('  ·  ') };
+  }
+
   private subtypeOf(ship: BaseShip): ShipSubtype | undefined {
     return ship.dataId ? DataLoader.getRegistry(this).byId(ship.dataId)?.subtype : undefined;
   }
@@ -2732,6 +2765,14 @@ export class BattleScene extends Phaser.Scene {
       result.campaign = '演習: 損傷なし・資源報酬は半分';
     }
     if (area && this.battleData?.swArea) result.campaign = `超兵器海域: ${area.name}  ${victory ? '勝利' : '敗北'}`;
+    // 制海権 (#50): a defence settles the counterattack; a main-fleet win takes a lost sea back; every main-fleet
+    // battle counts towards the next counterattack.
+    if (area && !skirmish && !this.battleData?.swArea && !area.training) {
+      const sea = this.seaAfterBattle(progress, area, victory, now);
+      progress = sea.progress;
+      if (sea.line) result.sea = sea.line;
+      if (this.battleData?.defense) result.campaign = `${victory ? '防衛成功' : '防衛失敗'}: ${area.name}`;
+    }
     // Merit (戦功, #36): first clears count most; the rank (and slots, docks, ship grades) follow from it.
     const before = rankOf(progress);
     // Promotion missions (#142) count campaign battles; finishing one can promote as surely as merit.

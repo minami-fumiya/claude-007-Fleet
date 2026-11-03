@@ -13,7 +13,7 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
 import { areaMode, enemyNationFor, enemyShips } from '@/systems/CampaignSystem';
-import { CAMPAIGN_AREA_KEY, OBJECTIVE_LABEL, SW_AREA_KEY } from '@/scenes/CampaignMapScene';
+import { CAMPAIGN_AREA_KEY, DEFENSE_AREA_KEY, OBJECTIVE_LABEL, SW_AREA_KEY } from '@/scenes/CampaignMapScene';
 import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -319,6 +319,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private area: ICampaignArea | null = null;
   /** 超兵器海域 (#148): the area is fought once against its giant, outside any sortie */
   private swArea = false;
+  /** 防衛戦 (#50): the sortie defends the area against the enemy's counterattack */
+  private defense = false;
   private enemyNation: Choice<Nation> = RANDOM;
   private mode: Choice<BattleMode> = RANDOM;
   private weatherChoice: Choice<Weather> = RANDOM;
@@ -430,6 +432,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const areaId = this.registry.get(CAMPAIGN_AREA_KEY) as string | undefined;
     this.area = (campaignData as ICampaignData).areas.find((a) => a.id === areaId) ?? null;
     this.swArea = this.area !== null && this.registry.get(SW_AREA_KEY) === true;
+    this.defense = this.area !== null && !this.swArea && this.registry.get(DEFENSE_AREA_KEY) === true;
     if (this.area) this.organizeOnly = false;
     this.keyBuffer = '';
     this.keyAt = 0;
@@ -1351,7 +1354,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // Enemy kinds first, then each kind's ships (#68).
     const lineup = kindGroups(enemy.map((s) => ({ ...s, name: shortName(s.name) }))).map((g) => `${g.kind} ${g.names.join('・')}`).join(' / ');
     const lines = [
-      this.swArea ? `超兵器海域  ${area.name}` : `作戦  ${area.name}`,
+      this.swArea ? `超兵器海域  ${area.name}` : this.defense ? `防衛戦  ${area.name}` : `作戦  ${area.name}`,
       `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[enemyNation].jaShort} ${enemy.length} 隻 — ${kindBreakdown(enemy)}`,
       lineup,
       `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
@@ -1367,6 +1370,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     objs.push(new UIButton(this, x + w / 2, by, '作戦を中止して演習にする', this.onTap(() => {
       this.registry.remove(CAMPAIGN_AREA_KEY);
       this.registry.remove(SW_AREA_KEY);
+      this.registry.remove(DEFENSE_AREA_KEY);
       this.scene.restart();
     }), { variant: 'secondary', width: w, height: bh, fontSize: 12 }));
     return p ? by + bh / 2 + 8 : y;
@@ -2217,7 +2221,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // A campaign area is fought node by node (#53); the first battle may be its escorts.
     const sortie = area
       ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList,
-        support.map((g) => ({ shipIds: g.ships.map((s) => s.id), captainIds: g.captainIds, mission: g.mission })))
+        support.map((g) => ({ shipIds: g.ships.map((s) => s.id), captainIds: g.captainIds, mission: g.mission })), this.defense)
       : null;
     // An exercise leaves a campaign sortie in progress alone (#138): it can still be continued from the map.
     this.scene.start(SceneKeys.BATTLE, sortie ?? initData);
