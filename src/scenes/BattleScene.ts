@@ -87,7 +87,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
-import { afterBattle, emptyWorld, endVoyage, mustReturn, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
+import { afterBattle, emptyWorld, endVoyage, FORT_GOLD, FORT_REWARD, mustReturn, takeFort, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
 import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
 import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
@@ -2922,6 +2922,14 @@ export class BattleScene extends Phaser.Scene {
         lost = addResources(lost, g.lost);
         progress = withQuestEvents(progress, [['worldWin', 1]], now);
         line += `  ·  外洋の報酬 ${formatResources(extra)}・ゴールド ${worldGold(w.danger)}`;
+        // 敵の要塞 (#65 第 2 段階): taken, it pays its own reward and makes the water round it safer this week.
+        if (w.fort) {
+          world = takeFort(world, w.spotId, now);
+          const g2 = gainResources(progress.resources, FORT_REWARD, holdCap(progress.facilities));
+          progress = withQuestEvents({ ...progress, resources: g2.resources, wallet: addGold(walletOf(progress), FORT_GOLD), ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(FORT_REWARD, g2.lost, -1), now), 'overflow', g2.lost, now) }, [['fortTaken', 1]], now);
+          lost = addResources(lost, g2.lost);
+          line += `  ·  要塞を攻略: ${formatResources(FORT_REWARD)}・ゴールド ${FORT_GOLD} (今週はまわりの敵が弱くなる)`;
+        }
       }
       if (mustReturn(victory, fleet.map((s) => (s.isAlive ? s.stats.currentHp / Math.max(1, s.stats.maxHp) : 0)), HEAVY_DAMAGE)) {
         world = endVoyage(world);

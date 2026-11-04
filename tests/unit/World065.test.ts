@@ -38,18 +38,18 @@ describe('0.0.65 外洋 (#65)', () => {
 
   it('a won battle is marked and counted; a lost one or a fleet in ruins comes home', () => {
     const w = { ...emptyWorld(), voyage: startVoyage(['a'], [null], Formation.LineAhead, NOW) };
-    const won = afterBattle(w, 'h:3', 4, true);
-    expect(won.voyage?.cleared).toEqual(['h:3']);
+    const won = afterBattle(w, '5:3', 4, true);
+    expect(won.voyage?.cleared).toEqual(['5:3']);
     expect(won).toMatchObject({ best: 4, wins: 1 });
-    expect(afterBattle(won, 'h:4', 9, false)).toMatchObject({ best: 4, wins: 1 });
+    expect(afterBattle(won, '5:4', 9, false)).toMatchObject({ best: 4, wins: 1 });
     expect(mustReturn(false, [1], 0.25)).toBe(true);
     expect(mustReturn(true, [0.2, 0.1], 0.25)).toBe(true);
     expect(mustReturn(true, [0.2, 0.9], 0.25)).toBe(false);
     expect(endVoyage(won).voyage).toBeNull();
     // Sailing home and out again doesn't bring a group won this hour back; the next hour's are new.
     const again = { ...endVoyage(won), voyage: startVoyage(['a'], [null], Formation.LineAhead, NOW) };
-    expect(spotWon(again, 'h:3')).toBe(true);
-    expect(afterBattle(again, 'k:1', 2, true).cleared).toEqual(['k:1']);
+    expect(spotWon(again, '5:3')).toBe(true);
+    expect(afterBattle(again, '6:1', 2, true).cleared).toEqual(['6:1']);
     expect(voyageShipIds(won)).toEqual(['a']);
   });
 
@@ -71,7 +71,7 @@ describe('0.0.65 外洋 (#65)', () => {
 
   it('old saves read in port; odd voyages are dropped', async () => {
     expect(parseWorld(undefined)).toEqual(emptyWorld());
-    expect(parseWorld({ voyage: { shipIds: [] }, best: 99 })).toEqual({ voyage: null, best: MAX_DANGER, wins: 0, cleared: [] });
+    expect(parseWorld({ voyage: { shipIds: [] }, best: 99 })).toEqual({ voyage: null, best: MAX_DANGER, wins: 0, cleared: [], visits: {}, forts: {} });
     const v = parseWorld({ voyage: { shipIds: ['a'], x: 5, y: 6, supply: 500, formation: 'nope' } }).voyage!;
     expect(v).toMatchObject({ x: 5, y: 6, supply: SUPPLY_MAX, formation: Formation.LineAhead, cleared: [] });
     const { parseSave, emptySave, emptyNationProgress } = await import('@/utils/ProgressStore');
