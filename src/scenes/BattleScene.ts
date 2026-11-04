@@ -100,6 +100,7 @@ import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
+import { addBattle, addGiantBattle } from '@/systems/ShipRecordSystem';
 import { COUNTER_HOURS, counterTargets, countSortie, defenseReward, emptySeaControl, retakeArea, settleDefense } from '@/systems/SeaControlSystem';
 import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
@@ -1008,6 +1009,20 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** A ship's 中分類 subtype from its data (#426). */
+  /** 艦ごとの戦歴 (#416): sinkings by class, the battle and heavy damage for every owned ship; the giant's history. */
+  private recordShips(progress: IProgress, fleet: BaseShip[], seconds: number): IProgress {
+    const owned = fleet.filter((s) => s.dataId && progress.ships.includes(s.dataId));
+    const shipRecords = { ...(progress.shipRecords ?? {}) };
+    for (const ship of owned) {
+      const sank = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy && e.lastHitBy === ship).map((e) => e.stats.shipClass);
+      const heavy = !ship.isAlive || ship.stats.currentHp / Math.max(1, ship.stats.maxHp) <= HEAVY_DAMAGE;
+      shipRecords[ship.dataId!] = addBattle(shipRecords[ship.dataId!], sank, heavy);
+    }
+    const giant = this.superweapon?.dataId;
+    const giantRecords = giant ? { ...(progress.giantRecords ?? {}), [giant]: addGiantBattle(progress.giantRecords?.[giant], !this.superweapon!.isAlive, seconds) } : progress.giantRecords ?? {};
+    return { ...progress, shipRecords, giantRecords };
+  }
+
   /** 制海権 (#50): what this campaign battle does to the seas held (see SeaControlSystem). */
   private seaAfterBattle(progress: IProgress, area: ICampaignArea, victory: boolean, now: number): { progress: IProgress; line: string } {
     let sea = progress.sea ?? emptySeaControl();
@@ -2743,6 +2758,8 @@ export class BattleScene extends Phaser.Scene {
       // A win under each kind of event counts for the イベント巡り章 (#218).
       ...(event ? [[`event_${event.kind}`, won(true)] as [QuestEvent, number]] : []),
     ], Date.now());
+    // 艦ごとの戦歴 (#416): each of the admiral's own ships, and the superweapon met.
+    if (!this.scenario) progress = this.recordShips(progress, fleet, result.durationSec ?? 0);
     if (skirmish) {
       result.campaign = `${area.name}  ${NODE_LABEL.battle} ${victory ? '勝利' : '敗北'} (${node.node} / ${node.battles})`;
       result.returnScene = SceneKeys.CAMPAIGN;

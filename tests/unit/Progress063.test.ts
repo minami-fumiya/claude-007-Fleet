@@ -69,3 +69,37 @@ describe('0.0.63 国家方針の国の道 (#416)', () => {
     expect(pendingSummary({ ...p, focusSeen: undefined }, 0, 0).find((i) => i.id === 'focusDone')).toBeUndefined();
   });
 });
+
+describe('0.0.63 艦ごとの戦歴・超兵器の戦歴 (#416)', () => {
+  it('each battle adds the classes a ship sank, its best and its heavy damage', async () => {
+    const { addBattle, shipRecordText, sunkTotal } = await import('@/systems/ShipRecordSystem');
+    const { ShipClass } = await import('@/types/ShipClass');
+    let r = addBattle(undefined, [ShipClass.Destroyer, ShipClass.Destroyer, ShipClass.Cruiser], false);
+    r = addBattle(r, [], true);
+    expect(r).toEqual({ battles: 2, sunk: { Destroyer: 2, Cruiser: 1 }, best: 3, heavy: 1 });
+    expect(sunkTotal(r)).toBe(3);
+    expect(shipRecordText(r)).toBe('出撃 2・撃沈 3 (巡 1・駆 2)・最多 3 隻・大破 1');
+    expect(shipRecordText(undefined)).toBe('');
+  });
+
+  it('a superweapon\'s history keeps the fastest sinking, and every navy\'s together', async () => {
+    const { addGiantBattle, giantRecordText, mergeGiantRecords } = await import('@/systems/ShipRecordSystem');
+    let g = addGiantBattle(undefined, false, 300);
+    g = addGiantBattle(g, true, 192.4);
+    g = addGiantBattle(g, true, 250);
+    expect(g).toEqual({ fought: 3, sunk: 2, bestSec: 192 });
+    expect(giantRecordText(g)).toBe('戦った 3 回・撃沈 2 回・最短 3:12');
+    expect(mergeGiantRecords([g, { fought: 1, sunk: 1, bestSec: 100 }, undefined])).toEqual({ fought: 4, sunk: 3, bestSec: 100 });
+  });
+
+  it('old saves read with no records; the medal counts the best ship', async () => {
+    const { emptyNationProgress, parseSave, emptySave } = await import('@/utils/ProgressStore');
+    const raw = JSON.stringify({ ...emptySave(), nations: { IJN: { ...emptyNationProgress(), shipRecords: undefined, giantRecords: undefined } } });
+    const np = parseSave(raw).nations.IJN!;
+    expect(np.shipRecords).toEqual({});
+    expect(np.giantRecords).toEqual({});
+    const { MEDALS } = await import('@/systems/RecordSystem');
+    expect(MEDALS.map((m) => m.id)).toContain('ship_ace');
+    expect(MEDALS.map((m) => m.id)).toContain('national_way');
+  });
+});

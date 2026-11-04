@@ -19,6 +19,7 @@ import { completeTimers, finishBuilds } from '@/systems/TimerSystem';
 import { Facilities, FacilityId, holdCap, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
+import { IGiantRecord, IShipRecord, parseGiantRecords, parseShipRecords } from '@/systems/ShipRecordSystem';
 import { accrueSeaIncome, emptySeaControl, expireCounter, heldAreas, ISeaControl, parseSeaControl } from '@/systems/SeaControlSystem';
 import campaignData from '@/data/campaign.json';
 import { gainResources, LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
@@ -170,6 +171,9 @@ export interface INationProgress {
   sea: ISeaControl;
   /** 方針完了のお知らせ (#416): how many focuses were done when the 国家方針 screen was last opened (absent = all seen) */
   focusSeen?: number;
+  /** 艦ごとの戦歴 (#416): ship id → its battles and sinkings; superweapon id → its history against this navy */
+  shipRecords: Record<string, IShipRecord>;
+  giantRecords: Record<string, IGiantRecord>;
 }
 
 /** The whole save (v2 and later). */
@@ -220,7 +224,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airStart: false, airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, examFrom: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
-    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true, sea: emptySeaControl(),
+    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true, sea: emptySeaControl(), shipRecords: {}, giantRecords: {},
   };
 }
 
@@ -427,6 +431,8 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     favorites: [...new Set(strings(data.favorites))],
     pickerShowAssigned: data.pickerShowAssigned !== false,
     sea: parseSeaControl(data.sea),
+    shipRecords: parseShipRecords(data.shipRecords),
+    giantRecords: parseGiantRecords(data.giantRecords),
     ...(typeof data.focusSeen === 'number' && data.focusSeen >= 0 ? { focusSeen: data.focusSeen } : {}),
   };
 }

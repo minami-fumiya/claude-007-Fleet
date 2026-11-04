@@ -244,6 +244,8 @@ export interface IMedalContext {
   seasHeld?: number;
   /** 国の道 (#416): navies whose own way is done */
   waysDone?: number;
+  /** 艦ごとの戦歴 (#416): the most enemies one ship has sunk */
+  bestShipSinks?: number;
   /** 架空艦 (#309): planned ships one nation owns, best nation */
   plannedOwned?: number;
   /** 設計艦 (#51): designs one nation has drawn, and ships of them owned in all */
@@ -477,6 +479,8 @@ export const MEDALS: IMedalRule[] = [
   // 熟読章 (#425): every screen's help read to its last page.
   ...ladder('help_reader', '熟読章', 'base', [SCREEN_HELP.length], (g) => `画面のヘルプを ${g} 画面ぶん最後まで読む`, (_r, c) => total(c, 'helpRead')),
   ...ladder('expedition_training', '遠征練成章', 'base', [100, 500], (g) => `遠征で熟練度を ${g} ためる`, (_r, c) => total(c, 'expeditionProficiency')),
+  // 0.0.63 艦ごとの戦歴 (#416)
+  ...ladder('ship_ace', '百戦錬磨章', 'battle', [10, 50, 150], (g) => `1 隻の艦で、敵艦を ${g} 隻沈める`, (_r, c) => c.bestShipSinks ?? 0),
   // 0.0.63 国の道 (#416)
   ...ladder('national_way', '国の道章', 'growth', [1, 3, 7], (g) => `${g} か国で、国家方針の国の道を最後まで進める`, (_r, c) => c.waysDone ?? 0),
   // 0.0.62 制海権と敵の反攻 (#50)
