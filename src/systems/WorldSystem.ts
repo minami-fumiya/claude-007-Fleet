@@ -26,8 +26,8 @@ export const BATTLE_SUPPLY = 8;
 /** Enemy groups on the chart (one a ring), placed anew every game hour */
 export const SPOTS_PER_HOUR = MAX_DANGER;
 /** A battle's extra reward per danger, and its gold */
-export const WORLD_REWARD_PER_DANGER: IResources = { fuel: 40, ammo: 40, steel: 50, bauxite: 20 };
-export const WORLD_GOLD_PER_DANGER = 15;
+export const WORLD_REWARD_PER_DANGER: IResources = { fuel: 25, ammo: 25, steel: 30, bauxite: 10 };
+export const WORLD_GOLD_PER_DANGER = 10;
 
 export interface IPoint {
   x: number;
@@ -51,6 +51,8 @@ export interface IWorld {
   /** The most dangerous ring a battle was won in, and battles won, on all voyages */
   best: number;
   wins: number;
+  /** Spots won this game hour, on any voyage: sailing home and out again doesn't bring them back */
+  cleared: string[];
 }
 
 export interface ISpot extends IPoint {
@@ -60,7 +62,7 @@ export interface ISpot extends IPoint {
 }
 
 export function emptyWorld(): IWorld {
-  return { voyage: null, best: 0, wins: 0 };
+  return { voyage: null, best: 0, wins: 0, cleared: [] };
 }
 
 export function distance(a: IPoint, b: IPoint): number {
@@ -88,9 +90,10 @@ export function worldSpots(now: number, player: Nation, foes: readonly Nation[])
   const others = foes.filter((n) => n !== player);
   return Array.from({ length: SPOTS_PER_HOUR }, (_, i) => {
     const h = hash(hour * 131 + i * 7);
-    const r = RING * (i + 0.5);
+    // The first ring's group keeps clear of the port and its name.
+    const r = RING * (i === 0 ? 0.85 : i + 0.5);
     // Upward from the port, up to 70 degrees either side, and no wider than keeps the spot on the chart (so its ring holds).
-    const dev = Math.min((70 * Math.PI) / 180, Math.asin(Math.min(1, (WORLD_SIZE / 2 - 30) / r)));
+    const dev = Math.min(((i === 0 ? 35 : 70) * Math.PI) / 180, Math.asin(Math.min(1, (WORLD_SIZE / 2 - 30) / r)));
     const angle = -Math.PI / 2 + ((h % 1000) / 1000 * 2 - 1) * dev;
     const x = Math.max(30, Math.min(WORLD_SIZE - 30, HOME.x + Math.cos(angle) * r));
     const y = Math.max(30, Math.min(WORLD_SIZE - 30, HOME.y + Math.sin(angle) * r));
@@ -124,7 +127,15 @@ export function afterBattle(world: IWorld, spotId: string, danger: number, victo
   const v = world.voyage;
   if (!v) return world;
   const voyage = { ...v, supply: Math.max(0, v.supply - BATTLE_SUPPLY), cleared: victory ? [...new Set([...v.cleared, spotId])] : v.cleared };
-  return { voyage, best: victory ? Math.max(world.best, danger) : world.best, wins: world.wins + (victory ? 1 : 0) };
+  // Only this hour's spots are kept (their ids start with the hour).
+  const hour = spotId.split(':')[0];
+  const cleared = victory ? [...new Set([...(world.cleared ?? []).filter((id) => id.startsWith(`${hour}:`)), spotId])] : (world.cleared ?? []);
+  return { voyage, best: victory ? Math.max(world.best, danger) : world.best, wins: world.wins + (victory ? 1 : 0), cleared };
+}
+
+/** Whether a spot was already won this hour (on this voyage or an earlier one). */
+export function spotWon(world: IWorld | undefined, spotId: string): boolean {
+  return (world?.cleared ?? []).includes(spotId) || (world?.voyage?.cleared ?? []).includes(spotId);
 }
 
 export function endVoyage(world: IWorld): IWorld {
@@ -195,7 +206,7 @@ export function parseWorld(raw: unknown): IWorld {
       cleared: ids(v.cleared), startedAt: num(v.startedAt),
     }
     : null;
-  return { voyage, best: Math.min(MAX_DANGER, num(o.best)), wins: num(o.wins) };
+  return { voyage, best: Math.min(MAX_DANGER, num(o.best)), wins: num(o.wins), cleared: ids(o.cleared) };
 }
 
 /** The ships out on a voyage (they can't sail elsewhere until it ends). */

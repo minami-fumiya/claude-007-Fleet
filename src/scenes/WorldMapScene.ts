@@ -15,7 +15,7 @@ import { randomTime, randomWeather } from '@/systems/WeatherSystem';
 import { hpFraction } from '@/systems/DockSystem';
 import {
   dangerAt, distance, emptyWorld, endVoyage, HOME, ISpot, MAX_DANGER, reachProblem, RING, sailTo, startVoyage, SUPPLY_MAX,
-  supplyFor, WORLD_SIZE, worldEnemyFleet, worldGold, worldReward, worldSpots,
+  spotWon, supplyFor, WORLD_SIZE, worldEnemyFleet, worldGold, worldReward, worldSpots,
 } from '@/systems/WorldSystem';
 import { IBattleInitData } from '@/types/Scene';
 import { Formation } from '@/types/Formation';
@@ -110,7 +110,6 @@ export class WorldMapScene extends Phaser.Scene {
         const inside = (x: number, y: number): boolean => x >= c.x && x <= c.x + c.s && y >= c.y && y <= c.y + c.s;
         if (inside(x1, y1) && inside(x2, y2)) g.lineBetween(x1, y1, x2, y2);
       }
-      if (d % 2 === 0 && home.y - r > c.y + 12) this.track(this.add.text(home.x + 6, home.y - r + 2, `${d}`, eyebrowStyle(10, d >= 8 ? Css.danger : Css.muted)));
     }
     // The port
     g.fillStyle(Colors.gold, 1);
@@ -118,7 +117,7 @@ export class WorldMapScene extends Phaser.Scene {
     this.track(this.add.text(home.x, home.y + 12, NATION_INFO[p.nation].ja, eyebrowStyle(10, Css.gold)).setOrigin(0.5, 0));
     // The enemy groups at sea
     for (const s of this.spots()) {
-      const won = voyage?.cleared.includes(s.id) === true;
+      const won = spotWon(world, s.id);
       const pos = this.at(s.x, s.y);
       const pick = this.selected === s.id;
       const dot = this.track(this.add.container(pos.x, pos.y));
@@ -205,7 +204,7 @@ export class WorldMapScene extends Phaser.Scene {
       y += 22;
       line(`${NATION_INFO[spot.enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}`, 13);
       line(`勝てば戦闘の報酬に加えて ${formatResources(worldReward(spot.danger))}・ゴールド ${worldGold(spot.danger)}`, 12, Css.cyan);
-      if (voyage?.cleared.includes(spot.id)) line('この敵艦隊には勝ちました (1 時間ごとに新しい敵艦隊)', 12, Css.success);
+      if (spotWon(world, spot.id)) line('この敵艦隊には勝ちました (この 1 時間は戻らず、次の時間に新しい敵艦隊)', 12, Css.success);
       else if (voyage) {
         const problem = reachProblem(voyage, spot);
         line(problem ?? `ここまで補給 ${supplyFor(distance(voyage, spot))}・戦闘で 8・帰りに ${supplyFor(distance(spot, HOME))}`, 12, problem ? Css.danger : Css.muted);
@@ -233,7 +232,7 @@ export class WorldMapScene extends Phaser.Scene {
       }
       return;
     }
-    const canFight = spot && !voyage.cleared.includes(spot.id) && !reachProblem(voyage, spot);
+    const canFight = spot && !spotWon(world, spot.id) && !reachProblem(voyage, spot);
     this.track(new UIButton(this, x + half / 2, by, '交戦  ›', () => spot && this.fight(spot), { variant: canFight ? 'danger' : 'secondary', width: half, height: L.bh, fontSize: 18 })).setEnabled(!!canFight);
     this.track(new UIButton(this, x + w - half / 2, by, '帰港する', () => this.comeHome(), { variant: 'primary', width: half, height: L.bh, fontSize: 16 }));
   }
@@ -260,7 +259,7 @@ export class WorldMapScene extends Phaser.Scene {
     const p = loadProgress();
     const world = p.world ?? emptyWorld();
     const voyage = world.voyage;
-    if (!voyage || voyage.cleared.includes(spot.id)) return;
+    if (!voyage || spotWon(world, spot.id)) return;
     const problem = reachProblem(voyage, spot);
     if (problem) {
       this.say(problem, true);

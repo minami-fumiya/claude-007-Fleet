@@ -3,7 +3,7 @@ import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
 import { ShipClass } from '@/types/ShipClass';
 import {
-  afterBattle, BATTLE_SUPPLY, dangerAt, emptyWorld, endVoyage, HOME, MAX_DANGER, mustReturn, parseWorld, reachProblem, RING, sailTo,
+  afterBattle, BATTLE_SUPPLY, dangerAt, emptyWorld, endVoyage, HOME, MAX_DANGER, mustReturn, parseWorld, spotWon, reachProblem, RING, sailTo,
   startVoyage, SUPPLY_MAX, voyageShipIds, worldEnemyClasses, worldEnemyFleet, worldEnemyScale, worldReward, worldSpots,
 } from '@/systems/WorldSystem';
 
@@ -46,6 +46,10 @@ describe('0.0.65 外洋 (#65)', () => {
     expect(mustReturn(true, [0.2, 0.1], 0.25)).toBe(true);
     expect(mustReturn(true, [0.2, 0.9], 0.25)).toBe(false);
     expect(endVoyage(won).voyage).toBeNull();
+    // Sailing home and out again doesn't bring a group won this hour back; the next hour's are new.
+    const again = { ...endVoyage(won), voyage: startVoyage(['a'], [null], Formation.LineAhead, NOW) };
+    expect(spotWon(again, 'h:3')).toBe(true);
+    expect(afterBattle(again, 'k:1', 2, true).cleared).toEqual(['k:1']);
     expect(voyageShipIds(won)).toEqual(['a']);
   });
 
@@ -67,7 +71,7 @@ describe('0.0.65 外洋 (#65)', () => {
 
   it('old saves read in port; odd voyages are dropped', async () => {
     expect(parseWorld(undefined)).toEqual(emptyWorld());
-    expect(parseWorld({ voyage: { shipIds: [] }, best: 99 })).toEqual({ voyage: null, best: MAX_DANGER, wins: 0 });
+    expect(parseWorld({ voyage: { shipIds: [] }, best: 99 })).toEqual({ voyage: null, best: MAX_DANGER, wins: 0, cleared: [] });
     const v = parseWorld({ voyage: { shipIds: ['a'], x: 5, y: 6, supply: 500, formation: 'nope' } }).voyage!;
     expect(v).toMatchObject({ x: 5, y: 6, supply: SUPPLY_MAX, formation: Formation.LineAhead, cleared: [] });
     const { parseSave, emptySave, emptyNationProgress } = await import('@/utils/ProgressStore');
