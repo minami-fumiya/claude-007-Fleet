@@ -69,7 +69,7 @@ import { WaterSplash } from '@/entities/effects/WaterSplash';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { addChip, addOceanWorld, addPanel, fitText, UIButton } from '@/ui/components/UIKit';
-import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
+import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer, convoyGuardPoint, convoyGuardTarget } from '@/systems/AutoPilot';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
@@ -118,7 +118,7 @@ import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
 import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
-import { areaDepth, enemyScale, fleetPower, scaleModifiers } from '@/systems/DifficultyCurve';
+import { areaDepth, enemyScale, fleetPower, isOpeningArea, OPENING_TORPEDO_MUL, scaleModifiers } from '@/systems/DifficultyCurve';
 import { UNDERDOG_RATIO } from '@/systems/FleetPower';
 
 
@@ -1163,7 +1163,10 @@ export class BattleScene extends Phaser.Scene {
     const offsets = FormationSystem.getOffsets(this.enemyFormation, Math.max(0, ships.length - 1));
     // A sea further along the player's order meets a stronger enemy (#293).
     const area = this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId) : undefined;
-    const reach = scaleModifiers(area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1);
+    const scaled = scaleModifiers(area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1);
+    // A theater's first area (#433): its torpedoes hit softer still, so one spread doesn't decide the navy's first fight.
+    const opening = area !== undefined && !this.exercise && isOpeningArea(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
+    const reach = opening ? { ...scaled, torpedoPowerMul: (scaled.torpedoPowerMul ?? 1) * OPENING_TORPEDO_MUL } : scaled;
     // The flagship starts in the middle of a line north of the centre (moved off any island), the rest in formation.
     const line = lineAtSea(this.map, enemySpawnPoints(ships.length, WORLD));
     const lead = line[Math.floor(line.length / 2)];
@@ -1678,6 +1681,8 @@ export class BattleScene extends Phaser.Scene {
     if (this.lockedTarget && !this.lockedTarget.isAlive) this.lockedTarget = null;
     const candidates = this.targetCandidates();
     const locked = candidates.find((c) => c.ship === this.lockedTarget) ?? null;
+    // 船団護衛 (#416): the enemy nearest the merchantmen, not the escort.
+    if (this.objective === Objective.Convoy) return convoyGuardTarget(this.flagship, candidates, this.convoy.filter((s) => s.isAlive && s.active), locked)?.ship ?? null;
     return pickTarget(this.flagship, candidates, locked)?.ship ?? null;
   }
 
@@ -1952,6 +1957,13 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    // 船団護衛 (#416): with nothing in sight the escort keeps beside its convoy instead of going off to search.
+    const guard = this.autoMode && this.objective === Objective.Convoy ? convoyGuardPoint(this.convoy.filter((s) => s.isAlive && s.active)) : null;
+    if (guard) {
+      const s = waypointSteer(this.flagship, guard, 120);
+      if (s) this.flagship.steer(s, dtSec, SHIP_ROTATE_SPEED);
+      return;
+    }
     if (this.autoMode) {
       // Nothing in sight (#400): search slowly towards where the enemy was last seen; hold once badly hurt.
       const hp = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);

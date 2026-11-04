@@ -5,7 +5,7 @@
     "name": "輸送船",
     "nation": "IJN",
     "shipClass": "Cruiser",
-    "hp": 270,
+    "hp": 450,
     "armor": 8,
     "speed": 75,
     "weapons": [],

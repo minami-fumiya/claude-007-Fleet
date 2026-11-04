@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { areaDepth, enemyScale, isOpeningArea, OPENING_ENEMY_SCALE, OPENING_TORPEDO_MUL } from '@/systems/DifficultyCurve';
+import { convoyGuardPoint, convoyGuardTarget, CONVOY_GUARD_AHEAD } from '@/systems/AutoPilot';
+import campaignData from '@/data/campaign.json';
+import specialData from '@/data/special.json';
+import type { ICampaignData } from '@/types/Campaign';
+
+const DATA = campaignData as ICampaignData;
+const area = (id: string) => DATA.areas.find((a) => a.id === id)!;
+
+describe('0.0.63 最初の海域 (#433)', () => {
+  it('a theater\'s first area in the earliest ranks meets a weaker enemy with softer torpedoes', () => {
+    const p1 = area('p1');
+    expect(isOpeningArea(p1, areaDepth(DATA, p1, 'IJN'))).toBe(true);
+    // The same sea further along another navy's order is not an opening any more.
+    expect(isOpeningArea(p1, areaDepth(DATA, p1, 'RN'))).toBe(false);
+    expect(isOpeningArea(area('p2'), 1)).toBe(false);
+    expect(OPENING_ENEMY_SCALE).toBeLessThan(1);
+    expect(OPENING_TORPEDO_MUL).toBeLessThan(1);
+    const opening = enemyScale(DATA, p1, 'IJN');
+    // Taken out again, the scale is what the curve alone gives.
+    expect(opening / OPENING_ENEMY_SCALE).toBeGreaterThan(opening);
+  });
+});
+
+describe('0.0.63 船団護衛の AUTO (#416)', () => {
+  const convoy = [{ x: 140, y: 400 }, { x: 140, y: 490 }];
+  const near = { x: 600, y: 120, alive: true, id: 'near-escort' };
+  const raider = { x: 300, y: 520, alive: true, id: 'near-convoy' };
+
+  it('the escort goes for the enemy nearest the convoy, not the one nearest itself', () => {
+    const escort = { x: 620, y: 140 };
+    expect(convoyGuardTarget(escort, [near, raider], convoy)?.id).toBe('near-convoy');
+    // A locked target stays locked; with no convoy left it is the nearest enemy again.
+    expect(convoyGuardTarget(escort, [near, raider], convoy, near)?.id).toBe('near-escort');
+    expect(convoyGuardTarget(escort, [near, raider], [])?.id).toBe('near-escort');
+  });
+
+  it('with nothing in sight it waits ahead of the convoy on its route', () => {
+    expect(convoyGuardPoint(convoy)).toEqual({ x: 140 + CONVOY_GUARD_AHEAD, y: 445 });
+    expect(convoyGuardPoint([])).toBeNull();
+  });
+
+  it('the merchantmen take two submarine torpedoes and more', () => {
+    const merchant = (specialData as unknown as { convoy: { hp: number } }).convoy;
+    expect(merchant.hp).toBeGreaterThan(2 * 200);
+  });
+});

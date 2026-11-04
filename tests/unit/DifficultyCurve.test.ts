@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { allowedAtDepth, areaDepth, areaRankIndex, NAVY_ENEMY_SCALE, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve, writtenDepth } from '@/systems/DifficultyCurve';
+import { allowedAtDepth, areaDepth, areaRankIndex, NAVY_ENEMY_SCALE, curveText, enemyScale, scaleModifiers, theaterStep, EARLY_DEPTH, EARLY_HIGH, fleetPower, recommendedRank, targetPower, withinCurve, writtenDepth, isOpeningArea, OPENING_ENEMY_SCALE } from '@/systems/DifficultyCurve';
 import { enemyShips, lockText, sevenSeasText, theatersFor } from '@/systems/CampaignSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
 import { SEVEN_SEAS } from '@/systems/RecordSystem';
@@ -100,10 +100,11 @@ describe('the further the sea, the harder (#293)', () => {
   });
 
   it('the enemy keeps its share of the target at the depth of its recommended rank; hit points and firepower share it', () => {
-    expect(enemyScale(data, area('m1'), 'RM')).toBe(1);
+    // Italy's first sea (#433): an opening area meets its enemy at OPENING_ENEMY_SCALE.
+    expect(enemyScale(data, area('m1'), 'RM')).toBe(OPENING_ENEMY_SCALE);
     // Japan meets m1 at 大尉 (depth 3), two steps past where it was written.
     expect(enemyScale(data, area('m1'), 'IJN')).toBeCloseTo(targetPower(3) / targetPower(1));
-    expect(enemyScale(data, area('m1'))).toBe(1);
+    expect(enemyScale(data, area('m1'))).toBe(OPENING_ENEMY_SCALE);
     const k = scaleModifiers(enemyScale(data, area('m1'), 'IJN'));
     expect(k.hpMul! * k.gunPowerMul!).toBeCloseTo(targetPower(3) / targetPower(1));
     expect(k.airPowerMul).toBeUndefined();
@@ -113,6 +114,8 @@ describe('the further the sea, the harder (#293)', () => {
     for (const a of data.areas.filter((x) => !x.training)) {
       const theater = data.theaters.find((t) => t.id === a.theater)!;
       for (const n of Object.keys(theater.opponents)) {
+        // A theater's first area sits below the band on purpose (#433).
+        if (isOpeningArea(a, areaDepth(data, a, n))) continue;
         const power = fleetPower(enemyShips(a, registry)) * enemyScale(data, a, n);
         if (!withinCurve(power, areaDepth(data, a, n))) out.push(`${a.id} ${n}: ${Math.round(power)} vs ${targetPower(areaDepth(data, a, n))}`);
       }
@@ -214,8 +217,8 @@ describe('promotion missions and the curve (#339)', () => {
 describe('a weaker navy meets weaker seas (#352)', () => {
   it('the Soviet navy meets its enemies at 0.6 of the curve; the others as the curve says', () => {
     expect(NAVY_ENEMY_SCALE.SU).toBe(0.6);
-    // b1 is written for the Soviet navy's first sea: only the navy's share changes it.
-    expect(enemyScale(data, area('b1'), 'SU')).toBeCloseTo(0.6);
+    // b1 is written for the Soviet navy's first sea: the navy's share and the opening area's (#433) change it.
+    expect(enemyScale(data, area('b1'), 'SU')).toBeCloseTo(0.6 * OPENING_ENEMY_SCALE);
     expect(enemyScale(data, area('b1'), 'KM')).toBeCloseTo(enemyScale(data, area('b1')));
   });
 });
