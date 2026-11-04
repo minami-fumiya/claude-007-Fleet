@@ -15,8 +15,15 @@ import { randomTime, randomWeather } from '@/systems/WeatherSystem';
 import { hpFraction } from '@/systems/DockSystem';
 import {
   dangerAt, distance, emptyWorld, endVoyage, HOME, ISpot, MAX_DANGER, reachProblem, RING, sailTo, startVoyage, SUPPLY_MAX,
-  spotWon, supplyFor, WORLD_SIZE, worldEnemyFleet, worldGold, worldReward, worldSpots,
+  supplyFor, WORLD_SIZE, worldEnemyFleet, worldGold, worldReward, worldSpots, spotWon,
+  callAtPort, clearOfFeatures, FEATURE_KIND, FEATURE_MARK, featureProblem, featureReady, FORT_GOLD, FORT_NATION, FORT_REWARD, fortDanger,
+  IFeature, PORT_REPAIR, resourceReward, safeAround, safeDanger, visitResource, WORLD_SEA, worldFeatures,
 } from '@/systems/WorldSystem';
+import { setDamage } from '@/systems/DockSystem';
+import { addResources, gainResources } from '@/systems/ResourceSystem';
+import { holdCap } from '@/systems/FacilitySystem';
+import { recordLedger } from '@/systems/LedgerSystem';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { IBattleInitData } from '@/types/Scene';
 import { Formation } from '@/types/Formation';
 import { Nation } from '@/types/Nation';
@@ -61,7 +68,8 @@ export class WorldMapScene extends Phaser.Scene {
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
-    this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 46, '外洋', displayStyle(24)).setOrigin(0.5);
+    // 他国の海図 (#65 第 2 段階): each navy sails its own sea.
+    this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 46, `外洋 — ${WORLD_SEA[loadProgress().nation]}`, displayStyle(24)).setOrigin(0.5);
     this.draw();
   }
 
@@ -76,9 +84,17 @@ export class WorldMapScene extends Phaser.Scene {
     this.draw();
   }
 
+  /** This hour's groups, clear of the navy's places, and safer round a stronghold taken this week. */
   private spots(): ISpot[] {
     const p = loadProgress();
-    return worldSpots(Date.now(), p.nation, PLAYABLE_NATIONS);
+    const now = Date.now();
+    const features = worldFeatures(p.nation);
+    const safe = safeAround(p.world, features, now);
+    return clearOfFeatures(worldSpots(now, p.nation, PLAYABLE_NATIONS), features).map((s) => ({ ...s, danger: safeDanger(s, safe) }));
+  }
+
+  private features(): IFeature[] {
+    return worldFeatures(loadProgress().nation);
   }
 
   /** Chart units → screen */
@@ -133,6 +149,29 @@ export class WorldMapScene extends Phaser.Scene {
       makeClickable(dot, 40, 40);
       dot.on('pointerup', () => {
         this.selected = s.id;
+        this.status = '';
+        this.draw();
+      });
+    }
+    // The navy's places (#65 第 2 段階): ports, resource points and the enemy's stronghold, as squares.
+    for (const f of this.features()) {
+      const pos = this.at(f.x, f.y);
+      const ready = featureReady(world, f, Date.now());
+      const pick = this.selected === f.id;
+      const box = this.track(this.add.container(pos.x, pos.y));
+      const mark = this.add.graphics();
+      const color = f.kind === 'fort' ? Colors.danger : f.kind === 'port' ? Colors.gold : Colors.success;
+      mark.fillStyle(color, ready ? 0.95 : 0.35);
+      mark.fillRoundedRect(-12, -12, 24, 24, 5);
+      if (pick) {
+        mark.lineStyle(2, Colors.gold, 1);
+        mark.strokeRoundedRect(-17, -17, 34, 34, 7);
+      }
+      const label = this.add.text(0, 0, FEATURE_MARK[f.kind], textStyle(12, Css.bgDeep, { fontStyle: 'bold' })).setOrigin(0.5);
+      box.add([mark, label]);
+      makeClickable(box, 40, 40);
+      box.on('pointerup', () => {
+        this.selected = f.id;
         this.status = '';
         this.draw();
       });
@@ -195,9 +234,24 @@ export class WorldMapScene extends Phaser.Scene {
       line(fleet.ships.length > 0 ? `出港する艦隊: ${fleet.ships.length} 隻 — ${kindBreakdown(fleet.ships)}` : '艦隊がありません。「編成」で艦隊を組んでから来てください', 13, fleet.ships.length > 0 ? Css.text : Css.danger);
     }
     line(`これまで: 勝利 ${world.wins}  ·  最も遠い勝利 危険度 ${world.best || '—'}`, 12, Css.muted);
-    // The group picked on the chart
+    // The group or place picked on the chart
     const spot = this.spots().find((s) => s.id === this.selected);
-    if (spot) {
+    const place = this.features().find((f) => f.id === this.selected);
+    if (place) {
+      const ready = featureReady(world, place, Date.now());
+      this.track(this.add.text(x, y, `${FEATURE_KIND[place.kind]}  危険度 ${place.danger}`, eyebrowStyle(11, place.kind === 'fort' ? Css.danger : Css.gold)));
+      y += 22;
+      line(place.name, 14);
+      const what = place.kind === 'port' ? `補給を ${SUPPLY_MAX} に戻し、艦の耐久を ${Math.round(PORT_REPAIR * 100)}% まで直す (1 時間に 1 回)`
+        : place.kind === 'fort' ? `${NATION_INFO[FORT_NATION[p.nation]].ja}の要塞と守備艦隊に対地攻撃。落とすと ${formatResources(FORT_REWARD)}・ゴールド ${FORT_GOLD}、今週はまわりの敵艦隊が弱くなる (週に 1 回)`
+          : `寄ると ${formatResources(resourceReward(place.kind, place.danger))} (1 時間に 1 回、戦闘なし)`;
+      line(what, 12, Css.cyan);
+      if (!ready) line(place.kind === 'fort' ? '今週はもう落としました' : 'この 1 時間はもう寄りました', 12, Css.success);
+      else if (voyage) {
+        const problem = featureProblem(voyage, place);
+        if (problem) line(problem, 12, Css.danger);
+      } else line('出港すると寄れます', 12, Css.muted);
+    } else if (spot) {
       const roster = registry.byNation(spot.enemyNation);
       const enemy = worldEnemyFleet(roster, spot);
       this.track(this.add.text(x, y, `敵艦隊  危険度 ${spot.danger}`, eyebrowStyle(11, spot.danger >= 8 ? Css.danger : Css.gold)));
@@ -232,6 +286,13 @@ export class WorldMapScene extends Phaser.Scene {
       }
       return;
     }
+    if (place) {
+      const can = featureReady(world, place, Date.now()) && !featureProblem(voyage, place);
+      const label = place.kind === 'port' ? '入港  ›' : place.kind === 'fort' ? '攻撃  ›' : '回収  ›';
+      this.track(new UIButton(this, x + half / 2, by, label, () => this.goTo(place), { variant: can ? (place.kind === 'fort' ? 'danger' : 'gold') : 'secondary', width: half, height: L.bh, fontSize: 18 })).setEnabled(can);
+      this.track(new UIButton(this, x + w - half / 2, by, '帰港する', () => this.comeHome(), { variant: 'primary', width: half, height: L.bh, fontSize: 16 }));
+      return;
+    }
     const canFight = spot && !spotWon(world, spot.id) && !reachProblem(voyage, spot);
     this.track(new UIButton(this, x + half / 2, by, '交戦  ›', () => spot && this.fight(spot), { variant: canFight ? 'danger' : 'secondary', width: half, height: L.bh, fontSize: 18 })).setEnabled(!!canFight);
     this.track(new UIButton(this, x + w - half / 2, by, '帰港する', () => this.comeHome(), { variant: 'primary', width: half, height: L.bh, fontSize: 16 }));
@@ -255,11 +316,42 @@ export class WorldMapScene extends Phaser.Scene {
     this.say('帰港しました');
   }
 
-  private fight(spot: ISpot): void {
+  /** A port call, a resource point, or the attack on the stronghold. */
+  private goTo(f: IFeature): void {
+    const now = Date.now();
+    let p = loadProgress();
+    const world = p.world ?? emptyWorld();
+    const voyage = world.voyage;
+    if (!voyage || !featureReady(world, f, now)) return;
+    const problem = featureProblem(voyage, f);
+    if (problem) {
+      this.say(problem, true);
+      return;
+    }
+    if (f.kind === 'fort') {
+      this.fight({ id: f.id, x: f.x, y: f.y, danger: fortDanger(), enemyNation: FORT_NATION[p.nation] }, true);
+      return;
+    }
+    if (f.kind === 'port') {
+      // 応急修理: every ship of the fleet up to PORT_REPAIR of its HP.
+      for (const id of voyage.shipIds) if (hpFraction(p, id) < PORT_REPAIR) p = { ...p, ...setDamage(p, id, PORT_REPAIR) };
+      saveProgress(withQuestEvents({ ...p, world: callAtPort(world, f, now) }, [['portCall', 1]], now));
+      this.say(`${f.name} に入港: 補給 ${SUPPLY_MAX}・応急修理`);
+      return;
+    }
+    const reward = resourceReward(f.kind, f.danger);
+    const g = gainResources(p.resources, reward, holdCap(p.facilities));
+    const ledger = recordLedger(recordLedger(p.ledger, 'battle', addResources(reward, g.lost, -1), now), 'overflow', g.lost, now);
+    saveProgress(withQuestEvents({ ...p, resources: g.resources, ledger, world: visitResource(world, f, now) }, [['resourceRun', 1]], now));
+    this.say(`${f.name}: ${formatResources(reward)}`);
+  }
+
+  /** A battle with a group at sea, or (`fort`) the stronghold's garrison and batteries on its island. */
+  private fight(spot: ISpot, fort = false): void {
     const p = loadProgress();
     const world = p.world ?? emptyWorld();
     const voyage = world.voyage;
-    if (!voyage || spotWon(world, spot.id)) return;
+    if (!voyage || (!fort && spotWon(world, spot.id))) return;
     const problem = reachProblem(voyage, spot);
     if (problem) {
       this.say(problem, true);
@@ -273,14 +365,14 @@ export class WorldMapScene extends Phaser.Scene {
     const init: IBattleInitData = {
       playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', p.nation, ships, 0),
       enemyFleet: FleetSystem.createFleet('enemy-fleet', 'Enemy Fleet', spot.enemyNation, enemy, 0),
-      mapKey: 'open-sea',
+      mapKey: fort ? 'atoll' : 'open-sea',
       formation: voyage.formation,
       mode: areaMode(enemy),
       weather: randomWeather(),
       time: randomTime(),
       captainIds: voyage.captainIds,
-      objective: Objective.Annihilate,
-      world: { spotId: spot.id, danger: spot.danger },
+      objective: fort ? Objective.Bombard : Objective.Annihilate,
+      world: { spotId: spot.id, danger: spot.danger, ...(fort ? { fort: true } : {}) },
     };
     this.scene.start(SceneKeys.BATTLE, init);
   }

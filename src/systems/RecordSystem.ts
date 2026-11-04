@@ -499,6 +499,10 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.65 外洋 (#65)
   ...ladder('world_win', '外洋航海章', 'campaign', [1, 20, 100], (g) => `外洋で敵艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'worldWin')),
   ...ladder('world_far', '遠洋章', 'campaign', [5, 8, 10], (g) => `外洋の危険度 ${g} の海で勝つ`, (_r, c) => c.worldBest ?? 0),
+  // 0.0.66 外洋の第 2 段階 (#65)
+  ...ladder('port_call', '寄港章', 'campaign', [1, 10, 50], (g) => `外洋で港に ${g} 回寄る`, (_r, c) => total(c, 'portCall')),
+  ...ladder('resource_run', '資源輸送章', 'campaign', [1, 20, 100], (g) => `外洋の資源の場所に ${g} 回寄る`, (_r, c) => total(c, 'resourceRun')),
+  ...ladder('fort_taken', '要塞攻略章', 'campaign', [1, 5, 20], (g) => `外洋の敵の要塞を ${g} 回落とす`, (_r, c) => total(c, 'fortTaken')),
   // 0.0.64 海の障害と上陸支援 (#368)
   ...ladder('mine_sweeper', '掃海章', 'battle', [1, 10, 50], (g) => `機雷原を ${g} か所掃海する`, (_r, c) => total(c, 'mineSwept')),
   ...ladder('landing', '上陸支援章', 'battle', [1, 10, 40], (g) => `対地攻撃で上陸部隊を ${g} 回送る`, (_r, c) => total(c, 'landingStrike')),

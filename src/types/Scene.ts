@@ -29,7 +29,7 @@ export interface IBattleInitData {
   /** 特別海域 (#416): this week's sea fought by one class only, against its main fleet */
   special?: boolean;
   /** 外洋 (#65): a battle with a group met at sea, by its spot and the danger of the water */
-  world?: { spotId: string; danger: number };
+  world?: { spotId: string; danger: number; fort?: boolean };
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** 演習 (#404): one enemy fleet for each 支援艦隊 the player brings, each matched to it */
