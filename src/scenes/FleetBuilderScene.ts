@@ -13,7 +13,8 @@ import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { BattleMode } from '@/types/Battle';
 import { ICampaignArea, ICampaignData, Objective } from '@/types/Campaign';
 import { areaMode, enemyNationFor, enemyShips } from '@/systems/CampaignSystem';
-import { CAMPAIGN_AREA_KEY, DEFENSE_AREA_KEY, OBJECTIVE_LABEL, SW_AREA_KEY } from '@/scenes/CampaignMapScene';
+import { CAMPAIGN_AREA_KEY, DEFENSE_AREA_KEY, OBJECTIVE_LABEL, SPECIAL_AREA_KEY, SW_AREA_KEY } from '@/scenes/CampaignMapScene';
+import { fleetKeepsRule, weeklyRule } from '@/systems/SpecialOpsSystem';
 import campaignData from '@/data/campaign.json';
 import { TimeOfDay, Weather } from '@/types/Weather';
 import { randomTime, randomWeather, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
@@ -321,6 +322,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private swArea = false;
   /** 防衛戦 (#50): the sortie defends the area against the enemy's counterattack */
   private defense = false;
+  /** 特別海域 (#416): this week's sea, one class of ship only */
+  private special = false;
   private enemyNation: Choice<Nation> = RANDOM;
   private mode: Choice<BattleMode> = RANDOM;
   private weatherChoice: Choice<Weather> = RANDOM;
@@ -433,6 +436,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.area = (campaignData as ICampaignData).areas.find((a) => a.id === areaId) ?? null;
     this.swArea = this.area !== null && this.registry.get(SW_AREA_KEY) === true;
     this.defense = this.area !== null && !this.swArea && this.registry.get(DEFENSE_AREA_KEY) === true;
+    this.special = this.area !== null && !this.swArea && !this.defense && this.registry.get(SPECIAL_AREA_KEY) === true;
     if (this.area) this.organizeOnly = false;
     this.keyBuffer = '';
     this.keyAt = 0;
@@ -1354,7 +1358,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // Enemy kinds first, then each kind's ships (#68).
     const lineup = kindGroups(enemy.map((s) => ({ ...s, name: shortName(s.name) }))).map((g) => `${g.kind} ${g.names.join('・')}`).join(' / ');
     const lines = [
-      this.swArea ? `超兵器海域  ${area.name}` : this.defense ? `防衛戦  ${area.name}` : `作戦  ${area.name}`,
+      this.swArea ? `超兵器海域  ${area.name}` : this.defense ? `防衛戦  ${area.name}` : this.special ? `特別海域 (${weeklyRule(Date.now()).name})  ${area.name}` : `作戦  ${area.name}`,
       `${OBJECTIVE_LABEL[area.objective]}  ·  ${NATION_INFO[enemyNation].jaShort} ${enemy.length} 隻 — ${kindBreakdown(enemy)}`,
       lineup,
       `${DataLoader.getMap(this, area.map).name}  ·  ${WEATHER_LABEL[area.weather]}  ·  ${TIME_LABEL[area.time]}`,
@@ -1371,6 +1375,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       this.registry.remove(CAMPAIGN_AREA_KEY);
       this.registry.remove(SW_AREA_KEY);
       this.registry.remove(DEFENSE_AREA_KEY);
+      this.registry.remove(SPECIAL_AREA_KEY);
       this.scene.restart();
     }), { variant: 'secondary', width: w, height: bh, fontSize: 12 }));
     return p ? by + bh / 2 + 8 : y;
@@ -1906,7 +1911,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const formation = FORMATION_RULES[this.formation].ja;
       const opts = this.sortieOptions();
       const all = this.allShips(ships);
-      const blockers = sortieBlockers(loadProgress(), all, Date.now(), this.sortieOptions(ships));
+      const blockers = this.blockers(ships);
       const depot = (opts.supply ?? 1) < 1 ? ` (補給 −${Math.round((1 - (opts.supply ?? 1)) * 100)}%)` : '';
       const price = isFreeSortie(opts) ? (opts.exercise ? '無料 (演習)' : '無料 (最初の海域)') : `${formatResources(sortieCostFor(all, opts))}${depot}`;
       // The fleet's cost against the rank's cap (#306), then what the sortie spends.
@@ -1963,7 +1968,16 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private canStart(): boolean {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
-    return ships.length > 0 && sortieBlockers(loadProgress(), this.allShips(ships), Date.now(), this.sortieOptions(ships)).length === 0;
+    return ships.length > 0 && this.blockers(ships).length === 0;
+  }
+
+  /** What keeps the fleet from sailing; 特別海域 (#416) also wants every ship, 支援艦隊 too, of the week's class. */
+  private blockers(ships: IShipData[]): string[] {
+    const all = this.allShips(ships);
+    const list = sortieBlockers(loadProgress(), all, Date.now(), this.sortieOptions(ships));
+    const rule = weeklyRule(Date.now());
+    if (this.special && !fleetKeepsRule(rule, all.map((s) => s.shipClass))) list.push(`特別海域は${rule.name}で出撃`);
+    return list;
   }
 
   private isDamaged(ship: IShipData): boolean {
@@ -2221,7 +2235,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     // A campaign area is fought node by node (#53); the first battle may be its escorts.
     const sortie = area
       ? beginSortie(this, area, this.slots, initData.captainIds ?? [], this.formation, this.nation, enemyNation, enemyShipsList,
-        support.map((g) => ({ shipIds: g.ships.map((s) => s.id), captainIds: g.captainIds, mission: g.mission })), this.defense)
+        support.map((g) => ({ shipIds: g.ships.map((s) => s.id), captainIds: g.captainIds, mission: g.mission })), this.defense, this.special)
       : null;
     // An exercise leaves a campaign sortie in progress alone (#138): it can still be continued from the map.
     this.scene.start(SceneKeys.BATTLE, sortie ?? initData);

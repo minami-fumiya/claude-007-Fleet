@@ -19,4 +19,6 @@ export interface ISortieState {
   support?: Array<{ shipIds: string[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** 防衛戦 (#50): the enemy's counterattack on a sea held, fought against its main fleet alone */
   defense?: boolean;
+  /** 特別海域 (#416): this week's special sea, one battle against the main fleet */
+  special?: boolean;
 }

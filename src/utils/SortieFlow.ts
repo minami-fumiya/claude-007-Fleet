@@ -64,6 +64,7 @@ function battleInit(scene: Phaser.Scene, s: ISortieState): IBattleInitData | nul
     // Only the boss node has the area's own objective; the skirmishes before it are fights to the finish.
     objective: boss ? area.objective : Objective.Annihilate,
     ...(s.defense ? { defense: true } : {}),
+    ...(s.special ? { special: true } : {}),
     sortie: { node: battles.indexOf(node) + 1, battles: battles.length, boss },
     // 支援艦隊 (#84) sail with the main fleet through the whole sortie.
     support: (s.support ?? []).map((g) => ({
@@ -76,16 +77,17 @@ function battleInit(scene: Phaser.Scene, s: ISortieState): IBattleInitData | nul
 export function beginSortie(
   scene: Phaser.Scene, area: ICampaignArea, slots: (IShipData | null)[], captainIds: (string | null)[],
   formation: Formation, nation: Nation, enemyNation: Nation, enemy: IShipData[],
-  support: ISortieState['support'] = [], defense = false,
+  support: ISortieState['support'] = [], defense = false, special = false,
 ): IBattleInitData | null {
   const kept = slots.map((s, i) => ({ s, c: captainIds[i] ?? null })).filter((x) => x.s !== null);
   // 防衛戦 (#50): the counterattack's main fleet, nothing on the way.
-  const route = defense ? sortieRoute(area, enemy).filter((n) => n.kind === 'boss') : sortieRoute(area, enemy);
+  const route = defense || special ? sortieRoute(area, enemy).filter((n) => n.kind === 'boss') : sortieRoute(area, enemy);
   const at = nextBattleIndex(route, 0);
   const state: ISortieState = {
     areaId: area.id, route, at, nation, enemyNation,
     shipIds: kept.map((x) => x.s!.id), captainIds: kept.map((x) => x.c), formation, support,
     ...(defense ? { defense: true } : {}),
+    ...(special ? { special: true } : {}),
   };
   // A supply cache or whirlpool before the first battle (#307: one node on the way) is passed on the way out.
   const passed = passNodes(loadProgress(), route.slice(0, Math.max(0, at)));

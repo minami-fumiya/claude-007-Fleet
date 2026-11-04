@@ -87,6 +87,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
+import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
@@ -1178,7 +1179,8 @@ export class BattleScene extends Phaser.Scene {
     const offsets = FormationSystem.getOffsets(this.enemyFormation, Math.max(0, ships.length - 1));
     // A sea further along the player's order meets a stronger enemy (#293).
     const area = this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId) : undefined;
-    const scaled = scaleModifiers(area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1);
+    // 特別海域 (#416): one class of ship against the main fleet, which comes in a little weaker.
+    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
     // A theater's first area (#433): its torpedoes hit softer still, so one spread doesn't decide the navy's first fight.
     const opening = area !== undefined && !this.exercise && isOpeningArea(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
     const reach = opening ? { ...scaled, torpedoPowerMul: (scaled.torpedoPowerMul ?? 1) * OPENING_TORPEDO_MUL } : scaled;
@@ -2656,7 +2658,9 @@ export class BattleScene extends Phaser.Scene {
       planesLost: this.playerAir.totalLost(),
       sunkClasses: this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy).map((e) => e.stats.shipClass),
       ships: fleet.map((s) => ({ shipId: s.dataId, hpFraction: s.stats.maxHp > 0 ? s.stats.currentHp / s.stats.maxHp : 0, sunk: !s.isAlive })),
-    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) * this.difficulty.rewardMul });
+    }, { exercise: this.exercise, event: this.battleEvent, theater: area?.theater, rankMul: RANK_REWARD_MUL[rank] * (area?.training ? TRAINING_SCALE : 1) * this.difficulty.rewardMul
+      // 記念日 (#416): the navies of the day's battle earn more from the campaign.
+      * (area && !area.training ? anniversaryRewardMul(this.playerNation, Date.now()) : 1) });
     if (this.scenario) {
       // Historical scenarios are exhibitions: no rewards, damage or crew experience carry over. The record keeps
       // their results apart (#177), out of the career totals.
@@ -2666,12 +2670,15 @@ export class BattleScene extends Phaser.Scene {
       const force = this.scenarioSetup?.side.force;
       const firstWin = victory && force !== undefined && (before.record.scenarios?.[this.scenario.id]?.wins[force] ?? 0) === 0;
       if (firstWin) after = { ...after, wallet: addGold(walletOf(after), GOLD_SCENARIO_FIRST) };
+      // 記念日 (#416): the battle won on its own day pays gold, once a year.
+      const anniv = victory ? winAnniversary(after.specialOps, this.scenario.id, Date.now()) : null;
+      if (anniv) after = { ...after, specialOps: anniv.ops, wallet: addGold(walletOf(after), ANNIVERSARY_GOLD) };
       // 任務 (#314): a historical win counts for the history quest, and only that (no other quest or reward).
-      if (victory) after = withQuestEvents(after, [['scenarioWin', 1]], Date.now());
+      if (victory) after = withQuestEvents(after, [['scenarioWin', 1], ['anniversaryWin', anniv ? 1 : 0]], Date.now());
       saveProgress(after);
       result.reward = undefined;
       result.cost = undefined;
-      result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}${firstWin ? `  ·  初勝利 ゴールド ${GOLD_SCENARIO_FIRST}` : ''}`;
+      result.campaign = `シナリオ: ${this.scenario.name}  ${victory ? '勝利' : '敗北'}${firstWin ? `  ·  初勝利 ゴールド ${GOLD_SCENARIO_FIRST}` : ''}${anniv ? `  ·  記念日 (${anniv.anniversary.name}) ゴールド ${ANNIVERSARY_GOLD}` : ''}`;
       // 史実との比較 (#200), on its own line.
       const cmp = force ? historyComparison(this.scenario, force, { victory, sunk: enemiesSunk, lost: fleet.filter((s) => !s.isAlive).length }) : null;
       if (cmp) result.event = cmp.text;
@@ -2797,7 +2804,19 @@ export class BattleScene extends Phaser.Scene {
     if (area && this.battleData?.swArea) result.campaign = `超兵器海域: ${area.name}  ${victory ? '勝利' : '敗北'}`;
     // 制海権 (#50): a defence settles the counterattack; a main-fleet win takes a lost sea back; every main-fleet
     // battle counts towards the next counterattack.
-    if (area && !skirmish && !this.battleData?.swArea && !area.training) {
+    // 特別海域 (#416): its win pays once a week; it leaves the seas held as they are.
+    if (area && this.battleData?.special) {
+      const ops = victory ? winSpecial(progress.specialOps, now) : null;
+      if (ops) {
+        const reward = specialReward(area.reward);
+        const g = gainResources(progress.resources, reward, holdCap(progress.facilities));
+        progress = { ...progress, specialOps: ops, resources: g.resources, wallet: addGold(walletOf(progress), SPECIAL_GOLD), ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(reward, g.lost, -1), now), 'overflow', g.lost, now) };
+        progress = withQuestEvents(progress, [['specialWin', 1]], now);
+        lost = addResources(lost, g.lost);
+      }
+      result.campaign = `特別海域: ${area.name}  ${victory ? '勝利' : '敗北'}${ops ? `  ·  報酬 ${formatResources(specialReward(area.reward))}・ゴールド ${SPECIAL_GOLD}` : victory ? '  ·  今週の報酬は受け取り済み' : ''}`;
+    }
+    if (area && !skirmish && !this.battleData?.swArea && !this.battleData?.special && !area.training) {
       const sea = this.seaAfterBattle(progress, area, victory, now);
       progress = sea.progress;
       if (sea.line) result.sea = sea.line;

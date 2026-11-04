@@ -483,6 +483,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('ship_ace', '百戦錬磨章', 'battle', [10, 50, 150], (g) => `1 隻の艦で、敵艦を ${g} 隻沈める`, (_r, c) => c.bestShipSinks ?? 0),
   // 0.0.63 国の道 (#416)
   ...ladder('national_way', '国の道章', 'growth', [1, 3, 7], (g) => `${g} か国で、国家方針の国の道を最後まで進める`, (_r, c) => c.waysDone ?? 0),
+  // 0.0.64 記念日と特別海域 (#416)
+  ...ladder('anniversary', '記念日章', 'campaign', [1, 5, 20], (g) => `記念日に、その日の史実の海戦で ${g} 回勝つ`, (_r, c) => total(c, 'anniversaryWin')),
+  ...ladder('special_sea', '特別海域章', 'campaign', [1, 5, 20], (g) => `週替わりの特別海域で ${g} 回勝つ`, (_r, c) => total(c, 'specialWin')),
   // 0.0.62 制海権と敵の反攻 (#50)
   ...ladder('sea_held', '制海権章', 'campaign', [10, 30, 60], (g) => `1 つの国で、${g} か所の海域の制海権を持つ`, (_r, c) => c.seasHeld ?? 0),
   ...ladder('sea_defender', '防衛章', 'campaign', [3, 15, 50], (g) => `敵の反攻から海域を ${g} 回守る`, (_r, c) => total(c, 'defenseWin')),
