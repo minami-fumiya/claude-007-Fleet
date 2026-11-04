@@ -98,6 +98,8 @@ export const QUEST_EVENTS = [
   'mineSwept', 'landingStrike',
   // 0.0.65 (#65): battles won at sea
   'worldWin',
+  // 0.0.66 (#65): port calls, resource points visited, strongholds taken
+  'portCall', 'resourceRun', 'fortTaken',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
