@@ -21,6 +21,7 @@ import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/s
 import { Nation } from '@/types/Nation';
 import { parseSeenNew, SeenNew } from '@/systems/NewMarks';
 import { emptySpecialOps, ISpecialOps, parseSpecialOps } from '@/systems/SpecialOpsSystem';
+import { emptyWorld, IWorld, parseWorld } from '@/systems/WorldSystem';
 import { IGiantRecord, IShipRecord, parseGiantRecords, parseShipRecords } from '@/systems/ShipRecordSystem';
 import { accrueSeaIncome, emptySeaControl, expireCounter, heldAreas, ISeaControl, parseSeaControl } from '@/systems/SeaControlSystem';
 import campaignData from '@/data/campaign.json';
@@ -180,6 +181,8 @@ export interface INationProgress {
   seenNew: SeenNew;
   /** 記念日と特別海域 (#416): the week whose special sea was won, and the anniversaries won */
   specialOps: ISpecialOps;
+  /** 外洋 (#65): the voyage under way, the farthest ring won in and battles won at sea */
+  world: IWorld;
 }
 
 /** The whole save (v2 and later). */
@@ -230,7 +233,7 @@ export function emptyNationProgress(ships: string[] = [], captains: string[] = [
     upgrades: {}, equipment: {}, blueprints: 0, aircraftDev: [], airStart: false, airGroups: {}, pilots: {}, groundKills: {}, refits: {}, refitBranches: {}, proficiency: {}, morale: {}, moraleAt: {}, captainXp: {}, campaign: [], presets: [],
     merit: 0, rankFloor: 0, docksOwned: 1, captains: [...captains], captainSkills: {}, captainBonus: {}, captainStats: {}, base: '', quests: emptyQuestState(), perfect: [], sweepCharges: {},
     builds: [], items: { ...STARTING_ITEMS }, areaRanks: {}, rankStats: {}, examFrom: {}, ledger: {}, sortie: null, shipBases: {}, baseDocks: {}, facilities: {}, facilityJobs: [], basesOpen: [], baseWork: null, expeditions: [], expeditionGroups: {}, dorm: [], support: [],
-    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true, sea: emptySeaControl(), shipRecords: {}, giantRecords: {}, seenNew: {}, specialOps: emptySpecialOps(),
+    focus: { done: [], current: null }, designs: [], equipStars: {}, gunSwaps: {}, foreignFragments: {}, favorites: [], pickerShowAssigned: true, sea: emptySeaControl(), shipRecords: {}, giantRecords: {}, seenNew: {}, specialOps: emptySpecialOps(), world: emptyWorld(),
   };
 }
 
@@ -441,6 +444,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     giantRecords: parseGiantRecords(data.giantRecords),
     seenNew: parseSeenNew(data.seenNew),
     specialOps: parseSpecialOps(data.specialOps),
+    world: parseWorld(data.world),
     ...(typeof data.focusSeen === 'number' && data.focusSeen >= 0 ? { focusSeen: data.focusSeen } : {}),
   };
 }

@@ -25,6 +25,7 @@ const BACK_LABEL: Record<string, string> = {
   [SceneKeys.HOME]: '鎮守府へ戻る',
   [SceneKeys.CAMPAIGN]: '作戦地図へ戻る',
   [SceneKeys.SCENARIO]: 'シナリオ選択へ戻る',
+  [SceneKeys.WORLD]: '鎮守府へ戻る (航海は続く)',
 };
 /** Landscape: 8 lines (campaign, reward, cost, medals, merit, 3 captains) must still fit in 720 px. */
 const REPORT_LINE_H = IS_PORTRAIT ? 34 : 20;
@@ -176,6 +177,11 @@ export class ResultsScene extends Phaser.Scene {
         if (next) this.scene.start(SceneKeys.BATTLE, next.init);
         else this.scene.start(SceneKeys.CAMPAIGN);
       }, { variant: victory ? 'gold' : 'primary', width: CARD_W - 96, height: BUTTONS.h1, fontSize: 22 });
+    } else if (data?.returnScene === SceneKeys.WORLD) {
+      // 外洋 (#65): back to the chart, where the voyage goes on (or the fleet is home).
+      new UIButton(this, CANVAS_W / 2, by1, '外洋の海図へ  ›', () => this.scene.start(SceneKeys.WORLD), {
+        variant: victory ? 'gold' : 'primary', width: CARD_W - 96, height: BUTTONS.h1, fontSize: 22,
+      });
     } else if (data?.retry) {
       // Historical scenarios replay their fixed setup.
       new UIButton(this, CANVAS_W / 2, by1, '再出撃', () => this.scene.start(SceneKeys.BATTLE, data.retry), {
@@ -199,7 +205,8 @@ export class ResultsScene extends Phaser.Scene {
     const backW = logs.length > 0 ? CARD_W - 96 - 12 - LOG_BUTTON_W : CARD_W - 96;
     new UIButton(this, CANVAS_W / 2 - (CARD_W - 96) / 2 + backW / 2, y + reportH + BUTTONS.y2, advance ? '撤退 (報酬はそのまま)' : BACK_LABEL[data?.returnScene ?? SceneKeys.HOME] ?? '鎮守府へ戻る', () => {
       endSortie(this);
-      this.scene.start(data?.returnScene ?? SceneKeys.HOME);
+      // 外洋 (#65): the chart has its own button; this one goes home (the voyage stays at sea).
+      this.scene.start(data?.returnScene === SceneKeys.WORLD ? SceneKeys.HOME : data?.returnScene ?? SceneKeys.HOME);
     }, {
       variant: 'secondary',
       width: backW,
