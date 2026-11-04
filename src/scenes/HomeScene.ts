@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { newIds, OPEN_BUILD_STATES, SHIPYARD_NEW } from '@/systems/NewMarks';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
 import { holdCap, regenRules } from '@/systems/FacilitySystem';
@@ -20,7 +21,7 @@ import { CAPTAIN_PROMOTION_RANK, captainsLeft, recruitCaptains } from '@/systems
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionLines, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
-import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
+import { buildState, buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
 import { buildDock, dockCount, fastRepairCost, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
@@ -732,6 +733,10 @@ export class HomeScene extends Phaser.Scene {
     const built = (this.registry.get(BUILT_KEY) as number | undefined) ?? 0;
     // The notice opens the new ship on the 改装 screen (#382): fitting it out comes next, not another build.
     if (built > 0) items.unshift({ id: 'built', label: '竣工 › 改装', count: built, scene: SceneKeys.CUSTOMIZATION });
+    // 次にできること (#416): ships that opened to the yard since it was last opened.
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    const opened = newIds(progress.seenNew, SHIPYARD_NEW, roster.filter((s) => OPEN_BUILD_STATES.includes(buildState(progress, roster, s))).map((s) => s.id)).length;
+    if (opened > 0) items.push({ id: 'newShips', label: '建造 NEW', count: opened, scene: SceneKeys.SHIPYARD });
     const n = L.notice;
     add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
     if (items.length === 0) {

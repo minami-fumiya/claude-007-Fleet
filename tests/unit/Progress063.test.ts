@@ -103,3 +103,14 @@ describe('0.0.63 艦ごとの戦歴・超兵器の戦歴 (#416)', () => {
     expect(MEDALS.map((m) => m.id)).toContain('national_way');
   });
 });
+
+describe('0.0.63 NEW の印 (#416)', () => {
+  it('a screen opened before marks what opened since; its first visit marks nothing', async () => {
+    const { markSeen, newIds, parseSeenNew } = await import('@/systems/NewMarks');
+    expect(newIds(undefined, 'shipyard', ['a', 'b'])).toEqual([]);
+    const seen = markSeen(undefined, 'shipyard', ['a', 'b']);
+    expect(newIds(seen, 'shipyard', ['a', 'b', 'c'])).toEqual(['c']);
+    expect(markSeen(seen, 'shipyard', ['a'])).toBe(seen);
+    expect(parseSeenNew({ shipyard: ['a', 'a', 1] })).toEqual({ shipyard: ['a'] });
+  });
+});
