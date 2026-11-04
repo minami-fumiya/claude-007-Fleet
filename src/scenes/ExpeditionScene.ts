@@ -1,3 +1,4 @@
+import { EXPEDITION_NEW, markSeen, newIds, openExpeditions } from '@/systems/NewMarks';
 import Phaser from 'phaser';
 import { focusExpeditionMul } from '@/systems/NationFocusSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -53,6 +54,8 @@ export class ExpeditionScene extends Phaser.Scene {
   private recallArmed: string | null = null;
   /** Page of the expedition list (#359: one expedition a rank no longer fits one screen) */
   private page = 0;
+  /** NEW の印 (0.0.64): expeditions opened since the last visit; null until the first draw works it out */
+  private newExps: Set<string> | null = null;
 
   constructor() {
     super({ key: SceneKeys.EXPEDITION });
@@ -64,6 +67,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.picker = null;
     this.pickerIds = [];
     this.recallArmed = null;
+    this.newExps = null;
     showScreenHelp(this);
     audio.music('menu');
     addBackdrop(this, 'menu');
@@ -134,6 +138,12 @@ export class ExpeditionScene extends Phaser.Scene {
     // 前進遠征拠点 (#373): the seas whose forward base opened an expedition.
     const seas = new Set(nationForwardBases(p.nation).flatMap((b) => b.theaters ?? []).filter((t) => theaterFacility(p, t, 'outpost') >= 1));
     const shown = shownExpeditions(rank, p.expeditions, undefined, seas);
+    if (!this.newExps) {
+      const open = openExpeditions(shown, rank);
+      this.newExps = new Set(newIds(p.seenNew, EXPEDITION_NEW, open));
+      const seenNew = markSeen(p.seenNew, EXPEDITION_NEW, open);
+      if (seenNew !== p.seenNew) saveProgress({ ...p, seenNew });
+    }
     const size = shown.length > rows * L.cols ? (rows - 1) * L.cols : rows * L.cols;
     const pages = Math.max(1, Math.ceil(shown.length / size));
     this.page = Math.min(this.page, pages - 1);
@@ -151,7 +161,8 @@ export class ExpeditionScene extends Phaser.Scene {
       const run = p.expeditions.find((r) => r.id === e.id);
       const state = expeditionState(e, p.expeditions, rank, idle);
       this.track(drawPanel(this.add.graphics(), x, y, CARD_W, L.cardH, { radius: 14, fillAlpha: 0.6, rim: run ? Colors.cyan : undefined, rimAlpha: run ? 0.7 : 0.2 }));
-      this.track(this.add.text(x + 14, y + 10, e.name, textStyle(15, Css.text, { fontStyle: 'bold' })));
+      const nameText = this.track(this.add.text(x + 14, y + 10, e.name, textStyle(15, Css.text, { fontStyle: 'bold' })));
+      if (this.newExps?.has(e.id) && !run) this.track(this.add.text(nameText.x + nameText.width + 8, y + 12, 'NEW', textStyle(12, Css.gold, { fontStyle: 'bold' })));
       this.track(this.add.text(x + CARD_W - 14, y + 12, expeditionLength(e.minutes), textStyle(12, Css.muted)).setOrigin(1, 0));
       // Out: who sailed (#337), in place of what it asks.
       const line = run ? `出撃中: ${run.shipIds.map(short).join('・')}` : `${e.ships} 隻${this.needsText(e)}`;

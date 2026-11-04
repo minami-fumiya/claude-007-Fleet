@@ -113,3 +113,40 @@ describe('0.0.64 週替わりの特別海域 (#416)', () => {
     expect(ids.some((id) => id.startsWith('special_sea'))).toBe(true);
   });
 });
+
+describe('0.0.64 研究と遠征の NEW 印 (#416)', () => {
+  it('research projects open once their prerequisites, rank and medal are met', async () => {
+    const { openResearch } = await import('@/systems/NewMarks');
+    const { TECH_TREE } = await import('@/systems/ResearchSystem');
+    const first = openResearch(TECH_TREE, [], [], 2);
+    expect(first.length).toBeGreaterThan(0);
+    // Finishing them opens the next levels (at a rank high enough); a project done is no longer open.
+    const next = openResearch(TECH_TREE, first, [], 13);
+    expect(next.length).toBeGreaterThan(0);
+    expect(next.some((id) => first.includes(id))).toBe(false);
+    expect(openResearch(TECH_TREE, [first[0]], [], 2)).not.toContain(first[0]);
+  });
+
+  it('expeditions open with the rank; the next rank\'s goal is not open yet', async () => {
+    const { openExpeditions } = await import('@/systems/NewMarks');
+    const { shownExpeditions } = await import('@/systems/ExpeditionSystem');
+    const shown = shownExpeditions(0);
+    const open = openExpeditions(shown, 0);
+    expect(open.length).toBe(shown.length - 1);
+    expect(openExpeditions(shownExpeditions(3), 3).length).toBeGreaterThan(open.length);
+  });
+});
+
+describe('0.0.64 設計艦の見た目 (#416)', () => {
+  it('the drawing follows the hull and what it carries', async () => {
+    const { designLook, designSpriteKey } = await import('@/systems/DesignSystem');
+    const bb = designLook({ hull: 'hull_bb', modules: ['46cm_main_gun', '15_5cm_triple', 'fit_engine'] });
+    expect(bb).toMatchObject({ mounts: 3, barrels: 3, beamGuns: true, funnels: 2 });
+    expect(designLook({ hull: 'hull_bb_large', modules: ['46cm_main_gun'] }).mounts).toBe(4);
+    const dd = designLook({ hull: 'hull_dd', modules: ['fit_bulge'] });
+    expect(dd).toMatchObject({ mounts: 0, torpedoes: false, beam: 1.1 });
+    // The key changes with the modules, whatever their order.
+    expect(designSpriteKey('d', { hull: 'hull_bb', modules: ['b', 'a'] })).toBe(designSpriteKey('d', { hull: 'hull_bb', modules: ['a', 'b'] }));
+    expect(designSpriteKey('d', { hull: 'hull_bb', modules: ['a'] })).not.toBe(designSpriteKey('d', { hull: 'hull_bb', modules: ['a', 'b'] }));
+  });
+});
