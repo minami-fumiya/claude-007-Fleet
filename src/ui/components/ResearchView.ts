@@ -56,6 +56,8 @@ interface ICard {
  * Reads and writes research only through the callbacks, so the scene decides where progress lives.
  */
 export class ResearchView {
+  /** NEW の印 (0.0.64): projects opened since the screen was last opened */
+  private newIds: ReadonlySet<string> = new Set();
   private tabs: UIButton[] = [];
   private summary!: Phaser.GameObjects.Text;
   private cards: ICard[] = [];
@@ -149,6 +151,12 @@ export class ResearchView {
     return `${rank ? `${rank}・` : ''}前提 ${names.join('・')}`;
   }
 
+  /** Marks the projects opened since the last visit (the scene remembers what was seen). */
+  setNew(ids: ReadonlySet<string>): void {
+    this.newIds = ids;
+    this.refresh();
+  }
+
   refresh(): void {
     const { done, resources, costMul = 1, medals, rankIndex } = this.state();
     TECH_BRANCHES.forEach((b, i) => {
@@ -156,7 +164,8 @@ export class ResearchView {
       const tab = this.tabs[i];
       // A finished branch is not a call to action (#269): it stays plain and says so.
       tab.setVariant(b.id === lastBranch ? 'primary' : 'secondary');
-      tab.setCaption(p.done === p.total ? '✓ 完了' : `${p.done}/${p.total}`);
+      const fresh = this.tree.filter((n) => n.branch === b.id && this.newIds.has(n.id) && !done.includes(n.id)).length;
+      tab.setCaption(p.done === p.total ? '✓ 完了' : `${fresh > 0 ? 'NEW ' : ''}${p.done}/${p.total}`);
       // Finished branches read green at a glance (#283), apart from gold calls to action.
       if (p.done === p.total) tab.setCaptionColor(Css.success);
     });
@@ -169,7 +178,7 @@ export class ResearchView {
       const medalOk = medalMet(c.node, medals);
       const rankOk = rankMet(c.node, rankIndex);
       const met = prerequisitesMet(c.node, done) && medalOk && rankOk;
-      const label = finished ? '✓ 研究済' : !rankOk ? '要階級' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
+      const label = !finished && this.newIds.has(c.node.id) ? `NEW ${canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足'}` : finished ? '✓ 研究済' : !rankOk ? '要階級' : !medalOk ? '要勲章' : !met ? '前提未達' : canAfford(resources, scaleCost(c.node.cost, costMul)) ? '研究可 ›' : '資源不足';
       // 研究済 is green (#283): gold stays for what can be done now.
       c.state.setText(label).setColor(finished ? Css.success : ready ? Css.cyan : met ? Css.muted : Css.danger);
       const nameRoom = c.state.x - c.state.width - 8 - c.name.x;

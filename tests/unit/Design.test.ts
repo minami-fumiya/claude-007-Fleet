@@ -52,7 +52,8 @@ describe('設計艦 (#51)', () => {
     expect(s.weapons).toEqual(['46cm_main_gun', '15_5cm_triple']);
     expect(s.hp).toBe(Math.round(660 * 1.06));
     expect(s.speed).toBeLessThan(125);
-    expect(SHIPS.some((x) => x.spriteKey === s.spriteKey)).toBe(true);
+    // Its own drawing (#416), drawn again whenever the design changes.
+    expect(s.spriteKey).toBe('design:design_ijn_1:hull_bb:15_5cm_triple+46cm_main_gun+fit_bulge');
     expect(shipGrade(s)).toBeGreaterThanOrEqual(3);
     const cv = designShip(design('hull_cv', ['5in_38', 'fit_hangar']), 'USN', SHIPS);
     expect(cv.airWing).toEqual({ fighters: 6, diveBombers: 5, torpedoBombers: 5 });

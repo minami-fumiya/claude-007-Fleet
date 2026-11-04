@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { IShipData, ShipSubtype } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
+import { IShipDesign } from '@/types/Design';
+import { designLook, IDesignLook } from '@/systems/DesignSystem';
 
 /**
  * Procedural top-down ship sprites, one per ship in the data files. Bow points up (angle 0 = north),
@@ -197,6 +199,88 @@ export function generateShipTextures(scene: Phaser.Scene, ships: IShipData[]): v
     const w = Math.round(spec.w * k);
     const h = Math.round(spec.h * k);
     spec.draw(g, w, h, Math.min(0.9, (index % 3) * 0.45), ship.nation);
+    g.generateTexture(ship.spriteKey, w, h);
+    g.destroy();
+  }
+}
+
+/**
+ * 設計艦の見た目 (#416 #386): a design's own drawing, put together from its look (mounts and barrels, beam guns,
+ * torpedo tubes, depth-charge racks, one or two funnels, a bulged beam, an armour belt, a bigger hangar).
+ */
+function drawDesign(g: Phaser.GameObjects.Graphics, w: number, h: number, nation: Nation, look: IDesignLook): void {
+  const color = hullColor(0.2, nation);
+  if (look.shipClass === ShipClass.Carrier) {
+    drawCarrier(g, w, h, 0.2, nation);
+    if (look.bigHangar) {
+      g.fillStyle(0x9c8460, 1);
+      g.fillRect(w / 2 - 4, h * 0.48, 8, 6);
+    }
+    return;
+  }
+  if (look.shipClass === ShipClass.Submarine) {
+    drawSubmarine(g, w, h, 0.2, nation);
+    return;
+  }
+  hull(g, w, h, color, Math.min(1, 0.9 * look.beam + (look.shipClass === ShipClass.Battleship ? 0.1 : 0)));
+  if (look.belt) {
+    g.lineStyle(1.6, OUTLINE, 1);
+    g.lineBetween(2.5, h * 0.3, 2.5, h * 0.75);
+    g.lineBetween(w - 2.5, h * 0.3, w - 2.5, h * 0.75);
+  }
+  g.fillStyle(DECK, 1);
+  g.fillRect(w / 2 - 1.5, h * 0.12, 3, h * 0.8);
+  // The mounts: half forward (superfiring), half aft, the odd one forward.
+  const fore = Math.ceil(look.mounts / 2);
+  const aft = look.mounts - fore;
+  const step = look.mountR * 2.4 / h;
+  for (let i = 0; i < fore; i++) turret(g, w / 2, h * (0.2 + i * step), look.mountR, look.barrels, -1);
+  for (let i = 0; i < aft; i++) turret(g, w / 2, h * (0.84 - i * step), look.mountR, look.barrels, 1);
+  // Bridge and funnels amidships
+  const mid = 0.2 + fore * step + 0.03;
+  g.fillStyle(STRUCTURE, 1);
+  g.fillRoundedRect(w / 2 - w * 0.22, h * mid, w * 0.44, h * 0.13, 2);
+  g.fillStyle(FUNNEL, 1);
+  const fw = Math.max(3.5, w * 0.26);
+  if (look.funnels === 2) {
+    g.fillEllipse(w / 2, h * (mid + 0.17), fw, fw * 1.3);
+    g.fillEllipse(w / 2, h * (mid + 0.26), fw, fw * 1.3);
+  } else {
+    g.fillEllipse(w / 2, h * (mid + 0.2), fw, fw * 1.4);
+  }
+  if (look.beamGuns) {
+    g.fillStyle(TURRET, 1);
+    for (const y of [mid + 0.04, mid + 0.14]) {
+      g.fillCircle(w * 0.18, h * y, Math.max(1.4, w * 0.07));
+      g.fillCircle(w * 0.82, h * y, Math.max(1.4, w * 0.07));
+    }
+  }
+  if (look.torpedoes) {
+    g.lineStyle(1.5, TURRET, 1);
+    const y = h * Math.min(0.7, mid + 0.34);
+    g.lineBetween(w / 2 - w * 0.2, y, w / 2 + w * 0.2, y + 4);
+  }
+  if (look.charges) {
+    g.fillStyle(TURRET, 1);
+    g.fillRect(w * 0.3, h - 6, 2, 3);
+    g.fillRect(w * 0.7 - 2, h - 6, 2, 3);
+  }
+}
+
+/**
+ * The designs' drawings (#416): each texture is drawn once for its key, which changes with the design, so a design
+ * edited in the 設計 screen is drawn anew the next time the ships are read.
+ */
+export function ensureDesignTextures(scene: Phaser.Scene, designs: ReadonlyArray<{ ship: IShipData; design: Pick<IShipDesign, 'hull' | 'modules'> }>): void {
+  for (const { ship, design } of designs) {
+    if (!ship.spriteKey || scene.textures.exists(ship.spriteKey)) continue;
+    const look = designLook(design);
+    const spec = CLASS_SPRITES[look.shipClass] ?? CLASS_SPRITES[ShipClass.Cruiser];
+    const k = ((ship.subtype && SUBTYPE_SCALE[ship.subtype]) || 1) * look.scale;
+    const w = Math.round(spec.w * k * (look.beam > 1 ? 1.08 : 1));
+    const h = Math.round(spec.h * k);
+    const g = scene.make.graphics({ x: 0, y: 0 }, false);
+    drawDesign(g, w, h, ship.nation, look);
     g.generateTexture(ship.spriteKey, w, h);
     g.destroy();
   }

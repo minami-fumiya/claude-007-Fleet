@@ -28,10 +28,9 @@ import type { ISave } from './ProgressStore';
 import { IWallet } from '@/types/Progression';
 import { addGold, GOLD_PER_MEDAL } from '@/systems/GoldSystem';
 import { ownSuperweapons } from '@/systems/SuperweaponSystem';
-import { AIRCRAFT, isDeveloped } from '@/systems/AircraftSystem';
+import { developableModels, isDeveloped } from '@/systems/AircraftSystem';
 import { groundKillStats } from '@/systems/GroundSystem';
 import { techLevel, techPoints } from '@/systems/FleetTechSystem';
-import { AircraftType } from '@/types/Aircraft';
 
 const CAMPAIGN = campaignData as ICampaignData;
 /** Carrier ids of every navy, for the 機動部隊編成章 (#204) */
@@ -72,7 +71,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet; 
   const theaters = new Set<string>();
   const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, equipStarsMax: 0, foreignOwned: 0, shipsKnown: 0, seasHeld: 0, waysDone: 0, bestShipSinks: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, aircraftDeveloped: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, equipStarsMax: 0, foreignOwned: 0, shipsKnown: 0, seasHeld: 0, waysDone: 0, bestShipSinks: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -110,7 +109,8 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet; 
     const fitted = Object.values(np.upgrades ?? {}).flat();
     ctx.equipmentKinds = Math.max(ctx.equipmentKinds, new Set([...Object.keys(np.equipment ?? {}).filter((id) => (np.equipment[id] ?? 0) > 0), ...fitted]).size);
     ctx.ownSuperweapon = Math.max(ctx.ownSuperweapon, np.ships.some((id) => OWN_SUPERWEAPONS.has(id)) ? 1 : 0);
-    const models = AIRCRAFT.filter((a) => a.nation === nation && a.type !== AircraftType.Recon);
+    const models = developableModels(nation);
+    ctx.aircraftDeveloped += models.filter((m) => (np.aircraftDev ?? []).includes(m.id)).length;
     ctx.aircraftComplete = Math.max(ctx.aircraftComplete, models.length > 0 && models.every((m) => isDeveloped({ aircraftDev: np.aircraftDev ?? [] }, m)) ? 1 : 0);
     const ground = groundKillStats(np.groundKills ?? {});
     ctx.groundTotal += ground.total;

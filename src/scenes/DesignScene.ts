@@ -1,3 +1,4 @@
+import { ensureDesignTextures } from '@/entities/ships/ShipTextures';
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
@@ -128,8 +129,16 @@ export class DesignScene extends Phaser.Scene {
     const cost = buildCostAt(p, ship);
     const air = ship.airWing ? `  ·  搭載 ${ship.airWing.fighters + ship.airWing.diveBombers + ship.airWing.torpedoBombers} 機` : '';
     const pv = add(this.add.text(x0, L.preview, `耐久 ${ship.hp}  装甲 ${ship.armor}  速力 ${ship.speed}  格 ${shipGrade(ship)}${air}\n建造 ${formatResources(cost)}`, textStyle(13, Css.text, { lineSpacing: 4 })));
-    fitText(pv, w);
+    // Room at the right for the drawing.
+    fitText(pv, w - 150);
     add(drawPanel(this.add.graphics(), x0 - 4, L.preview - 6, w + 8, pv.height + 12, { radius: 10, fillAlpha: 0.35, rimAlpha: 0.2 })).setDepth(pv.depth - 1);
+    // 設計艦の見た目 (#416): the drawing of the ship as it stands, laid on its side at the right of the panel.
+    ensureDesignTextures(this, [{ ship, design: { hull: h.id, modules: this.draft.modules } }]);
+    if (this.textures.exists(ship.spriteKey)) {
+      const img = add(this.add.image(x0 + w - 8, L.preview + pv.height / 2, ship.spriteKey).setAngle(90).setOrigin(0.5, 0.5));
+      const k = Math.min(2.2, (pv.height + 4) / img.width, 150 / img.height);
+      img.setScale(k).setX(x0 + w - 8 - (img.height * k) / 2);
+    }
 
     // The modules: weapons the navy's ships carry, then fittings; tap to fit or take off.
     const list = this.list!;
