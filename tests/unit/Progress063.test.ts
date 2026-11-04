@@ -46,3 +46,26 @@ describe('0.0.63 船団護衛の AUTO (#416)', () => {
     expect(merchant.hp).toBeGreaterThan(2 * 200);
   });
 });
+
+describe('0.0.63 国家方針の国の道 (#416)', () => {
+  it('every navy has its own way of three, with effects beyond ship bonuses', async () => {
+    const { focusTree, focusBuildTimeMul, focusRepairTimeMul, focusExpeditionMul } = await import('@/systems/NationFocusSystem');
+    for (const n of ['IJN', 'USN', 'KM', 'RN', 'FR', 'RM', 'SU']) {
+      const way = focusTree(n).filter((x) => /_way\d$/.test(x.id));
+      expect(way.map((x) => x.rank), n).toEqual([3, 5, 7]);
+    }
+    const all = (n: string) => ({ done: focusTree(n).map((x) => x.id) });
+    expect(focusBuildTimeMul('USN', all('USN'))).toBeCloseTo(0.92 * 0.92);
+    expect(focusRepairTimeMul('SU', all('SU'))).toBeCloseTo(0.9);
+    expect(focusExpeditionMul('RN', all('RN'))).toBeCloseTo(1.21);
+    expect(focusBuildTimeMul('IJN', undefined)).toBe(1);
+  });
+
+  it('a focus finished since the screen was opened shows on the home strip', async () => {
+    const { pendingSummary } = await import('@/systems/PendingSummary');
+    const { emptyProgress } = await import('@/utils/ProgressStore');
+    const p = { ...emptyProgress(), focus: { done: ['ijn_expand', 'ijn_way1'], current: null }, focusSeen: 1 };
+    expect(pendingSummary(p, 0, 0).find((i) => i.id === 'focusDone')?.count).toBe(1);
+    expect(pendingSummary({ ...p, focusSeen: undefined }, 0, 0).find((i) => i.id === 'focusDone')).toBeUndefined();
+  });
+});

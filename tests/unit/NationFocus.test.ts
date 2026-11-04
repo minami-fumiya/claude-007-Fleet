@@ -14,12 +14,12 @@ const rich = resources({ fuel: 99999, ammo: 99999, steel: 99999, bauxite: 99999 
 const done = (...ids: string[]): IFocusState => ({ done: ids, current: null });
 
 describe('国家方針 (#49)', () => {
-  it('every playable navy has a tree of 10–15 focuses whose links point inside it', () => {
+  it('every playable navy has a tree of 10–18 focuses (#416: its own way of three) whose links point inside it', () => {
     const nations = (focusData as unknown as { nations: Record<string, IFocusNode[]> }).nations;
     for (const n of PLAYABLE_NATIONS) {
       const tree = focusTree(n);
       expect(tree.length, n).toBeGreaterThanOrEqual(10);
-      expect(tree.length, n).toBeLessThanOrEqual(15);
+      expect(tree.length, n).toBeLessThanOrEqual(18);
       const ids = new Set(tree.map((x) => x.id));
       expect(ids.size).toBe(tree.length);
       for (const x of tree) {
@@ -123,7 +123,7 @@ describe('国家方針のツリー (#382)', () => {
     }
     const ijn = focusLayout('IJN');
     expect(ijn.depths).toBe(5);
-    expect(ijn.lanes).toBe(6);
+    expect(ijn.lanes).toBe(7);
     const at = (id: string) => ijn.places.find((p) => p.id === id)!;
     expect(at('ijn_bigGun3').lane).toBe(at('ijn_bigGun').lane);
     expect(at('ijn_total').lane).toBe((at('ijn_bigGun3').lane + at('ijn_air3').lane) / 2);

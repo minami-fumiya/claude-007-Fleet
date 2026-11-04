@@ -55,6 +55,9 @@ export class FocusScene extends Phaser.Scene {
     this.layer = [];
     this.status = '';
     this.confirm = null;
+    const p0 = loadProgress();
+    // 方針完了のお知らせ (#416): opening the screen sees every focus done so far.
+    if (p0.focusSeen !== (p0.focus?.done.length ?? 0)) saveProgress({ ...p0, focusSeen: p0.focus?.done.length ?? 0 });
     const p = loadProgress();
     // Open on the focus under way, else the first one that can start, else the root.
     const tree = focusTree(p.nation);

@@ -168,6 +168,8 @@ export interface INationProgress {
   pickerShowAssigned: boolean;
   /** 制海権と敵の反攻 (#50): seas taken back, the counterattack under way and the hourly income's clock */
   sea: ISeaControl;
+  /** 方針完了のお知らせ (#416): how many focuses were done when the 国家方針 screen was last opened (absent = all seen) */
+  focusSeen?: number;
 }
 
 /** The whole save (v2 and later). */
@@ -425,6 +427,7 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     favorites: [...new Set(strings(data.favorites))],
     pickerShowAssigned: data.pickerShowAssigned !== false,
     sea: parseSeaControl(data.sea),
+    ...(typeof data.focusSeen === 'number' && data.focusSeen >= 0 ? { focusSeen: data.focusSeen } : {}),
   };
 }
 

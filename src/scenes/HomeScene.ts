@@ -41,6 +41,7 @@ import {
 import { medalProgress, MEDALS } from '@/systems/RecordSystem';
 import { medalContext } from '@/utils/MedalContext';
 import { researchRepairTimeMul } from '@/systems/ShipyardResearch';
+import { focusRepairTimeMul } from '@/systems/NationFocusSystem';
 import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -813,7 +814,7 @@ export class HomeScene extends Phaser.Scene {
 
     // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
     const event = activeEffects();
-    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research);
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research) * focusRepairTimeMul(progress.nation, progress.focus);
     // Docks (#38), shared by repairs and builds since #211: a summary line, the next dock, then one scrolling list
     // with every ship in a dock, every build and every damaged ship, each on its own row (#297: no more "ほか n 隻").
     const docks = dockCount(progress);
@@ -933,7 +934,7 @@ export class HomeScene extends Phaser.Scene {
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
     // Builds hold docks too (#211).
-    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research), ship.shipClass, buildsHere(progress).length) : null;
+    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research) * focusRepairTimeMul(progress.nation, progress.focus), ship.shipClass, buildsHere(progress).length) : null;
     if (!paid || !docked) return;
     saveProgress(withQuestEvents({ ...mergeFleetDocks(progress, { ...progress, ...docked }), resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();
