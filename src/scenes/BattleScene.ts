@@ -87,6 +87,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
+import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
 import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
@@ -357,6 +358,14 @@ export class BattleScene extends Phaser.Scene {
   private baseAirLevel = 0;
   private baseAirField: BaseShip | null = null;
   private baseAirSent = 0;
+  /** 海の障害 (#368): minefields and nets of this sea, their drawing, and what came of them */
+  private hazards: IHazard[] = [];
+  private hazardGfx: Phaser.GameObjects.Graphics | null = null;
+  private hazardLabels: Phaser.GameObjects.Text[] = [];
+  private minesStruck = 0;
+  private fieldsSwept = 0;
+  /** 上陸支援 (#368): landings made this battle */
+  private landings = 0;
   private lastSeenMarks!: Phaser.GameObjects.Graphics;
 
   private aimAngle = 0;
@@ -423,6 +432,12 @@ export class BattleScene extends Phaser.Scene {
     this.escapeStart = null;
     this.escapeProgress = 0;
     this.landTargets = [];
+    this.hazards = [];
+    this.hazardGfx = null;
+    this.hazardLabels = [];
+    this.minesStruck = 0;
+    this.fieldsSwept = 0;
+    this.landings = 0;
     this.objectiveText = null;
     this.scenarioTargets = [];
     this.captains = new Map();
@@ -508,6 +523,7 @@ export class BattleScene extends Phaser.Scene {
     const startAngle = this.scenarioSetup?.player.positions[0]?.angle;
     if (startAngle !== undefined) for (const s of this.friendlies()) s.setAngle(startAngle);
     this.drawObjectiveZone();
+    this.setupHazards(battleArea);
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, WORLD.w, WORLD.h);
@@ -667,6 +683,7 @@ export class BattleScene extends Phaser.Scene {
     this.autoDepthCharge(enemyView, time);
 
     this.applySea(dtSec);
+    this.updateHazards(dtSec);
     this.updateConvoy(dtSec);
     // 航行距離 (#92): every ship of the player's own fleets, at the speed it is making.
     for (const s of this.friendlies()) if (s.isAlive && s.body) this.sailedPx += (s.body as Phaser.Physics.Arcade.Body).velocity.length() * dtSec;
@@ -902,6 +919,82 @@ export class BattleScene extends Phaser.Scene {
       g.strokePath();
     }
     this.add.text(c.x, c.y, zone.label, textStyle(14, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX);
+  }
+
+  /** 海の障害 (#368): the sea's minefields and nets, by its depth and objective (none in exercises or scenarios). */
+  private setupHazards(area: ICampaignArea | undefined): void {
+    if (!area || this.exercise || this.scenario) return;
+    const plan = hazardPlan(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
+    const island = [...this.map.islands].sort((a, b) => b.reduce((n, c) => n + c.r, 0) - a.reduce((n, c) => n + c.r, 0))[0]?.[0];
+    this.hazards = placeHazards(plan, area.id, WORLD, this.objective === Objective.Bombard ? island : undefined);
+    if (this.hazards.length === 0) return;
+    this.hazardGfx = this.add.graphics().setDepth(DEPTH_WATER_FX);
+    this.hazardLabels = this.hazards.map((z) => this.add.text(z.x, z.y, HAZARD_LABEL[z.kind], textStyle(13, z.kind === 'minefield' ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX));
+    this.drawHazards();
+  }
+
+  private drawHazards(): void {
+    const g = this.hazardGfx;
+    if (!g) return;
+    g.clear();
+    this.hazards.forEach((z, i) => {
+      const live = z.charge > 0;
+      this.hazardLabels[i]?.setVisible(live);
+      if (!live) return;
+      const color = z.kind === 'minefield' ? Colors.danger : Colors.gold;
+      g.fillStyle(color, z.kind === 'minefield' ? 0.05 + 0.07 * z.charge : 0.04);
+      g.fillCircle(z.x, z.y, z.r);
+      g.lineStyle(2, color, 0.55);
+      const step = z.kind === 'minefield' ? Math.PI / 14 : Math.PI / 30;
+      for (let a = 0; a < Math.PI * 2; a += step) {
+        g.beginPath();
+        g.arc(z.x, z.y, z.r, a, a + step / 2);
+        g.strokePath();
+      }
+    });
+  }
+
+  /** Mines struck and swept, nets for the submarines, and the landing parties (#368), every frame. */
+  private updateHazards(dtSec: number): void {
+    if (this.hazards.length > 0) {
+      let changed = false;
+      const own = this.playerSide().filter((s) => s.isAlive && !s.isConvoy);
+      this.hazards = this.hazards.map((z) => {
+        if (z.kind !== 'minefield' || z.charge <= 0) return z;
+        const inside = own.filter((s) => inHazard(z, s.x, s.y));
+        for (const s of inside) {
+          const speed = (s.body as Phaser.Physics.Arcade.Body | null)?.velocity.length() ?? 0;
+          if (Math.random() < mineChance(z, speed, dtSec, { submerged: s.submerged, sweeper: isSweeper(s.stats.shipClass) })) {
+            s.takeDamage(Math.round(s.stats.maxHp * MINE_DAMAGE));
+            this.minesStruck++;
+            this.explosion.play(s.x, s.y);
+            this.sound3d('explosion', s.x, s.y);
+            if (s === this.flagship) this.showToast('触雷');
+          }
+        }
+        const swept = sweep(z, inside.filter((s) => isSweeper(s.stats.shipClass)).length, dtSec);
+        if (swept.charge !== z.charge) changed = true;
+        if (swept.charge <= 0) {
+          this.fieldsSwept++;
+          this.showToast('掃海完了: 機雷原を除きました');
+        }
+        return swept;
+      });
+      if (changed) this.drawHazards();
+    }
+    // 上陸支援: the next landing party goes ashore when its time comes and a ship stands close to the island.
+    if (this.objective !== Objective.Bombard || this.landTargets.length === 0) return;
+    const alive = this.landTargets.filter((t) => t.isAlive);
+    if (alive.length === 0) return;
+    const own = this.playerSide().filter((s) => s.isAlive && !s.isConvoy);
+    const near = (t: BaseShip): number => Math.min(...own.map((s) => Phaser.Math.Distance.Between(s.x, s.y, t.x, t.y)));
+    const target = alive.reduce((best, t) => (near(t) < near(best) ? t : best), alive[0]);
+    if (!landingDue(this.battleNow(), this.landings, near(target))) return;
+    this.landings++;
+    target.takeDamage(Math.round(target.stats.maxHp * LANDING_DAMAGE));
+    this.explosion.play(target.x, target.y);
+    this.sound3d('explosion', target.x, target.y);
+    this.showToast(`上陸支援: 上陸部隊が ${target.stats.name} を攻撃`);
   }
 
   /** Convoy: three merchant ships start on the west edge with the escort fleet beside them. */
@@ -1308,7 +1401,9 @@ export class BattleScene extends Phaser.Scene {
   private applySea(dtSec: number): void {
     for (const ship of [...this.playerSide(), ...this.enemies]) {
       if (!ship.isAlive) continue;
-      ship.envSpeedMul = this.conditions.speedMul * (inShoal(this.map, ship.x, ship.y) ? SHOAL_SPEED : 1);
+      ship.envSpeedMul = this.conditions.speedMul * (inShoal(this.map, ship.x, ship.y) ? SHOAL_SPEED : 1)
+        // 防潜網 (#368): the player's submarines crawl inside the enemy's nets.
+        * (this.hazards.length > 0 && !this.enemies.includes(ship) ? netSpeedMul(this.hazards, ship.stats.shipClass, ship.x, ship.y) : 1);
       const c = currentAt(this.map, ship.x, ship.y);
       if (c.vx !== 0 || c.vy !== 0) {
         ship.x += c.vx * dtSec;
@@ -2760,6 +2855,8 @@ export class BattleScene extends Phaser.Scene {
       ['tenderWin', won(fleet.some((s) => this.subtypeOf(s) === ShipSubtype.SeaplaneTender))],
       ['largeCarrierFlagWin', won(!!this.flagship && this.subtypeOf(this.flagship) === ShipSubtype.LargeCarrier)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['trainingWin', won(this.exercise && this.battleData?.training === true)],
+      // 海の障害と上陸支援 (#368)
+      ['mineSwept', this.fieldsSwept], ['landingStrike', this.landings],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],
       ['sinkCarrier', sunkOf(ShipClass.Carrier)], ['sinkSubmarine', sunkOf(ShipClass.Submarine)], ['sinkBattleship', sunkOf(ShipClass.Battleship)],
       // A win under each kind of event counts for the イベント巡り章 (#218).

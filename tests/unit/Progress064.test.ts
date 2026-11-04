@@ -150,3 +150,55 @@ describe('0.0.64 設計艦の見た目 (#416)', () => {
     expect(designSpriteKey('d', { hull: 'hull_bb', modules: ['a'] })).not.toBe(designSpriteKey('d', { hull: 'hull_bb', modules: ['a', 'b'] }));
   });
 });
+
+describe('0.0.64 機雷原・防潜網・上陸支援 (#368)', () => {
+  it('minefields lie in the deeper seas only, nets where a harbour or strait is fought for', async () => {
+    const { hazardPlan, MINE_DEPTH } = await import('@/systems/HazardSystem');
+    const { Objective } = await import('@/types/Campaign');
+    const deep = DATA.areas.filter((a) => !a.training).map((a) => hazardPlan(a, 10));
+    expect(deep.some((p) => p.mines > 0)).toBe(true);
+    expect(DATA.areas.every((a) => hazardPlan(a, MINE_DEPTH - 1).mines === 0)).toBe(true);
+    expect(hazardPlan({ id: 'x', objective: Objective.Bombard }, 5).net).toBe(true);
+    expect(hazardPlan({ id: 'x', objective: Objective.Annihilate }, 5).net).toBe(false);
+    expect(hazardPlan({ id: 'x', objective: Objective.Bombard, training: true }, 9)).toEqual({ mines: 0, net: false });
+  });
+
+  it('a field is placed the same way every time, between the fleets', async () => {
+    const { placeHazards } = await import('@/systems/HazardSystem');
+    const world = { w: 3200, h: 3200 };
+    const a = placeHazards({ mines: 2, net: false }, 'p9', world);
+    expect(a).toEqual(placeHazards({ mines: 2, net: false }, 'p9', world));
+    for (const z of a) expect(z.y).toBeGreaterThan(world.h * 0.3);
+    const net = placeHazards({ mines: 0, net: true }, 'p9', world, { x: 1000, y: 900, r: 300 })[0];
+    expect(net).toMatchObject({ kind: 'net', x: 1000, y: 900 });
+    expect(net.r).toBeGreaterThan(300);
+  });
+
+  it('mines strike moving surface ships; destroyers sweep the field away', async () => {
+    const { mineChance, sweep, SWEEP_SECONDS, netSpeedMul, NET_SPEED_MUL } = await import('@/systems/HazardSystem');
+    const field = { kind: 'minefield' as const, x: 0, y: 0, r: 200, charge: 1 };
+    expect(mineChance(field, 150, 1)).toBeGreaterThan(0);
+    expect(mineChance(field, 0, 1)).toBe(0);
+    expect(mineChance(field, 150, 1, { submerged: true })).toBe(0);
+    expect(mineChance(field, 150, 1, { sweeper: true })).toBeLessThan(mineChance(field, 150, 1));
+    const half = sweep(field, 2, SWEEP_SECONDS / 4);
+    expect(half.charge).toBeCloseTo(0.5);
+    expect(sweep(half, 1, SWEEP_SECONDS).charge).toBe(0);
+    expect(mineChance({ ...field, charge: 0 }, 150, 1)).toBe(0);
+    const net = { kind: 'net' as const, x: 0, y: 0, r: 200, charge: 1 };
+    expect(netSpeedMul([net], ShipClass.Submarine, 10, 10)).toBe(NET_SPEED_MUL);
+    expect(netSpeedMul([net], ShipClass.Destroyer, 10, 10)).toBe(1);
+  });
+
+  it('the landing parties go ashore at their times, when the fleet is close', async () => {
+    const { landingDue, LANDING_AT, LANDING_RANGE } = await import('@/systems/HazardSystem');
+    expect(landingDue(LANDING_AT[0] - 1, 0, 100)).toBe(false);
+    expect(landingDue(LANDING_AT[0], 0, 100)).toBe(true);
+    expect(landingDue(LANDING_AT[0], 0, LANDING_RANGE + 1)).toBe(false);
+    expect(landingDue(LANDING_AT[1], 1, 100)).toBe(true);
+    expect(landingDue(999_999, LANDING_AT.length, 100)).toBe(false);
+    const { MEDALS } = await import('@/systems/RecordSystem');
+    expect(MEDALS.some((m) => m.id.startsWith('mine_sweeper'))).toBe(true);
+    expect(MEDALS.some((m) => m.id.startsWith('landing'))).toBe(true);
+  });
+});

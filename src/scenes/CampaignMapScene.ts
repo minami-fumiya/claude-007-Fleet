@@ -39,6 +39,7 @@ import { dashes, rimSegment } from '@/utils/RouteLine';
 import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 import { defenseReward, emptySeaControl, heldAreas, seaIncome, seaState } from '@/systems/SeaControlSystem';
 import { shortResources } from '@/systems/ResourceSystem';
+import { hazardPlan, hazardText } from '@/systems/HazardSystem';
 import { SPECIAL_GOLD, specialReward, specialState, weeklyArea, weeklyRule } from '@/systems/SpecialOpsSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
@@ -369,6 +370,8 @@ export class CampaignMapScene extends Phaser.Scene {
       ...(seaHere === 'attacked' ? [['敵の反攻', `残り ${clock(Math.max(0, (sea.counter?.endsAt ?? 0) - Date.now()))} で制海権を失います。防衛戦は敵の主力艦隊との 1 戦 (勝てば ${formatResources(defenseReward(a.reward))})`] as [string, string]]
         : seaHere === 'lost' ? [['制海権', '敵に奪われました。もう一度攻略すると取り返せます (それまで収入と掃討なし)'] as [string, string]]
         : seaHere === 'held' ? [['制海権', `保持  ·  1 時間に ${formatResources(seaIncome(1))}`] as [string, string]] : []),
+      // 海の障害と上陸支援 (#368)
+      ...(hazardText(hazardPlan(a, depth), a.objective === Objective.Bombard) ? [['海の障害', hazardText(hazardPlan(a, depth), a.objective === Objective.Bombard)] as [string, string]] : []),
       ...(specialHere !== 'none' ? [['特別海域', `今週は${weeklyRule(Date.now()).name}で主力艦隊と 1 戦  ·  ${specialHere === 'won' ? '今週の報酬は受け取り済み' : `勝てば ${formatResources(specialReward(a.reward))}・ゴールド ${SPECIAL_GOLD}`}`] as [string, string]] : []),
       ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];

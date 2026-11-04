@@ -94,6 +94,8 @@ export const QUEST_EVENTS = [
   'defenseWin', 'seaRetake',
   // 0.0.64 (#416): anniversary scenarios won on their day, special seas won
   'anniversaryWin', 'specialWin',
+  // 0.0.64 (#368): minefields swept, landings made
+  'mineSwept', 'landingStrike',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
