@@ -1,3 +1,4 @@
+import { markSeen, newIds, openResearch, RESEARCH_NEW } from '@/systems/NewMarks';
 import Phaser from 'phaser';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -61,6 +62,12 @@ export class ArsenalScene extends Phaser.Scene {
     );
     const p = loadProgress();
     this.bar.refresh(p.resources, holdCap(p.facilities));
+    // NEW の印 (0.0.64): projects opened since the last visit are marked this visit, then remembered as seen.
+    const open = openResearch(TECH_TREE, p.research, p.record.medals, rankOf(p).index);
+    const fresh = new Set(newIds(p.seenNew, RESEARCH_NEW, open));
+    const seenNew = markSeen(p.seenNew, RESEARCH_NEW, open);
+    if (seenNew !== p.seenNew) saveProgress({ ...p, seenNew });
+    if (fresh.size > 0) this.view.setNew(fresh);
   }
 
   private research(node: ITechNode): void {

@@ -1,3 +1,4 @@
+import { ANNIVERSARY_GOLD, anniversaryKey, mdLabel, scenarioAnniversary } from '@/systems/SpecialOpsSystem';
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -112,7 +113,8 @@ export class ScenarioScene extends Phaser.Scene {
       const r = { x: L.list.x + col * (CARD_W + GAP), y: top + row * (L.cardH + GAP), w: CARD_W, h: L.cardH };
       const frame = this.add.graphics();
       this.cardFrames.push({ g: frame, index: i });
-      const date = this.add.text(18, 12, sc.date, eyebrowStyle(10, Css.gold));
+      // 記念日 (#416): the battle's own day.
+      const date = this.add.text(18, 12, `${sc.date}${scenarioAnniversary(sc.id, Date.now()) ? '  ·  今日は記念日' : ''}`, eyebrowStyle(10, Css.gold));
       const sides = `${NATION_INFO[sc.forces.A.nation].jaShort} vs ${NATION_INFO[sc.forces.B.nation].jaShort}  ${sc.forces.A.ships.length} 対 ${sc.forces.B.ships.length}`;
       const vs = IS_PORTRAIT
         ? this.add.text(r.w - 16, 12, sides, textStyle(12, Css.muted)).setOrigin(1, 0)
@@ -213,6 +215,7 @@ export class ScenarioScene extends Phaser.Scene {
         ['勝利条件', `${OBJECTIVE_LABEL[setup.side.objective]} — ${setup.side.brief}`],
         ['味方', variant(lineups[0])],
         ['敵', variant(lineups[1])],
+        ...(this.anniversaryRow(sc)),
         ...(sc.history ? [['史実', `${sc.history.text}${best ? `\n最良の記録: ${best.victory ? '勝利' : '敗北'}・撃沈 ${best.sunk} 隻・損失 ${best.lost} 隻` : ''}`] as [string, string]] : []),
       ];
       for (const [k, v] of rows) {
@@ -233,6 +236,14 @@ export class ScenarioScene extends Phaser.Scene {
         variant: 'gold', width: w, height: IS_PORTRAIT ? 76 : 60, fontSize: 20,
       }),
     );
+  }
+
+  /** 記念日 (#416): on the battle's day, a win pays gold once a year. */
+  private anniversaryRow(sc: IScenario): Array<[string, string]> {
+    const a = scenarioAnniversary(sc.id, Date.now());
+    if (!a) return [];
+    const done = (loadProgress().specialOps?.anniversaries ?? []).includes(anniversaryKey(a, Date.now()));
+    return [['記念日', `今日 (${mdLabel(a.md)}) は${a.name}の日  ·  ${done ? '今年の記念日の報酬は受け取り済み' : `勝てばゴールド ${ANNIVERSARY_GOLD}`}`]];
   }
 
   start(sc: IScenario): void {

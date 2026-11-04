@@ -186,16 +186,13 @@ export function designProblem(d: Pick<IShipDesign, 'name' | 'hull' | 'modules'>,
   return null;
 }
 
-/** The ship a design is built and fought as. `roster` lends it the look of a real ship of its kind. */
-export function designShip(d: IShipDesign, nation: string, roster: readonly IShipData[]): IShipData {
+/** The ship a design is built and fought as (its drawing is its own since 0.0.64; `_roster` is kept for the callers). */
+export function designShip(d: IShipDesign, nation: string, _roster: readonly IShipData[] = []): IShipData {
   const h = hull(d.hull) ?? HULLS[0];
   const has = (id: string): boolean => d.modules.includes(id);
   const hp = Math.round(h.hp * (has('fit_bulge') ? 1.06 : 1));
   const armor = Math.round(h.armor * (has('fit_armor') ? 1.15 : 1));
   const speed = Math.round(h.speed * (has('fit_engine') ? 1.08 : 1) * (has('fit_bulge') ? 0.96 : 1));
-  const look = roster
-    .filter((s) => s.nation === nation && s.shipClass === h.shipClass && !s.designed && (s.subtype ?? '') === (h.subtype ?? ''))
-    .sort((a, b) => Math.abs(a.hp - hp) - Math.abs(b.hp - hp))[0] ?? roster.find((s) => s.shipClass === h.shipClass);
   const air = h.airWing && (has('fit_hangar') ? { fighters: h.airWing.fighters + 1, diveBombers: h.airWing.diveBombers + 1, torpedoBombers: h.airWing.torpedoBombers + 1 } : { ...h.airWing });
   return {
     id: d.id,
@@ -207,7 +204,8 @@ export function designShip(d: IShipDesign, nation: string, roster: readonly IShi
     armor,
     speed,
     weapons: d.modules.filter((id) => weapon(id) !== undefined),
-    spriteKey: look?.spriteKey ?? '',
+    // 設計艦の見た目 (#416): its own drawing, from the hull and modules (drawn when the registry is read).
+    spriteKey: designSpriteKey(d.id, d),
     ...(air ? { airWing: air } : {}),
     designed: true,
     description: `設計艦。${h.name}に${d.modules.map((id) => weapon(id)?.name ?? fitting(id)?.name ?? id).join('・') || '装備なし'}。`,
@@ -243,4 +241,64 @@ export function parseDesigns(v: unknown): IShipDesign[] {
     });
   }
   return out;
+}
+
+/** 設計艦の見た目 (#416 #386): what the drawing of a design shows, from its hull and modules. */
+export interface IDesignLook {
+  shipClass: ShipClass;
+  /** Size against the class's own sprite */
+  scale: number;
+  /** Gun mounts fore and aft (the main battery, or the secondary on hulls that carry no main guns) */
+  mounts: number;
+  /** Radius of a mount and its barrels */
+  mountR: number;
+  barrels: number;
+  /** Beam guns (副砲・両用砲) beside the main battery */
+  beamGuns: boolean;
+  torpedoes: boolean;
+  charges: boolean;
+  /** 機関強化: two funnels */
+  funnels: 1 | 2;
+  /** バルジ: a wider beam; 装甲強化: a dark belt */
+  beam: number;
+  belt: boolean;
+  /** 格納庫拡張 */
+  bigHangar: boolean;
+}
+
+const LOOK_SCALE: Partial<Record<string, number>> = {
+  hull_dd_leader: 1.08, hull_cl: 0.94, hull_ca: 1.04, hull_bc: 1.02, hull_bb_large: 1.14, hull_cvl: 0.88, hull_cv_armored: 1.04, hull_ss_large: 1.1,
+};
+
+export function designLook(d: Pick<IShipDesign, 'hull' | 'modules'>): IDesignLook {
+  const h = hull(d.hull) ?? HULLS[0];
+  const ws = d.modules.map(weapon).filter((w): w is IWeaponData => w !== undefined);
+  const byRole = (r: WeaponRole): IWeaponData | undefined => ws.find((w) => weaponRole(w) === r);
+  const main = byRole('main');
+  const second = byRole('secondary');
+  const guns = main ?? second;
+  const big = h.id === 'hull_bb_large';
+  const mounts = !guns || h.shipClass === ShipClass.Carrier || h.shipClass === ShipClass.Submarine ? 0
+    : h.shipClass === ShipClass.Battleship ? (big ? 4 : 3)
+      : h.shipClass === ShipClass.Cruiser ? (main ? 4 : 3) : 2;
+  const fp = guns?.firePower ?? 0;
+  return {
+    shipClass: h.shipClass,
+    scale: LOOK_SCALE[h.id] ?? 1,
+    mounts,
+    mountR: h.shipClass === ShipClass.Battleship ? (fp >= 110 ? 5.4 : fp >= 95 ? 4.9 : 4.4) : h.shipClass === ShipClass.Cruiser ? (main ? 3.6 : 3) : 2.5,
+    barrels: main ? (fp >= 95 ? 3 : 2) : h.shipClass === ShipClass.Destroyer ? 1 : 2,
+    beamGuns: main !== undefined && second !== undefined,
+    torpedoes: byRole('torpedo') !== undefined && h.shipClass !== ShipClass.Submarine,
+    charges: byRole('charge') !== undefined,
+    funnels: d.modules.includes('fit_engine') ? 2 : 1,
+    beam: d.modules.includes('fit_bulge') ? 1.1 : 1,
+    belt: d.modules.includes('fit_armor'),
+    bigHangar: d.modules.includes('fit_hangar'),
+  };
+}
+
+/** The texture key of a design's drawing: it changes with the design, so an edited design is drawn again. */
+export function designSpriteKey(id: string, d: Pick<IShipDesign, 'hull' | 'modules'>): string {
+  return `design:${id}:${d.hull}:${[...d.modules].sort().join('+')}`;
 }

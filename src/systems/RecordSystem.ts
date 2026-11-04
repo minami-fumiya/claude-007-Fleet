@@ -4,12 +4,16 @@ import { IBattleRecordInput, ICareerStats, IMedal, IModeRecord, IScenarioBest, I
 import { ALL_SCENARIOS } from '@/data/scenarios';
 import { ShipClass } from '@/types/ShipClass';
 import campaignData from '@/data/campaign.json';
+import aircraftData from '@/data/aircraft.json';
 import { earnedTitles } from './AdmiralTitles';
 import { GROUND_WEAPONS } from './GroundSystem';
 import { TUNES } from './MusicScore';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
 
+
+/** Aircraft models a navy can develop, all navies together (#408): the 航空の殿堂's last step. */
+const AIRCRAFT_TOTAL = (aircraftData as { aircraft: Array<{ type: string; base?: string }> }).aircraft.filter((a) => a.type !== 'Recon' || a.base === 'flyingBoat').length;
 export function emptyRecord(): IServiceRecord {
   return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {}, career: emptyCareer(), tunesHeard: [], encountered: [], kills: {} };
 }
@@ -209,6 +213,8 @@ export interface IMedalContext {
   ownSuperweapon?: number;
   /** 1 when some nation has developed every carrier model of its navy (#87) */
   aircraftComplete?: number;
+  /** 航空の殿堂 (#408): aircraft models developed, every navy's together */
+  aircraftDeveloped?: number;
   /** Ground weapons destroyed in all, and how many different ones (#251) */
   groundTotal?: number;
   groundKinds?: number;
@@ -420,6 +426,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('own_superweapon', '超兵器建造章', 'special', [1], () => '設計図から自国の超兵器を建造する', (_r, c) => c.ownSuperweapon ?? 0),
   ...ladder('superweapon_sea', '超兵器海域章', 'campaign', [1, 10, 30], (g) => `超兵器海域で ${g} 回勝利する`, (_r, c) => total(c, 'swAreaWin')),
   ...ladder('aircraft_dev', '航空機開発章', 'base', [1, 5, 10], (g) => `新しい艦載機を ${g} 機種開発する`, (_r, c) => total(c, 'aircraftDev')),
+  // 航空の殿堂 (#408): models developed, every navy's together (carrier and land planes and flying boats).
+  ...ladder('aircraft_hall', '航空の殿堂', 'base', [30, 60, AIRCRAFT_TOTAL], (g) => `航空機を ${g} 機種開発する (全ての国で)`, (_r, c) => c.aircraftDeveloped ?? 0),
   ...ladder('aircraft_complete', '全機種配備章', 'base', [1], () => '自国の艦載機をすべて開発する', (_r, c) => c.aircraftComplete ?? 0),
   ...ladder('air_ace', 'エース章', 'growth', [1, 3, 6], (g) => `空母の航空隊に ${g} 人のエースを迎える`, (_r, c) => total(c, 'aceBorn')),
   ...ladder('ground_weapon', '地上兵器撃破章', 'battle', [10, 50, 200], (g) => `国ごとの地上兵器 (要塞砲・高射砲陣地など) を ${g} 個破壊する`, (_r, c) => c.groundTotal ?? 0),
@@ -483,6 +491,12 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('ship_ace', '百戦錬磨章', 'battle', [10, 50, 150], (g) => `1 隻の艦で、敵艦を ${g} 隻沈める`, (_r, c) => c.bestShipSinks ?? 0),
   // 0.0.63 国の道 (#416)
   ...ladder('national_way', '国の道章', 'growth', [1, 3, 7], (g) => `${g} か国で、国家方針の国の道を最後まで進める`, (_r, c) => c.waysDone ?? 0),
+  // 0.0.64 記念日と特別海域 (#416)
+  ...ladder('anniversary', '記念日章', 'campaign', [1, 5, 20], (g) => `記念日に、その日の史実の海戦で ${g} 回勝つ`, (_r, c) => total(c, 'anniversaryWin')),
+  ...ladder('special_sea', '特別海域章', 'campaign', [1, 5, 20], (g) => `週替わりの特別海域で ${g} 回勝つ`, (_r, c) => total(c, 'specialWin')),
+  // 0.0.64 海の障害と上陸支援 (#368)
+  ...ladder('mine_sweeper', '掃海章', 'battle', [1, 10, 50], (g) => `機雷原を ${g} か所掃海する`, (_r, c) => total(c, 'mineSwept')),
+  ...ladder('landing', '上陸支援章', 'battle', [1, 10, 40], (g) => `対地攻撃で上陸部隊を ${g} 回送る`, (_r, c) => total(c, 'landingStrike')),
   // 0.0.62 制海権と敵の反攻 (#50)
   ...ladder('sea_held', '制海権章', 'campaign', [10, 30, 60], (g) => `1 つの国で、${g} か所の海域の制海権を持つ`, (_r, c) => c.seasHeld ?? 0),
   ...ladder('sea_defender', '防衛章', 'campaign', [3, 15, 50], (g) => `敵の反攻から海域を ${g} 回守る`, (_r, c) => total(c, 'defenseWin')),

@@ -10,6 +10,7 @@ import { IScenario } from '@/types/Scenario';
 import { designShip } from '@/systems/DesignSystem';
 import { foreignShips } from '@/systems/ForeignShipSystem';
 import { loadSave } from './ProgressStore';
+import { ensureDesignTextures } from '@/entities/ships/ShipTextures';
 
 export interface IShipJsonFile {
   ships: IShipData[];
@@ -36,13 +37,16 @@ export class DataLoader {
     const ships = PLAYABLE_NATIONS.flatMap((n) => [...DataLoader.getShips(scene, NATION_INFO[n].dataKey), ...own.filter((s) => s.nation === n)]);
     // Other navies' ships built from their plans (#368) join each roster as its own copies.
     const foreign = PLAYABLE_NATIONS.flatMap((n) => foreignShips(ships, n));
-    return new ShipRegistry([...ships, ...foreign, ...DataLoader.designs(ships)]);
+    return new ShipRegistry([...ships, ...foreign, ...DataLoader.designs(ships, scene)]);
   }
 
   /** The player's designs (設計艦, #51) as ships, each navy's from its save. */
-  static designs(ships: IShipData[]): IShipData[] {
+  static designs(ships: IShipData[], scene?: Phaser.Scene): IShipData[] {
     const save = loadSave();
-    return PLAYABLE_NATIONS.flatMap((n) => (save.nations[n]?.designs ?? []).map((d) => designShip(d, n, ships)));
+    const list = PLAYABLE_NATIONS.flatMap((n) => (save.nations[n]?.designs ?? []).map((d) => ({ ship: designShip(d, n, ships), design: d })));
+    // 設計艦の見た目 (#416): each design's own drawing, made the first time its look is read.
+    if (scene) ensureDesignTextures(scene, list);
+    return list.map((x) => x.ship);
   }
 
   static getCaptains(scene: Phaser.Scene): ICaptainData[] {

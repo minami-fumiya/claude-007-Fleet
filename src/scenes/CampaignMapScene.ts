@@ -39,6 +39,8 @@ import { dashes, rimSegment } from '@/utils/RouteLine';
 import { NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 import { defenseReward, emptySeaControl, heldAreas, seaIncome, seaState } from '@/systems/SeaControlSystem';
 import { shortResources } from '@/systems/ResourceSystem';
+import { hazardPlan, hazardText } from '@/systems/HazardSystem';
+import { SPECIAL_GOLD, specialReward, specialState, weeklyArea, weeklyRule } from '@/systems/SpecialOpsSystem';
 
 /** Registry key: the area the Fleet Builder is preparing a sortie for. */
 export const CAMPAIGN_AREA_KEY = 'campaign.area';
@@ -46,6 +48,8 @@ export const CAMPAIGN_AREA_KEY = 'campaign.area';
 export const SW_AREA_KEY = 'campaign.swArea';
 /** Registry key: the area is sortied to as a defence against the enemy's counterattack (#50) */
 export const DEFENSE_AREA_KEY = 'campaign.defense';
+/** Registry flag: the sortie is this week's 特別海域 (#416) */
+export const SPECIAL_AREA_KEY = 'campaign.special';
 
 const DATA = campaignData as ICampaignData;
 
@@ -338,6 +342,9 @@ export class CampaignMapScene extends Phaser.Scene {
     const swOpen = superweaponSeaOpen(DATA, a, cleared) && superweaponOf(enemyNation) !== undefined;
     const sea = progress.sea ?? emptySeaControl();
     const seaHere = seaState(a.id, cleared, sea, a.training);
+    // 特別海域 (#416): this week's sea, fought again by one class of ship.
+    const special = weeklyArea(DATA.areas.filter((x) => theatersFor(DATA, nation).some((t) => t.id === x.theater)), cleared, Date.now());
+    const specialHere = special?.id === a.id ? specialState(progress.specialOps, special, Date.now()) : 'none';
     const giantEvent = activeEvent();
     const giantHere = giantEvent?.kind === 'superweapon' && eventGiantJoins(a, depth, giantEvent.theater) ? superweaponOf(enemyNation) : undefined;
     const lines: Array<[string, string]> = [
@@ -363,6 +370,9 @@ export class CampaignMapScene extends Phaser.Scene {
       ...(seaHere === 'attacked' ? [['敵の反攻', `残り ${clock(Math.max(0, (sea.counter?.endsAt ?? 0) - Date.now()))} で制海権を失います。防衛戦は敵の主力艦隊との 1 戦 (勝てば ${formatResources(defenseReward(a.reward))})`] as [string, string]]
         : seaHere === 'lost' ? [['制海権', '敵に奪われました。もう一度攻略すると取り返せます (それまで収入と掃討なし)'] as [string, string]]
         : seaHere === 'held' ? [['制海権', `保持  ·  1 時間に ${formatResources(seaIncome(1))}`] as [string, string]] : []),
+      // 海の障害と上陸支援 (#368)
+      ...(hazardText(hazardPlan(a, depth), a.objective === Objective.Bombard) ? [['海の障害', hazardText(hazardPlan(a, depth), a.objective === Objective.Bombard)] as [string, string]] : []),
+      ...(specialHere !== 'none' ? [['特別海域', `今週は${weeklyRule(Date.now()).name}で主力艦隊と 1 戦  ·  ${specialHere === 'won' ? '今週の報酬は受け取り済み' : `勝てば ${formatResources(specialReward(a.reward))}・ゴールド ${SPECIAL_GOLD}`}`] as [string, string]] : []),
       ['初回報酬', captain ? `${reward}  /  ${captain}` : reward],
     ];
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
@@ -428,7 +438,9 @@ export class CampaignMapScene extends Phaser.Scene {
     }
     // The sortie, the superweapon sea (#148) and the sweep share the row.
     const defend = seaHere === 'attacked';
-    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0) + (defend ? 1 : 0);
+    // 特別海域 (#416) shares the defence's place (a sea under attack is defended first).
+    const specialBtn = !defend && specialHere !== 'none';
+    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0) + (defend || specialBtn ? 1 : 0);
     const bw = (d.w - 48 - 12 * (count - 1)) / count;
     const bx = (i: number): number => d.x + 24 + i * (bw + 12) + bw / 2;
     const bh = IS_PORTRAIT ? 76 : 60;
@@ -448,8 +460,13 @@ export class CampaignMapScene extends Phaser.Scene {
         variant: 'danger', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
       })).setEnabled(reach);
     }
+    if (specialBtn) {
+      add(new UIButton(this, bx(1), by, '特別海域  ›', () => this.prepare(a, false, false, true), {
+        variant: 'danger', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
+      })).setEnabled(reach);
+    }
     if (swOpen) {
-      add(new UIButton(this, bx(defend ? 2 : 1), by, '超兵器海域', () => this.prepare(a, true), {
+      add(new UIButton(this, bx(defend || specialBtn ? 2 : 1), by, '超兵器海域', () => this.prepare(a, true), {
         variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
       })).setEnabled(reach);
     }
@@ -488,13 +505,15 @@ export class CampaignMapScene extends Phaser.Scene {
   }
 
   /** To the fleet builder for the area; `giant`: its superweapon sea (#148). */
-  private prepare(a: ICampaignArea, giant = false, defense = false): void {
+  private prepare(a: ICampaignArea, giant = false, defense = false, special = false): void {
     if (!isUnlocked(a, loadProgress().campaign)) return;
     this.registry.set(CAMPAIGN_AREA_KEY, a.id);
     if (giant) this.registry.set(SW_AREA_KEY, true);
     else this.registry.remove(SW_AREA_KEY);
     if (defense) this.registry.set(DEFENSE_AREA_KEY, true);
     else this.registry.remove(DEFENSE_AREA_KEY);
+    if (special) this.registry.set(SPECIAL_AREA_KEY, true);
+    else this.registry.remove(SPECIAL_AREA_KEY);
     this.scene.start(SceneKeys.FLEET_BUILDER);
   }
 }

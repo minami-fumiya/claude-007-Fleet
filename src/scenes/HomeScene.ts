@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
-import { newIds, OPEN_BUILD_STATES, SHIPYARD_NEW } from '@/systems/NewMarks';
+import { TECH_TREE } from '@/systems/ResearchSystem';
+import { shownExpeditions } from '@/systems/ExpeditionSystem';
+import { EXPEDITION_NEW, newIds, OPEN_BUILD_STATES, openExpeditions, openResearch, RESEARCH_NEW, SHIPYARD_NEW } from '@/systems/NewMarks';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
 import { holdCap, regenRules } from '@/systems/FacilitySystem';
@@ -737,6 +739,14 @@ export class HomeScene extends Phaser.Scene {
     const roster = DataLoader.getRegistry(this).byNation(progress.nation);
     const opened = newIds(progress.seenNew, SHIPYARD_NEW, roster.filter((s) => OPEN_BUILD_STATES.includes(buildState(progress, roster, s))).map((s) => s.id)).length;
     if (opened > 0) items.push({ id: 'newShips', label: '建造 NEW', count: opened, scene: SceneKeys.SHIPYARD });
+    // And research projects and expeditions (0.0.64), the same way.
+    const rank = rankOf(progress).index;
+    const research = newIds(progress.seenNew, RESEARCH_NEW, openResearch(TECH_TREE, progress.research, progress.record.medals, rank)).length;
+    if (research > 0) items.push({ id: 'newResearch', label: '研究 NEW', count: research, scene: SceneKeys.ARSENAL });
+    const expeditions = newIds(progress.seenNew, EXPEDITION_NEW, openExpeditions(shownExpeditions(rank, progress.expeditions), rank)).length;
+    if (expeditions > 0) items.push({ id: 'newExpeditions', label: '遠征 NEW', count: expeditions, scene: SceneKeys.EXPEDITION });
+    // The strip holds a few at most; the rest wait their turn (the screens mark their own).
+    items.splice(IS_PORTRAIT ? 5 : 7);
     const n = L.notice;
     add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
     if (items.length === 0) {

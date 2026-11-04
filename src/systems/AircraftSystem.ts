@@ -36,6 +36,11 @@ export interface IAircraftData {
   cost?: Partial<IResources>;
   perf?: Partial<IAircraftPerf>;
   description?: string;
+  /**
+   * 陸上機・飛行艇 (#408): flown from the land, never from a carrier. Land planes fly with the 基地航空隊 and from the
+   * enemy's airfields; a flying boat keeps the base's scouts out longer.
+   */
+  base?: 'land' | 'flyingBoat';
 }
 
 export const AIRCRAFT = (data as unknown as { aircraft: IAircraftData[] }).aircraft;
@@ -63,7 +68,28 @@ export interface IPilot {
 
 /** A navy's models of a kind, oldest first. */
 export function modelsFor(nation: Nation | string, type: CarrierAircraft): IAircraftData[] {
-  return AIRCRAFT.filter((a) => a.nation === nation && a.type === type);
+  return AIRCRAFT.filter((a) => a.nation === nation && a.type === type && !a.base);
+}
+
+/** A navy's land planes of a kind (#408), oldest first. */
+export function landModelsFor(nation: Nation | string, type: CarrierAircraft): IAircraftData[] {
+  return AIRCRAFT.filter((a) => a.nation === nation && a.type === type && a.base === 'land').sort((a, b) => (a.year ?? 0) - (b.year ?? 0));
+}
+
+/** The models the 開発 screen lists: carrier and land planes and flying boats (not the ships' floatplanes). */
+export function developableModels(nation: Nation | string): IAircraftData[] {
+  return AIRCRAFT.filter((a) => a.nation === nation && (a.type !== AircraftType.Recon || a.base === 'flyingBoat'));
+}
+
+const LAND_KIND: Record<CarrierAircraft, string> = {
+  [AircraftType.Fighter]: '陸上戦闘機', [AircraftType.DiveBomber]: '陸上爆撃機', [AircraftType.TorpedoBomber]: '陸上攻撃機',
+};
+
+/** "陸上攻撃機" / "飛行艇" for the land models, null for the carrier ones (their screens name the kind). */
+export function landKindLabel(model: Pick<IAircraftData, 'base' | 'type'>): string | null {
+  if (model.base === 'flyingBoat') return '飛行艇';
+  if (model.base === 'land') return LAND_KIND[model.type as CarrierAircraft] ?? '陸上機';
+  return null;
 }
 
 export function perfOf(model: Pick<IAircraftData, 'perf'> | undefined): IAircraftPerf {
@@ -75,7 +101,7 @@ export function perfOf(model: Pick<IAircraftData, 'perf'> | undefined): IAircraf
  * the floatplanes of battleships and cruisers need nothing. A kind with nothing developed flies an old model.
  */
 export function isDeveloped(holder: Pick<IAirHolder, 'aircraftDev'>, model: IAircraftData): boolean {
-  return model.type === AircraftType.Recon || holder.aircraftDev.includes(model.id);
+  return (model.type === AircraftType.Recon && model.base !== 'flyingBoat') || holder.aircraftDev.includes(model.id);
 }
 
 /** What developing a navy's first model of a kind costs (#385). */
@@ -130,7 +156,7 @@ export function carrierModel(holder: Pick<IAirHolder, 'aircraftDev' | 'airGroups
 /** Chooses `id` for the carrier's kind (it must be its navy's, developed). */
 export function chooseModel<T extends IAirHolder>(holder: T, shipId: string, id: string): T | null {
   const model = AIRCRAFT.find((a) => a.id === id);
-  if (!model || model.type === AircraftType.Recon || !isDeveloped(holder, model)) return null;
+  if (!model || model.type === AircraftType.Recon || model.base || !isDeveloped(holder, model)) return null;
   const type = model.type as CarrierAircraft;
   return { ...holder, airGroups: { ...holder.airGroups, [shipId]: { ...(holder.airGroups[shipId] ?? {}), [type]: id } } };
 }
@@ -158,6 +184,37 @@ export function eraModel(nation: Nation | string, type: CarrierAircraft, year: n
 export function eraWingPerf(nation: Nation | string, year: number | undefined): Record<CarrierAircraft, IAircraftPerf> {
   const out = {} as Record<CarrierAircraft, IAircraftPerf>;
   for (const t of CARRIER_AIRCRAFT) out[t] = perfOf(eraModel(nation, t, year));
+  return out;
+}
+
+/**
+ * 基地航空隊の機種 (#408): each kind flies the navy's newest land plane developed, the plain base plane before any is.
+ */
+export function baseAirPerf(holder: Pick<IAirHolder, 'aircraftDev'>, nation: Nation | string): Record<CarrierAircraft, IAircraftPerf> {
+  const out = {} as Record<CarrierAircraft, IAircraftPerf>;
+  for (const t of CARRIER_AIRCRAFT) out[t] = perfOf(landModelsFor(nation, t).filter((m) => holder.aircraftDev.includes(m.id)).pop());
+  return out;
+}
+
+/** A flying boat developed (#408): the base's scouts stay out this much longer. */
+export const FLYING_BOAT_SCOUT_MUL = 1.5;
+
+export function flyingBoatOf(holder: Pick<IAirHolder, 'aircraftDev'>, nation: Nation | string): IAircraftData | undefined {
+  return AIRCRAFT.filter((a) => a.nation === nation && a.base === 'flyingBoat' && holder.aircraftDev.includes(a.id)).pop();
+}
+
+/** The year the enemy's airfields fly from (#408): later planes in the deeper seas, 1939 at the start. */
+export function airfieldYear(depth: number): number {
+  return 1939 + Math.floor(Math.max(0, depth) / 2);
+}
+
+/** An enemy airfield's planes (#408): its navy's newest land plane of each kind by the year, else its carrier plane. */
+export function eraLandPerf(nation: Nation | string, year: number): Record<CarrierAircraft, IAircraftPerf> {
+  const out = {} as Record<CarrierAircraft, IAircraftPerf>;
+  for (const t of CARRIER_AIRCRAFT) {
+    const land = landModelsFor(nation, t).filter((m) => (m.year ?? Number.POSITIVE_INFINITY) <= year).pop();
+    out[t] = perfOf(land ?? eraModel(nation, t, year));
+  }
   return out;
 }
 

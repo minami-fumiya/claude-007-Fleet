@@ -26,7 +26,8 @@ describe('お知らせ (#192)', () => {
       sweepCharges: { p1: { charges: 0, at: NOW - 2 * HOUR }, p2: { charges: 0, at: NOW } },
       items: { fastRepair: 0, fastBuild: 0, captainBook: 2 },
     };
-    const s = pendingSummary(p, NOW, 0);
+    // This week's 特別海域 and a day's 記念日 (#416) have their own test.
+    const s = pendingSummary(p, NOW, 0).filter((i) => i.id !== 'special' && i.id !== 'anniversary');
     expect(claimableCount(p.quests, NOW)).toBeGreaterThan(0);
     expect(s.map((i) => [i.id, i.count])).toEqual([['quests', claimableCount(p.quests, NOW)], ['sweeps', 2]]);
     expect(s.find((i) => i.id === 'sweeps')?.scene).toBe(SceneKeys.CAMPAIGN);

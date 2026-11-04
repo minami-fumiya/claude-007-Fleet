@@ -5,6 +5,10 @@ import { claimableCount } from './QuestSystem';
 import { sweepCharges } from './SweepSystem';
 import { focusStatus, focusTree } from './NationFocusSystem';
 import { rankOf } from './RankSystem';
+import campaignData from '@/data/campaign.json';
+import type { ICampaignData } from '@/types/Campaign';
+import { theatersFor } from './CampaignSystem';
+import { anniversariesOn, anniversaryKey, specialState, weeklyArea } from './SpecialOpsSystem';
 
 /**
  * お知らせ (#192, pure): what the admiral can do right now, for the strip on the home screen. Builds, repairs and
@@ -12,7 +16,7 @@ import { rankOf } from './RankSystem';
  * empty docks and a base ready to be built (captain books left the strip in 0.0.40, #303: the captain screen shows them).
  */
 
-export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus' | 'counter' | 'focusDone';
+export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus' | 'counter' | 'focusDone' | 'special' | 'anniversary';
 
 export interface IPendingItem {
   id: PendingId;
@@ -30,6 +34,8 @@ export function pendingSummary(progress: IProgress, now: number, freeDocks: numb
   const sweeps = charged.reduce((n, a) => n + a.n, 0);
   const topSweep = charged.reduce<{ id: string; n: number } | null>((best, a) => (a.n > (best?.n ?? 0) ? a : best), null);
   const basesReady = nationBases(progress.nation).filter((b) => baseState(b, progress) === 'ready').length;
+  const data = campaignData as ICampaignData;
+  const special = weeklyArea(data.areas.filter((a) => theatersFor(data, progress.nation).some((t) => t.id === a.theater)), progress.campaign, now);
   const counter = progress.sea?.counter && progress.sea.counter.endsAt > now ? progress.sea.counter : null;
   const items: IPendingItem[] = [
     // 敵の反攻 (#50): a sea under attack, first; a tap opens the map on it.
@@ -42,6 +48,9 @@ export function pendingSummary(progress: IProgress, now: number, freeDocks: numb
     { id: 'expeditions', label: '遠征帰還', count: (progress.expeditions ?? []).filter((r) => r.endsAt <= now).length, scene: SceneKeys.EXPEDITION },
     // 方針完了 (#416): focuses finished since the 国家方針 screen was last opened.
     { id: 'focusDone', label: '方針完了', count: Math.max(0, (progress.focus?.done.length ?? 0) - (progress.focusSeen ?? progress.focus?.done.length ?? 0)), scene: SceneKeys.FOCUS },
+    // 特別海域 (#416): this week's sea, not yet won; 記念日: today's battle, not yet won this year.
+    { id: 'special', label: '特別海域', count: special && specialState(progress.specialOps, special, now) === 'open' ? 1 : 0, scene: SceneKeys.CAMPAIGN, data: special ? { areaId: special.id } : undefined },
+    { id: 'anniversary', label: '記念日', count: anniversariesOn(now).filter((a) => a.scenario && a.nations.includes(progress.nation) && !(progress.specialOps?.anniversaries ?? []).includes(anniversaryKey(a, now))).length, scene: SceneKeys.SCENARIO },
     // 国家方針 (#49): none under way while one could start.
     { id: 'focus', label: '方針', count: focusReady(progress), scene: SceneKeys.FOCUS },
   ];

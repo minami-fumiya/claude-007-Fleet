@@ -1,3 +1,7 @@
+import type { ITechNode } from '@/types/Progression';
+import { medalMet, prerequisitesMet, rankMet } from './ResearchSystem';
+import type { IExpedition } from './ExpeditionSystem';
+
 /**
  * NEW の印 (#416 #398, pure): what has opened on a screen since the admiral last looked at it. Each screen keeps the ids
  * it has shown as open; anything open now and not among them is new. A screen never opened before has nothing new
@@ -34,3 +38,17 @@ export const OPEN_BUILD_STATES: readonly string[] = ['ready', 'resources', 'dock
 
 /** The shipyard's key in the marks */
 export const SHIPYARD_NEW = 'shipyard';
+/** The research screen's: projects whose prerequisites, rank and medal are all met (0.0.64) */
+export const RESEARCH_NEW = 'research';
+/** The expedition screen's: expeditions the rank or a forward base has opened (0.0.64) */
+export const EXPEDITION_NEW = 'expedition';
+
+/** Research projects open to start (finished ones are not). */
+export function openResearch(tree: readonly ITechNode[], done: readonly string[], medals: readonly string[], rankIndex: number): string[] {
+  return tree.filter((n) => !done.includes(n.id) && prerequisitesMet(n, [...done]) && medalMet(n, medals) && rankMet(n, rankIndex)).map((n) => n.id);
+}
+
+/** Expeditions open to send (the next rank's, shown as a goal, is not). */
+export function openExpeditions(shown: readonly IExpedition[], rankIndex: number): string[] {
+  return shown.filter((e) => e.theater || e.rank <= rankIndex).map((e) => e.id);
+}
