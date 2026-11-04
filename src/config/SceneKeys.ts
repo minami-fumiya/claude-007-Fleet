@@ -23,6 +23,7 @@ export const SceneKeys = {
   DEVELOP: 'DevelopScene',
   FOCUS: 'FocusScene',
   DESIGN: 'DesignScene',
+  WORLD: 'WorldMapScene',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];

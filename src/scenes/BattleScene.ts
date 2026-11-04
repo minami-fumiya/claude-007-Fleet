@@ -87,6 +87,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
+import { afterBattle, emptyWorld, endVoyage, mustReturn, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
 import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
 import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
@@ -505,7 +506,7 @@ export class BattleScene extends Phaser.Scene {
     // A skirmish before a campaign area's boss is a plain fight (#53).
     const bossNode = this.battleData?.sortie?.boss ?? true;
     this.side = this.scenarioSetup?.side ?? (bossNode ? campaignSide(battleArea) : null);
-    this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined });
+    this.exercise = isExercise({ areaId: this.battleData?.areaId, scenario: this.scenario ?? undefined, world: this.battleData?.world });
     this.difficulty = battleDifficulty(audio.settings.difficulty, this.scenario !== null);
     // 超兵器出現 (#148 #89): a main fleet in the event's theater brings its superweapon (not training areas).
     const event = eventEffects(activeEvent());
@@ -1276,7 +1277,9 @@ export class BattleScene extends Phaser.Scene {
     // A sea further along the player's order meets a stronger enemy (#293).
     const area = this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId) : undefined;
     // 特別海域 (#416): one class of ship against the main fleet, which comes in a little weaker.
-    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
+    // 外洋 (#65): the group's strength follows the danger of the water.
+    const world = this.battleData?.world;
+    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : world ? worldEnemyScale(world.danger) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
     // A theater's first area (#433): its torpedoes hit softer still, so one spread doesn't decide the navy's first fight.
     const opening = area !== undefined && !this.exercise && isOpeningArea(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
     const reach = opening ? { ...scaled, torpedoPowerMul: (scaled.torpedoPowerMul ?? 1) * OPENING_TORPEDO_MUL } : scaled;
@@ -2907,6 +2910,26 @@ export class BattleScene extends Phaser.Scene {
     } else if (area) {
       result.campaign = `作戦失敗: ${area.name}`;
       result.returnScene = SceneKeys.CAMPAIGN;
+    } else if (this.battleData?.world) {
+      // 外洋 (#65): the group's reward by the danger of the water; a defeat, or every ship badly hurt, brings the fleet home.
+      const w = this.battleData.world;
+      let world = afterBattle(progress.world ?? emptyWorld(), w.spotId, w.danger, victory);
+      let line = `外洋 (危険度 ${w.danger}): ${victory ? '勝利' : '敗北'}`;
+      if (victory) {
+        const extra = worldReward(w.danger);
+        const g = gainResources(progress.resources, extra, holdCap(progress.facilities));
+        progress = { ...progress, resources: g.resources, wallet: addGold(walletOf(progress), worldGold(w.danger)), ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(extra, g.lost, -1), now), 'overflow', g.lost, now) };
+        lost = addResources(lost, g.lost);
+        progress = withQuestEvents(progress, [['worldWin', 1]], now);
+        line += `  ·  外洋の報酬 ${formatResources(extra)}・ゴールド ${worldGold(w.danger)}`;
+      }
+      if (mustReturn(victory, fleet.map((s) => (s.isAlive ? s.stats.currentHp / Math.max(1, s.stats.maxHp) : 0)), HEAVY_DAMAGE)) {
+        world = endVoyage(world);
+        line += victory ? '  ·  全艦が大破したため帰港' : '  ·  帰港しました';
+      }
+      progress = { ...progress, world };
+      result.campaign = line;
+      result.returnScene = SceneKeys.WORLD;
     } else if (this.exercise) {
       result.campaign = '演習: 損傷なし・資源報酬は半分';
     }

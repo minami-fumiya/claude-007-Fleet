@@ -30,6 +30,8 @@ export const HOME_MENU: IHomeMenuTab[] = [
       { label: '作戦', caption: '海域を攻略', scene: SceneKeys.CAMPAIGN, variant: 'primary' },
       { label: '演習', caption: '無傷で練習', scene: SceneKeys.FLEET_BUILDER, variant: 'primary' },
       { label: '史実', caption: '史実の海戦', scene: SceneKeys.SCENARIO, variant: 'primary' },
+      // 外洋 (#65): the open sea round the home port
+      { label: '外洋', caption: '自由に航海', scene: SceneKeys.WORLD, variant: 'primary' },
       { label: '任務', caption: '日替わりの目標', scene: SceneKeys.HOME, variant: 'secondary', action: 'quests' },
     ],
   },
