@@ -4,12 +4,16 @@ import { IBattleRecordInput, ICareerStats, IMedal, IModeRecord, IScenarioBest, I
 import { ALL_SCENARIOS } from '@/data/scenarios';
 import { ShipClass } from '@/types/ShipClass';
 import campaignData from '@/data/campaign.json';
+import aircraftData from '@/data/aircraft.json';
 import { earnedTitles } from './AdmiralTitles';
 import { GROUND_WEAPONS } from './GroundSystem';
 import { TUNES } from './MusicScore';
 
 /** Service record and medals (pure): career totals from every battle, and the medals they earn. */
 
+
+/** Aircraft models a navy can develop, all navies together (#408): the 航空の殿堂's last step. */
+const AIRCRAFT_TOTAL = (aircraftData as { aircraft: Array<{ type: string; base?: string }> }).aircraft.filter((a) => a.type !== 'Recon' || a.base === 'flyingBoat').length;
 export function emptyRecord(): IServiceRecord {
   return { ...emptyModeRecord(), medals: [], byMode: {}, scenarios: {}, career: emptyCareer(), tunesHeard: [], encountered: [], kills: {} };
 }
@@ -209,6 +213,8 @@ export interface IMedalContext {
   ownSuperweapon?: number;
   /** 1 when some nation has developed every carrier model of its navy (#87) */
   aircraftComplete?: number;
+  /** 航空の殿堂 (#408): aircraft models developed, every navy's together */
+  aircraftDeveloped?: number;
   /** Ground weapons destroyed in all, and how many different ones (#251) */
   groundTotal?: number;
   groundKinds?: number;
@@ -420,6 +426,8 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('own_superweapon', '超兵器建造章', 'special', [1], () => '設計図から自国の超兵器を建造する', (_r, c) => c.ownSuperweapon ?? 0),
   ...ladder('superweapon_sea', '超兵器海域章', 'campaign', [1, 10, 30], (g) => `超兵器海域で ${g} 回勝利する`, (_r, c) => total(c, 'swAreaWin')),
   ...ladder('aircraft_dev', '航空機開発章', 'base', [1, 5, 10], (g) => `新しい艦載機を ${g} 機種開発する`, (_r, c) => total(c, 'aircraftDev')),
+  // 航空の殿堂 (#408): models developed, every navy's together (carrier and land planes and flying boats).
+  ...ladder('aircraft_hall', '航空の殿堂', 'base', [30, 60, AIRCRAFT_TOTAL], (g) => `航空機を ${g} 機種開発する (全ての国で)`, (_r, c) => c.aircraftDeveloped ?? 0),
   ...ladder('aircraft_complete', '全機種配備章', 'base', [1], () => '自国の艦載機をすべて開発する', (_r, c) => c.aircraftComplete ?? 0),
   ...ladder('air_ace', 'エース章', 'growth', [1, 3, 6], (g) => `空母の航空隊に ${g} 人のエースを迎える`, (_r, c) => total(c, 'aceBorn')),
   ...ladder('ground_weapon', '地上兵器撃破章', 'battle', [10, 50, 200], (g) => `国ごとの地上兵器 (要塞砲・高射砲陣地など) を ${g} 個破壊する`, (_r, c) => c.groundTotal ?? 0),

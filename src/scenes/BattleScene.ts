@@ -56,7 +56,7 @@ import { shipSize, sinkSound } from '@/systems/SoundRules';
 import {
   AA_BARRAGE, aiConsumable, BOOST_SPEED, ConsumableKind, hiddenBySmoke, IConsumableSlot, isActive, ISmokeCloud, RADAR_VISION, repairPerSec, shipConsumables, slotLabel, SMOKE_RADIUS, useConsumable,
 } from '@/systems/ConsumableSystem';
-import { eraWingPerf, pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
+import { airfieldYear, baseAirPerf, eraLandPerf, eraWingPerf, FLYING_BOAT_SCOUT_MUL, flyingBoatOf, pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
 import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, eventGiantJoins, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
@@ -358,6 +358,8 @@ export class BattleScene extends Phaser.Scene {
   private baseAirLevel = 0;
   private baseAirField: BaseShip | null = null;
   private baseAirSent = 0;
+  /** How long the base's scouts show the enemy (longer with a flying boat, #408) */
+  private baseScoutMs = BASE_AIR_SCOUT_MS;
   /** 海の障害 (#368): minefields and nets of this sea, their drawing, and what came of them */
   private hazards: IHazard[] = [];
   private hazardGfx: Phaser.GameObjects.Graphics | null = null;
@@ -1047,7 +1049,8 @@ export class BattleScene extends Phaser.Scene {
       this.enemies.push(target);
       this.landTargets.push(target);
       // 飛行場 (#83): its air group strikes the fleet until it is destroyed.
-      if (data.airWing) this.enemyAir.register(target, AirOpsSystem.wingFor(data));
+      // 陸上機 (#408): the airfield flies its navy's land planes of the sea's year.
+      if (data.airWing) this.enemyAir.register(target, AirOpsSystem.wingFor(data, NO_MODIFIERS, { perf: eraLandPerf(this.enemyNation, airfieldYear(depth)) }));
       this.aiSystems.push(new AISystem(this.enemyWeapons, TACTICS[this.enemyNation], WORLD_BOUNDS));
     });
   }
@@ -1416,7 +1419,7 @@ export class BattleScene extends Phaser.Scene {
   private visionSources(ships: BaseShip[], recon: ReconSystem, air: AirOpsSystem): VisionSource[] {
     const sources: VisionSource[] = [];
     // 基地航空隊 (#373): the base's scouts show the whole enemy fleet for the first seconds of the battle.
-    if (air === this.playerAir && this.baseAirLevel > 0 && this.battleNow() < BASE_AIR_SCOUT_MS) {
+    if (air === this.playerAir && this.baseAirLevel > 0 && this.battleNow() < this.baseScoutMs) {
       sources.push({ kind: 'circle', x: WORLD.w / 2, y: WORLD.h / 2, radius: Math.hypot(WORLD.w, WORLD.h) });
     }
     const env = this.conditions.visionMul;
@@ -1644,8 +1647,16 @@ export class BattleScene extends Phaser.Scene {
    * flagship so the strike flies in from the fleet's side.
    */
   private setupBaseAir(area: ICampaignArea | undefined): void {
+    // The scene is used again battle after battle: the last battle's base air must not carry over.
+    this.baseAirLevel = 0;
+    this.baseAirSent = 0;
+    this.baseAirField = null;
+    this.baseScoutMs = BASE_AIR_SCOUT_MS;
     if (!area || area.training || this.scenario) return;
     this.baseAirLevel = theaterFacility(loadProgress(), area.theater, 'baseAir');
+    // 飛行艇 (#408): a flying boat developed keeps the scouts out longer.
+    const boat = this.baseAirLevel > 0 ? flyingBoatOf(loadProgress(), this.playerNation) : undefined;
+    this.baseScoutMs = BASE_AIR_SCOUT_MS * (boat ? FLYING_BOAT_SCOUT_MUL : 1);
     if (this.baseAirLevel < 2) return;
     const special = specialData as unknown as ISpecialData;
     const strip = special.landTargets.find((t) => t.airWing) as IShipData | undefined;
@@ -1655,7 +1666,8 @@ export class BattleScene extends Phaser.Scene {
     field.setVisible(false);
     (field.body as Phaser.Physics.Arcade.Body).enable = false;
     this.baseAirField = field;
-    this.playerAir.register(field, AirOpsSystem.wingFor(data));
+    // 陸上機 (#408): the base flies the navy's newest land planes developed.
+    this.playerAir.register(field, AirOpsSystem.wingFor(data, NO_MODIFIERS, { perf: baseAirPerf(loadProgress(), this.playerNation) }));
   }
 
   /** Sends the base's strikes at their times, at the nearest visible foe in reach (#373). */

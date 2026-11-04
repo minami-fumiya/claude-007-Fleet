@@ -202,3 +202,48 @@ describe('0.0.64 機雷原・防潜網・上陸支援 (#368)', () => {
     expect(MEDALS.some((m) => m.id.startsWith('landing'))).toBe(true);
   });
 });
+
+describe('0.0.64 航空機の種類 (#408)', () => {
+  it('about ninety models, six or more new ones for every navy, each numbered', async () => {
+    const { AIRCRAFT } = await import('@/systems/AircraftSystem');
+    expect(AIRCRAFT.length).toBeGreaterThanOrEqual(85);
+    for (const n of ['IJN', 'USN', 'KM', 'RN', 'RM', 'SU', 'FR']) {
+      const own = AIRCRAFT.filter((a) => a.nation === n);
+      expect(own.filter((a) => a.base === 'land').length, n).toBeGreaterThanOrEqual(3);
+      expect(own.filter((a) => a.base === 'flyingBoat').length, n).toBe(1);
+    }
+    expect(new Set(AIRCRAFT.map((a) => a.no)).size).toBe(AIRCRAFT.length);
+  });
+
+  it('land planes and flying boats never fly from a carrier', async () => {
+    const { chooseModel, modelsFor, AIRCRAFT } = await import('@/systems/AircraftSystem');
+    const { AircraftType } = await import('@/types/Aircraft');
+    expect(modelsFor('IJN', AircraftType.TorpedoBomber).some((m) => m.base)).toBe(false);
+    const land = AIRCRAFT.find((a) => a.id === 'ijn_land_attack')!;
+    const holder = { research: [], resources: { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }, aircraftDev: [land.id], airGroups: {}, pilots: {} };
+    expect(chooseModel(holder, 'akagi', land.id)).toBeNull();
+  });
+
+  it('the base flies the newest land planes developed; a flying boat must be developed', async () => {
+    const { baseAirPerf, flyingBoatOf, isDeveloped, AIRCRAFT, BASE_PERF } = await import('@/systems/AircraftSystem');
+    const { AircraftType } = await import('@/types/Aircraft');
+    expect(baseAirPerf({ aircraftDev: [] }, 'IJN')[AircraftType.TorpedoBomber]).toEqual(BASE_PERF);
+    expect(baseAirPerf({ aircraftDev: ['ijn_land_attack'] }, 'IJN')[AircraftType.TorpedoBomber].attack).toBeGreaterThan(1);
+    const boat = AIRCRAFT.find((a) => a.id === 'ijn_flying_boat')!;
+    expect(isDeveloped({ aircraftDev: [] }, boat)).toBe(false);
+    expect(flyingBoatOf({ aircraftDev: [boat.id] }, 'IJN')?.id).toBe(boat.id);
+  });
+
+  it('the enemy airfields fly later planes in the deeper seas', async () => {
+    const { airfieldYear, eraLandPerf } = await import('@/systems/AircraftSystem');
+    const { AircraftType } = await import('@/types/Aircraft');
+    expect(airfieldYear(0)).toBe(1939);
+    expect(airfieldYear(12)).toBe(1945);
+    expect(eraLandPerf('KM', 1945)[AircraftType.Fighter].speed).toBeGreaterThan(eraLandPerf('KM', 1940)[AircraftType.Fighter].speed);
+  });
+
+  it('the 航空の殿堂 counts every navy\'s models', async () => {
+    const { MEDALS } = await import('@/systems/RecordSystem');
+    expect(MEDALS.filter((m) => m.id.startsWith('aircraft_hall')).length).toBe(3);
+  });
+});

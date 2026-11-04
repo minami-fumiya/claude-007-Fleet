@@ -6,7 +6,7 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { canDevelop, develop, developable, developCost, developRandom, heldCount, randomDevelopCost, stockOf } from '@/systems/EquipmentSystem';
-import { aircraftDevState, AIRCRAFT, OLD_MODEL_NAME, carrierModel, chooseModel, developAircraft, developCostOf, IAircraftData, isDeveloped, modelsFor, perfOf } from '@/systems/AircraftSystem';
+import { aircraftDevState, developableModels, landKindLabel, OLD_MODEL_NAME, carrierModel, chooseModel, developAircraft, developCostOf, IAircraftData, isDeveloped, modelsFor, perfOf } from '@/systems/AircraftSystem';
 import { canAfford, formatResources } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { withQuestEvents } from '@/systems/QuestSystem';
@@ -268,17 +268,18 @@ export class DevelopScene extends Phaser.Scene {
         y += kindH + L.gap;
       }
     }
-    const models = AIRCRAFT.filter((a) => a.nation === p.nation && a.type !== AircraftType.Recon);
+    // 陸上機・飛行艇 (#408) are developed here too, for the 基地航空隊.
+    const models = developableModels(p.nation);
     for (const m of models) {
       const state = aircraftDevState(p, m);
       const lit = state === 'ready' || state === 'developed';
       const frame = drawPanel(this.add.graphics(), 0, 0, rw, L.rowH, { radius: 14, fill: Colors.panel, fillAlpha: lit ? 0.7 : 0.35, rimAlpha: state === 'developed' ? 0.7 : lit ? 0.5 : 0.15, rim: state === 'developed' ? Colors.gold : undefined });
       const title = this.add.text(16, 10, m.name, textStyle(15, lit ? Css.text : Css.dim, { fontStyle: 'bold' }));
-      const kind = this.add.text(rw - 16, 12, `${formatNo(m.no)}  ${KIND_JA[m.type as CarrierAircraft]}${m.year ? `  ${m.year}` : ''}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
+      const kind = this.add.text(rw - 16, 12, `${formatNo(m.no)}  ${landKindLabel(m) ?? KIND_JA[m.type as CarrierAircraft]}${m.year ? `  ${m.year}` : ''}`, eyebrowStyle(10, Css.muted)).setOrigin(1, 0);
       const f = perfOf(m);
       const stats = this.add.text(16, IS_PORTRAIT ? 42 : 36, `攻撃 ×${f.attack.toFixed(2)}  空戦 ×${f.agility.toFixed(2)}  頑丈 ×${f.toughness.toFixed(2)}  速度 ×${f.speed.toFixed(2)}`, textStyle(12, Css.muted));
       const tech = m.requires ? TECH_TREE.find((n) => n.id === m.requires)?.name ?? m.requires : '';
-      const line = state === 'developed' ? '開発済み' : state === 'research' ? `要研究: ${tech}` : `開発 ${formatResources(developCostOf(m))}  ·  タップで開発`;
+      const line = state === 'developed' ? (m.base ? '開発済み (基地航空隊が使う)' : '開発済み') : state === 'research' ? `要研究: ${tech}` : `開発 ${formatResources(developCostOf(m))}  ·  タップで開発`;
       const foot = this.add.text(16, L.rowH - (IS_PORTRAIT ? 30 : 24), line, textStyle(12, state === 'developed' ? Css.gold : state === 'ready' ? Css.cyan : state === 'resources' ? Css.danger : Css.dim, { fontStyle: 'bold' }));
       list.addItem(this.add.container(0, y, [frame, title, kind, stats, foot]), rw, L.rowH, () => this.developModel(m));
       y += L.rowH + L.gap;
@@ -314,7 +315,7 @@ export class DevelopScene extends Phaser.Scene {
       return;
     }
     saveProgress(withQuestEvents(next, [['aircraftDev', 1]], Date.now()));
-    this.say(`${m.name} を開発しました (空母の機種に選べます)`);
+    this.say(`${m.name} を開発しました (${m.base === 'flyingBoat' ? '基地航空隊の索敵が長く続きます' : m.base ? '基地航空隊が使います' : '空母の機種に選べます'})`);
   }
 
   private develop(u: IUpgradeData): void {
