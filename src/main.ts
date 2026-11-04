@@ -5,6 +5,7 @@ import { GameConfig } from './config/GameConfig';
 import { loadUiFonts } from './ui/fontLoader';
 import { ORIENTATION } from './config/GameConstants';
 import { audio } from './systems/AudioSystem';
+import * as ProgressStore from './utils/ProgressStore';
 import { loadSave, saveSave } from './utils/ProgressStore';
 import { noteTune } from './systems/RecordSystem';
 import { setQuestEventClock } from './systems/QuestSystem';
@@ -38,4 +39,7 @@ loadUiFonts().then(() => {
   // 縦横の切り替え (#95)
   watchOrientation(game);
   if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+  // …and the save store the game itself reads (#433): a script's own import of it can be a second copy with its own
+  // in-memory save, so what the battle simulator wrote never reached the battle.
+  if (import.meta.env.DEV) (window as unknown as { progressStore: typeof ProgressStore }).progressStore = ProgressStore;
 });

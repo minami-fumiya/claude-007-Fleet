@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { markSeen, newIds, OPEN_BUILD_STATES, SHIPYARD_NEW } from '@/systems/NewMarks';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
@@ -79,12 +80,24 @@ export class ShipyardScene extends Phaser.Scene {
     super({ key: SceneKeys.SHIPYARD });
   }
 
+  /** NEW の印 (#416): ships opened since the last visit */
+  private newShips = new Set<string>();
+
   create(): void {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
     awardPendingMedals();
     // The home screen's 建造完了 notice (#264) is read once the shipyard is open.
     this.registry.remove(BUILT_KEY);
+    // NEW の印 (#416): ships that opened since the last visit are marked on this visit, then remembered as seen.
+    {
+      const p = loadProgress();
+      const roster = DataLoader.getRegistry(this).byNation(p.nation);
+      const open = roster.filter((s) => OPEN_BUILD_STATES.includes(buildState(p, roster, s))).map((s) => s.id);
+      this.newShips = new Set(newIds(p.seenNew, SHIPYARD_NEW, open));
+      const seenNew = markSeen(p.seenNew, SHIPYARD_NEW, open);
+      if (seenNew !== p.seenNew) saveProgress({ ...p, seenNew });
+    }
     this.guide = new TutorialGuide(this);
     this.tabs = [];
     this.layer = [];
@@ -301,7 +314,8 @@ export class ShipyardScene extends Phaser.Scene {
     const hull = hullNumber(roster, ship);
     const title = shown ? ship.name : hiddenShipName(roster, ship, ownedList);
     const name = this.add.text(pad, 10, title, textStyle(15, lit ? Css.text : Css.dim, { fontStyle: 'bold' }));
-    const stateText = this.add.text(r.w - pad, 12, buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints, ship.foreign ? fragmentsOf(progress.foreignFragments, ship) : 0), eyebrowStyle(10, owned ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
+    const isNew = this.newShips.has(ship.id) && !owned;
+    const stateText = this.add.text(r.w - pad, 12, (isNew ? 'NEW · ' : '') + buildStateLabel(state, ship, TECH_NAMES, AREA_NAMES, progress.record, roster, progress.blueprints, ship.foreign ? fragmentsOf(progress.foreignFragments, ship) : 0), eyebrowStyle(10, owned || isNew ? Css.gold : ready ? Css.cyan : Css.dim)).setOrigin(1, 0);
     const room = r.w - pad * 3 - stateText.width;
     if (name.width > room) name.setText(title.replace(/\s*\(.*\)\s*$/, ''));
     fitText(name, room);

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { focusExpeditionMul } from '@/systems/NationFocusSystem';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
@@ -86,7 +87,7 @@ export class ExpeditionScene extends Phaser.Scene {
     const p = loadProgress();
     if (!p.expeditions.some((r) => r.endsAt <= now)) return;
     // 前進遠征拠点 Lv2 (#373): a sea's expedition pays more.
-    const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now, (e) => (e.theater && theaterFacility(p, e.theater, 'outpost') >= 2 ? OUTPOST_REWARD_MUL : 1));
+    const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now, (e) => (e.theater && theaterFacility(p, e.theater, 'outpost') >= 2 ? OUTPOST_REWARD_MUL : 1) * focusExpeditionMul(p.nation, p.focus));
     const ledger = recordLedger(recordLedger(p.ledger, 'expedition', addResources(c.gained, c.lost, -1), now), 'overflow', c.lost, now);
     // 遠征の練成 (#426): the ships come home a little more practised.
     const trained = expeditionTraining(p.proficiency, p.expeditions, now);

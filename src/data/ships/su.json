@@ -642,6 +642,43 @@
       "fictional": true,
       "description": "48 号計画の嚮導駆逐艦。1939 年に起工されたが、戦争で工事が止まった (未成艦)。",
       "year": 1944
+    },
+    {
+      "id": "uragan",
+      "no": 1608001,
+      "name": "ウラガン (Uragan)",
+      "nation": "SU",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 185,
+      "armor": 8,
+      "speed": 185,
+      "weapons": [
+        "100mm_b34",
+        "53_38_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "uragan",
+      "description": "ウラガン級警備艦の 1 番艦。ソ連が初めて自国で設計した水上戦闘艦で、バルト海で船団の護衛と哨戒に就いた。",
+      "year": 1930
+    },
+    {
+      "id": "petropavlovsk",
+      "no": 1604001,
+      "name": "ペトロパヴロフスク (Petropavlovsk)",
+      "nation": "SU",
+      "shipClass": "Cruiser",
+      "subtype": "HeavyCruiser",
+      "hp": 390,
+      "armor": 40,
+      "speed": 120,
+      "weapons": [
+        "180mm_b1p",
+        "100mm_b34"
+      ],
+      "spriteKey": "petropavlovsk",
+      "description": "ドイツから未完成のまま買い取ったアドミラル・ヒッパー級重巡洋艦 (旧リュッツォウ)。レニングラード防衛で浮き砲台として戦った。",
+      "year": 1941
     }
   ]
 }
