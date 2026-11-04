@@ -215,6 +215,8 @@ export interface IMedalContext {
   aircraftComplete?: number;
   /** 航空の殿堂 (#408): aircraft models developed, every navy's together */
   aircraftDeveloped?: number;
+  /** 遠洋章 (#65): the most dangerous ring of the open sea won in, best navy */
+  worldBest?: number;
   /** Ground weapons destroyed in all, and how many different ones (#251) */
   groundTotal?: number;
   groundKinds?: number;
@@ -494,6 +496,9 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.64 記念日と特別海域 (#416)
   ...ladder('anniversary', '記念日章', 'campaign', [1, 5, 20], (g) => `記念日に、その日の史実の海戦で ${g} 回勝つ`, (_r, c) => total(c, 'anniversaryWin')),
   ...ladder('special_sea', '特別海域章', 'campaign', [1, 5, 20], (g) => `週替わりの特別海域で ${g} 回勝つ`, (_r, c) => total(c, 'specialWin')),
+  // 0.0.65 外洋 (#65)
+  ...ladder('world_win', '外洋航海章', 'campaign', [1, 20, 100], (g) => `外洋で敵艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'worldWin')),
+  ...ladder('world_far', '遠洋章', 'campaign', [5, 8, 10], (g) => `外洋の危険度 ${g} の海で勝つ`, (_r, c) => c.worldBest ?? 0),
   // 0.0.64 海の障害と上陸支援 (#368)
   ...ladder('mine_sweeper', '掃海章', 'battle', [1, 10, 50], (g) => `機雷原を ${g} か所掃海する`, (_r, c) => total(c, 'mineSwept')),
   ...ladder('landing', '上陸支援章', 'battle', [1, 10, 40], (g) => `対地攻撃で上陸部隊を ${g} 回送る`, (_r, c) => total(c, 'landingStrike')),

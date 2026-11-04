@@ -1,3 +1,4 @@
+import { voyageShipIds } from './WorldSystem';
 import { IShipData } from '@/types/Ship';
 import { IResources } from '@/types/Progression';
 import type { IProgress } from '@/utils/ProgressStore';
@@ -52,8 +53,9 @@ function supplied(progress: IProgress, opts: ISortieOptions): ISortieOptions {
 }
 
 /** A battle is an exercise when it is neither a campaign area nor a historical scenario. */
-export function isExercise(data: { areaId?: string; scenario?: unknown } | null | undefined): boolean {
-  return !data?.areaId && !data?.scenario;
+export function isExercise(data: { areaId?: string; scenario?: unknown; world?: unknown } | null | undefined): boolean {
+  // 外洋 (#65): a battle at sea keeps its damage and pays in full.
+  return !data?.areaId && !data?.scenario && !data?.world;
 }
 
 /** True when this sortie costs nothing. */
@@ -99,6 +101,9 @@ export function sortieBlockers(progress: IProgress, ships: IShipData[], now: num
   // Ships out on an unfinished campaign sortie (#138) stay with it until it is continued or withdrawn.
   const away = sailingIds(progress.sortie);
   for (const s of ships) if (away.includes(s.id)) reasons.push(`${s.name} は出撃中 (作戦地図で続けるか撤退)`);
+  // 外洋 (#65): ships out on a voyage stay with it until it comes home.
+  const voyage = voyageShipIds(progress.world);
+  for (const s of ships) if (voyage.includes(s.id)) reasons.push(`${s.name} は外洋に出ています (外洋の画面で帰港)`);
   // Ships out on an expedition (#41) or training in the dorm (#57) stay where they are.
   const expedition = shipsAway(progress.expeditions);
   for (const s of ships) if (expedition.has(s.id)) reasons.push(`${s.name} は遠征中`);
