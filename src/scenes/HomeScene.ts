@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { newIds, OPEN_BUILD_STATES, SHIPYARD_NEW } from '@/systems/NewMarks';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
 import { holdCap, regenRules } from '@/systems/FacilitySystem';
@@ -20,7 +21,7 @@ import { CAPTAIN_PROMOTION_RANK, captainsLeft, recruitCaptains } from '@/systems
 import { ShipClass } from '@/types/ShipClass';
 import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionLines, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
-import { buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
+import { buildState, buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
 import { buildDock, dockCount, fastRepairCost, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
@@ -41,6 +42,7 @@ import {
 import { medalProgress, MEDALS } from '@/systems/RecordSystem';
 import { medalContext } from '@/utils/MedalContext';
 import { researchRepairTimeMul } from '@/systems/ShipyardResearch';
+import { focusRepairTimeMul } from '@/systems/NationFocusSystem';
 import { daySchedule, eventLabel, nextEvent, WINDOWS_PER_DAY } from '@/systems/EventSystem';
 import { activeEffects, activeEvent } from '@/utils/GameClock';
 import { sailingIds } from '@/systems/FleetGroups';
@@ -731,6 +733,10 @@ export class HomeScene extends Phaser.Scene {
     const built = (this.registry.get(BUILT_KEY) as number | undefined) ?? 0;
     // The notice opens the new ship on the 改装 screen (#382): fitting it out comes next, not another build.
     if (built > 0) items.unshift({ id: 'built', label: '竣工 › 改装', count: built, scene: SceneKeys.CUSTOMIZATION });
+    // 次にできること (#416): ships that opened to the yard since it was last opened.
+    const roster = DataLoader.getRegistry(this).byNation(progress.nation);
+    const opened = newIds(progress.seenNew, SHIPYARD_NEW, roster.filter((s) => OPEN_BUILD_STATES.includes(buildState(progress, roster, s))).map((s) => s.id)).length;
+    if (opened > 0) items.push({ id: 'newShips', label: '建造 NEW', count: opened, scene: SceneKeys.SHIPYARD });
     const n = L.notice;
     add(this.add.text(n.x + 6, n.y + n.h / 2, 'お知らせ', eyebrowStyle(10, Css.gold)).setOrigin(0, 0.5));
     if (items.length === 0) {
@@ -813,7 +819,7 @@ export class HomeScene extends Phaser.Scene {
 
     // The base (#88) and 入渠半額 (#89) shorten repairs; the event also halves their cost.
     const event = activeEffects();
-    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research);
+    const repairMul = repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research) * focusRepairTimeMul(progress.nation, progress.focus);
     // Docks (#38), shared by repairs and builds since #211: a summary line, the next dock, then one scrolling list
     // with every ship in a dock, every build and every damaged ship, each on its own row (#297: no more "ほか n 隻").
     const docks = dockCount(progress);
@@ -933,7 +939,7 @@ export class HomeScene extends Phaser.Scene {
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));
     // Builds hold docks too (#211).
-    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research), ship.shipClass, buildsHere(progress).length) : null;
+    const docked = paid ? startRepair(fleetDockView(progress), ship.id, ship.hp, Date.now(), repairTimeMultiplier(baseOfProgress(progress)) * event.repairMul * researchRepairTimeMul(progress.research) * focusRepairTimeMul(progress.nation, progress.focus), ship.shipClass, buildsHere(progress).length) : null;
     if (!paid || !docked) return;
     saveProgress(withQuestEvents({ ...mergeFleetDocks(progress, { ...progress, ...docked }), resources: paid }, [['repair', 1]], Date.now()), 'repair');
     this.refresh();

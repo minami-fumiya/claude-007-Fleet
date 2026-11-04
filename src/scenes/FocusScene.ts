@@ -55,6 +55,9 @@ export class FocusScene extends Phaser.Scene {
     this.layer = [];
     this.status = '';
     this.confirm = null;
+    const p0 = loadProgress();
+    // 方針完了のお知らせ (#416): opening the screen sees every focus done so far.
+    if (p0.focusSeen !== (p0.focus?.done.length ?? 0)) saveProgress({ ...p0, focusSeen: p0.focus?.done.length ?? 0 });
     const p = loadProgress();
     // Open on the focus under way, else the first one that can start, else the root.
     const tree = focusTree(p.nation);
@@ -185,9 +188,10 @@ export class FocusScene extends Phaser.Scene {
         const a = rect.get(n.id)!;
         const b = rect.get(e);
         if (!b) continue;
-        const x = IS_PORTRAIT ? (Math.min(a.x + a.w, b.x + b.w) + Math.max(a.x, b.x)) / 2 : a.x + a.w / 2;
+        // Landscape: in the gap right of the cards (#416: seven lanes leave too little room between two of them).
+        const x = IS_PORTRAIT ? (Math.min(a.x + a.w, b.x + b.w) + Math.max(a.x, b.x)) / 2 : a.x + a.w + 3;
         const y = IS_PORTRAIT ? a.y + a.h + 10 : (Math.min(a.y + a.h, b.y + b.h) + Math.max(a.y, b.y)) / 2;
-        add(this.add.text(x, y, 'または', eyebrowStyle(9, Css.gold)).setOrigin(0.5));
+        add(this.add.text(x, y, 'または', eyebrowStyle(9, Css.gold)).setOrigin(IS_PORTRAIT ? 0.5 : 0, 0.5));
       }
     }
     for (const n of tree) {

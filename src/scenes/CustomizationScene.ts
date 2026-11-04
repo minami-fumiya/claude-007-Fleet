@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { shipRecordText } from '@/systems/ShipRecordSystem';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
@@ -603,6 +604,9 @@ export class CustomizationScene extends Phaser.Scene {
       const pilot = progress.pilots[ship.id];
       extras.push(`艦載機 ${models.join('・')}  ·  搭乗員 練度 ${Math.round(pilot?.skill ?? 0)}${pilot?.ace ? `・エース ${pilot.ace}` : ''}`);
     }
+    // 艦ごとの戦歴 (#416)
+    const history = shipRecordText(progress.shipRecords?.[ship.id]);
+    if (history) extras.push(`戦歴 ${history}`);
     this.extrasText.setText(extras.join('  '));
     this.statsText.forEach((t, i) => t.setText(lines[i] ?? '').setColor(lines[i]?.includes('→') ? Css.text : Css.muted));
     this.shipName.setText(refitName(this.refitTable, ship.name, ship, stage, branch));

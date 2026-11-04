@@ -129,7 +129,20 @@ export function writtenDepth(data: Pick<ICampaignData, 'areas' | 'theaters'>, ar
  */
 export function enemyScale(data: Pick<ICampaignData, 'areas' | 'theaters'>, area: ICampaignArea, nation?: string): number {
   if (area.training) return 1;
-  return (targetPower(areaDepth(data, area, nation)) / targetPower(writtenDepth(data, area))) * (nation ? NAVY_ENEMY_SCALE[nation] ?? 1 : 1);
+  const depth = areaDepth(data, area, nation);
+  return (targetPower(depth) / targetPower(writtenDepth(data, area))) * (nation ? NAVY_ENEMY_SCALE[nation] ?? 1 : 1) * (isOpeningArea(area, depth) ? OPENING_ENEMY_SCALE : 1);
+}
+
+/**
+ * A theater's first area in the earliest ranks (#433): the navy's first fight there, often one destroyer against
+ * one. At full strength that was a coin toss (日本の p1 60%), so its enemy sails at this share.
+ */
+export const OPENING_ENEMY_SCALE = 0.6;
+/** …and its torpedoes hit at this share on top: one torpedo nearly sinks a destroyer (power 170〜200 against 205〜235 HP). */
+export const OPENING_TORPEDO_MUL = 0.5;
+
+export function isOpeningArea(area: Pick<ICampaignArea, 'requires' | 'requiresAny' | 'training'>, depth: number): boolean {
+  return !area.training && area.requires.length === 0 && (area.requiresAny ?? []).length === 0 && depth <= LIGHT_ONLY_DEPTH;
 }
 
 /**

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { giantRecordText, mergeGiantRecords, shipRecordText } from '@/systems/ShipRecordSystem';
 import { MAX_PROFICIENCY } from '@/systems/ProficiencySystem';
 import { TECH_EFFECT_TEXT, TECH_THRESHOLDS, techLevel, techPoints, toNextLevel } from '@/systems/FleetTechSystem';
 import { skillOf as shipSkillOf, skillText, SKILL_REMODEL_STAGE } from '@/systems/ShipSkillSystem';
@@ -551,6 +552,9 @@ export class EncyclopediaScene extends Phaser.Scene {
       lines.push(`艦載機  戦闘機 ${a.fighters} / 艦爆 ${a.diveBombers} / 艦攻 ${a.torpedoBombers}`);
     }
     y = this.section(y, '兵装', lines.join('\n') || '—');
+    // 艦ごとの戦歴 (#416): its battles, sinkings by class and heavy damage, in every navy's fleet.
+    const history = shipRecordText(loadSave().nations[ship.nation]?.shipRecords?.[ship.id]);
+    if (history) y = this.section(y, '戦歴', history);
     // 中分類の特性 (#260): escorts hunt submarines, AA ships shoot planes.
     const kindMods = modifierLines(combineModifiers(midModifiers(ship)));
     if (kindMods.length > 0) y = this.section(y, `艦種の特性 — ${midLabel(midClass(ship))}`, kindMods.join('・'), Css.cyan);
@@ -693,6 +697,11 @@ export class EncyclopediaScene extends Phaser.Scene {
     const d = L.detail;
     this.track(this.add.image(d.x + d.w - 60, d.y + 60, g.spriteKey).setScale(g.scale ?? 2));
     y = this.section(y, '性能', `耐久 ${g.hp}  装甲 ${g.armor}`);
+    // 超兵器の戦歴 (#416): every navy's battles against it together.
+    if (g.kind === '超兵器') {
+      const history = giantRecordText(mergeGiantRecords(Object.values(loadSave().nations).map((np) => np?.giantRecords?.[g.id])));
+      if (history) y = this.section(y, '戦歴', history);
+    }
     this.section(y, '解説', g.description, Css.muted);
   }
 

@@ -101,3 +101,33 @@ export function waypointSteer(self: IPoint, waypoint: IPoint, arriveRadius: numb
   const throttle = Math.min(1, Math.max(0.3, d / (arriveRadius * SLOWDOWN_RADII)));
   return { headingDeg: headingTo(self, waypoint), throttle };
 }
+
+/**
+ * 船団護衛 (#416): the live candidate nearest to any ship of the convoy, so the escort goes for whoever threatens the
+ * merchantmen, not whoever is nearest to itself. Falls back to `pickTarget` with no convoy left.
+ */
+export function convoyGuardTarget<T extends ITargetCandidate>(self: IPoint, candidates: T[], convoy: readonly IPoint[], locked: T | null = null): T | null {
+  if (locked && locked.alive) return locked;
+  if (convoy.length === 0) return pickTarget(self, candidates, locked);
+  let best: T | null = null;
+  let bestDist = Infinity;
+  for (const c of candidates) {
+    if (!c.alive) continue;
+    const d = Math.min(...convoy.map((m) => distance(m, c)));
+    if (d < bestDist) {
+      bestDist = d;
+      best = c;
+    }
+  }
+  return best;
+}
+
+/** Where an escort waits for the enemy beside its convoy (#416): this far ahead of the convoy's centre, on its route. */
+export const CONVOY_GUARD_AHEAD = 160;
+
+export function convoyGuardPoint(convoy: readonly IPoint[]): IPoint | null {
+  if (convoy.length === 0) return null;
+  const x = convoy.reduce((s, p) => s + p.x, 0) / convoy.length;
+  const y = convoy.reduce((s, p) => s + p.y, 0) / convoy.length;
+  return { x: x + CONVOY_GUARD_AHEAD, y };
+}

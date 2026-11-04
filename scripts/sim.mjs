@@ -142,7 +142,8 @@ function line(r) {
 /** Runs in the page: one battle of `nation` against `areaId`'s main fleet, returned as its results. */
 async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
   const game = window.game;
-  const ps = await import('/src/utils/ProgressStore.ts');
+  // The game's own save store (#433): a fresh import here can be a second copy, whose saves the battle never reads.
+  const ps = window.progressStore ?? (await import('/src/utils/ProgressStore.ts'));
   const { DataLoader } = await import('/src/utils/DataLoader.ts');
   const { FleetSystem } = await import('/src/systems/FleetSystem.ts');
   const { enemyNationFor, enemyShips, areaMode } = await import('/src/systems/CampaignSystem.ts');
@@ -254,6 +255,11 @@ async function playOne({ nation, areaId, limitSec, stepMs, grown }) {
     window.__simNow = now;
   };
   game.scene.getScenes(true).forEach((s) => s.scene.stop());
+  // Every battle starts undamaged (#433): the last battle's results may still write its damage into the save after this
+  // battle's save was made (one-ship fleets then started at 10〜45% HP and lost the opening areas).
+  const fresh = ps.loadSave();
+  fresh.nations[nation] = { ...fresh.nations[nation], damage: {} };
+  ps.saveSave(fresh);
   game.scene.start('BattleScene', init);
   step(5);
   const battle = game.scene.getScene('BattleScene');

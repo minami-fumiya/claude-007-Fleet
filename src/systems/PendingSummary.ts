@@ -12,7 +12,7 @@ import { rankOf } from './RankSystem';
  * empty docks and a base ready to be built (captain books left the strip in 0.0.40, #303: the captain screen shows them).
  */
 
-export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus' | 'counter';
+export type PendingId = 'quests' | 'sweeps' | 'docks' | 'baseWork' | 'expeditions' | 'focus' | 'counter' | 'focusDone';
 
 export interface IPendingItem {
   id: PendingId;
@@ -40,6 +40,8 @@ export function pendingSummary(progress: IProgress, now: number, freeDocks: numb
     { id: 'baseWork', label: '軍港・基地の工事', count: basesReady, scene: SceneKeys.BASE },
     // 遠征 (#41): expeditions back, to take home.
     { id: 'expeditions', label: '遠征帰還', count: (progress.expeditions ?? []).filter((r) => r.endsAt <= now).length, scene: SceneKeys.EXPEDITION },
+    // 方針完了 (#416): focuses finished since the 国家方針 screen was last opened.
+    { id: 'focusDone', label: '方針完了', count: Math.max(0, (progress.focus?.done.length ?? 0) - (progress.focusSeen ?? progress.focus?.done.length ?? 0)), scene: SceneKeys.FOCUS },
     // 国家方針 (#49): none under way while one could start.
     { id: 'focus', label: '方針', count: focusReady(progress), scene: SceneKeys.FOCUS },
   ];

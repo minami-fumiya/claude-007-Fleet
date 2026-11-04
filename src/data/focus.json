@@ -339,6 +339,71 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "ijn_way1",
+    "name": "夜戦訓練",
+    "text": "駆逐艦・巡洋艦の夜間の命中 +8%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "ijn_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "nightAimMul": 1.08
+     },
+     "Cruiser": {
+      "nightAimMul": 1.08
+     }
+    }
+   },
+   {
+    "id": "ijn_way2",
+    "name": "酸素魚雷の量産",
+    "text": "駆逐艦・巡洋艦の魚雷 +5%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "ijn_way1"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     },
+     "Cruiser": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "ijn_way3",
+    "name": "遠洋の猛訓練",
+    "text": "遠征の報酬 +10%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "ijn_way2"
+    ],
+    "expeditionMul": 1.1
    }
   ],
   "USN": [
@@ -680,6 +745,57 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "usn_way1",
+    "name": "戦時標準設計",
+    "text": "建造時間 −8%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "usn_expand"
+    ],
+    "buildTimeMul": 0.92
+   },
+   {
+    "id": "usn_way2",
+    "name": "量産体制",
+    "text": "建造時間 −8%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "usn_way1"
+    ],
+    "buildTimeMul": 0.92
+   },
+   {
+    "id": "usn_way3",
+    "name": "ダメージコントロール",
+    "text": "修理時間 −15%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "usn_way2"
+    ],
+    "repairTimeMul": 0.85
    }
   ],
   "KM": [
@@ -1022,6 +1138,66 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "km_way1",
+    "name": "群狼戦術",
+    "text": "潜水艦の魚雷 +6%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "km_expand"
+    ],
+    "mods": {
+     "Submarine": {
+      "torpedoPowerMul": 1.06
+     }
+    }
+   },
+   {
+    "id": "km_way2",
+    "name": "仮装巡洋艦",
+    "text": "遠征の報酬 +10%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "km_way1"
+    ],
+    "expeditionMul": 1.1
+   },
+   {
+    "id": "km_way3",
+    "name": "U ボートの増産",
+    "text": "潜水艦の潜航時間 +10%・建造時間 −5%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "km_way2"
+    ],
+    "mods": {
+     "Submarine": {
+      "diveMul": 1.1
+     }
+    },
+    "buildTimeMul": 0.95
    }
   ],
   "RN": [
@@ -1362,6 +1538,67 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "rn_way1",
+    "name": "護送船団方式",
+    "text": "遠征の報酬 +10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "rn_expand"
+    ],
+    "expeditionMul": 1.1
+   },
+   {
+    "id": "rn_way2",
+    "name": "ヘッジホッグ",
+    "text": "駆逐艦の爆雷 +15%・ソナー +10%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "rn_way1"
+    ],
+    "mods": {
+     "Destroyer": {
+      "depthChargeMul": 1.15,
+      "sonarMul": 1.1
+     }
+    }
+   },
+   {
+    "id": "rn_way3",
+    "name": "対潜支援群",
+    "text": "遠征の報酬 +10%・巡洋艦の対空 +5%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "rn_way2"
+    ],
+    "expeditionMul": 1.1,
+    "mods": {
+     "Cruiser": {
+      "aaMul": 1.05
+     }
+    }
    }
   ],
   "FR": [
@@ -1702,6 +1939,66 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "fr_way1",
+    "name": "コントル・トルピユール",
+    "text": "駆逐艦の砲撃 +5%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "fr_expand"
+    ],
+    "mods": {
+     "Destroyer": {
+      "gunPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "fr_way2",
+    "name": "高速水雷戦隊",
+    "text": "駆逐艦の速力 +4%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "fr_way1"
+    ],
+    "mods": {
+     "Destroyer": {
+      "speedMul": 1.04
+     }
+    }
+   },
+   {
+    "id": "fr_way3",
+    "name": "植民地の拠点",
+    "text": "遠征の報酬 +10%・修理時間 −8%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "fr_way2"
+    ],
+    "expeditionMul": 1.1,
+    "repairTimeMul": 0.92
    }
   ],
   "RM": [
@@ -2042,6 +2339,71 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "rm_way1",
+    "name": "高速の伝統",
+    "text": "戦艦・巡洋艦・駆逐艦の速力 +4%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "rm_expand"
+    ],
+    "mods": {
+     "Battleship": {
+      "speedMul": 1.04
+     },
+     "Cruiser": {
+      "speedMul": 1.04
+     },
+     "Destroyer": {
+      "speedMul": 1.04
+     }
+    }
+   },
+   {
+    "id": "rm_way2",
+    "name": "魚雷艇の奇襲",
+    "text": "駆逐艦の魚雷 +5%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "rm_way1"
+    ],
+    "mods": {
+     "Destroyer": {
+      "torpedoPowerMul": 1.05
+     }
+    }
+   },
+   {
+    "id": "rm_way3",
+    "name": "地中海の補給線",
+    "text": "遠征の報酬 +10%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "rm_way2"
+    ],
+    "expeditionMul": 1.1
    }
   ],
   "SU": [
@@ -2382,6 +2744,64 @@
      }
     },
     "buildMul": 0.95
+   },
+   {
+    "id": "su_way1",
+    "name": "沿岸砲兵",
+    "text": "修理時間 −10%",
+    "rank": 3,
+    "minutes": 20,
+    "cost": {
+     "fuel": 300,
+     "ammo": 300,
+     "steel": 300,
+     "bauxite": 100
+    },
+    "requires": [
+     "su_expand"
+    ],
+    "repairTimeMul": 0.9
+   },
+   {
+    "id": "su_way2",
+    "name": "要塞艦隊",
+    "text": "戦艦・巡洋艦の耐久 +4%",
+    "rank": 5,
+    "minutes": 30,
+    "cost": {
+     "fuel": 500,
+     "ammo": 500,
+     "steel": 500,
+     "bauxite": 150
+    },
+    "requires": [
+     "su_way1"
+    ],
+    "mods": {
+     "Battleship": {
+      "hpMul": 1.04
+     },
+     "Cruiser": {
+      "hpMul": 1.04
+     }
+    }
+   },
+   {
+    "id": "su_way3",
+    "name": "五ヵ年計画",
+    "text": "建造時間 −10%",
+    "rank": 7,
+    "minutes": 40,
+    "cost": {
+     "fuel": 800,
+     "ammo": 800,
+     "steel": 800,
+     "bauxite": 200
+    },
+    "requires": [
+     "su_way2"
+    ],
+    "buildTimeMul": 0.9
    }
   ]
  }

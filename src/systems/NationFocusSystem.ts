@@ -29,6 +29,10 @@ export interface IFocusNode {
   mods?: Partial<Record<ShipClass, Partial<IShipModifiers>>>;
   /** Multiplies every build cost */
   buildMul?: number;
+  /** 国の道 (#416): multiplies build time, repair time and the expeditions' rewards */
+  buildTimeMul?: number;
+  repairTimeMul?: number;
+  expeditionMul?: number;
   /** Planned and unfinished ships it opens to the shipyard */
   unlocks?: string[];
 }
@@ -132,6 +136,26 @@ export function focusModifiers(nation: string, state: Pick<IFocusState, 'done'>,
 /** Every build cost is multiplied by this. */
 export function focusBuildMul(nation: string, state: Pick<IFocusState, 'done'>): number {
   return focusTree(nation).filter((n) => state.done.includes(n.id)).reduce((m, n) => m * (n.buildMul ?? 1), 1);
+}
+
+/** 国の道 (#416): the product of a multiplier over the focuses done (1 when none has it). */
+function focusProduct(nation: string, state: Pick<IFocusState, 'done'> | undefined, key: 'buildTimeMul' | 'repairTimeMul' | 'expeditionMul'): number {
+  return focusTree(nation).filter((n) => state?.done.includes(n.id)).reduce((m, n) => m * (n[key] ?? 1), 1);
+}
+
+/** Build time is multiplied by this. */
+export function focusBuildTimeMul(nation: string, state: Pick<IFocusState, 'done'> | undefined): number {
+  return focusProduct(nation, state, 'buildTimeMul');
+}
+
+/** Repair time is multiplied by this. */
+export function focusRepairTimeMul(nation: string, state: Pick<IFocusState, 'done'> | undefined): number {
+  return focusProduct(nation, state, 'repairTimeMul');
+}
+
+/** The expeditions' resources are multiplied by this. */
+export function focusExpeditionMul(nation: string, state: Pick<IFocusState, 'done'> | undefined): number {
+  return focusProduct(nation, state, 'expeditionMul');
 }
 
 /** The node that opens a planned ship, if any. */

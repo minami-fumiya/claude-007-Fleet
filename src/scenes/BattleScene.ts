@@ -69,7 +69,7 @@ import { WaterSplash } from '@/entities/effects/WaterSplash';
 import { HUD } from '@/ui/HUD';
 import { VirtualJoystick } from '@/ui/components/VirtualJoystick';
 import { addChip, addOceanWorld, addPanel, fitText, UIButton } from '@/ui/components/UIKit';
-import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer } from '@/systems/AutoPilot';
+import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer, convoyGuardPoint, convoyGuardTarget } from '@/systems/AutoPilot';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
@@ -100,6 +100,7 @@ import { holdCap } from '@/systems/FacilitySystem';
 import campaignData from '@/data/campaign.json';
 import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, firstSReward, recordClear, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
+import { addBattle, addGiantBattle } from '@/systems/ShipRecordSystem';
 import { COUNTER_HOURS, counterTargets, countSortie, defenseReward, emptySeaControl, retakeArea, settleDefense } from '@/systems/SeaControlSystem';
 import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
@@ -118,7 +119,7 @@ import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL } from '@/systems/SortieMapSystem';
 import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
-import { areaDepth, enemyScale, fleetPower, scaleModifiers } from '@/systems/DifficultyCurve';
+import { areaDepth, enemyScale, fleetPower, isOpeningArea, OPENING_TORPEDO_MUL, scaleModifiers } from '@/systems/DifficultyCurve';
 import { UNDERDOG_RATIO } from '@/systems/FleetPower';
 
 
@@ -1008,6 +1009,20 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** A ship's 中分類 subtype from its data (#426). */
+  /** 艦ごとの戦歴 (#416): sinkings by class, the battle and heavy damage for every owned ship; the giant's history. */
+  private recordShips(progress: IProgress, fleet: BaseShip[], seconds: number): IProgress {
+    const owned = fleet.filter((s) => s.dataId && progress.ships.includes(s.dataId));
+    const shipRecords = { ...(progress.shipRecords ?? {}) };
+    for (const ship of owned) {
+      const sank = this.enemies.filter((e) => !e.isAlive && !e.isLand && !e.isConvoy && e.lastHitBy === ship).map((e) => e.stats.shipClass);
+      const heavy = !ship.isAlive || ship.stats.currentHp / Math.max(1, ship.stats.maxHp) <= HEAVY_DAMAGE;
+      shipRecords[ship.dataId!] = addBattle(shipRecords[ship.dataId!], sank, heavy);
+    }
+    const giant = this.superweapon?.dataId;
+    const giantRecords = giant ? { ...(progress.giantRecords ?? {}), [giant]: addGiantBattle(progress.giantRecords?.[giant], !this.superweapon!.isAlive, seconds) } : progress.giantRecords ?? {};
+    return { ...progress, shipRecords, giantRecords };
+  }
+
   /** 制海権 (#50): what this campaign battle does to the seas held (see SeaControlSystem). */
   private seaAfterBattle(progress: IProgress, area: ICampaignArea, victory: boolean, now: number): { progress: IProgress; line: string } {
     let sea = progress.sea ?? emptySeaControl();
@@ -1163,7 +1178,10 @@ export class BattleScene extends Phaser.Scene {
     const offsets = FormationSystem.getOffsets(this.enemyFormation, Math.max(0, ships.length - 1));
     // A sea further along the player's order meets a stronger enemy (#293).
     const area = this.battleData?.areaId ? (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId) : undefined;
-    const reach = scaleModifiers(area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1);
+    const scaled = scaleModifiers(area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : 1);
+    // A theater's first area (#433): its torpedoes hit softer still, so one spread doesn't decide the navy's first fight.
+    const opening = area !== undefined && !this.exercise && isOpeningArea(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
+    const reach = opening ? { ...scaled, torpedoPowerMul: (scaled.torpedoPowerMul ?? 1) * OPENING_TORPEDO_MUL } : scaled;
     // The flagship starts in the middle of a line north of the centre (moved off any island), the rest in formation.
     const line = lineAtSea(this.map, enemySpawnPoints(ships.length, WORLD));
     const lead = line[Math.floor(line.length / 2)];
@@ -1678,6 +1696,8 @@ export class BattleScene extends Phaser.Scene {
     if (this.lockedTarget && !this.lockedTarget.isAlive) this.lockedTarget = null;
     const candidates = this.targetCandidates();
     const locked = candidates.find((c) => c.ship === this.lockedTarget) ?? null;
+    // 船団護衛 (#416): the enemy nearest the merchantmen, not the escort.
+    if (this.objective === Objective.Convoy) return convoyGuardTarget(this.flagship, candidates, this.convoy.filter((s) => s.isAlive && s.active), locked)?.ship ?? null;
     return pickTarget(this.flagship, candidates, locked)?.ship ?? null;
   }
 
@@ -1952,6 +1972,13 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
+    // 船団護衛 (#416): with nothing in sight the escort keeps beside its convoy instead of going off to search.
+    const guard = this.autoMode && this.objective === Objective.Convoy ? convoyGuardPoint(this.convoy.filter((s) => s.isAlive && s.active)) : null;
+    if (guard) {
+      const s = waypointSteer(this.flagship, guard, 120);
+      if (s) this.flagship.steer(s, dtSec, SHIP_ROTATE_SPEED);
+      return;
+    }
     if (this.autoMode) {
       // Nothing in sight (#400): search slowly towards where the enemy was last seen; hold once badly hurt.
       const hp = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);
@@ -2731,6 +2758,8 @@ export class BattleScene extends Phaser.Scene {
       // A win under each kind of event counts for the イベント巡り章 (#218).
       ...(event ? [[`event_${event.kind}`, won(true)] as [QuestEvent, number]] : []),
     ], Date.now());
+    // 艦ごとの戦歴 (#416): each of the admiral's own ships, and the superweapon met.
+    if (!this.scenario) progress = this.recordShips(progress, fleet, result.durationSec ?? 0);
     if (skirmish) {
       result.campaign = `${area.name}  ${NODE_LABEL.battle} ${victory ? '勝利' : '敗北'} (${node.node} / ${node.battles})`;
       result.returnScene = SceneKeys.CAMPAIGN;
