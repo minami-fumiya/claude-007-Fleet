@@ -188,9 +188,10 @@ export class FocusScene extends Phaser.Scene {
         const a = rect.get(n.id)!;
         const b = rect.get(e);
         if (!b) continue;
-        const x = IS_PORTRAIT ? (Math.min(a.x + a.w, b.x + b.w) + Math.max(a.x, b.x)) / 2 : a.x + a.w / 2;
+        // Landscape: in the gap right of the cards (#416: seven lanes leave too little room between two of them).
+        const x = IS_PORTRAIT ? (Math.min(a.x + a.w, b.x + b.w) + Math.max(a.x, b.x)) / 2 : a.x + a.w + 3;
         const y = IS_PORTRAIT ? a.y + a.h + 10 : (Math.min(a.y + a.h, b.y + b.h) + Math.max(a.y, b.y)) / 2;
-        add(this.add.text(x, y, 'または', eyebrowStyle(9, Css.gold)).setOrigin(0.5));
+        add(this.add.text(x, y, 'または', eyebrowStyle(9, Css.gold)).setOrigin(IS_PORTRAIT ? 0.5 : 0, 0.5));
       }
     }
     for (const n of tree) {
