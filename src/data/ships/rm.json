@@ -982,6 +982,44 @@
       },
       "description": "貨客船から改装されたイタリア海軍の水上機母艦。水上機の輸送と訓練に使われ、大戦を生き残った。",
       "year": 1927
+    },
+    {
+      "id": "spica",
+      "no": 1507024,
+      "name": "スピカ (Spica)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "subtype": "EscortDestroyer",
+      "hp": 190,
+      "armor": 10,
+      "speed": 225,
+      "weapons": [
+        "100mm_m1928",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "spica",
+      "description": "スピカ級水雷艇の 1 番艦。地中海の船団護衛の主力となった小型の水雷艇で、多くの同型艦が対潜戦で活躍した。",
+      "year": 1935
+    },
+    {
+      "id": "gabbiano",
+      "no": 1508001,
+      "name": "ガッビアーノ (Gabbiano)",
+      "nation": "RM",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 185,
+      "armor": 8,
+      "speed": 165,
+      "weapons": [
+        "100mm_m1928",
+        "533mm_si270",
+        "depth_charge"
+      ],
+      "spriteKey": "gabbiano",
+      "description": "ガッビアーノ級コルベットの 1 番艦。地中海の対潜護衛のために大量に計画された小型艦で、戦後も長く使われた。",
+      "year": 1942
     }
   ]
 }

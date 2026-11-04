@@ -802,6 +802,83 @@
       "fictional": true,
       "description": "ヴァルター機関で水中を高速で進む計画の潜水艦。2 隻が建造中に止まった (未成艦)。",
       "year": 1945
+    },
+    {
+      "id": "t22",
+      "no": 1307017,
+      "name": "T22 (Torpedoboot T22)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "subtype": "EscortDestroyer",
+      "hp": 195,
+      "armor": 10,
+      "speed": 230,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "t22",
+      "description": "39 型水雷艇 (エルビング級) の 1 隻。駆逐艦に近い大型の水雷艇で、英仏海峡やビスケー湾で船団の護衛と夜襲に使われた。",
+      "year": 1942
+    },
+    {
+      "id": "f1",
+      "no": 1308001,
+      "name": "F1 (Flottenbegleiter F1)",
+      "nation": "KM",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 185,
+      "armor": 8,
+      "speed": 200,
+      "weapons": [
+        "12cm_skc34",
+        "g7a_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "f1",
+      "description": "艦隊護衛艦 F 級の 1 番艦。艦隊の前路掃海と対潜警戒のために造られた小型艦で、機関の不調に悩まされた。",
+      "year": 1935
+    },
+    {
+      "id": "u_boat_ixd2",
+      "no": 1312005,
+      "name": "U-181 (IXD2 型潜水艦)",
+      "nation": "KM",
+      "shipClass": "Submarine",
+      "subtype": "LargeSubmarine",
+      "hp": 170,
+      "armor": 6,
+      "speed": 145,
+      "weapons": [
+        "g7e_torpedo"
+      ],
+      "spriteKey": "u_boat_ixd2",
+      "description": "IXD2 型の遠洋潜水艦。航続距離を大きく伸ばした型で、インド洋や南大西洋まで遠征して通商破壊を行った。",
+      "year": 1942
+    },
+    {
+      "id": "schwabenland",
+      "no": 1313001,
+      "name": "シュヴァーベンラント (Schwabenland)",
+      "nation": "KM",
+      "shipClass": "Carrier",
+      "subtype": "SeaplaneTender",
+      "hp": 330,
+      "armor": 8,
+      "speed": 95,
+      "weapons": [
+        "15cm_tbk_c36"
+      ],
+      "spriteKey": "schwabenland",
+      "description": "カタパルトで飛行艇を射出する航空機母艦。戦前は南極探検に使われ、大戦中は大西洋で水上機の補給と射出を担った。",
+      "year": 1934,
+      "airWing": {
+        "fighters": 1,
+        "diveBombers": 1,
+        "torpedoBombers": 1
+      }
     }
   ]
 }

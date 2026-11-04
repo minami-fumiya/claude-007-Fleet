@@ -39,14 +39,15 @@ describe('0.0.61 建造の 10 段・造船・潜水 (#426)', () => {
     const steps = branchNodes(TECH_TREE, 'shipbuilding');
     expect(steps.map((n) => n.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     for (const id of Object.values(MID_BUILD_TECH)) if (id) expect(steps.some((n) => n.id === id), id).toBe(true);
-    // Every navy has ships to build at no fewer than four of the eleven steps (Lv0 included); the rest wait for #428.
+    // Every navy has ships to build at no fewer than eight of the eleven steps (Lv0 included, #428); the Soviet navy,
+    // which built few kinds of ship, at six.
     for (const n of NATIONS) {
       const own = SHIPS.filter((s) => s.nation === n && !s.fictional && !s.designed);
       const steps0 = new Set(own.map((s) => {
         const tech = MID_BUILD_TECH[s.subtype ?? (s.shipClass === ShipClass.Carrier ? 'FleetCarrier' : s.shipClass === ShipClass.Cruiser ? ShipSubtype.LightCruiser : s.shipClass) as keyof typeof MID_BUILD_TECH];
         return tech ? steps.find((x) => x.id === tech)!.level : 0;
       }));
-      expect(steps0.size, n).toBeGreaterThanOrEqual(4);
+      expect(steps0.size, n).toBeGreaterThanOrEqual(n === Nation.SU ? 6 : 8);
     }
   });
 
@@ -73,7 +74,7 @@ describe('0.0.61 建造の 10 段・造船・潜水 (#426)', () => {
 
   it('seaplane tenders and large carriers are kinds of their own; no enemy fleet is led by a tender', () => {
     const tenders = SHIPS.filter((s) => s.subtype === ShipSubtype.SeaplaneTender);
-    expect(tenders.map((s) => s.nation).sort()).toEqual(['FR', 'IJN', 'IJN', 'RM', 'RN', 'USN']);
+    expect(tenders.map((s) => s.nation).sort()).toEqual(['FR', 'IJN', 'IJN', 'KM', 'RM', 'RN', 'USN']);
     expect(SHIPS.filter((s) => s.subtype === ShipSubtype.LargeCarrier).map((s) => s.id).sort()).toEqual(['franklin_d_roosevelt', 'kai_taiho', 'malta_cv', 'midway', 'shinano']);
     const reg = new ShipRegistry(SHIPS);
     for (let i = 0; i < 20; i++) expect(generateEnemyFleet(reg, Nation.RM, BattleMode.CarrierStrike, Math.random).some((s) => s.subtype === ShipSubtype.SeaplaneTender)).toBe(false);

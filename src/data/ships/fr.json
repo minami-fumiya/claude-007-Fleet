@@ -819,6 +819,43 @@
       },
       "description": "フランス海軍の水上機母艦。水上機 26 機を積み、カタパルト 4 基を備えた。1942年11月、トゥーロンで自沈。",
       "year": 1932
+    },
+    {
+      "id": "la_melpomene",
+      "no": 1707014,
+      "name": "ラ・メルポメーヌ (La Melpomène)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "subtype": "EscortDestroyer",
+      "hp": 190,
+      "armor": 10,
+      "speed": 225,
+      "weapons": [
+        "130mm_m1932",
+        "550mm_torpedo",
+        "depth_charge"
+      ],
+      "spriteKey": "la_melpomene",
+      "description": "ラ・メルポメーヌ級水雷艇の 1 番艦。軍縮条約の枠の外で造られた小型の水雷艇で、沿岸の護衛にあたった。",
+      "year": 1936
+    },
+    {
+      "id": "elan",
+      "no": 1708001,
+      "name": "エラン (Élan)",
+      "nation": "FR",
+      "shipClass": "Destroyer",
+      "subtype": "Escort",
+      "hp": 185,
+      "armor": 8,
+      "speed": 170,
+      "weapons": [
+        "130mm_m1932",
+        "depth_charge"
+      ],
+      "spriteKey": "elan",
+      "description": "エラン級通報艦の 1 番艦。植民地の警備と船団の護衛のための通報艦 (スループ) で、掃海の装備も持っていた。",
+      "year": 1939
     }
   ]
 }
