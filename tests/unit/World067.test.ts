@@ -69,3 +69,23 @@ describe('0.0.67 外洋の第 3 段階 (#65)', () => {
     for (const id of ['world_control', 'patrol_win', 'historic_win']) expect(MEDALS.some((m) => m.id.startsWith(id)), id).toBe(true);
   });
 });
+
+describe('0.0.67 外洋の印は重ならない (#65)', () => {
+  it('every hour for three weeks, each navy\'s groups keep clear of the places, the patrol, the historical battle and each other', () => {
+    for (const n of ALL) {
+      const list = playableScenarios(ALL_SCENARIOS, n);
+      const f = worldFeatures(n);
+      for (let h = 0; h < 24 * 21; h++) {
+        const now = NOW + h * 3_600_000;
+        const patrol = allyPatrol(now, f);
+        const hist = historicBattle(now, list, [...f, patrol, HOME])!;
+        const marks = [...f, patrol, hist];
+        const spots = clearOfFeatures(worldSpots(now, n, ALL), marks);
+        for (const s of spots) {
+          for (const m of marks) expect(distance(s, m), `${n} ${h} ${s.id} ${m.id}`).toBeGreaterThanOrEqual(FEATURE_CLEARANCE);
+          for (const o of spots) if (o !== s) expect(distance(s, o), `${n} ${h} ${s.id} ${o.id}`).toBeGreaterThanOrEqual(FEATURE_CLEARANCE * 0.6);
+        }
+      }
+    }
+  }, 120_000);
+});

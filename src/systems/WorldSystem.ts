@@ -292,17 +292,38 @@ export function worldFeatures(nation: Nation): IFeature[] {
 /** Spots keep this far from the places on the chart (so their marks never sit on each other). */
 export const FEATURE_CLEARANCE = 70;
 
-/** This hour's groups moved clear of the navy's places (each one stepped round its ring until it is). */
+/**
+ * This hour's groups moved clear of the navy's places (and of each other): a group already clear stays where it is;
+ * one too close moves to the spot of its ring, along the arc and a little in or out, farthest from everything else.
+ */
 export function clearOfFeatures(spots: readonly ISpot[], features: readonly IPoint[]): ISpot[] {
+  const placed: IPoint[] = [];
   return spots.map((s) => {
+    const others = [...features, ...placed];
+    const gap = (p: IPoint): number => (others.length === 0 ? Infinity : Math.min(...others.map((f) => distance(f, p))));
     let p: IPoint = s;
-    const r = distance(HOME, s);
-    let angle = Math.atan2(s.y - HOME.y, s.x - HOME.x);
-    for (let k = 0; k < 24 && features.some((f) => distance(f, p) < FEATURE_CLEARANCE); k++) {
-      angle += (k % 2 === 0 ? 1 : -1) * (k + 1) * 0.12;
-      if (angle > -0.15 || angle < -Math.PI + 0.15) continue;
-      p = { x: Math.round(Math.max(30, Math.min(WORLD_SIZE - 30, HOME.x + Math.cos(angle) * r))), y: Math.round(Math.max(30, Math.min(WORLD_SIZE - 30, HOME.y + Math.sin(angle) * r))) };
+    if (gap(p) < FEATURE_CLEARANCE) {
+      const ring = Math.max(1, Math.ceil(distance(HOME, s) / RING));
+      let best = p;
+      let bestGap = gap(p);
+      for (const frac of [0.5, 0.3, 0.7, 0.15, 0.85]) {
+        const r = RING * (ring - 1 + frac);
+        const dev = Math.min((75 * Math.PI) / 180, Math.asin(Math.min(1, (WORLD_SIZE / 2 - 30) / r)));
+        for (let k = -20; k <= 20; k++) {
+          const angle = -Math.PI / 2 + (k / 20) * dev;
+          const c = { x: Math.round(HOME.x + Math.cos(angle) * r), y: Math.round(HOME.y + Math.sin(angle) * r) };
+          if (c.x < 30 || c.x > WORLD_SIZE - 30 || c.y < 30 || c.y > WORLD_SIZE - 30) continue;
+          const g = gap(c);
+          if (g > bestGap) {
+            best = c;
+            bestGap = g;
+          }
+        }
+        if (bestGap >= FEATURE_CLEARANCE * 1.3) break;
+      }
+      p = best;
     }
+    placed.push(p);
     return { ...s, x: p.x, y: p.y, danger: dangerAt(p) };
   });
 }
