@@ -499,6 +499,10 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.65 外洋 (#65)
   ...ladder('world_win', '外洋航海章', 'campaign', [1, 20, 100], (g) => `外洋で敵艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'worldWin')),
   ...ladder('world_far', '遠洋章', 'campaign', [5, 8, 10], (g) => `外洋の危険度 ${g} の海で勝つ`, (_r, c) => c.worldBest ?? 0),
+  // 0.0.67 外洋の第 3 段階 (#65)
+  ...ladder('world_control', '制海章', 'campaign', [1, 10, 40], (g) => `外洋の輪の制海権を ${g} 回取る`, (_r, c) => total(c, 'worldControl')),
+  ...ladder('patrol_win', '友軍連携章', 'campaign', [1, 10, 50], (g) => `外洋で友軍の巡回艦隊と ${g} 回勝つ`, (_r, c) => total(c, 'patrolWin')),
+  ...ladder('historic_win', '史実再現章', 'campaign', [1, 10, 30], (g) => `外洋の史実の海戦で ${g} 回勝つ`, (_r, c) => total(c, 'historicWin')),
   // 0.0.66 外洋の第 2 段階 (#65)
   ...ladder('port_call', '寄港章', 'campaign', [1, 10, 50], (g) => `外洋で港に ${g} 回寄る`, (_r, c) => total(c, 'portCall')),
   ...ladder('resource_run', '資源輸送章', 'campaign', [1, 20, 100], (g) => `外洋の資源の場所に ${g} 回寄る`, (_r, c) => total(c, 'resourceRun')),

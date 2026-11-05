@@ -3,7 +3,7 @@ import { IShipData } from '@/types/Ship';
 import { ShipClass } from '@/types/ShipClass';
 import { Nation } from '@/types/Nation';
 import { Formation } from '@/types/Formation';
-import { gameHour, gameWeek } from './QuestSystem';
+import { gameDay, gameHour, gameWeek } from './QuestSystem';
 
 /**
  * 外洋 (#65 オープンワールドの第 1 段階, pure). From the home port the fleet sails a chart of the open sea as far as
@@ -56,6 +56,9 @@ export interface IWorld {
   /** 0.0.66: the hour each port or resource point was last visited, and the week each stronghold fell */
   visits?: Record<string, number>;
   forts?: Record<string, number>;
+  /** 0.0.67: each ring's wins this week (control at CONTROL_WINS), and the day the historical battle was won */
+  control?: Record<string, { week: number; wins: number }>;
+  histDay?: number;
 }
 
 export interface ISpot extends IPoint {
@@ -65,7 +68,7 @@ export interface ISpot extends IPoint {
 }
 
 export function emptyWorld(): IWorld {
-  return { voyage: null, best: 0, wins: 0, cleared: [], visits: {}, forts: {} };
+  return { voyage: null, best: 0, wins: 0, cleared: [], visits: {}, forts: {}, control: {} };
 }
 
 export function distance(a: IPoint, b: IPoint): number {
@@ -212,7 +215,17 @@ export function parseWorld(raw: unknown): IWorld {
     }
     : null;
   const counts = (x: unknown): Record<string, number> => (x && typeof x === 'object' ? Object.fromEntries(Object.entries(x as Record<string, unknown>).filter(([, n]) => typeof n === 'number' && Number.isFinite(n) && n >= 0)) as Record<string, number> : {});
-  return { voyage, best: Math.min(MAX_DANGER, num(o.best)), wins: num(o.wins), cleared: ids(o.cleared), visits: counts(o.visits), forts: counts(o.forts) };
+  const control: Record<string, { week: number; wins: number }> = {};
+  if (o.control && typeof o.control === 'object') {
+    for (const [k, v] of Object.entries(o.control as Record<string, unknown>)) {
+      const c = v as Record<string, unknown> | null;
+      if (c && typeof c === 'object') control[k] = { week: num(c.week), wins: num(c.wins) };
+    }
+  }
+  return {
+    voyage, best: Math.min(MAX_DANGER, num(o.best)), wins: num(o.wins), cleared: ids(o.cleared), visits: counts(o.visits), forts: counts(o.forts), control,
+    ...(typeof o.histDay === 'number' && Number.isFinite(o.histDay) ? { histDay: o.histDay } : {}),
+  };
 }
 
 /** The ships out on a voyage (they can't sail elsewhere until it ends). */
@@ -279,17 +292,38 @@ export function worldFeatures(nation: Nation): IFeature[] {
 /** Spots keep this far from the places on the chart (so their marks never sit on each other). */
 export const FEATURE_CLEARANCE = 70;
 
-/** This hour's groups moved clear of the navy's places (each one stepped round its ring until it is). */
+/**
+ * This hour's groups moved clear of the navy's places (and of each other): a group already clear stays where it is;
+ * one too close moves to the spot of its ring, along the arc and a little in or out, farthest from everything else.
+ */
 export function clearOfFeatures(spots: readonly ISpot[], features: readonly IPoint[]): ISpot[] {
+  const placed: IPoint[] = [];
   return spots.map((s) => {
+    const others = [...features, ...placed];
+    const gap = (p: IPoint): number => (others.length === 0 ? Infinity : Math.min(...others.map((f) => distance(f, p))));
     let p: IPoint = s;
-    const r = distance(HOME, s);
-    let angle = Math.atan2(s.y - HOME.y, s.x - HOME.x);
-    for (let k = 0; k < 24 && features.some((f) => distance(f, p) < FEATURE_CLEARANCE); k++) {
-      angle += (k % 2 === 0 ? 1 : -1) * (k + 1) * 0.12;
-      if (angle > -0.15 || angle < -Math.PI + 0.15) continue;
-      p = { x: Math.round(Math.max(30, Math.min(WORLD_SIZE - 30, HOME.x + Math.cos(angle) * r))), y: Math.round(Math.max(30, Math.min(WORLD_SIZE - 30, HOME.y + Math.sin(angle) * r))) };
+    if (gap(p) < FEATURE_CLEARANCE) {
+      const ring = Math.max(1, Math.ceil(distance(HOME, s) / RING));
+      let best = p;
+      let bestGap = gap(p);
+      for (const frac of [0.5, 0.3, 0.7, 0.15, 0.85]) {
+        const r = RING * (ring - 1 + frac);
+        const dev = Math.min((75 * Math.PI) / 180, Math.asin(Math.min(1, (WORLD_SIZE / 2 - 30) / r)));
+        for (let k = -20; k <= 20; k++) {
+          const angle = -Math.PI / 2 + (k / 20) * dev;
+          const c = { x: Math.round(HOME.x + Math.cos(angle) * r), y: Math.round(HOME.y + Math.sin(angle) * r) };
+          if (c.x < 30 || c.x > WORLD_SIZE - 30 || c.y < 30 || c.y > WORLD_SIZE - 30) continue;
+          const g = gap(c);
+          if (g > bestGap) {
+            best = c;
+            bestGap = g;
+          }
+        }
+        if (bestGap >= FEATURE_CLEARANCE * 1.3) break;
+      }
+      p = best;
     }
+    placed.push(p);
     return { ...s, x: p.x, y: p.y, danger: dangerAt(p) };
   });
 }
@@ -375,4 +409,97 @@ export const FORT_NATION: Record<Nation, Nation> = {
 
 export function fortDanger(): number {
   return MAX_DANGER - 1;
+}
+
+// ---------------------------------------------------------------------------
+// 0.0.67 第 3 段階: sea control of the rings, the navy's patrol, and the day's historical battle
+
+/** Wins in one ring in a game week that give the navy its control */
+export const CONTROL_WINS = 3;
+export const CONTROL_REWARD_MUL = 1.25;
+export const CONTROL_ENEMY_MUL = 0.9;
+
+/** The ring of a danger, and the week's wins in it */
+export function ringWins(world: Pick<IWorld, 'control'> | undefined, danger: number, now: number): number {
+  const c = world?.control?.[String(danger)];
+  return c && c.week === gameWeek(now) ? c.wins : 0;
+}
+
+export function ringControlled(world: Pick<IWorld, 'control'> | undefined, danger: number, now: number): boolean {
+  return ringWins(world, danger, now) >= CONTROL_WINS;
+}
+
+/** A win in a ring this week; returns the world and whether it just took control. */
+export function winInRing(world: IWorld, danger: number, now: number): { world: IWorld; took: boolean } {
+  const before = ringWins(world, danger, now);
+  const control = { ...(world.control ?? {}), [String(danger)]: { week: gameWeek(now), wins: before + 1 } };
+  return { world: { ...world, control }, took: before + 1 === CONTROL_WINS };
+}
+
+/** The rings the navy holds this week */
+export function controlledRings(world: Pick<IWorld, 'control'> | undefined, now: number): number[] {
+  return Array.from({ length: MAX_DANGER }, (_, i) => i + 1).filter((d) => ringControlled(world, d, now));
+}
+
+/** 友軍の巡回: one of the navy's own groups at sea each hour, somewhere in rings 3〜7 */
+export const PATROL_RANGE = 220;
+export const PATROL_ARRIVE_SEC = 20;
+
+export interface IPatrol extends IPoint {
+  id: string;
+  danger: number;
+}
+
+export function allyPatrol(now: number, features: readonly IPoint[]): IPatrol {
+  const hour = gameHour(now);
+  const h = hash(hour * 977 + 13);
+  const ring = 3 + (h % 5);
+  const r = RING * (ring - 0.5);
+  const candidates = [-0.6, -0.3, 0, 0.3, 0.6].map((side) => {
+    const dev = Math.min((70 * Math.PI) / 180, Math.asin(Math.min(1, (WORLD_SIZE / 2 - 40) / r)));
+    const angle = -Math.PI / 2 + (side + ((h >>> 6) % 10) / 50) * dev;
+    return { x: Math.round(HOME.x + Math.cos(angle) * r), y: Math.round(HOME.y + Math.sin(angle) * r) };
+  });
+  const p = candidates.reduce((best, c) => (Math.min(...features.map((f) => distance(f, c))) > Math.min(...features.map((f) => distance(f, best))) ? c : best), candidates[0]);
+  return { id: `patrol:${hour}`, ...p, danger: dangerAt(p) };
+}
+
+/** Whether a fight at `at` is near enough the patrol for it to join */
+export function patrolJoins(patrol: IPoint, at: IPoint): boolean {
+  return distance(patrol, at) <= PATROL_RANGE;
+}
+
+/** 史実の海戦: one a day, the enemy force of a battle the navy fought, at sea in ring 6 */
+export const HISTORIC_DANGER = 6;
+export const HISTORIC_GOLD = 150;
+
+export interface IHistoric extends IPoint {
+  id: string;
+  danger: number;
+  scenarioId: string;
+  name: string;
+}
+
+/** The day's historical battle among those the navy fought (none for a navy with none), placed clear of `avoid`. */
+export function historicBattle(now: number, scenarios: ReadonlyArray<{ id: string; name: string }>, avoid: readonly IPoint[]): IHistoric | null {
+  if (scenarios.length === 0) return null;
+  const day = gameDay(now);
+  const sc = scenarios[hash(day * 4099) % scenarios.length];
+  const r = RING * (HISTORIC_DANGER - 0.5);
+  const dev = Math.min((70 * Math.PI) / 180, Math.asin(Math.min(1, (WORLD_SIZE / 2 - 40) / r)));
+  const options = [-0.9, -0.45, 0, 0.45, 0.9].map((side) => {
+    const angle = -Math.PI / 2 + side * dev;
+    return { x: Math.round(HOME.x + Math.cos(angle) * r), y: Math.round(HOME.y + Math.sin(angle) * r) };
+  });
+  const far = (c: IPoint): number => (avoid.length === 0 ? 0 : Math.min(...avoid.map((a) => distance(a, c))));
+  const p = options.reduce((best, c) => (far(c) > far(best) ? c : best), options[0]);
+  return { id: `hist:${day}`, ...p, danger: dangerAt(p), scenarioId: sc.id, name: sc.name };
+}
+
+export function historicReady(world: Pick<IWorld, 'histDay'> | undefined, now: number): boolean {
+  return world?.histDay !== gameDay(now);
+}
+
+export function winHistoric(world: IWorld, now: number): IWorld {
+  return { ...world, histDay: gameDay(now) };
 }
