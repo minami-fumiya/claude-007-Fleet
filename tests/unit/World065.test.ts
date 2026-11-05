@@ -71,7 +71,7 @@ describe('0.0.65 外洋 (#65)', () => {
 
   it('old saves read in port; odd voyages are dropped', async () => {
     expect(parseWorld(undefined)).toEqual(emptyWorld());
-    expect(parseWorld({ voyage: { shipIds: [] }, best: 99 })).toEqual({ voyage: null, best: MAX_DANGER, wins: 0, cleared: [], visits: {}, forts: {} });
+    expect(parseWorld({ voyage: { shipIds: [] }, best: 99 })).toEqual({ voyage: null, best: MAX_DANGER, wins: 0, cleared: [], visits: {}, forts: {}, control: {} });
     const v = parseWorld({ voyage: { shipIds: ['a'], x: 5, y: 6, supply: 500, formation: 'nope' } }).voyage!;
     expect(v).toMatchObject({ x: 5, y: 6, supply: SUPPLY_MAX, formation: Formation.LineAhead, cleared: [] });
     const { parseSave, emptySave, emptyNationProgress } = await import('@/utils/ProgressStore');
@@ -85,7 +85,7 @@ describe('0.0.65 外洋 (#65)', () => {
     const ship = { id: 'yamato', name: '大和', shipClass: ShipClass.Battleship, hp: 1, armor: 1, speed: 1, weapons: [], spriteKey: '', nation: Nation.IJN } as never;
     expect(sortieBlockers(p, [ship], NOW, { exercise: true }).some((r) => r.includes('外洋'))).toBe(true);
     const { MEDALS } = await import('@/systems/RecordSystem');
-    expect(MEDALS.filter((m) => m.id.startsWith('world_')).length).toBe(6);
+    expect(MEDALS.filter((m) => m.id.startsWith('world_win') || m.id.startsWith('world_far')).length).toBe(6);
     const { HOME_MENU } = await import('@/systems/HomeMenu');
     expect(HOME_MENU.flatMap((t) => t.items).some((i) => i.label === '外洋')).toBe(true);
   });
