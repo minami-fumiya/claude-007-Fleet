@@ -18,7 +18,10 @@ import {
   supplyFor, WORLD_SIZE, worldEnemyFleet, worldGold, worldReward, worldSpots, spotWon,
   callAtPort, clearOfFeatures, FEATURE_KIND, FEATURE_MARK, featureProblem, featureReady, FORT_GOLD, FORT_NATION, FORT_REWARD, fortDanger,
   IFeature, PORT_REPAIR, resourceReward, safeAround, safeDanger, visitResource, WORLD_SEA, worldFeatures,
+  allyPatrol, controlledRings, CONTROL_REWARD_MUL, CONTROL_WINS, HISTORIC_GOLD, historicBattle, historicReady, IHistoric, IPatrol, patrolJoins, PATROL_ARRIVE_SEC,
+  PATROL_RANGE, ringControlled, ringWins,
 } from '@/systems/WorldSystem';
+import { forceShips, playableScenarios, playableSides, setupFor } from '@/systems/ScenarioSystem';
 import { setDamage } from '@/systems/DockSystem';
 import { addResources, gainResources } from '@/systems/ResourceSystem';
 import { holdCap } from '@/systems/FacilitySystem';
@@ -90,7 +93,21 @@ export class WorldMapScene extends Phaser.Scene {
     const now = Date.now();
     const features = worldFeatures(p.nation);
     const safe = safeAround(p.world, features, now);
-    return clearOfFeatures(worldSpots(now, p.nation, PLAYABLE_NATIONS), features).map((s) => ({ ...s, danger: safeDanger(s, safe) }));
+    const extra = [this.patrol(), ...(this.historic() ? [this.historic()!] : [])];
+    return clearOfFeatures(worldSpots(now, p.nation, PLAYABLE_NATIONS), [...features, ...extra]).map((s) => ({ ...s, danger: safeDanger(s, safe) }));
+  }
+
+  /** 友軍の巡回 (#65 第 3 段階): the navy's own group at sea this hour. */
+  private patrol(): IPatrol {
+    return allyPatrol(Date.now(), worldFeatures(loadProgress().nation));
+  }
+
+  /** 史実の海戦: the day's battle the navy fought, clear of its places and the patrol. */
+  private historic(): IHistoric | null {
+    const p = loadProgress();
+    const list = playableScenarios(DataLoader.getScenarios(this), p.nation);
+    const features = worldFeatures(p.nation);
+    return historicBattle(Date.now(), list, [...features, allyPatrol(Date.now(), features), HOME]);
   }
 
   private features(): IFeature[] {
@@ -115,9 +132,12 @@ export class WorldMapScene extends Phaser.Scene {
     const g = this.track(this.add.graphics());
     const k = c.s / WORLD_SIZE;
     const home = this.at(HOME.x, HOME.y);
+    const controlled = controlledRings(world, Date.now());
     for (let d = 1; d <= MAX_DANGER; d++) {
       const r = d * RING * k;
-      g.lineStyle(1.5, d >= 8 ? Colors.danger : d >= 5 ? Colors.gold : Colors.cyan, 0.25 + d * 0.02);
+      // 制海権 (#65 第 3 段階): the rings the navy holds this week are drawn green and bold.
+      const held = controlled.includes(d);
+      g.lineStyle(held ? 3 : 1.5, held ? Colors.success : d >= 8 ? Colors.danger : d >= 5 ? Colors.gold : Colors.cyan, held ? 0.7 : 0.25 + d * 0.02);
       for (let a = Math.PI; a <= Math.PI * 2 + 0.001; a += Math.PI / 48) {
         const x1 = home.x + Math.cos(a) * r;
         const y1 = home.y + Math.sin(a) * r;
@@ -154,6 +174,30 @@ export class WorldMapScene extends Phaser.Scene {
       });
     }
     // The navy's places (#65 第 2 段階): ports, resource points and the enemy's stronghold, as squares.
+    // The patrol (a green circle) and the day's historical battle (a violet square).
+    const marks: Array<{ id: string; x: number; y: number; text: string; color: number; round: boolean; dim: boolean }> = [
+      { ...this.patrol(), text: '友', color: Colors.success, round: true, dim: false },
+      ...(this.historic() ? [{ ...this.historic()!, text: '史', color: Colors.cyan, round: false, dim: !historicReady(world, Date.now()) }] : []),
+    ];
+    for (const m of marks) {
+      const pos = this.at(m.x, m.y);
+      const box = this.track(this.add.container(pos.x, pos.y));
+      const gfx = this.add.graphics();
+      gfx.fillStyle(m.color, m.dim ? 0.35 : 0.95);
+      if (m.round) gfx.fillCircle(0, 0, 12);
+      else gfx.fillRoundedRect(-12, -12, 24, 24, 5);
+      if (this.selected === m.id) {
+        gfx.lineStyle(2, Colors.gold, 1);
+        gfx.strokeCircle(0, 0, 18);
+      }
+      box.add([gfx, this.add.text(0, 0, m.text, textStyle(12, Css.bgDeep, { fontStyle: 'bold' })).setOrigin(0.5)]);
+      makeClickable(box, 40, 40);
+      box.on('pointerup', () => {
+        this.selected = m.id;
+        this.status = '';
+        this.draw();
+      });
+    }
     for (const f of this.features()) {
       const pos = this.at(f.x, f.y);
       const ready = featureReady(world, f, Date.now());
@@ -237,7 +281,23 @@ export class WorldMapScene extends Phaser.Scene {
     // The group or place picked on the chart
     const spot = this.spots().find((s) => s.id === this.selected);
     const place = this.features().find((f) => f.id === this.selected);
-    if (place) {
+    const patrol = this.patrol();
+    const hist = this.historic();
+    if (this.selected === patrol.id) {
+      this.track(this.add.text(x, y, `友軍の巡回艦隊  危険度 ${patrol.danger}`, eyebrowStyle(11, Css.success)));
+      y += 22;
+      line(`${NATION_INFO[p.nation].ja}の巡回艦隊がこの 1 時間ここにいます。近く (${PATROL_RANGE} 以内) の敵艦隊と戦うと、戦闘の ${PATROL_ARRIVE_SEC} 秒後に加わります。`, 12, Css.cyan);
+    } else if (hist && this.selected === hist.id) {
+      this.track(this.add.text(x, y, `史実の海戦  危険度 ${hist.danger}`, eyebrowStyle(11, Css.cyan)));
+      y += 22;
+      line(hist.name, 14);
+      line(`その海戦の敵艦隊と戦う。勝つと外洋の報酬に加えてゴールド ${HISTORIC_GOLD} (1 日に 1 回、日ごとに海戦が変わる)`, 12, Css.cyan);
+      if (!historicReady(world, Date.now())) line('今日はもう勝ちました', 12, Css.success);
+      else if (voyage) {
+        const problem = reachProblem(voyage, hist);
+        if (problem) line(problem, 12, Css.danger);
+      }
+    } else if (place) {
       const ready = featureReady(world, place, Date.now());
       this.track(this.add.text(x, y, `${FEATURE_KIND[place.kind]}  危険度 ${place.danger}`, eyebrowStyle(11, place.kind === 'fort' ? Css.danger : Css.gold)));
       y += 22;
@@ -258,6 +318,9 @@ export class WorldMapScene extends Phaser.Scene {
       y += 22;
       line(`${NATION_INFO[spot.enemyNation].ja} ${enemy.length} 隻 — ${kindBreakdown(enemy)}`, 13);
       line(`勝てば戦闘の報酬に加えて ${formatResources(worldReward(spot.danger))}・ゴールド ${worldGold(spot.danger)}`, 12, Css.cyan);
+      // 制海権 and the patrol (#65 第 3 段階)
+      line(ringControlled(world, spot.danger, Date.now()) ? `この輪は制海権あり: 敵が弱く、外洋の報酬 ×${CONTROL_REWARD_MUL}` : `この輪の制海権まで ${CONTROL_WINS - ringWins(world, spot.danger, Date.now())} 勝 (今週)`, 12, Css.muted);
+      if (patrolJoins(patrol, spot)) line('友軍の巡回艦隊が加わります', 12, Css.success);
       if (spotWon(world, spot.id)) line('この敵艦隊には勝ちました (この 1 時間は戻らず、次の時間に新しい敵艦隊)', 12, Css.success);
       else if (voyage) {
         const problem = reachProblem(voyage, spot);
@@ -284,6 +347,12 @@ export class WorldMapScene extends Phaser.Scene {
         const t = this.track(this.add.text(x, by - L.bh / 2 - 8, note, textStyle(12, blockers.length > 0 ? Css.danger : Css.muted, wrap)).setOrigin(0, 1));
         fitText(t, w);
       }
+      return;
+    }
+    if (hist && this.selected === hist.id) {
+      const can = historicReady(world, Date.now()) && !reachProblem(voyage, hist);
+      this.track(new UIButton(this, x + half / 2, by, '交戦  ›', () => this.fightHistoric(hist), { variant: can ? 'danger' : 'secondary', width: half, height: L.bh, fontSize: 18 })).setEnabled(can);
+      this.track(new UIButton(this, x + w - half / 2, by, '帰港する', () => this.comeHome(), { variant: 'primary', width: half, height: L.bh, fontSize: 16 }));
       return;
     }
     if (place) {
@@ -347,7 +416,18 @@ export class WorldMapScene extends Phaser.Scene {
   }
 
   /** A battle with a group at sea, or (`fort`) the stronghold's garrison and batteries on its island. */
-  private fight(spot: ISpot, fort = false): void {
+  /** The day's historical battle: its enemy force, fought at sea. */
+  private fightHistoric(hist: IHistoric): void {
+    const p = loadProgress();
+    const sc = DataLoader.getScenarios(this).find((s) => s.id === hist.scenarioId);
+    const side = sc ? playableSides(sc, p.nation)[0] : undefined;
+    const setup = sc && side !== undefined ? setupFor(sc, side) : null;
+    if (!setup) return;
+    const enemy = forceShips(setup.enemy, DataLoader.getRegistry(this));
+    this.fight({ id: hist.id, x: hist.x, y: hist.y, danger: hist.danger, enemyNation: setup.enemy.nation as Nation }, false, enemy);
+  }
+
+  private fight(spot: ISpot, fort = false, fixedEnemy?: IShipData[]): void {
     const p = loadProgress();
     const world = p.world ?? emptyWorld();
     const voyage = world.voyage;
@@ -359,7 +439,12 @@ export class WorldMapScene extends Phaser.Scene {
     }
     const registry = DataLoader.getRegistry(this);
     const ships = voyage.shipIds.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
-    const enemy = worldEnemyFleet(registry.byNation(spot.enemyNation), spot);
+    const enemy = fixedEnemy ?? worldEnemyFleet(registry.byNation(spot.enemyNation), spot);
+    // 友軍の巡回 (#65 第 3 段階): the navy's patrol joins a fight near it (none of the fleet's own ships in it).
+    const patrol = this.patrol();
+    const allyShips = patrolJoins(patrol, spot)
+      ? worldEnemyFleet(registry.byNation(p.nation).filter((s) => !voyage.shipIds.includes(s.id)), { id: patrol.id, danger: Math.min(patrol.danger, 6) }).slice(0, 3)
+      : [];
     if (ships.length === 0 || enemy.length === 0) return;
     saveProgress({ ...p, world: { ...world, voyage: sailTo(voyage, spot) } });
     const init: IBattleInitData = {
@@ -372,7 +457,11 @@ export class WorldMapScene extends Phaser.Scene {
       time: randomTime(),
       captainIds: voyage.captainIds,
       objective: fort ? Objective.Bombard : Objective.Annihilate,
-      world: { spotId: spot.id, danger: spot.danger, ...(fort ? { fort: true } : {}) },
+      world: {
+        spotId: spot.id, danger: spot.danger, ...(fort ? { fort: true } : {}), ...(fixedEnemy ? { historic: true } : {}),
+        ...(ringControlled(world, spot.danger, Date.now()) ? { controlled: true } : {}),
+        ...(allyShips.length > 0 ? { ally: { name: '友軍の巡回艦隊', nation: p.nation, shipIds: allyShips.map((s) => s.id) } } : {}),
+      },
     };
     this.scene.start(SceneKeys.BATTLE, init);
   }

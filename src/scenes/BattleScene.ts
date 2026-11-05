@@ -87,7 +87,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
-import { afterBattle, emptyWorld, endVoyage, FORT_GOLD, FORT_REWARD, mustReturn, takeFort, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
+import { afterBattle, CONTROL_ENEMY_MUL, CONTROL_REWARD_MUL, emptyWorld, endVoyage, FORT_GOLD, FORT_REWARD, HISTORIC_GOLD, mustReturn, PATROL_ARRIVE_SEC, takeFort, winHistoric, winInRing, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
 import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
 import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
@@ -827,6 +827,13 @@ export class BattleScene extends Phaser.Scene {
 
   /** The area's 友軍艦隊 (#64): those there from the start join now, the others when their time comes. */
   private queueAllies(area: ICampaignArea | undefined): void {
+    // 友軍の巡回 (#65 第 3 段階): the navy's patrol near the fight joins it after a while.
+    const patrol = this.battleData?.world?.ally;
+    if (patrol) {
+      const registry = DataLoader.getRegistry(this);
+      const ships = patrol.shipIds.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined);
+      if (ships.length > 0) this.pendingAllies.push({ ships, arriveSec: PATROL_ARRIVE_SEC, name: patrol.name, nation: patrol.nation as Nation });
+    }
     if (!area || this.exercise || this.scenario) return;
     const registry = DataLoader.getRegistry(this);
     for (const a of (area.allies ?? []).filter((x) => !x.for || x.for.includes(this.playerNation))) {
@@ -1279,7 +1286,7 @@ export class BattleScene extends Phaser.Scene {
     // 特別海域 (#416): one class of ship against the main fleet, which comes in a little weaker.
     // 外洋 (#65): the group's strength follows the danger of the water.
     const world = this.battleData?.world;
-    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : world ? worldEnemyScale(world.danger) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
+    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : world ? worldEnemyScale(world.danger) * (world.controlled ? CONTROL_ENEMY_MUL : 1) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
     // A theater's first area (#433): its torpedoes hit softer still, so one spread doesn't decide the navy's first fight.
     const opening = area !== undefined && !this.exercise && isOpeningArea(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
     const reach = opening ? { ...scaled, torpedoPowerMul: (scaled.torpedoPowerMul ?? 1) * OPENING_TORPEDO_MUL } : scaled;
@@ -2916,12 +2923,22 @@ export class BattleScene extends Phaser.Scene {
       let world = afterBattle(progress.world ?? emptyWorld(), w.spotId, w.danger, victory);
       let line = `外洋 (危険度 ${w.danger}): ${victory ? '勝利' : '敗北'}`;
       if (victory) {
-        const extra = worldReward(w.danger);
+        // 制海権 (#65 第 3 段階): a ring the navy holds pays more; every win counts towards holding it.
+        const base = worldReward(w.danger);
+        const extra = w.controlled ? { fuel: Math.round(base.fuel * CONTROL_REWARD_MUL), ammo: Math.round(base.ammo * CONTROL_REWARD_MUL), steel: Math.round(base.steel * CONTROL_REWARD_MUL), bauxite: Math.round(base.bauxite * CONTROL_REWARD_MUL) } : base;
+        const ring = winInRing(world, w.danger, now);
+        world = ring.world;
+        if (ring.took) progress = withQuestEvents(progress, [['worldControl', 1]], now);
+        if (w.ally) progress = withQuestEvents(progress, [['patrolWin', 1]], now);
+        if (w.historic) {
+          world = winHistoric(world, now);
+          progress = withQuestEvents({ ...progress, wallet: addGold(walletOf(progress), HISTORIC_GOLD) }, [['historicWin', 1]], now);
+        }
         const g = gainResources(progress.resources, extra, holdCap(progress.facilities));
         progress = { ...progress, resources: g.resources, wallet: addGold(walletOf(progress), worldGold(w.danger)), ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(extra, g.lost, -1), now), 'overflow', g.lost, now) };
         lost = addResources(lost, g.lost);
         progress = withQuestEvents(progress, [['worldWin', 1]], now);
-        line += `  ·  外洋の報酬 ${formatResources(extra)}・ゴールド ${worldGold(w.danger)}`;
+        line += `  ·  外洋の報酬 ${formatResources(extra)}・ゴールド ${worldGold(w.danger)}${ring.took ? `  ·  危険度 ${w.danger} の輪の制海権を取りました` : ''}${w.historic ? `  ·  史実の海戦 ゴールド ${HISTORIC_GOLD}` : ''}`;
         // 敵の要塞 (#65 第 2 段階): taken, it pays its own reward and makes the water round it safer this week.
         if (w.fort) {
           world = takeFort(world, w.spotId, now);
