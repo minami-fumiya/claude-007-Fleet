@@ -217,6 +217,9 @@ export interface IMedalContext {
   aircraftDeveloped?: number;
   /** 遠洋章 (#65): the most dangerous ring of the open sea won in, best navy */
   worldBest?: number;
+  /** 本当のオープンワールド (#445): sectors sailed on the world's ocean (all navies) and the most explored (best navy) */
+  openSeaSectors?: number;
+  openSeaExplored?: number;
   /** Ground weapons destroyed in all, and how many different ones (#251) */
   groundTotal?: number;
   groundKinds?: number;
@@ -503,6 +506,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('world_control', '制海章', 'campaign', [1, 10, 40], (g) => `外洋の輪の制海権を ${g} 回取る`, (_r, c) => total(c, 'worldControl')),
   ...ladder('patrol_win', '友軍連携章', 'campaign', [1, 10, 50], (g) => `外洋で友軍の巡回艦隊と ${g} 回勝つ`, (_r, c) => total(c, 'patrolWin')),
   ...ladder('historic_win', '史実再現章', 'campaign', [1, 10, 30], (g) => `外洋の史実の海戦で ${g} 回勝つ`, (_r, c) => total(c, 'historicWin')),
+  // 0.0.68 本当のオープンワールド (#445)
+  ...ladder('ocean_voyage', '大洋航海章', 'campaign', [10, 100, 500], (g) => `広い海を ${g} 区画走る`, (_r, c) => c.openSeaSectors ?? 0),
+  ...ladder('chart_maker', '海図作成章', 'campaign', [50, 300, 1000], (g) => `1 か国で広い海を ${g} 区画探索する`, (_r, c) => c.openSeaExplored ?? 0),
   // 0.0.66 外洋の第 2 段階 (#65)
   ...ladder('port_call', '寄港章', 'campaign', [1, 10, 50], (g) => `外洋で港に ${g} 回寄る`, (_r, c) => total(c, 'portCall')),
   ...ladder('resource_run', '資源輸送章', 'campaign', [1, 20, 100], (g) => `外洋の資源の場所に ${g} 回寄る`, (_r, c) => total(c, 'resourceRun')),

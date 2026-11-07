@@ -611,6 +611,81 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('広い海 (#445): the battle screen sails the world, the chart plans a route, the voyage ends in port', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    type G = { game: Phaser.Game };
+    type V = { warp: number; fuel: number; explored: string; hasRoute: boolean; routeLeft: unknown[]; setWarp(k: number): void; here(): { c: number; r: number } };
+    await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+    await page.waitForTimeout(2500);
+    const start = await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: V; map: { islands: unknown[] }; enemies: unknown[] };
+      return { fuel: b.voyage.fuel, here: b.voyage.here(), islands: b.map.islands.length, explored: b.voyage.explored.replace(/0/g, '').length, enemies: b.enemies.length };
+    });
+    // Off Yokosuka (IJN's home port), the sectors round it loaded and explored.
+    expect(start.fuel).toBeGreaterThan(99);
+    expect(start.islands).toBeGreaterThan(0);
+    expect(start.explored).toBeGreaterThan(0);
+    // 試しの航海: no enemy at sea yet (0.0.69 brings them).
+    expect(start.enemies).toBe(0);
+    // The HUD and the voyage's own readout (screen-fixed texts; names on the sea move with it).
+    const sea = (show: boolean): Promise<void> => page.evaluate((v) => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene');
+      // Held still while looking, so the labels the battle shows each frame stay hidden.
+      if (v) b.scene.resume();
+      else b.scene.pause();
+      for (const o of b.children.list) {
+        const t = o as Phaser.GameObjects.Text;
+        if ((o.type === 'Text' || o.type === 'Container') && t.scrollFactorX !== 0) t.setVisible(v);
+      }
+    }, show);
+    await sea(false);
+    expect(await overflowingTexts(page, 'BattleScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'BattleScene')).toEqual([]);
+    await sea(true);
+    await page.screenshot({ path: info.outputPath('open-sea.png') });
+
+    // The chart: the whole world over the battle, a destination tapped, a route with its fuel.
+    await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+    await page.waitForTimeout(500);
+    const planned = await page.evaluate(() => {
+      const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { at: { c: number; r: number } }; plan: unknown[] | null; pick(x: number, y: number): void; colX(c: number): number | null };
+      // Two sectors east and two south of the fleet: open water off Japan.
+      const at = c.d.at;
+      const x = c.colX(at.c + 2)!;
+      const cell = (window as unknown as G).game.scale.width > (window as unknown as G).game.scale.height ? 14 : 16;
+      const top = (window as unknown as G).game.scale.width > (window as unknown as G).game.scale.height ? 84 : 120;
+      c.pick(x + cell / 2, top + (at.r + 2) * cell + cell / 2);
+      return c.plan?.length ?? 0;
+    });
+    expect(planned).toBeGreaterThan(1);
+    expect(await overflowingTexts(page, 'OpenSeaChartScene')).toEqual([]);
+    expect(await overlappingTexts(page, 'OpenSeaChartScene')).toEqual([]);
+    await page.screenshot({ path: info.outputPath('open-sea-chart.png') });
+    await page.evaluate(() => {
+      const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { plan: unknown[]; choose(r: unknown[]): void };
+      c.choose(c.plan);
+    });
+    await page.waitForTimeout(300);
+    const sailing = await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: V; autoMode: boolean; paused: boolean };
+      b.voyage.setWarp(8);
+      return { route: b.voyage.hasRoute, auto: b.autoMode, paused: b.paused, warp: b.voyage.warp };
+    });
+    expect(sailing).toEqual({ route: true, auto: true, paused: false, warp: 8 });
+    await page.waitForTimeout(3000);
+    await page.screenshot({ path: info.outputPath('open-sea-cruise.png') });
+
+    // The voyage ends from the pause sheet: back to the 外洋 screen, the chart and the distance kept.
+    await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { retreat(): void }).retreat());
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('WorldMapScene')?.sys.settings.active === true);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.openSea as { explored: string; sailedPx: number; voyages: number });
+    expect(saved.voyages).toBe(1);
+    expect(saved.sailedPx).toBeGreaterThan(0);
+    expect(saved.explored.replace(/0/g, '').length).toBeGreaterThan(0);
+    expect(errors).toEqual([]);
+  });
+
   test('the 図鑑 and the 改装 screen open each other on the same ship (#178)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     type G = { game: Phaser.Game };

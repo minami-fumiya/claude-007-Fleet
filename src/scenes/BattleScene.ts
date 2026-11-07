@@ -1117,7 +1117,8 @@ export class BattleScene extends Phaser.Scene {
       };
     }
     const yamato = registry.byId('yamato') ?? registry.byNation(Nation.IJN)[0];
-    const enemies = generateEnemyFleet(registry, Nation.USN, this.battleData?.mode ?? BattleMode.Surface);
+    // 試しの航海 (#445): no enemy at sea yet.
+    const enemies = this.battleData?.openSea ? [] : generateEnemyFleet(registry, Nation.USN, this.battleData?.mode ?? BattleMode.Surface);
     return {
       playerFleet: FleetSystem.createFleet('default', '大和隊', Nation.IJN, [yamato], 0),
       enemyFleet: FleetSystem.createFleet('enemy', 'Enemy', Nation.USN, enemies, 0),
