@@ -73,7 +73,32 @@ export class WorldMapScene extends Phaser.Scene {
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
     // 他国の海図 (#65 第 2 段階): each navy sails its own sea.
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 46, `外洋 — ${WORLD_SEA[loadProgress().nation]}`, displayStyle(24)).setOrigin(0.5);
+    // 本当のオープンワールド (#445, 0.0.68): the battle screen sails the whole world from the home port (no enemy yet).
+    new UIButton(this, CANVAS_W - back.x, back.y, '広い海へ  ›', () => this.openSea(), { variant: 'gold', width: back.w, height: back.h, fontSize: 15 });
     this.draw();
+  }
+
+  /** 試しの航海 (#445): the fleet chosen for the sea puts out from the home port onto the world's ocean. */
+  private openSea(): void {
+    const fleet = this.chosenFleet();
+    const p = loadProgress();
+    if (fleet.ships.length === 0) {
+      this.say('編成で艦隊を組むと、広い海へ出られます', true);
+      return;
+    }
+    if (p.world?.voyage) {
+      this.say('外洋に出ている艦隊を帰港させてから出てください', true);
+      return;
+    }
+    const init: IBattleInitData = {
+      playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', p.nation, fleet.ships, 0),
+      enemyFleet: FleetSystem.createFleet('enemy-fleet', '—', p.nation, [], 0),
+      mapKey: 'open-sea',
+      formation: fleet.formation,
+      captainIds: fleet.captainIds,
+      openSea: true,
+    };
+    this.scene.start(SceneKeys.BATTLE, init);
   }
 
   private track<T extends Phaser.GameObjects.GameObject>(o: T): T {

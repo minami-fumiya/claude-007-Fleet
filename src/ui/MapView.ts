@@ -4,10 +4,12 @@ import { IResolvedMap } from '@/types/Map';
 
 /**
  * Draws a battle map: pale shoal water, islands (sand rim, green interior) and faint arrows showing
- * currents. Returns the static physics group of island circles for colliders.
+ * currents. Returns the static physics group of island circles for colliders; the graphics drawn go into `drawn`
+ * when given (the open sea's sectors are drawn and dropped as the fleet sails, #445).
  */
-export function drawMap(scene: Phaser.Scene, map: IResolvedMap): Phaser.Physics.Arcade.StaticGroup {
+export function drawMap(scene: Phaser.Scene, map: IResolvedMap, drawn?: Phaser.GameObjects.GameObject[]): Phaser.Physics.Arcade.StaticGroup {
   const water = scene.add.graphics().setDepth(DEPTH_WATER_FX - 2);
+  drawn?.push(water);
   for (const s of map.shoals) {
     water.fillStyle(0x3fb6c9, 0.16);
     water.fillCircle(s.x, s.y, s.r);
@@ -33,6 +35,7 @@ export function drawMap(scene: Phaser.Scene, map: IResolvedMap): Phaser.Physics.
   }
 
   const land = scene.add.graphics().setDepth(DEPTH_SHIPS - 1);
+  drawn?.push(land);
   for (const island of map.islands) {
     for (const c of island) {
       land.fillStyle(0xd9c48f, 1);

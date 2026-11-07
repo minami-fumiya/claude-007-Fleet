@@ -133,7 +133,7 @@ const OCEAN_TILE = 320;
  * Battle sea for a world larger than the screen: a repeating chart-grid tile across the whole world,
  * a rim marking its edge, and a screen-fixed vignette on top.
  */
-export function addOceanWorld(scene: Phaser.Scene, worldW: number, worldH: number): void {
+export function addOceanWorld(scene: Phaser.Scene, worldW: number, worldH: number, opts: { screenFixed?: boolean } = {}): Phaser.GameObjects.TileSprite {
   const tileKey = makeCanvasTexture(scene, 'ui-ocean-tile', OCEAN_TILE, OCEAN_TILE, (ctx) => {
     ctx.fillStyle = Surface.sea;
     ctx.fillRect(0, 0, OCEAN_TILE, OCEAN_TILE);
@@ -160,13 +160,18 @@ export function addOceanWorld(scene: Phaser.Scene, worldW: number, worldH: numbe
       ctx.stroke();
     }
   });
-  scene.add.tileSprite(0, 0, worldW, worldH, tileKey).setOrigin(0, 0).setDepth(-10);
+  // The open sea (#445) is far too big for one tile sprite: a screen-sized one, its pattern scrolled with the camera.
+  const sea = opts.screenFixed
+    ? scene.add.tileSprite(0, 0, CANVAS_W, CANVAS_H, tileKey).setOrigin(0, 0).setScrollFactor(0).setDepth(-10)
+    : scene.add.tileSprite(0, 0, worldW, worldH, tileKey).setOrigin(0, 0).setDepth(-10);
 
-  const rim = scene.add.graphics().setDepth(-9);
-  rim.lineStyle(6, Colors.cyan, 0.08);
-  rim.strokeRect(3, 3, worldW - 6, worldH - 6);
-  rim.lineStyle(2, Colors.cyan, 0.35);
-  rim.strokeRect(1, 1, worldW - 2, worldH - 2);
+  if (!opts.screenFixed) {
+    const rim = scene.add.graphics().setDepth(-9);
+    rim.lineStyle(6, Colors.cyan, 0.08);
+    rim.strokeRect(3, 3, worldW - 6, worldH - 6);
+    rim.lineStyle(2, Colors.cyan, 0.35);
+    rim.strokeRect(1, 1, worldW - 2, worldH - 2);
+  }
 
   const vignetteKey = makeCanvasTexture(scene, 'ui-vignette', CANVAS_W, CANVAS_H, (ctx) => {
     const v = ctx.createRadialGradient(
@@ -179,6 +184,7 @@ export function addOceanWorld(scene: Phaser.Scene, worldW: number, worldH: numbe
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   });
   scene.add.image(0, 0, vignetteKey).setOrigin(0, 0).setScrollFactor(0).setDepth(-8);
+  return sea;
 }
 
 // ---------------------------------------------------------------------------

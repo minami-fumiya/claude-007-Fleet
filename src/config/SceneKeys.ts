@@ -24,6 +24,7 @@ export const SceneKeys = {
   FOCUS: 'FocusScene',
   DESIGN: 'DesignScene',
   WORLD: 'WorldMapScene',
+  OPEN_SEA_CHART: 'OpenSeaChartScene',
 } as const;
 
 export type SceneKey = (typeof SceneKeys)[keyof typeof SceneKeys];

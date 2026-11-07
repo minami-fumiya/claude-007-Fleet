@@ -290,7 +290,7 @@ export function worldFeatures(nation: Nation): IFeature[] {
 }
 
 /** Spots keep this far from the places on the chart (so their marks never sit on each other). */
-export const FEATURE_CLEARANCE = 70;
+export const FEATURE_CLEARANCE = 95;
 
 /**
  * This hour's groups moved clear of the navy's places (and of each other): a group already clear stays where it is;
