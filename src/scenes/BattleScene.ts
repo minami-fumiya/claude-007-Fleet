@@ -37,6 +37,8 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
+import { SECTOR_PX, WORLD_PX } from '@/systems/OpenSeaSystem';
+import { OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
 import { costCap, fleetCost } from '@/systems/FleetCost';
@@ -140,13 +142,23 @@ const AUTO_EDGE_MARGIN = 70;
 const TOP_BUTTON = IS_PORTRAIT ? { y: 46, w: 172, h: 60 } : { y: 42, w: 130, h: 44 };
 /** Torpedo / dive buttons sit above the bottom-right corner. */
 const ACTION_BUTTON = IS_PORTRAIT ? { w: 172, h: 64, gap: 14, bottom: 120 } : { w: 150, h: 46, gap: 10, bottom: 90 };
-/** The sea is a 3200 px square in both orientations; the camera follows the flagship. */
-const WORLD = BATTLE_WORLD;
+/**
+ * The sea is a 3200 px square in both orientations; the camera follows the flagship. The open sea (#445) is the
+ * whole world: set at the start of each battle (the AI and the steering read these objects in place).
+ */
+const WORLD: { w: number; h: number } = { ...BATTLE_WORLD };
 /** Class words for the commentary (#106): 戦艦・巡洋艦 … */
 const CLASS_JA_SHORT: Partial<Record<ShipClass, string>> = {
   [ShipClass.Battleship]: '戦艦', [ShipClass.Cruiser]: '巡洋艦', [ShipClass.Destroyer]: '駆逐艦', [ShipClass.Carrier]: '空母', [ShipClass.Submarine]: '潜水艦',
 };
 const WORLD_BOUNDS = { width: WORLD.w, height: WORLD.h };
+
+function setWorldSize(w: number, h: number): void {
+  WORLD.w = w;
+  WORLD.h = h;
+  WORLD_BOUNDS.width = w;
+  WORLD_BOUNDS.height = h;
+}
 /** 基地航空隊 (#373): how long the base's scouts show the enemy, and when its strikes fly (battle ms). */
 const BASE_AIR_SCOUT_MS = 20_000;
 const BASE_AIR_STRIKES_AT = [25_000, 70_000];
@@ -204,6 +216,9 @@ const ALLY_TINT = 0x9fe8b0;
 
 export class BattleScene extends Phaser.Scene {
   private battleData: IBattleInitData | null = null;
+  /** 本当のオープンワールド (#445): the battle screen sailing the world, and its screen-sized sea */
+  private voyage: OpenSeaVoyage | null = null;
+  private oceanTile: Phaser.GameObjects.TileSprite | null = null;
 
   private flagship!: BaseShip;
   private escorts: BaseShip[] = [];
@@ -452,10 +467,24 @@ export class BattleScene extends Phaser.Scene {
     this.strikeReady = false;
     this.wantDive = false;
 
-    addOceanWorld(this, WORLD.w, WORLD.h);
-    this.map = resolveMap(DataLoader.getMap(this, this.battleData?.mapKey || 'open-sea'), WORLD.w, WORLD.h);
-    this.islands = drawMap(this, this.map);
-    this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
+    const openSea = this.battleData?.openSea === true;
+    this.voyage = null;
+    if (openSea) {
+      // The open sea (#445): the world's sectors are loaded round the flagship as it sails (OpenSeaVoyage).
+      setWorldSize(WORLD_PX.w, WORLD_PX.h);
+      this.oceanTile = addOceanWorld(this, CANVAS_W, CANVAS_H, { screenFixed: true });
+      this.map = { islands: [], shoals: [], currents: [] };
+      this.islands = this.physics.add.staticGroup();
+      const b = OpenSeaVoyage.bounds();
+      this.physics.world.setBounds(b.x, b.y, b.w, b.h);
+    } else {
+      setWorldSize(BATTLE_WORLD.w, BATTLE_WORLD.h);
+      this.oceanTile = null;
+      addOceanWorld(this, WORLD.w, WORLD.h);
+      this.map = resolveMap(DataLoader.getMap(this, this.battleData?.mapKey || 'open-sea'), WORLD.w, WORLD.h);
+      this.islands = drawMap(this, this.map);
+      this.physics.world.setBounds(0, 0, WORLD.w, WORLD.h);
+    }
     // Set on the first update with the game-loop time: the scene clock in create() can be stale, which once made the
     // battle clock start at the time the page had been open (e.g. 14 minutes).
     this.battleStartedAt = -1;
@@ -529,7 +558,10 @@ export class BattleScene extends Phaser.Scene {
     this.setupHazards(battleArea);
 
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, WORLD.w, WORLD.h);
+    if (openSea) {
+      const b = OpenSeaVoyage.bounds();
+      cam.setBounds(b.x, b.y, b.w, b.h);
+    } else cam.setBounds(0, 0, WORLD.w, WORLD.h);
     cam.startFollow(this.flagship, true, CAMERA_LERP, CAMERA_LERP);
 
     this.explosion = new Explosion(this);
@@ -543,8 +575,10 @@ export class BattleScene extends Phaser.Scene {
     this.trails = new ShipTrails(this);
     for (const s of [...this.playerSide(), ...this.enemies]) this.trails.add(s);
     const mm = IS_PORTRAIT ? { w: 150, x: CANVAS_W - 20 - 150, y: 252 } : { w: 200, x: CANVAS_W - 20 - 200, y: 80 };
-    this.minimap = new Minimap(this, mm.x, mm.y, mm.w, WORLD.w, WORLD.h);
-    this.minimap.drawIslands(this.map);
+    // On the open sea the minimap shows the 3 × 3 sectors round the flagship (#445); the chart shows the world.
+    this.minimap = openSea ? new Minimap(this, mm.x, mm.y, mm.w, 3 * SECTOR_PX, 3 * SECTOR_PX) : new Minimap(this, mm.x, mm.y, mm.w, WORLD.w, WORLD.h);
+    if (!openSea) this.minimap.drawIslands(this.map);
+    if (openSea) this.startVoyage(mm.y + this.minimap.height);
     const splashAt = (x: number, y: number): void => {
       // Only splashes the player could see.
       if (isVisible(x, y, this.visionSources(this.playerSide(), this.playerRecon, this.playerAir))) this.splash.play(x, y, 0.8);
@@ -583,7 +617,13 @@ export class BattleScene extends Phaser.Scene {
   update(loopTime: number, delta: number): void {
     if (this.gameOver || this.paused) return;
     const frameStart = this.perfText ? performance.now() : 0;
-    this.battleUpdate(loopTime, delta);
+    // 早送り (#445): cruising on the open sea runs faster (the voyage speeds the ships; turning keeps pace here).
+    const warp = this.voyage?.warp ?? 1;
+    this.battleUpdate(loopTime, delta * warp);
+    if (this.oceanTile && this.oceanTile.scrollFactorX === 0) {
+      const cam = this.cameras.main;
+      this.oceanTile.setTilePosition(cam.scrollX, cam.scrollY);
+    }
     this.updateSuperweaponParts();
     this.updateMusicMood(loopTime);
     if (this.perfText) this.showPerf(performance.now() - frameStart);
@@ -591,7 +631,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** The battle's music follows the fight (#383): the superweapon's theme, a crisis, the night. Checked every second. */
   private updateMusicMood(now: number): void {
-    if (now < this.musicCheckAt) return;
+    if (now < this.musicCheckAt || this.voyage) return;
     this.musicCheckAt = now + 1000;
     const own = this.friendlies().filter((s) => s);
     const max = own.reduce((sum, s) => sum + s.stats.maxHp, 0);
@@ -686,6 +726,7 @@ export class BattleScene extends Phaser.Scene {
     this.autoDepthCharge(enemyView, time);
 
     this.applySea(dtSec);
+    this.voyage?.update();
     this.updateHazards(dtSec);
     this.updateConvoy(dtSec);
     // 航行距離 (#92): every ship of the player's own fleets, at the speed it is making.
@@ -733,7 +774,8 @@ export class BattleScene extends Phaser.Scene {
     this.drawEdgeMarkers();
     this.trails.update();
     this.minimap.update(this.playerSide(), this.enemies, this.seenByPlayer);
-    this.checkWinLoss();
+    // 試しの航海 (#445, 0.0.68): no enemy at sea yet, so nothing to win or lose but the flagship.
+    if (!this.voyage) this.checkWinLoss();
   }
 
   /** The player's own ships: the fleet steered and its 支援艦隊 (#84), whose damage and experience carry over. */
@@ -1099,7 +1141,7 @@ export class BattleScene extends Phaser.Scene {
     ship.loadout = loadout;
     ship.dataId = shipData.id;
     ship.envSpeedMul = this.conditions.speedMul;
-    if (this.map.islands.length > 0) ship.avoid = (px, py, h) => avoidHeading(this.map, px, py, h);
+    if (this.map.islands.length > 0 || this.battleData?.openSea) ship.avoid = (px, py, h) => avoidHeading(this.map, px, py, h);
     ship.mods = mods;
     ship.clock = () => this.battleNow();
     const night = this.conditions.time === TimeOfDay.Night;
@@ -1232,6 +1274,7 @@ export class BattleScene extends Phaser.Scene {
   private flagshipSpawn(): { x: number; y: number } {
     const placed = this.scenarioSetup?.player.positions[0];
     if (placed) return placeAt(placed, WORLD.w, WORLD.h);
+    if (this.battleData?.openSea) return OpenSeaVoyage.startPoint(this.playerNation);
     return this.objective === Objective.Convoy ? convoyEscortStart(WORLD) : playerStart(WORLD);
   }
 
@@ -1802,6 +1845,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.waypoint = { x, y };
+    this.voyage?.clearRoute();
     if (this.autoMode) this.setAutoMode(false);
   }
 
@@ -1867,15 +1911,75 @@ export class BattleScene extends Phaser.Scene {
     // Land stops ships and torpedoes; shells fly over it (so shore targets can be shelled).
     this.landColliders = [...this.playerSide(), ...this.enemies.filter((e) => !e.isLand)];
     this.physics.add.collider(this.landColliders as unknown as Phaser.GameObjects.GameObject[], this.islands);
+    this.addLandColliders(this.islands);
+  }
+
+  /** Land stops ships and torpedoes (the battle's islands, or a sector of the open sea as it is loaded, #445). */
+  private addLandColliders(land: Phaser.Physics.Arcade.StaticGroup, withShips = false): Phaser.Physics.Arcade.Collider[] {
     const intoLand: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (p) => {
       const projectile = p as unknown as BaseProjectile;
       if (!projectile.active || !(projectile instanceof Torpedo)) return;
       this.explosion.play(projectile.x, projectile.y);
       projectile.deactivate();
     };
+    const out: Phaser.Physics.Arcade.Collider[] = [];
+    if (withShips) out.push(this.physics.add.collider(this.landColliders as unknown as Phaser.GameObjects.GameObject[], land));
     for (const ws of [this.playerWeapons, this.enemyWeapons]) {
-      this.physics.add.overlap(ws.projectiles as unknown as Phaser.GameObjects.GameObject[], this.islands, intoLand);
+      out.push(this.physics.add.overlap(ws.projectiles as unknown as Phaser.GameObjects.GameObject[], land, intoLand));
     }
+    return out;
+  }
+
+  /** 試しの航海 (#445, 0.0.68): the battle screen sails the world, its own buttons under the minimap. */
+  private startVoyage(minimapBottom: number): void {
+    const nation = this.playerNation ?? Nation.IJN;
+    this.voyage = new OpenSeaVoyage({
+      scene: this,
+      map: this.map,
+      flagship: () => this.flagship,
+      ships: () => this.playerSide(),
+      addLand: (group) => this.addLandColliders(group, true),
+      shiftWorld: (dx) => this.shiftWorld(dx),
+      minimap: this.minimap,
+      openChart: () => this.openChart(),
+      enterPort: () => this.endVoyage(),
+    }, nation, loadProgress().openSea);
+    this.voyage.buildUi(minimapBottom);
+    audio.music('map');
+  }
+
+  /** Crossing the east-west join (#445): shells in flight are dropped, aircraft and marks move with the sea. */
+  private shiftWorld(dx: number): void {
+    for (const ws of [this.playerWeapons, this.enemyWeapons]) for (const p of ws.projectiles) if (p.active) p.deactivate();
+    for (const air of [this.playerAir, this.enemyAir]) for (const sq of air.squadrons) sq.x += dx;
+    if (this.waypoint) this.waypoint = { x: this.waypoint.x + dx, y: this.waypoint.y };
+    this.aimTarget = { x: this.aimTarget.x + dx, y: this.aimTarget.y };
+    for (const [k, v] of this.lastSeen) this.lastSeen.set(k, { ...v, x: v.x + dx });
+  }
+
+  /** The chart over the battle (#445): the world, the explored seas, and a destination to set. */
+  private openChart(): void {
+    if (!this.voyage) return;
+    this.setPaused(true, false);
+    const v = this.voyage;
+    this.scene.launch(SceneKeys.OPEN_SEA_CHART, {
+      nation: v.nation, explored: v.explored, at: v.here(), fuel: v.fuel, route: v.routeLeft,
+      onRoute: (route: Array<{ c: number; r: number }>) => {
+        v.setRoute(route);
+        if (route.length > 1 && !this.autoMode) this.setAutoMode(true);
+      },
+      onClose: () => this.setPaused(false),
+    });
+  }
+
+  /** The voyage ends in port (or from the pause sheet): what was explored and sailed is kept, back to the chart room. */
+  private endVoyage(): void {
+    const v = this.voyage;
+    if (!v) return;
+    const progress = loadProgress();
+    saveProgress({ ...progress, openSea: v.result(progress.openSea) });
+    this.voyage = null;
+    this.scene.start(SceneKeys.WORLD);
   }
 
   private onProjectileHit(projectile: BaseProjectile, target: BaseShip): void {
@@ -2098,7 +2202,16 @@ export class BattleScene extends Phaser.Scene {
       if (s) this.flagship.steer(s, dtSec, SHIP_ROTATE_SPEED);
       return;
     }
-    if (this.autoMode) {
+    // The chart's route (#445): sector by sector to the destination, steering round the land on the way.
+    const leg = this.voyage?.hasRoute ? this.voyage.waypoint() : null;
+    if (leg) {
+      const s = waypointSteer(this.flagship, leg, 200);
+      if (s) {
+        this.flagship.steer(s, dtSec, SHIP_ROTATE_SPEED);
+        return;
+      }
+    }
+    if (this.autoMode && !this.voyage) {
       // Nothing in sight (#400): search slowly towards where the enemy was last seen; hold once badly hurt.
       const hp = this.flagship.stats.currentHp / Math.max(1, this.flagship.stats.maxHp);
       const goal = autoSearchGoal(this.flagship, [...this.lastSeen.values()], { x: WORLD.w / 2, y: WORLD.h / 2 }, hp);
@@ -2551,16 +2664,18 @@ export class BattleScene extends Phaser.Scene {
     const kindText = add(this.add.text(CANVAS_W / 2, y + 72, kind, eyebrowStyle(11, Css.gold)).setOrigin(0.5, 0));
     fitText(kindText, w - 64);
     const campaign = this.battleData?.areaId !== undefined && !this.scenario;
-    const lines = [
-      ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length }),
-      ...(campaign ? ['撤退すると、この出撃は終わります (それまでの報酬は残ります)'] : []),
-    ];
+    const lines = this.voyage
+      ? ['試しの航海 — 敵はまだ出ません (0.0.69 から)', '海図で行き先を決めると、自動で走ります', '航海を終えると、軍港に戻ります (探索した海は残ります)']
+      : [
+        ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length }),
+        ...(campaign ? ['撤退すると、この出撃は終わります (それまでの報酬は残ります)'] : []),
+      ];
     add(this.add.text(x + 32, y + 96, lines.join('\n'), textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { lineSpacing: 8, wordWrap: { width: w - 64, useAdvancedWrap: true } })));
     const bh = IS_PORTRAIT ? 72 : 56;
     const retreatH = bh - 8;
     const retreatY = y + h - retreatH / 2 - 28;
     add(new UIButton(this, CANVAS_W / 2, retreatY - retreatH / 2 - 16 - bh / 2, '再開  ▶', () => this.setPaused(false), { variant: 'gold', width: w - 64, height: bh, fontSize: 20 }));
-    add(new UIButton(this, CANVAS_W / 2, retreatY, '撤退する', () => this.retreat(), { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
+    add(new UIButton(this, CANVAS_W / 2, retreatY, this.voyage ? '航海を終える' : '撤退する', () => this.retreat(), { variant: 'secondary', width: w - 64, height: retreatH, fontSize: 16 }));
   }
 
   /** The fleet as it sailed, weighed against the enemy's ships like the map does (#280). */
@@ -2573,7 +2688,7 @@ export class BattleScene extends Phaser.Scene {
   /** Which battle this is and how it is won, for a few seconds as it opens (#279). */
   private showBattleBanner(): void {
     const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
-    const [kind, goal] = battleBanner({
+    const [kind, goal] = this.battleData?.openSea ? ['外洋 · 試しの航海', '海図で行き先を決めて、世界の海を走れます'] : battleBanner({
       areaName: area?.name, sortie: area ? this.battleData?.sortie : undefined, exercise: this.exercise && !area,
       scenarioName: this.scenario?.name, goal: this.goalText(), timeLimitSec: this.side?.timeLimitSec,
     });
@@ -2592,6 +2707,10 @@ export class BattleScene extends Phaser.Scene {
   /** 撤退 (#279): a full withdrawal. The saved sortie ends (no 続きから), the fleet comes home and can be docked. */
   private retreat(): void {
     this.setPaused(false);
+    if (this.voyage) {
+      this.endVoyage();
+      return;
+    }
     const campaign = this.battleData?.areaId !== undefined && !this.scenario;
     endSortie(this);
     this.scene.start(campaign ? SceneKeys.CAMPAIGN : SceneKeys.FLEET_BUILDER);

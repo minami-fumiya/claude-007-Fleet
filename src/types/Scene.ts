@@ -34,6 +34,8 @@ export interface IBattleInitData {
     /** 0.0.67: the ring is the navy's this week; the day's historical battle; the navy's patrol joining */
     controlled?: boolean; historic?: boolean; ally?: { name: string; nation: string; shipIds: string[] };
   };
+  /** 本当のオープンワールド (#445, 0.0.68): the battle screen sails the world from the home port (試しの航海, no enemy yet) */
+  openSea?: boolean;
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** 演習 (#404): one enemy fleet for each 支援艦隊 the player brings, each matched to it */
