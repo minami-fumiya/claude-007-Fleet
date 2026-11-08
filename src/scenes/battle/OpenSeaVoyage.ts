@@ -33,6 +33,8 @@ export interface IVoyageHost {
   callAt(placeId: string): void;
   /** Sails through an oil field's or a mine's ring (0.0.70) */
   passBy(placeId: string): void;
+  /** The sheet of 帰投・待機・合流 orders (艦隊の分離, 0.0.70) */
+  openSeparation(): void;
 }
 
 /** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
@@ -128,6 +130,9 @@ export class OpenSeaVoyage {
     y += h / 2 + 10;
     this.info = scene.add.text(CANVAS_W - 20, y, '', textStyle(IS_PORTRAIT ? 13 : 12, Css.text, { align: 'right', lineSpacing: 4, stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(1, 0).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
+    // 艦隊の分離 (0.0.70): under the readout.
+    new UIButton(scene, x, y + (IS_PORTRAIT ? 96 : 76), '分離・合流', () => this.host.openSeparation(), { variant: 'secondary', width: w, height: h, fontSize: IS_PORTRAIT ? 15 : 13 })
+      .setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     this.portBtn = new UIButton(scene, CANVAS_W / 2, IS_PORTRAIT ? 420 : 200, '入港する', () => {
       const here = this.portHere;
       if (!here) return;

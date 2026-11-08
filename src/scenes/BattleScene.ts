@@ -37,9 +37,11 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { FUEL_MAX, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
+import { anchorAt, FUEL_MAX, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
 import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
+import { nearestDock } from '@/systems/AnchorageSystem';
+import { setDamage } from '@/systems/DockSystem';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
 import { costCap, fleetCost } from '@/systems/FleetCost';
@@ -2023,6 +2025,7 @@ export class BattleScene extends Phaser.Scene {
       enterPort: (baseId) => this.endVoyage(baseId),
       callAt: (id) => this.callAtSeaPort(id),
       passBy: (id) => this.passResource(id),
+      openSeparation: () => this.openSeparation(),
     }, nation, loadProgress().openSea, this.voyagePorts(), placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
     this.voyage.buildUi(minimapBottom);
     audio.music('map');
@@ -2076,6 +2079,11 @@ export class BattleScene extends Phaser.Scene {
     const v = this.voyage;
     if (!v || time < this.seaCheckAt) return;
     this.seaCheckAt = time + 500;
+    // 大破で自動の帰投 (0.0.70): a ship of the fleet (not the flagship) badly hurt leaves for the nearest dock and
+    // can no longer be sunk.
+    for (const ship of this.separable()) {
+      if (ship.isAlive && ship.stats.currentHp / Math.max(1, ship.stats.maxHp) <= HEAVY_DAMAGE) this.separate(ship, 'home', true);
+    }
     const eng = this.engagement;
     if (eng) {
       // An area's objective decides its fight (0.0.70); a group met at sea is over once it is sunk.
@@ -2409,6 +2417,137 @@ export class BattleScene extends Phaser.Scene {
     this.seaNote(lines.join('\n'), 7000);
   }
 
+  // -------------------------------------------------------------------------
+  // 艦隊の分離 (#445, 0.0.70): 帰投・待機・合流
+  // -------------------------------------------------------------------------
+
+  /** The fleet's ships that can be sent off: the escorts and the player's other fleets' ships (not the flagship). */
+  private separable(): BaseShip[] {
+    return [...this.escorts, ...this.groups.filter((g) => g.owned).flatMap((g) => g.ships)].filter((s) => s.active && s !== this.flagship);
+  }
+
+  /**
+   * A ship leaves the fleet: 帰投 (to the nearest base with a dock, there at once until the moving world, B1) or
+   * 待機 (lying at sea where it is). Its damage is kept; it is out of the battle and can't be sunk.
+   */
+  private separate(ship: BaseShip, order: 'home' | 'wait', heavy = false): void {
+    const v = this.voyage;
+    const id = ship.dataId;
+    if (!v || !id || ship === this.flagship) return;
+    const i = this.escorts.indexOf(ship);
+    if (i >= 0) {
+      this.escorts.splice(i, 1);
+      this.escortAISystems.splice(i, 1);
+    } else {
+      for (const g of this.groups) {
+        const k = g.ships.indexOf(ship);
+        if (k >= 0) {
+          g.ships.splice(k, 1);
+          g.ais.splice(k, 1);
+        }
+      }
+    }
+    ship.setActive(false).setVisible(false);
+    const body = ship.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = false;
+    const progress = loadProgress();
+    const name = ship.stats.name.replace(/\s*\(.*\)\s*$/, '');
+    const damaged = { ...progress, ...setDamage(progress, id, ship.stats.currentHp / Math.max(1, ship.stats.maxHp)) };
+    if (order === 'home') {
+      const base = nearestDock(progress, v.here());
+      const at = (base ? baseAnchor(base.id) : undefined) ?? homeAnchor(this.playerNation);
+      saveProgress({ ...damaged, openSea: { ...progress.openSea, anchors: anchorAt(progress.openSea.anchors, [id], at, this.playerNation) } });
+      this.seaNote(`${heavy ? '大破: ' : ''}${name}は${base?.name ?? '軍港'}へ帰投しました`);
+    } else {
+      const at = { x: ((ship.x % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w, y: ship.y };
+      saveProgress({ ...damaged, openSea: { ...progress.openSea, anchors: anchorAt(progress.openSea.anchors, [id], at, this.playerNation, v.fuel) } });
+      this.seaNote(`${name}はこの海で待機します (編成の停泊地から出せます)`);
+    }
+    this.refreshSeparation();
+  }
+
+  /** Ships lying at sea within a sector and a half (this navy's, waiting): they can join the fleet (合流). */
+  private waitingNear(): Array<{ index: number; shipIds: string[] }> {
+    const anchors = loadProgress().openSea.anchors;
+    return anchors.flatMap((a, index) => {
+      if (a.at.base) return [];
+      const dx = Math.abs(this.flagship.x - a.at.x) % WORLD_PX.w;
+      return Math.hypot(Math.min(dx, WORLD_PX.w - dx), this.flagship.y - a.at.y) <= SECTOR_PX * 1.5 ? [{ index, shipIds: a.shipIds }] : [];
+    });
+  }
+
+  /** 合流: a group waiting nearby sails with the fleet as an escort fleet (and lies wherever the fleet lies after). */
+  private joinWaiting(index: number): void {
+    const progress = loadProgress();
+    const group = progress.openSea.anchors[index];
+    if (!group) return;
+    const registry = DataLoader.getRegistry(this);
+    const ships = group.shipIds.map((sid) => registry.byId(sid)).filter((x): x is IShipData => x !== undefined);
+    saveProgress({ ...progress, openSea: { ...progress.openSea, anchors: progress.openSea.anchors.filter((_, k) => k !== index) } });
+    if (ships.length > 0) this.spawnGroup(ships, '合流艦隊', 'escort', true, this.playerNation);
+    this.seaNote(`${ships.length} 隻が合流しました`);
+    this.refreshSeparation();
+  }
+
+  private separationSheet: Phaser.GameObjects.GameObject[] = [];
+
+  /** The sheet of orders: each ship's 帰投 / 待機, and the groups waiting nearby to 合流. The battle stands still. */
+  private openSeparation(): void {
+    if (!this.voyage || this.separationSheet.length > 0) return;
+    this.setPaused(true, false);
+    this.refreshSeparation(true);
+  }
+
+  private closeSeparation(): void {
+    for (const o of this.separationSheet) o.destroy();
+    this.separationSheet = [];
+    this.setPaused(false);
+  }
+
+  private refreshSeparation(open = false): void {
+    if (!open && this.separationSheet.length === 0) return;
+    for (const o of this.separationSheet) o.destroy();
+    this.separationSheet = [];
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      (o as unknown as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor?.(0);
+      (o as unknown as Phaser.GameObjects.Components.Depth).setDepth?.(DEPTH_HUD + 20);
+      this.separationSheet.push(o);
+      return o;
+    };
+    const ships = this.separable().slice(0, 8);
+    const waiting = this.waitingNear().slice(0, 3);
+    const w = Math.min(CANVAS_W - 40, 640);
+    const rowH = IS_PORTRAIT ? 64 : 46;
+    const rows = Math.max(1, ships.length) + waiting.length;
+    const h = 110 + rows * (rowH + 8) + (IS_PORTRAIT ? 80 : 60);
+    const x0 = CANVAS_W / 2 - w / 2;
+    const y0 = Math.max(20, CANVAS_H / 2 - h / 2);
+    add(this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.6).setInteractive());
+    add(this.add.rectangle(x0, y0, w, h, Colors.panel, 0.97).setOrigin(0, 0).setStrokeStyle(2, Colors.rim));
+    add(this.add.text(x0 + 24, y0 + 20, '艦隊の分離', textStyle(IS_PORTRAIT ? 20 : 18, Css.gold, { fontStyle: 'bold' })));
+    add(this.add.text(x0 + 24, y0 + 56, '帰投: 入渠できる一番近い基地へ  ·  待機: この海に停泊', textStyle(IS_PORTRAIT ? 13 : 12, Css.muted)));
+    let y = y0 + 100;
+    const bw = IS_PORTRAIT ? 120 : 96;
+    if (ships.length === 0) {
+      add(this.add.text(x0 + 24, y + rowH / 2, '分けられる艦がありません (旗艦は分けられません)', textStyle(14, Css.muted)).setOrigin(0, 0.5));
+      y += rowH + 8;
+    }
+    for (const ship of ships) {
+      const pct = Math.round((ship.stats.currentHp / Math.max(1, ship.stats.maxHp)) * 100);
+      const label = add(this.add.text(x0 + 24, y + rowH / 2, `${ship.stats.name.replace(/\s*\(.*\)\s*$/, '')}  耐久 ${pct}%`, textStyle(IS_PORTRAIT ? 15 : 14, pct <= 25 ? Css.danger : Css.text)).setOrigin(0, 0.5));
+      fitText(label, w - 48 - bw * 2 - 24);
+      add(new UIButton(this, x0 + w - 24 - bw * 1.5 - 8, y + rowH / 2, '帰投', () => this.separate(ship, 'home'), { variant: 'secondary', width: bw, height: rowH - 6, fontSize: 14 }));
+      add(new UIButton(this, x0 + w - 24 - bw / 2, y + rowH / 2, '待機', () => this.separate(ship, 'wait'), { variant: 'secondary', width: bw, height: rowH - 6, fontSize: 14 }));
+      y += rowH + 8;
+    }
+    for (const g of waiting) {
+      add(this.add.text(x0 + 24, y + rowH / 2, `近くで待機中の艦 ${g.shipIds.length} 隻`, textStyle(IS_PORTRAIT ? 15 : 14, Css.cyan)).setOrigin(0, 0.5));
+      add(new UIButton(this, x0 + w - 24 - bw / 2, y + rowH / 2, '合流', () => this.joinWaiting(g.index), { variant: 'primary', width: bw, height: rowH - 6, fontSize: 14 }));
+      y += rowH + 8;
+    }
+    add(new UIButton(this, CANVAS_W / 2, y0 + h - (IS_PORTRAIT ? 44 : 34), '閉じる', () => this.closeSeparation(), { variant: 'secondary', width: 200, height: IS_PORTRAIT ? 56 : 44, fontSize: 15 }));
+  }
+
   /** A band at the top of the screen for the fight's start and its result. */
   private seaNote(text: string, ms = 4000): void {
     for (const o of this.seaBanner) o.destroy();
@@ -2417,7 +2556,7 @@ export class BattleScene extends Phaser.Scene {
     this.openingBanner = [];
     const w = Math.min(CANVAS_W - 40, 720);
     // Below the voyage's readout on the right (the chart button, the place and the fuel).
-    const y = IS_PORTRAIT ? 600 : 150;
+    const y = IS_PORTRAIT ? 640 : 150;
     const t = this.add.text(CANVAS_W / 2, y, text, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { align: 'center', lineSpacing: 6, wordWrap: { width: w - 40, useAdvancedWrap: true } }))
       .setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH_HUD + 8);
     const band = this.add.rectangle(CANVAS_W / 2, y - 12, w, t.height + 24, Colors.bgDeep, 0.85).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
