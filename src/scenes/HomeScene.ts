@@ -25,6 +25,7 @@ import { SKILL_LABEL } from '@/systems/CaptainSystem';
 import { clearCount, fleetSlots, missionLines, missionValue, nextRank, promotionText, RANK_MISSIONS, rankOf, RANKS } from '@/systems/RankSystem';
 import { buildState, buildsHere, buildTimeMs, fastBuild, ownedIds, starterShip } from '@/systems/ShipyardSystem';
 import { timerKey } from '@/systems/TimerSystem';
+import { dockProblem } from '@/systems/AnchorageSystem';
 import { buildDock, dockCount, fastRepairCost, nextDock, hpFraction, isDocked, repairCost, repairTimeMs, repairTimeText, startRepair, fastRepair } from '@/systems/DockSystem';
 import { ScrollList } from '@/ui/components/ScrollList';
 import { canAfford, formatResources, pay, scaleCost } from '@/systems/ResourceSystem';
@@ -925,11 +926,13 @@ export class HomeScene extends Phaser.Scene {
       const time = repairTimeMs(ship.hp, f, repairMul, ship.shipClass);
       const away = sailingIds(progress.sortie).includes(ship.id);
       const afford = canAfford(progress.resources, cost);
+      // 入渠は入渠のある基地で (0.0.70): a ship lying at sea or at a base without a dock sails to one first.
+      const farAway = dockProblem(progress, ship.id);
       addRow({
         tag: '損傷', tagCss: Css.danger, name: ship.name,
         sub: `HP ${Math.round(ship.hp * f)} / ${ship.hp}  ·  ${repairTimeText(time, clock)}  ·  ${formatResources(cost)}`,
-        action: away ? '出撃中' : !dockFree ? 'ドック満杯' : !afford ? '資源不足' : time <= 0 ? '即時修理' : '入渠',
-        can: !away && dockFree && afford, onTap: () => this.dock(ship),
+        action: away ? '出撃中' : farAway ?? (!dockFree ? 'ドック満杯' : !afford ? '資源不足' : time <= 0 ? '即時修理' : '入渠'),
+        can: !away && !farAway && dockFree && afford, onTap: () => this.dock(ship),
       });
     }
     list.setContentHeight(Math.max(0, row * (rowH + 6) - 6)).setOffset(dockOffset);
@@ -945,6 +948,7 @@ export class HomeScene extends Phaser.Scene {
 
   private dock(ship: IShipData): void {
     const progress = loadProgress();
+    if (dockProblem(progress, ship.id)) return;
     const f = hpFraction(progress, ship.id);
     const event = activeEffects();
     const paid = pay(progress.resources, scaleCost(repairCost(ship.hp, f), event.repairMul));

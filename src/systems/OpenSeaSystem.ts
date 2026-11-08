@@ -514,7 +514,8 @@ export function shipPlace(anchors: readonly IAnchoredFleet[], shipId: string, na
   return anchors.find((a) => a.shipIds.includes(shipId))?.at ?? homeAnchor(nation);
 }
 
-const samePlace = (a: IAnchorPlace, b: IAnchorPlace): boolean => (a.base !== undefined || b.base !== undefined ? a.base === b.base : Math.hypot(a.x - b.x, a.y - b.y) < 1);
+/** Whether two anchorages are the same place: the same base, or the same point at sea. */
+export const samePlace = (a: IAnchorPlace, b: IAnchorPlace): boolean => (a.base !== undefined || b.base !== undefined ? a.base === b.base : Math.hypot(a.x - b.x, a.y - b.y) < 1);
 
 /** Where a fleet of these ships puts to sea from, or why it can't (its ships lie in different places). */
 export function fleetStart(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], nation: string): { at: IAnchorPlace } | { problem: string } {
@@ -545,6 +546,16 @@ export function parseAnchors(raw: unknown): IAnchoredFleet[] {
     if (shipIds.length === 0) return [];
     return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y } }];
   });
+}
+
+/** Every place the navy's ships lie (0.0.70): the home port first, then each group away. */
+export function anchorages(anchors: readonly IAnchoredFleet[], nation: string): IAnchorPlace[] {
+  return [homeAnchor(nation), ...anchors.map((a) => a.at)];
+}
+
+/** The ships of `shipIds` lying at `at` (編成は同じ停泊地の艦で, 0.0.70). */
+export function shipsAt<T extends string>(anchors: readonly IAnchoredFleet[], shipIds: readonly T[], at: IAnchorPlace, nation: string): T[] {
+  return shipIds.filter((id) => samePlace(shipPlace(anchors, id, nation), at));
 }
 
 /** A place's name: the base's, or the sea's position. */
