@@ -611,6 +611,27 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('海から (0.0.69): the campaign sheet sends the nearest fleet by the autopilot, the HUD made in full', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    type G = { game: Phaser.Game };
+    await open(page, 'CampaignMapScene');
+    // No fleet set up in this session (a reload): the ships lying at home go.
+    const why = await page.evaluate(async () => {
+      const launch = await import('/src/scenes/battle/OpenSeaLaunch.ts');
+      return launch.launchToArea((window as unknown as G).game.scene.getScene('CampaignMapScene'), 'p2');
+    });
+    expect(why).toBeNull();
+    await page.waitForFunction(() => (window as unknown as G).game.scene.isActive('BattleScene'), null, { timeout: 20_000 });
+    await page.waitForTimeout(2000);
+    const sailing = await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { autoMode: boolean; autoBtn?: { label: Phaser.GameObjects.Text }; voyage: { hasRoute: boolean } | null };
+      return { auto: b.autoMode, label: b.autoBtn?.label.text, route: b.voyage?.hasRoute };
+    });
+    expect(sailing).toEqual({ auto: true, label: '自動  ON', route: true });
+    await page.screenshot({ path: info.outputPath('by-sea.png') });
+    expect(errors).toEqual([]);
+  });
+
   test('広い海 (#445): the battle screen sails the world, the chart plans a route, the voyage ends in port', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     type G = { game: Phaser.Game };
@@ -1473,6 +1494,15 @@ test('量が最大のセーブ: every screen fits with every ship, captain and r
   await open(page, 'CaptainScene');
   await page.screenshot({ path: info.outputPath('max-captain.png') });
   expect(await overflowingTexts(page, 'CaptainScene')).toEqual([]);
+  // Every area cleared with S: the area sheet's row holds the most buttons (sortie, sweep, superweapon, 海から 0.0.69).
+  await open(page, 'CampaignMapScene');
+  for (let i = 1; i <= 10; i++) {
+    await page.evaluate((id) => ((window as unknown as { game: Phaser.Game }).game.scene.getScene('CampaignMapScene') as unknown as { selectArea(id: string): void }).selectArea(id), `p${i}`);
+    await page.waitForTimeout(150);
+    expect(await overflowingTexts(page, 'CampaignMapScene'), `p${i} (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'CampaignMapScene'), `p${i} overlaps (${layout})`).toEqual([]);
+  }
+  await page.screenshot({ path: info.outputPath('max-area.png') });
   expect(errors).toEqual([]);
 });
 

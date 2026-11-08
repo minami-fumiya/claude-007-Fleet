@@ -126,7 +126,8 @@ export const RANK_MISSIONS: Partial<Record<number, IRankMission[]>> = {
   9: [carrier(1), battleship(3), sweep(8), medal('science_3')],
   10: [sink(100), areas(8), night(5), medal('victor_2')],
   11: [battleship(5), bigS(4), carrier(6), medal('s_rank_2')],
-  12: [sweep(12), sub(12), win(40), medal('explorer_3')],
+  // 大将 (0.0.69 review): 30 wins, about 9 hours at four battles an hour — below 元帥 (200 sinkings, about 10 hours).
+  12: [sweep(12), sub(12), win(30), medal('explorer_3')],
   13: [sink(200), bigS(6), battleship(8), medal('research_peak')],
 };
 
