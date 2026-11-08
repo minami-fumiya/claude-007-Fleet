@@ -79,7 +79,7 @@ export class WorldMapScene extends Phaser.Scene {
     this.draw();
   }
 
-  /** 試しの航海 (#445): the fleet chosen for the sea puts out from the home port onto the world's ocean. */
+  /** 広い海へ (#445): the fleet chosen puts out onto the world's ocean from where its ships lie (停泊). */
   private openSea(): void {
     const fleet = this.chosenFleet();
     const p = loadProgress();

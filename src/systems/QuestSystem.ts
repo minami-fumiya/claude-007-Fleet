@@ -102,6 +102,8 @@ export const QUEST_EVENTS = [
   'portCall', 'resourceRun', 'fortTaken',
   // 0.0.67 (#65): rings taken, wins beside the patrol, historical battles won at sea
   'worldControl', 'patrolWin', 'historicWin',
+  // 0.0.69 (#445): campaign areas won on the open sea, groups met at sea and beaten, fleets put into a harbour away from home
+  'seaAreaWin', 'seaGroupWin', 'anchoredAway',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

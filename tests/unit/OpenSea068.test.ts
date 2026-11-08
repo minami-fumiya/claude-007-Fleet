@@ -183,9 +183,9 @@ describe('0.0.68 the explored chart', () => {
   it('reads a broken or missing save as an empty chart', () => {
     expect(readExplored(undefined)).toBe(emptyExplored());
     expect(readExplored('zz')).toBe(emptyExplored());
-    expect(parseOpenSea(undefined)).toEqual({ explored: emptyExplored(), sailedPx: 0, voyages: 0 });
-    expect(parseOpenSea({ sailedPx: -5, voyages: 'x' })).toEqual({ explored: emptyExplored(), sailedPx: 0, voyages: 0 });
+    expect(parseOpenSea(undefined)).toEqual({ explored: emptyExplored(), sailedPx: 0, voyages: 0, anchors: [] });
+    expect(parseOpenSea({ sailedPx: -5, voyages: 'x' })).toEqual({ explored: emptyExplored(), sailedPx: 0, voyages: 0, anchors: [] });
     const bits = explore(emptyExplored(), { c: 3, r: 3 });
-    expect(parseOpenSea({ explored: bits, sailedPx: 6400, voyages: 2 })).toEqual({ explored: bits, sailedPx: 6400, voyages: 2 });
+    expect(parseOpenSea({ explored: bits, sailedPx: 6400, voyages: 2 })).toEqual({ explored: bits, sailedPx: 6400, voyages: 2, anchors: [] });
   });
 });

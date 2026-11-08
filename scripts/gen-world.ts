@@ -100,8 +100,9 @@ export function theaterAt([lon, lat]: P): string {
   // The Baltic: south of 60°N from the Danish straits east, and the Gulf of Bothnia (east of Sweden's coast) above.
   if (lon >= 9.5 && lon <= 31 && lat >= 53 && lat <= 67 && (lat < 57.5 || lon >= 16.5)) return 'baltic';
   if (lon >= 27 && lon <= 42 && lat >= 40.5 && lat <= 48) return 'blacksea';
-  if (lon >= -6 && lon <= 37 && lat >= 29 && lat <= 46.5) return 'mediterranean';
-  if (lat >= 64) return 'arctic';
+  // The Mediterranean, without the Bay of Biscay north of Spain.
+  if (lon >= -6 && lon <= 37 && lat >= 29 && lat <= 46.5 && !(lat > 42.5 && lon < 3)) return 'mediterranean';
+  if (lat >= 63) return 'arctic';
   if (lon >= 20 && lon < 101.5 && lat < 32) return 'indian';
   if (lon >= 101.5 && lon < 135 && lat < -8) return 'indian';
   if (lon >= 100 || lon < -100 || (lon < -78 && lat < 12)) {

@@ -793,7 +793,7 @@ export class BattleScene extends Phaser.Scene {
     this.drawEdgeMarkers();
     this.trails.update();
     this.minimap.update(this.playerSide(), this.enemies, this.seenByPlayer);
-    // 試しの航海 (#445, 0.0.68): no enemy at sea yet, so nothing to win or lose but the flagship.
+    // The open sea (#445): its fights are settled one by one (updateSeaFights), never the whole battle.
     if (!this.voyage) this.checkWinLoss();
   }
 
@@ -1136,7 +1136,7 @@ export class BattleScene extends Phaser.Scene {
       };
     }
     const yamato = registry.byId('yamato') ?? registry.byNation(Nation.IJN)[0];
-    // 試しの航海 (#445): no enemy at sea yet.
+    // The open sea (#445) starts with no enemy: they are met as the fleet sails.
     const enemies = this.battleData?.openSea ? [] : generateEnemyFleet(registry, Nation.USN, this.battleData?.mode ?? BattleMode.Surface);
     return {
       playerFleet: FleetSystem.createFleet('default', '大和隊', Nation.IJN, [yamato], 0),
@@ -1950,7 +1950,7 @@ export class BattleScene extends Phaser.Scene {
     return out;
   }
 
-  /** 試しの航海 (#445, 0.0.68): the battle screen sails the world, its own buttons under the minimap. */
+  /** The open sea (#445): the battle screen sails the world, its own buttons under the minimap. */
   private startVoyage(minimapBottom: number): void {
     const nation = this.playerNation ?? Nation.IJN;
     this.voyage = new OpenSeaVoyage({
@@ -2244,7 +2244,8 @@ export class BattleScene extends Phaser.Scene {
     const progress = loadProgress();
     const shipIds = this.friendlies().map((s) => s.dataId).filter((id): id is string => !!id);
     const at = (baseId ? baseAnchor(baseId) : undefined) ?? v.seaPlace();
-    saveProgress({ ...progress, openSea: v.result(progress.openSea, shipIds, at) });
+    const away = baseId !== undefined && baseId !== homeAnchor(this.playerNation).base;
+    saveProgress(withQuestEvents({ ...progress, openSea: v.result(progress.openSea, shipIds, at) }, [['anchoredAway', away ? 1 : 0]], Date.now()));
     this.voyage = null;
     this.scene.start(SceneKeys.WORLD);
   }
@@ -2932,7 +2933,7 @@ export class BattleScene extends Phaser.Scene {
     fitText(kindText, w - 64);
     const campaign = this.battleData?.areaId !== undefined && !this.scenario;
     const lines = this.voyage
-      ? ['試しの航海 — 敵はまだ出ません (0.0.69 から)', '海図で行き先を決めると、自動で走ります', '航海を終えると、軍港に戻ります (探索した海は残ります)']
+      ? [this.engagement ? '交戦中 — 全艦を沈めると勝利、2 区画ほど離れると撤退' : '航海中 — 海図で行き先を決めると自動航行で走ります', '作戦海域に入るか敵艦隊に近づくと、その場で交戦になります', '航海を終えると、艦隊はこの海の上で待機します (基地の円で入港すると、その基地に停泊)']
       : [
         ...pauseLines(this.objective, this.goalText(), this.objectiveState(), { alive: fleet.filter((f) => f.isAlive).length, total: fleet.length }),
         ...(campaign ? ['撤退すると、この出撃は終わります (それまでの報酬は残ります)'] : []),
@@ -2955,7 +2956,7 @@ export class BattleScene extends Phaser.Scene {
   /** Which battle this is and how it is won, for a few seconds as it opens (#279). */
   private showBattleBanner(): void {
     const area = (campaignData as ICampaignData).areas.find((a) => a.id === this.battleData?.areaId);
-    const [kind, goal] = this.battleData?.openSea ? ['外洋 · 試しの航海', '海図で行き先を決めて、世界の海を走れます'] : battleBanner({
+    const [kind, goal] = this.battleData?.openSea ? ['外洋 · 航海', '海図で行き先を決めて、世界の海を走れます'] : battleBanner({
       areaName: area?.name, sortie: area ? this.battleData?.sortie : undefined, exercise: this.exercise && !area,
       scenarioName: this.scenario?.name, goal: this.goalText(), timeLimitSec: this.side?.timeLimitSec,
     });
@@ -3263,6 +3264,8 @@ export class BattleScene extends Phaser.Scene {
       ['tenderWin', won(fleet.some((s) => this.subtypeOf(s) === ShipSubtype.SeaplaneTender))],
       ['largeCarrierFlagWin', won(!!this.flagship && this.subtypeOf(this.flagship) === ShipSubtype.LargeCarrier)], ...(theaterEvent && !area?.training ? [[theaterEvent, won(true)] as [QuestEvent, number]] : []),
       ['trainingWin', won(this.exercise && this.battleData?.training === true)],
+      // 本当のオープンワールド (#445, 0.0.69): fights on the open sea.
+      ['seaAreaWin', won(!!this.voyage && !!area)], ['seaGroupWin', won(!!this.voyage && !!this.battleData?.world)],
       // 海の障害と上陸支援 (#368)
       ['mineSwept', this.fieldsSwept], ['landingStrike', this.landings],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],

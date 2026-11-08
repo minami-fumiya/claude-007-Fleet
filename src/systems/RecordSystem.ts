@@ -509,6 +509,10 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.68 本当のオープンワールド (#445)
   ...ladder('ocean_voyage', '大洋航海章', 'campaign', [10, 100, 500], (g) => `広い海を ${g} 区画走る`, (_r, c) => c.openSeaSectors ?? 0),
   ...ladder('chart_maker', '海図作成章', 'campaign', [50, 300, 1000], (g) => `1 か国で広い海を ${g} 区画探索する`, (_r, c) => c.openSeaExplored ?? 0),
+  // 0.0.69 海の上の戦いと停泊 (#445)
+  ...ladder('sea_area', '洋上攻略章', 'campaign', [1, 10, 50], (g) => `広い海の作戦海域で ${g} 回勝つ`, (_r, c) => total(c, 'seaAreaWin')),
+  ...ladder('sea_group', '遭遇戦章', 'campaign', [1, 20, 100], (g) => `広い海で出会った敵艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'seaGroupWin')),
+  ...ladder('anchored_away', '前進停泊章', 'campaign', [1, 10, 30], (g) => `軍港の外の基地に ${g} 回入港する`, (_r, c) => total(c, 'anchoredAway')),
   // 0.0.66 外洋の第 2 段階 (#65)
   ...ladder('port_call', '寄港章', 'campaign', [1, 10, 50], (g) => `外洋で港に ${g} 回寄る`, (_r, c) => total(c, 'portCall')),
   ...ladder('resource_run', '資源輸送章', 'campaign', [1, 20, 100], (g) => `外洋の資源の場所に ${g} 回寄る`, (_r, c) => total(c, 'resourceRun')),
