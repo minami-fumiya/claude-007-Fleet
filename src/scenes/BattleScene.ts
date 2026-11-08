@@ -2463,7 +2463,7 @@ export class BattleScene extends Phaser.Scene {
     if (body) body.enable = false;
     const progress = loadProgress();
     const name = ship.stats.name.replace(/\s*\(.*\)\s*$/, '');
-    const damaged = { ...progress, ...setDamage(progress, id, ship.stats.currentHp / Math.max(1, ship.stats.maxHp)) };
+    const damaged = withQuestEvents({ ...progress, ...setDamage(progress, id, ship.stats.currentHp / Math.max(1, ship.stats.maxHp)) }, [['fleetDetached', 1]], Date.now());
     if (order === 'home') {
       const base = nearestDock(progress, v.here());
       const at = (base ? baseAnchor(base.id) : undefined) ?? homeAnchor(this.playerNation);
@@ -2494,7 +2494,7 @@ export class BattleScene extends Phaser.Scene {
     if (!group) return;
     const registry = DataLoader.getRegistry(this);
     const ships = group.shipIds.map((sid) => registry.byId(sid)).filter((x): x is IShipData => x !== undefined);
-    saveProgress({ ...progress, openSea: { ...progress.openSea, anchors: progress.openSea.anchors.filter((_, k) => k !== index) } });
+    saveProgress(withQuestEvents({ ...progress, openSea: { ...progress.openSea, anchors: progress.openSea.anchors.filter((_, k) => k !== index) } }, [['fleetJoined', 1]], Date.now()));
     if (ships.length > 0) this.spawnGroup(ships, '合流艦隊', 'escort', true, this.playerNation);
     this.seaNote(`${ships.length} 隻が合流しました`);
     this.refreshSeparation();
@@ -2589,8 +2589,11 @@ export class BattleScene extends Phaser.Scene {
       return s ? [{ id: b.id, name: b.name, kind: 'base' as const, ...s }] : [];
     });
     // 0.0.70: the navy's ports, oil fields and mines on the sea.
-    const stops: IVoyageStop[] = seaPlaces(progress.nation).filter((p) => p.kind === 'port' || p.kind === 'oil' || p.kind === 'mine')
-      .map((p) => ({ id: p.id, name: p.name, kind: p.kind as 'port' | 'oil' | 'mine', c: p.c, r: p.r }));
+    // The enemy's convoy and stronghold too, drawn red with their danger, so the fleet sees them coming.
+    const stops: IVoyageStop[] = seaPlaces(progress.nation).map((p) => ({
+      id: p.id, kind: p.kind as 'port' | 'oil' | 'mine' | 'convoy' | 'fort', c: p.c, r: p.r,
+      name: p.kind === 'fort' ? `${p.name} (敵の要塞・危険度 ${fortDanger()})` : p.kind === 'convoy' ? `${p.name} (敵の船団)` : p.name,
+    }));
     // 訓練海域・演習場 (0.0.70): off the home port.
     const grounds = practiceGrounds(progress.nation);
     const drills: IVoyageStop[] = grounds
@@ -3693,6 +3696,7 @@ export class BattleScene extends Phaser.Scene {
       ['trainingWin', won(this.exercise && this.battleData?.training === true)],
       // 本当のオープンワールド (#445, 0.0.69): fights on the open sea.
       ['seaAreaWin', won(!!this.voyage && !!area)], ['seaGroupWin', won(!!this.voyage && !!this.battleData?.world)],
+      ['seaObjectiveWin', won(!!this.voyage && !!area && this.objective !== Objective.Annihilate)], ['drillWin', won(!!this.voyage && this.drillHp !== null)],
       // 海の障害と上陸支援 (#368)
       ['mineSwept', this.fieldsSwept], ['landingStrike', this.landings],
       ['sinkDestroyer', sunkOf(ShipClass.Destroyer)], ['sinkCruiser', sunkOf(ShipClass.Cruiser)],

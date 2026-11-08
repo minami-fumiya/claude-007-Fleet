@@ -40,10 +40,10 @@ export interface IVoyageHost {
 }
 
 /** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
-export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise';
+export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise' | 'convoy' | 'fort';
 export type IVoyageStop = { id: string; name: string; kind?: VoyageStopKind } & ISectorRef;
 
-const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演' };
+const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演', convoy: '船', fort: '要' };
 
 interface ILoadedSector {
   /** Unwrapped column (may be -1 or cols) and row */
@@ -208,7 +208,8 @@ export class OpenSeaVoyage {
     }
     // In one of the navy's open harbours: the fleet can put in (and lie there, 停泊); a port on the sea refills the
     // tank; an oil field or a mine pays as the fleet sails through (0.0.70).
-    const ring = this.ports.find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
+    // The enemy's convoy and stronghold are drawn as a warning only: coming near starts their fight (BattleScene).
+    const ring = this.ports.filter((p) => p.kind !== 'convoy' && p.kind !== 'fort').find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
     const resource = ring && (ring.kind === 'oil' || ring.kind === 'mine') ? ring : null;
     if (resource && this.passedHere !== resource.id) this.host.passBy(resource.id);
     this.passedHere = resource?.id ?? null;
@@ -299,8 +300,9 @@ export class OpenSeaVoyage {
       const cx = x0 + SECTOR_PX / 2;
       const cy = y0 + SECTOR_PX / 2;
       const kind = port.kind ?? 'base';
-      const color = kind === 'base' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
-      const css = kind === 'base' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
+      const enemy = kind === 'convoy' || kind === 'fort';
+      const color = enemy ? Colors.danger : kind === 'base' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
+      const css = enemy ? Css.danger : kind === 'base' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
       const ring = scene.add.graphics().setDepth(DEPTH_WATER_FX - 1);
       ring.lineStyle(6, color, 0.55).strokeCircle(cx, cy, PORT_RADIUS);
       ring.fillStyle(color, 0.08).fillCircle(cx, cy, PORT_RADIUS);
