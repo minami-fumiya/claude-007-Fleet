@@ -42,6 +42,8 @@ export interface IWorldMap {
   bases: Record<string, ISectorRef>;
   /** Each campaign area's block of sea (0.0.69) */
   areas: Record<string, IAreaBlock>;
+  /** The old 外洋 chart's places at their real spots (0.0.70): "<kind>:<nation>" → place */
+  places: Record<string, { kind: string; nation: string; name: string } & ISectorRef>;
 }
 
 export const WORLD_MAP = worldJson as IWorldMap;

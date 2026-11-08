@@ -37,8 +37,9 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour } from '@/systems/OpenSeaSystem';
-import { OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
+import { FUEL_MAX, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
+import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
+import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
 import { costCap, fleetCost } from '@/systems/FleetCost';
@@ -89,7 +90,7 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
-import { afterBattle, spotWon, worldEnemyFleet, CONTROL_ENEMY_MUL, CONTROL_REWARD_MUL, emptyWorld, endVoyage, FORT_GOLD, FORT_REWARD, HISTORIC_GOLD, mustReturn, PATROL_ARRIVE_SEC, takeFort, winHistoric, winInRing, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
+import { afterBattle, spotWon, worldEnemyFleet, CONTROL_ENEMY_MUL, CONTROL_REWARD_MUL, emptyWorld, endVoyage, FORT_GOLD, FORT_NATION, FORT_REWARD, fortDanger, HISTORIC_GOLD, mustReturn, PORT_REPAIR, PATROL_ARRIVE_SEC, takeFort, winHistoric, winInRing, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
 import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
 import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
@@ -227,7 +228,7 @@ export class BattleScene extends Phaser.Scene {
    * 海の上の交戦 (#445, 0.0.69): the fight going on at sea — a campaign area's (its block's middle) or a group met at
    * sea — settled in place when its enemies are gone or the fleet draws off. Areas fought stay quiet until left.
    */
-  private engagement: ({ kind: 'area'; areaId: string } | { kind: 'encounter'; spotId: string; danger: number }) & { x: number; y: number } | null = null;
+  private engagement: ({ kind: 'area'; areaId: string } | { kind: 'encounter'; spotId: string; danger: number; fort?: boolean; convoy?: boolean }) & { x: number; y: number } | null = null;
   private engagedAreas = new Set<string>();
   /** Objective areas whose 'go to the middle' note was shown on entering (0.0.70). */
   private notedAreas = new Set<string>();
@@ -2020,6 +2021,8 @@ export class BattleScene extends Phaser.Scene {
       minimap: this.minimap,
       openChart: () => this.openChart(),
       enterPort: (baseId) => this.endVoyage(baseId),
+      callAt: (id) => this.callAtSeaPort(id),
+      passBy: (id) => this.passResource(id),
     }, nation, loadProgress().openSea, this.voyagePorts(), placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
     this.voyage.buildUi(minimapBottom);
     audio.music('map');
@@ -2076,7 +2079,7 @@ export class BattleScene extends Phaser.Scene {
     const eng = this.engagement;
     if (eng) {
       // An area's objective decides its fight (0.0.70); a group met at sea is over once it is sunk.
-      if (eng.kind === 'area') {
+      if (eng.kind === 'area' || this.objective !== Objective.Annihilate) {
         const state = this.objectiveState();
         const status = objectiveStatus(this.objective, state);
         if (status && this.objectiveText && this.objectiveText.text !== status) this.objectiveText.setText(status);
@@ -2120,8 +2123,19 @@ export class BattleScene extends Phaser.Scene {
         }
       }
     }
-    // A group lying within a sector and a half.
-    const ports = Object.values(WORLD_MAP.bases);
+    // 0.0.70: a convoy waiting at the start of its route, or the enemy's stronghold, within a sector and a half.
+    const now = Date.now();
+    const world0 = loadProgress().world;
+    for (const place of seaPlaces(this.playerNation)) {
+      if ((place.kind !== 'convoy' && place.kind !== 'fort') || this.seaWon.has(place.id) || !placeReady(world0, place, this.playerNation, now)) continue;
+      const px = this.nearX((place.c + 0.5) * SECTOR_PX);
+      if (Math.hypot(this.flagship.x - px, this.flagship.y - (place.r + 0.5) * SECTOR_PX) < PLACE_FIGHT_RANGE) {
+        this.startPlaceFight(place, { x: px, y: (place.r + 0.5) * SECTOR_PX });
+        return;
+      }
+    }
+    // A group lying within a sector and a half (clear of the bases and, 0.0.70, of the ports and places on the sea).
+    const ports = [...Object.values(WORLD_MAP.bases), ...Object.values(WORLD_MAP.places ?? {})];
     const hour = seaHour(Date.now());
     const world = loadProgress().world;
     for (const g of encountersNear(this.playerNation, here, hour, this.seaTheaters(), ports)) {
@@ -2231,6 +2245,41 @@ export class BattleScene extends Phaser.Scene {
     this.beginSeaFight({ kind: 'encounter', spotId: g.id, danger: g.danger, ...at }, `敵艦隊と遭遇 (危険度 ${g.danger})`, nation, '全艦を沈めると勝利');
   }
 
+  /**
+   * A place of the old chart fought in place (0.0.70): the convoy (merchant ships and a light escort, sunk for their
+   * cargo) or the stronghold (batteries on its island and a garrison; destroyed batteries take it).
+   */
+  private startPlaceFight(place: ReturnType<typeof seaPlaces>[number], at: { x: number; y: number }): void {
+    const registry = DataLoader.getRegistry(this);
+    const danger = place.kind === 'fort' ? fortDanger() : placeDanger(this.playerNation, place);
+    const theater = (campaignData as ICampaignData).theaters.find((t) => t.id === theaterOf(place.c, place.r));
+    const nation = place.kind === 'fort' ? FORT_NATION[this.playerNation] : (theater?.opponents?.[this.playerNation] ?? FORT_NATION[this.playerNation]) as Nation;
+    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(danger)) };
+    this.enemyNation = nation;
+    this.side = null;
+    if (place.kind === 'fort') {
+      // The stronghold: its batteries round the island in the middle, the garrison off it towards the fleet.
+      this.objective = Objective.Bombard;
+      this.frame = seaFrame(at, this.flagship);
+      this.spawnLandTargets();
+      const garrison = worldEnemyFleet(registry.byNation(nation), { id: place.id, danger });
+      this.spawnSeaEnemies(garrison, nation, this.zonePoint({ x: 0.5, y: 0.75 }), mods);
+      this.objectiveText = this.add
+        .text(IS_PORTRAIT ? 20 : 140, IS_PORTRAIT ? 316 : 84, '', textStyle(12, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+        .setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 2);
+      this.beginSeaFight({ kind: 'encounter', spotId: place.id, danger, fort: true, ...at }, `敵の要塞: ${place.name}`, nation, '陣地を全て破壊すると攻略');
+      return;
+    }
+    // The convoy: three merchant ships in line and an escort of the lighter kind.
+    this.objective = Objective.Annihilate;
+    this.frame = null;
+    const merchant = (specialData as unknown as ISpecialData).convoy as IShipData;
+    const escort = worldEnemyFleet(registry.byNation(nation), { id: place.id, danger: Math.max(1, danger - 3) }).slice(0, 2);
+    this.spawnSeaEnemies([merchant, merchant, merchant], nation, at, { ...NO_MODIFIERS });
+    if (escort.length > 0) this.spawnSeaEnemies(escort, nation, { x: at.x + 500, y: at.y + 300 }, mods);
+    this.beginSeaFight({ kind: 'encounter', spotId: place.id, danger, convoy: true, ...at }, `敵の船団: ${place.name}`, nation, '輸送船と護衛を沈めると積荷が入る');
+  }
+
   private beginSeaFight(eng: NonNullable<BattleScene['engagement']>, title: string, nation: Nation, goal: string): void {
     this.engagement = eng;
     this.enemyNation = nation;
@@ -2282,7 +2331,7 @@ export class BattleScene extends Phaser.Scene {
     const eng = this.engagement;
     if (!eng || !this.battleData) return;
     const keep = this.battleData;
-    this.battleData = { ...keep, ...(eng.kind === 'area' ? { areaId: eng.areaId } : { world: { spotId: eng.spotId, danger: eng.danger } }) };
+    this.battleData = { ...keep, ...(eng.kind === 'area' ? { areaId: eng.areaId } : { world: { spotId: eng.spotId, danger: eng.danger, fort: eng.fort, convoy: eng.convoy } }) };
     this.settlingInPlace = true;
     this.triggerGameOver(victory);
     this.battleData = keep;
@@ -2383,12 +2432,46 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** The navy's open bases, the home port first, where the fleet can put in (停泊, 0.0.69). */
-  private voyagePorts(): Array<{ id: string; name: string; c: number; r: number }> {
+  private voyagePorts(): IVoyageStop[] {
     const progress = loadProgress();
-    return openBases(progress).flatMap((b) => {
+    const bases: IVoyageStop[] = openBases(progress).flatMap((b) => {
       const s = WORLD_MAP.bases[b.id];
-      return s ? [{ id: b.id, name: b.name, ...s }] : [];
+      return s ? [{ id: b.id, name: b.name, kind: 'base' as const, ...s }] : [];
     });
+    // 0.0.70: the navy's ports, oil fields and mines on the sea.
+    const stops: IVoyageStop[] = seaPlaces(progress.nation).filter((p) => p.kind === 'port' || p.kind === 'oil' || p.kind === 'mine')
+      .map((p) => ({ id: p.id, name: p.name, kind: p.kind as 'port' | 'oil' | 'mine', c: p.c, r: p.r }));
+    return [...bases, ...stops];
+  }
+
+  /** A port on the sea (0.0.70): a full tank, the ships patched to PORT_REPAIR; the voyage goes on. */
+  private callAtSeaPort(id: string): void {
+    const v = this.voyage;
+    const place = seaPlaces(this.playerNation).find((p) => p.id === id);
+    if (!v || !place || this.engagement) return;
+    v.refuel();
+    for (const s of this.friendlies()) if (s.isAlive) s.stats.currentHp = Math.max(s.stats.currentHp, Math.round(s.stats.maxHp * PORT_REPAIR));
+    const now = Date.now();
+    const progress = loadProgress();
+    saveProgress(withQuestEvents({ ...progress, world: markPlace(progress.world ?? emptyWorld(), place, now) }, [['portCall', 1]], now));
+    this.seaNote(`${place.name}で補給: 燃料 ${FUEL_MAX}・耐久 ${Math.round(PORT_REPAIR * 100)}% まで応急修理`);
+  }
+
+  /** An oil field or a mine sailed through (0.0.70): its resources, once a game hour. */
+  private passResource(id: string): void {
+    const place = seaPlaces(this.playerNation).find((p) => p.id === id);
+    if (!place || this.engagement) return;
+    const now = Date.now();
+    const progress = loadProgress();
+    const world = progress.world ?? emptyWorld();
+    if (!placeReady(world, place, this.playerNation, now)) {
+      this.seaNote(`${place.name}: この時間の積み込みは済んでいます (次の 1 時間に)`);
+      return;
+    }
+    const reward = placeReward(place, this.playerNation);
+    const g = gainResources(progress.resources, reward, holdCap(progress.facilities));
+    saveProgress(withQuestEvents({ ...progress, resources: g.resources, world: markPlace(world, place, now), ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(reward, g.lost, -1), now), 'overflow', g.lost, now) }, [['resourceRun', 1]], now));
+    this.seaNote(`${place.name}: ${formatResources(reward)} を積み込みました`);
   }
 
   /**
@@ -3486,6 +3569,16 @@ export class BattleScene extends Phaser.Scene {
         lost = addResources(lost, g.lost);
         progress = withQuestEvents(progress, [['worldWin', 1]], now);
         line += `  ·  外洋の報酬 ${formatResources(extra)}・ゴールド ${worldGold(w.danger)}${ring.took ? `  ·  危険度 ${w.danger} の輪の制海権を取りました` : ''}${w.historic ? `  ·  史実の海戦 ゴールド ${HISTORIC_GOLD}` : ''}`;
+        // 敵の船団 (0.0.70): its cargo, once a game hour.
+        const convoyPlace = w.convoy ? seaPlaces(this.playerNation).find((p) => p.id === w.spotId) : undefined;
+        if (convoyPlace) {
+          const cargo = placeReward(convoyPlace, this.playerNation);
+          world = markPlace(world, convoyPlace, now);
+          const g3 = gainResources(progress.resources, cargo, holdCap(progress.facilities));
+          progress = withQuestEvents({ ...progress, resources: g3.resources, ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(cargo, g3.lost, -1), now), 'overflow', g3.lost, now) }, [['resourceRun', 1]], now);
+          lost = addResources(lost, g3.lost);
+          line += `  ·  船団の積荷 ${formatResources(cargo)}`;
+        }
         // 敵の要塞 (#65 第 2 段階): taken, it pays its own reward and makes the water round it safer this week.
         if (w.fort) {
           world = takeFort(world, w.spotId, now);
