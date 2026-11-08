@@ -20,6 +20,11 @@ export interface IWorldIsland extends ISectorRef {
   name: string;
 }
 
+/** A campaign area's block of sea (#445, 0.0.69): its top-left sector and its side (2, or 1 in the Black Sea) */
+export interface IAreaBlock extends ISectorRef {
+  size: number;
+}
+
 export interface IWorldMap {
   cols: number;
   rows: number;
@@ -33,6 +38,10 @@ export interface IWorldMap {
   theater: string[];
   islands: IWorldIsland[];
   homePorts: Record<string, { name: string } & ISectorRef>;
+  /** bases.json ids at their sea sectors (0.0.69) */
+  bases: Record<string, ISectorRef>;
+  /** Each campaign area's block of sea (0.0.69) */
+  areas: Record<string, IAreaBlock>;
 }
 
 export const WORLD_MAP = worldJson as IWorldMap;
@@ -45,13 +54,14 @@ export const THEATER_OF_CODE: Record<string, string> = {
   P: 'pacific', N: 'north_pacific', A: 'atlantic', S: 'south_atlantic', M: 'mediterranean', B: 'baltic', K: 'blacksea', I: 'indian', R: 'arctic',
 };
 
-/** The fleet's fuel (the 外洋's 補給 100 kept as a tank, #445): a sector sailed costs FUEL_PER_SECTOR. */
+/**
+ * The fleet's fuel (the 外洋's 補給 100 kept as a tank, #445): a sector sailed costs FUEL_PER_SECTOR. 0.0.69: the
+ * sectors are a quarter of 0.0.68's across (1.25°), so a sector costs a quarter as much (the same fuel for the same sea).
+ */
 export const FUEL_MAX = 100;
-export const FUEL_PER_SECTOR = 3;
+export const FUEL_PER_SECTOR = 0.75;
 /** Out of fuel the fleet still crawls home at this share of its speed. */
 export const NO_FUEL_SPEED = 0.3;
-/** Time compression while cruising (×1 / ×4 / ×8). */
-export const WARP_STEPS: readonly number[] = [1, 4, 8];
 /** How many sectors round the flagship the battle screen holds: 1 = the 3 × 3 window. */
 export const STREAM_RADIUS = 1;
 /** The sectors round the fleet that count as explored. */
@@ -244,8 +254,8 @@ export function seaSteps(from: ISectorRef, map: IWorldMap = WORLD_MAP): Int16Arr
 
 const stepsCache = new Map<string, Int16Array>();
 
-/** 危険度 1〜10 of a sea sector for a navy: farther from its home port by sea, more dangerous. */
-export const DANGER_STEP = 3;
+/** 危険度 1〜10 of a sea sector for a navy: farther from its home port by sea, more dangerous (a step every 12 sectors, ~1,700 km). */
+export const DANGER_STEP = 12;
 export function dangerAt(nation: string, s: ISectorRef): number {
   const home = homePort(nation);
   if (!home) return 1;
@@ -268,9 +278,34 @@ export function emptyExplored(): string {
   return '0'.repeat(HEX_LEN);
 }
 
-/** A saved explored string read safely: wrong length or stray characters give an empty chart. */
+/** 0.0.68's chart: 72 × 40 sectors of 5°, each now 4 × 4 of 0.0.69's. */
+const OLD_COLS = 72;
+const OLD_ROWS = 40;
+const OLD_HEX_LEN = (OLD_COLS * OLD_ROWS) / 4;
+
+/**
+ * A saved explored string read safely: wrong length or stray characters give an empty chart. 0.0.68's coarser chart
+ * is carried over, each of its sectors opening the 16 that now cover it.
+ */
 export function readExplored(raw: unknown): string {
-  return typeof raw === 'string' && raw.length === HEX_LEN && /^[0-9a-f]+$/.test(raw) ? raw : emptyExplored();
+  if (typeof raw !== 'string' || !/^[0-9a-f]+$/.test(raw)) return emptyExplored();
+  if (raw.length === HEX_LEN) return raw;
+  if (raw.length !== OLD_HEX_LEN) return emptyExplored();
+  const fx = WORLD_MAP.cols / OLD_COLS;
+  const fy = WORLD_MAP.rows / OLD_ROWS;
+  const chars = emptyExplored().split('');
+  for (let k = 0; k < OLD_COLS * OLD_ROWS; k++) {
+    if (((parseInt(raw[k >> 2], 16) >> (k & 3)) & 1) === 0) continue;
+    const c0 = (k % OLD_COLS) * fx;
+    const r0 = Math.floor(k / OLD_COLS) * fy;
+    for (let dy = 0; dy < fy; dy++) {
+      for (let dx = 0; dx < fx; dx++) {
+        const n = (r0 + dy) * WORLD_MAP.cols + c0 + dx;
+        chars[n >> 2] = (parseInt(chars[n >> 2], 16) | (1 << (n & 3))).toString(16);
+      }
+    }
+  }
+  return chars.join('');
 }
 
 export function isExplored(bits: string, s: ISectorRef): boolean {
@@ -417,4 +452,28 @@ export function parseOpenSea(raw: unknown): IOpenSeaProgress {
 /** Sectors sailed, for the record and the medals. */
 export function sectorsSailed(p: Pick<IOpenSeaProgress, 'sailedPx'>): number {
   return Math.floor(p.sailedPx / SECTOR_PX);
+}
+
+/** A campaign area's block of sea, or undefined for an area without one. */
+export function areaBlock(areaId: string, map: IWorldMap = WORLD_MAP): IAreaBlock | undefined {
+  return map.areas[areaId];
+}
+
+/** The pixel centre of an area's block, and its half-width. */
+export function areaCentre(block: IAreaBlock): { x: number; y: number; half: number } {
+  return { x: (block.c + block.size / 2) * SECTOR_PX, y: (block.r + block.size / 2) * SECTOR_PX, half: (block.size / 2) * SECTOR_PX };
+}
+
+/** The area whose block holds sector `s`, if any. */
+export function areaAt(s: ISectorRef, map: IWorldMap = WORLD_MAP): string | undefined {
+  const c = wrapCol(s.c, map.cols);
+  for (const [id, b] of Object.entries(map.areas)) {
+    if (s.r >= b.r && s.r < b.r + b.size && colGap(c, b.c, map.cols) < map.cols / 2 && wrapCol(c - b.c, map.cols) < b.size) return id;
+  }
+  return undefined;
+}
+
+/** A base's sector (bases.json id). */
+export function baseSector(baseId: string, map: IWorldMap = WORLD_MAP): ISectorRef | undefined {
+  return map.bases[baseId];
 }

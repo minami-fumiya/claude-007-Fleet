@@ -3,7 +3,7 @@ import { CANVAS_W, DEPTH_HUD, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameC
 import { BaseShip } from '@/entities/ships/BaseShip';
 import { resolveMap } from '@/systems/MapSystem';
 import {
-  EXPLORE_RADIUS, FUEL_MAX, ISectorRef, NO_FUEL_SPEED, PORT_RADIUS, SECTOR_PX, WARP_STEPS, WORLD_MAP, WORLD_PX, IOpenSeaProgress,
+  EXPLORE_RADIUS, FUEL_MAX, ISectorRef, NO_FUEL_SPEED, PORT_RADIUS, SECTOR_PX, WORLD_MAP, WORLD_PX, IOpenSeaProgress,
   explore, fuelForPx, homePort, isSea, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
 } from '@/systems/OpenSeaSystem';
 import { IResolvedMap } from '@/types/Map';
@@ -49,11 +49,10 @@ const THEATER_JA: Record<string, string> = {
 /**
  * 本当のオープンワールド (#445, 0.0.68 段階 A1): the battle screen sailing the world. The sectors round the flagship
  * are loaded (land, shoals, the home port) and the far ones dropped; crossing the east-west join moves everything by
- * the world's width; fuel burns by the distance sailed; cruising can be sped up.
+ * the world's width; fuel burns by the distance sailed. 0.0.69: no time compression; the chart's route is sailed by
+ * the autopilot (自動航行) at the fleet's own speed.
  */
 export class OpenSeaVoyage {
-  /** Time compression now (×1 / ×4 / ×8) */
-  warp = 1;
   fuel = FUEL_MAX;
   explored: string;
   /** Pixels the flagship has sailed this voyage */
@@ -64,7 +63,6 @@ export class OpenSeaVoyage {
   private centre: ISectorRef = { c: -999, r: -999 };
   private last: { x: number; y: number } | null = null;
   private info!: Phaser.GameObjects.Text;
-  private warpBtn!: UIButton;
   private portBtn!: UIButton;
   private routeGfx!: Phaser.GameObjects.Graphics;
   private readonly home: ISectorRef & { name: string };
@@ -94,9 +92,6 @@ export class OpenSeaVoyage {
     let y = minimapBottom + 16 + h / 2;
     new UIButton(scene, x, y, '海図', () => this.host.openChart(), { variant: 'primary', width: w, height: h, fontSize: IS_PORTRAIT ? 16 : 14 })
       .setDepth(DEPTH_HUD + 2).setScrollFactor(0);
-    y += h + 10;
-    this.warpBtn = new UIButton(scene, x, y, '速さ ×1', () => this.cycleWarp(), { variant: 'secondary', width: w, height: h, fontSize: IS_PORTRAIT ? 16 : 14 });
-    this.warpBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     y += h / 2 + 10;
     this.info = scene.add.text(CANVAS_W - 20, y, '', textStyle(IS_PORTRAIT ? 13 : 12, Css.text, { align: 'right', lineSpacing: 4, stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(1, 0).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
@@ -105,19 +100,6 @@ export class OpenSeaVoyage {
     });
     this.portBtn.setDepth(DEPTH_HUD + 3).setScrollFactor(0).setVisible(false);
     this.routeGfx = scene.add.graphics().setDepth(DEPTH_WATER_FX + 2);
-  }
-
-  private cycleWarp(): void {
-    const i = WARP_STEPS.indexOf(this.warp);
-    this.setWarp(WARP_STEPS[(i + 1) % WARP_STEPS.length]);
-  }
-
-  setWarp(k: number): void {
-    this.warp = k;
-    this.warpBtn?.setLabel(`速さ ×${k}`);
-    // At speed the camera keeps the flagship in the middle (the usual easing falls behind).
-    const lerp = k > 1 ? 1 : 0.12;
-    this.host.scene.cameras.main.setLerp(lerp, lerp);
   }
 
   /** The chart's destination: the route to follow, sector by sector. */
@@ -168,9 +150,7 @@ export class OpenSeaVoyage {
     if (this.last) this.sailedPx += Math.hypot(f.x - this.last.x, f.y - this.last.y);
     this.last = { x: f.x, y: f.y };
     this.fuel = Math.max(0, FUEL_MAX - fuelForPx(this.sailedPx));
-    // 早送り: the ships make `warp` times their speed (turning is sped up by the scene's delta).
-    const mul = this.warp * (this.fuel <= 0 ? NO_FUEL_SPEED : 1);
-    if (mul !== 1) for (const s of this.host.ships()) s.envSpeedMul *= mul;
+    if (this.fuel <= 0) for (const s of this.host.ships()) s.envSpeedMul *= NO_FUEL_SPEED;
 
     const here = { c: Math.floor(f.x / SECTOR_PX), r: Math.max(0, Math.min(WORLD_MAP.rows - 1, Math.floor(f.y / SECTOR_PX))) };
     if (here.c !== this.centre.c || here.r !== this.centre.r) {

@@ -617,9 +617,7 @@ export class BattleScene extends Phaser.Scene {
   update(loopTime: number, delta: number): void {
     if (this.gameOver || this.paused) return;
     const frameStart = this.perfText ? performance.now() : 0;
-    // 早送り (#445): cruising on the open sea runs faster (the voyage speeds the ships; turning keeps pace here).
-    const warp = this.voyage?.warp ?? 1;
-    this.battleUpdate(loopTime, delta * warp);
+    this.battleUpdate(loopTime, delta);
     if (this.oceanTile && this.oceanTile.scrollFactorX === 0) {
       const cam = this.cameras.main;
       this.oceanTile.setTilePosition(cam.scrollX, cam.scrollY);
