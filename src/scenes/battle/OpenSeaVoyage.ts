@@ -78,6 +78,8 @@ export class OpenSeaVoyage {
   private last: { x: number; y: number } | null = null;
   private info!: Phaser.GameObjects.Text;
   private portBtn!: UIButton;
+  /** 分離・合流 (0.0.70), kept just under the readout whatever its height */
+  private sepBtn: UIButton | null = null;
   private routeGfx!: Phaser.GameObjects.Graphics;
   /** The navy's open bases (the home port first), its ports, oil fields and mines (0.0.70) */
   private readonly ports: IVoyageStop[];
@@ -133,8 +135,8 @@ export class OpenSeaVoyage {
     this.info = scene.add.text(CANVAS_W - 20, y, '', textStyle(IS_PORTRAIT ? 13 : 12, Css.text, { align: 'right', lineSpacing: 4, stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(1, 0).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     // 艦隊の分離 (0.0.70): under the readout.
-    new UIButton(scene, x, y + (IS_PORTRAIT ? 96 : 76), '分離・合流', () => this.host.openSeparation(), { variant: 'secondary', width: w, height: h, fontSize: IS_PORTRAIT ? 15 : 13 })
-      .setDepth(DEPTH_HUD + 2).setScrollFactor(0);
+    this.sepBtn = new UIButton(scene, x, y + (IS_PORTRAIT ? 96 : 76), '分離・合流', () => this.host.openSeparation(), { variant: 'secondary', width: w, height: h, fontSize: IS_PORTRAIT ? 15 : 13 });
+    this.sepBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
     this.portBtn = new UIButton(scene, CANVAS_W / 2, IS_PORTRAIT ? 420 : 200, '入港する', () => {
       const here = this.portHere;
       if (!here) return;
@@ -239,6 +241,7 @@ export class OpenSeaVoyage {
     if (this.info.text !== text) {
       this.info.setText(text);
       this.info.setColor(fuel <= 20 ? Css.danger : Css.text);
+      this.sepBtn?.setY(this.info.y + this.info.height + 10 + (IS_PORTRAIT ? 26 : 20));
     }
   }
 

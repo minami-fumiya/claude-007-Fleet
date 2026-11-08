@@ -42,7 +42,7 @@ const SAVE = {
 const SCREENS = [
   'MainMenuScene', 'HomeScene', 'FleetBuilderScene', 'CampaignMapScene', 'ScenarioScene', 'ArsenalScene',
   'ShipyardScene', 'CustomizationScene', 'EncyclopediaScene', 'RecordScene', 'SettingsScene', 'HelpScene',
-  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'DevelopScene', 'FocusScene', 'DesignScene', 'WorldMapScene',
+  'CaptainScene', 'BaseScene', 'ShopScene', 'ItemScene', 'ExpeditionScene', 'DevelopScene', 'FocusScene', 'DesignScene',
 ];
 
 /** `lastSeen`: the version whose 更新内容 (#205) counts as read; the default hides the sheet so screens stay clear. */
@@ -632,6 +632,30 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('外洋 (0.0.70): the fleet builder puts the fleet to sea from its anchorage', async ({ page }, info) => {
+    const layout = info.project.metadata.layout as string;
+    const errors = await boot(page, layout);
+    type G = { game: Phaser.Game };
+    await open(page, 'FleetBuilderScene', { sea: true });
+    expect(await overflowingTexts(page, 'FleetBuilderScene'), `sea builder (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'FleetBuilderScene'), `sea builder overlaps (${layout})`).toEqual([]);
+    const label = await page.evaluate(() => {
+      const s = (window as unknown as G).game.scene.getScene('FleetBuilderScene') as unknown as { startBtn: { label: Phaser.GameObjects.Text }; placeBtn: { label: Phaser.GameObjects.Text } };
+      return { start: s.startBtn.label.text, place: s.placeBtn.label.text };
+    });
+    expect(label.start).toBe('出港  ▶');
+    expect(label.place).toMatch(/^停泊: /);
+    await page.screenshot({ path: info.outputPath('sea-builder.png') });
+    await page.evaluate(() => {
+      const s = (window as unknown as G).game.scene.getScene('FleetBuilderScene') as unknown as { startBattle(): void };
+      s.startBattle();
+    });
+    await page.waitForFunction(() => (window as unknown as G).game.scene.isActive('BattleScene'), null, { timeout: 20_000 });
+    const sea = await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: unknown }).voyage !== null);
+    expect(sea).toBe(true);
+    expect(errors).toEqual([]);
+  });
+
   test('広い海 (#445): the battle screen sails the world, the chart plans a route, the voyage ends in port', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     type G = { game: Phaser.Game };
@@ -721,9 +745,9 @@ test.describe('screens', () => {
     expect(won).toEqual({ gameOver: false, enemies: 0, cleared: true });
     await page.screenshot({ path: info.outputPath('open-sea-won.png') });
 
-    // The voyage ends from the pause sheet: back to the 外洋 screen, the chart and the distance kept, the fleet lying at sea.
+    // The voyage ends from the pause sheet: back to the home port's screen (0.0.70), the chart and the distance kept, the fleet lying at sea.
     await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { retreat(): void }).retreat());
-    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('WorldMapScene')?.sys.settings.active === true);
+    await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('HomeScene')?.sys.settings.active === true);
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.openSea as { explored: string; sailedPx: number; voyages: number; anchors: Array<{ at: { base?: string } }> });
     expect(saved.voyages).toBe(1);
     expect(saved.anchors).toHaveLength(1);

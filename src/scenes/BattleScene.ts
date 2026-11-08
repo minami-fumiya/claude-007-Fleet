@@ -2672,7 +2672,8 @@ export class BattleScene extends Phaser.Scene {
     const away = baseId !== undefined && baseId !== homeAnchor(this.playerNation).base;
     saveProgress(withQuestEvents({ ...progress, openSea: v.result(progress.openSea, shipIds, at) }, [['anchoredAway', away ? 1 : 0]], Date.now()));
     this.voyage = null;
-    this.scene.start(SceneKeys.WORLD);
+    // 0.0.70: the old 外洋 screen is gone; the voyage ends at the home port's screen.
+    this.scene.start(SceneKeys.HOME);
   }
 
   private onProjectileHit(projectile: BaseProjectile, target: BaseShip): void {

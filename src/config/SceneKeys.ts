@@ -23,6 +23,7 @@ export const SceneKeys = {
   DEVELOP: 'DevelopScene',
   FOCUS: 'FocusScene',
   DESIGN: 'DesignScene',
+  /** 外洋 (0.0.70): no screen of its own any more; a result's way back to the sea (the fleet builder's 外洋) */
   WORLD: 'WorldMapScene',
   OPEN_SEA_CHART: 'OpenSeaChartScene',
 } as const;
