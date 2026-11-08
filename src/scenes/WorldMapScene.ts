@@ -3,6 +3,7 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { audio } from '@/systems/AudioSystem';
+import { fleetStart } from '@/systems/OpenSeaSystem';
 import { DataLoader } from '@/utils/DataLoader';
 import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
@@ -78,7 +79,7 @@ export class WorldMapScene extends Phaser.Scene {
     this.draw();
   }
 
-  /** 試しの航海 (#445): the fleet chosen for the sea puts out from the home port onto the world's ocean. */
+  /** 広い海へ (#445): the fleet chosen puts out onto the world's ocean from where its ships lie (停泊). */
   private openSea(): void {
     const fleet = this.chosenFleet();
     const p = loadProgress();
@@ -90,6 +91,12 @@ export class WorldMapScene extends Phaser.Scene {
       this.say('外洋に出ている艦隊を帰港させてから出てください', true);
       return;
     }
+    // 停泊 (0.0.69): the fleet puts to sea from where its ships lie (a base, or the point at sea they stopped at).
+    const start = fleetStart(p.openSea.anchors, fleet.ships.map((s) => s.id), p.nation);
+    if ('problem' in start) {
+      this.say(start.problem, true);
+      return;
+    }
     const init: IBattleInitData = {
       playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', p.nation, fleet.ships, 0),
       enemyFleet: FleetSystem.createFleet('enemy-fleet', '—', p.nation, [], 0),
@@ -97,6 +104,7 @@ export class WorldMapScene extends Phaser.Scene {
       formation: fleet.formation,
       captainIds: fleet.captainIds,
       openSea: true,
+      openSeaFrom: start.at,
     };
     this.scene.start(SceneKeys.BATTLE, init);
   }

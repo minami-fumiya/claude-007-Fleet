@@ -106,6 +106,11 @@ export class AirOpsSystem {
     return n;
   }
 
+  /** The losses counted afresh (a fight at sea settled, the open sea goes on, #445): the planes were replaced. */
+  resetLosses(): void {
+    for (const w of this.wings.values()) w.lost = 0;
+  }
+
   hasCarrier(carrier: BaseShip): boolean {
     return this.wings.has(carrier);
   }

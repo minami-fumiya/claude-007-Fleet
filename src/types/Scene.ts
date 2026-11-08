@@ -36,6 +36,10 @@ export interface IBattleInitData {
   };
   /** 本当のオープンワールド (#445, 0.0.68): the battle screen sails the world from the home port (試しの航海, no enemy yet) */
   openSea?: boolean;
+  /** 停泊 (0.0.69): where the fleet puts to sea from (a base, or the point at sea it lay at); the home port if absent */
+  openSeaFrom?: { base?: string; x: number; y: number };
+  /** A route to sail at once (作戦の一覧 → the area's block), sector by sector */
+  openSeaRoute?: Array<{ c: number; r: number }>;
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** 演習 (#404): one enemy fleet for each 支援艦隊 the player brings, each matched to it */
