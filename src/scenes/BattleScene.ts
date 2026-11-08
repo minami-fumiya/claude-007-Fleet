@@ -38,7 +38,6 @@ import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
 import { SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, seaHour } from '@/systems/OpenSeaSystem';
-import { OPEN_SEA_OBJECTIVES } from '@/scenes/battle/OpenSeaLaunch';
 import { OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
@@ -119,6 +118,7 @@ import { Torpedo } from '@/entities/weapons/Torpedo';
 import specialData from '@/data/special.json';
 import { IScenario, IScenarioSide } from '@/types/Scenario';
 import { historyComparison, inZone, IScenarioSetup, placeAt, setupFor, zoneRadius } from '@/systems/ScenarioSystem';
+import { framePixel, framePoint, frameRadius, inFrameZone, ISeaFrame, seaFrame } from '@/systems/SeaFrame';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
 import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
@@ -176,6 +176,10 @@ const SONAR_PING_MS = 2200;
 
 /** Convoy route: merchant ships enter on the west edge (CONVOY_START_X) and escape off the east edge. */
 const CONVOY_EXIT_MARGIN = 90;
+/** The island the batteries of an area at sea stand on (0.0.70; drawn, not solid). */
+const SEA_ISLAND_R = 420;
+/** How near an objective area's middle its fight starts at sea (0.0.70): about where a campaign battle begins. */
+const SEA_SQUARE_ENTRY = 1900;
 /** Player escorts and air strikes prefer the scenario's target ships by this much. */
 const OBJECTIVE_PRIORITY = 0.5;
 /** Enemy AI prefers convoy ships over warships by this much. */
@@ -225,6 +229,8 @@ export class BattleScene extends Phaser.Scene {
    */
   private engagement: ({ kind: 'area'; areaId: string } | { kind: 'encounter'; spotId: string; danger: number }) & { x: number; y: number } | null = null;
   private engagedAreas = new Set<string>();
+  /** Objective areas whose 'go to the middle' note was shown on entering (0.0.70). */
+  private notedAreas = new Set<string>();
   private seaWon = new Set<string>();
   private seaCheckAt = 0;
   private settlingInPlace = false;
@@ -335,6 +341,12 @@ export class BattleScene extends Phaser.Scene {
   private escapeProgress = 0;
   private landTargets: BaseShip[] = [];
   private objectiveText: Phaser.GameObjects.Text | null = null;
+  /** 海の上の作戦の枠 (0.0.70): the objective's ground on the ocean while an area's fight lasts; null otherwise. */
+  private frame: ISeaFrame | null = null;
+  /** The battle's opening band, cleared early when a fight at sea brings its own (0.0.70). */
+  private openingBanner: Phaser.GameObjects.GameObject[] = [];
+  /** What the objective drew (zone ring, island) for a fight at sea, cleared when it is settled. */
+  private frameGfx: Phaser.GameObjects.GameObject[] = [];
   /** Captains in command of player ships this battle */
   private captains = new Map<BaseShip, ICaptain>();
   /** Where ships have spawned this battle, so later ones keep clear of them */
@@ -468,6 +480,9 @@ export class BattleScene extends Phaser.Scene {
     this.fieldsSwept = 0;
     this.landings = 0;
     this.objectiveText = null;
+    this.frame = null;
+    this.frameGfx = [];
+    this.openingBanner = [];
     this.scenarioTargets = [];
     this.captains = new Map();
     this.spawnedAt = [];
@@ -482,6 +497,7 @@ export class BattleScene extends Phaser.Scene {
     this.voyage = null;
     this.engagement = null;
     this.engagedAreas = new Set();
+    this.notedAreas = new Set();
     this.seaWon = new Set();
     this.seaCheckAt = 0;
     this.settlingInPlace = false;
@@ -978,8 +994,8 @@ export class BattleScene extends Phaser.Scene {
   private drawObjectiveZone(): void {
     const zone = this.side?.zone;
     if (!zone) return;
-    const c = placeAt(zone, WORLD.w, WORLD.h);
-    const r = zoneRadius(zone.r, WORLD.w, WORLD.h);
+    const c = this.zonePoint(zone);
+    const r = this.zoneRadiusHere(zone.r);
     const g = this.add.graphics().setDepth(DEPTH_WATER_FX);
     g.fillStyle(Colors.gold, 0.06);
     g.fillCircle(c.x, c.y, r);
@@ -989,15 +1005,36 @@ export class BattleScene extends Phaser.Scene {
       g.arc(c.x, c.y, r, a, a + Math.PI / 36);
       g.strokePath();
     }
-    this.add.text(c.x, c.y, zone.label, textStyle(14, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX);
+    const t = this.add.text(c.x, c.y, zone.label, textStyle(14, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX);
+    if (this.frame) this.frameGfx.push(g, t);
+  }
+
+  /** A point of the battle square (0..1): the battle's own sea, or the objective's ground at sea (0.0.70). */
+  private zonePoint(p: { x: number; y: number }): { x: number; y: number } {
+    return this.frame ? framePoint(this.frame, p) : placeAt(p, WORLD.w, WORLD.h);
+  }
+
+  private zoneRadiusHere(r: number): number {
+    return this.frame ? frameRadius(this.frame, r) : zoneRadius(r, WORLD.w, WORLD.h);
+  }
+
+  private inZoneHere(x: number, y: number, zone: { x: number; y: number; r: number }): boolean {
+    return this.frame ? inFrameZone(this.frame, x, y, zone) : inZone(x, y, zone, WORLD.w, WORLD.h);
   }
 
   /** 海の障害 (#368): the sea's minefields and nets, by its depth and objective (none in exercises or scenarios). */
   private setupHazards(area: ICampaignArea | undefined): void {
     if (!area || this.exercise || this.scenario) return;
     const plan = hazardPlan(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
-    const island = [...this.map.islands].sort((a, b) => b.reduce((n, c) => n + c.r, 0) - a.reduce((n, c) => n + c.r, 0))[0]?.[0];
-    this.hazards = placeHazards(plan, area.id, WORLD, this.objective === Objective.Bombard ? island : undefined);
+    const f = this.frame;
+    if (f) {
+      // At sea (0.0.70): laid out on the battle square, then turned onto the ocean.
+      const core = { x: f.size / 2, y: f.size / 2, r: SEA_ISLAND_R };
+      this.hazards = placeHazards(plan, area.id, { w: f.size, h: f.size }, this.objective === Objective.Bombard ? core : undefined).map((z) => ({ ...z, ...framePixel(f, z) }));
+    } else {
+      const island = [...this.map.islands].sort((a, b) => b.reduce((n, c) => n + c.r, 0) - a.reduce((n, c) => n + c.r, 0))[0]?.[0];
+      this.hazards = placeHazards(plan, area.id, WORLD, this.objective === Objective.Bombard ? island : undefined);
+    }
     if (this.hazards.length === 0) return;
     this.hazardGfx = this.add.graphics().setDepth(DEPTH_WATER_FX);
     this.hazardLabels = this.hazards.map((z) => this.add.text(z.x, z.y, HAZARD_LABEL[z.kind], textStyle(13, z.kind === 'minefield' ? Css.danger : Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX));
@@ -1071,18 +1108,38 @@ export class BattleScene extends Phaser.Scene {
   /** Convoy: three merchant ships start on the west edge with the escort fleet beside them. */
   private spawnConvoy(): void {
     const data = (specialData as unknown as ISpecialData).convoy as IShipData;
+    const f = this.frame;
     for (const dy of [-90, 0, 90]) {
-      const ship = this.spawnShip(data, CONVOY_START_X, WORLD.h / 2 + dy);
+      // At sea (0.0.70) the convoy starts on the side the fleet came from and makes for the far side.
+      const at = f ? framePixel(f, { x: CONVOY_START_X, y: f.size / 2 + dy }) : { x: CONVOY_START_X, y: WORLD.h / 2 + dy };
+      const ship = this.spawnShip(data, at.x, at.y);
       ship.isConvoy = true;
-      ship.setAngle(90);
+      ship.setAngle(f ? headingTo(at, framePoint(f, { x: 1, y: 0.5 })) : 90);
       this.convoy.push(ship);
     }
   }
 
   /** Merchant ships sail east at their own pace; reaching the far edge counts as escaped. */
   private updateConvoy(dtSec: number): void {
+    const f = this.frame;
     for (const ship of this.convoy) {
       if (!ship.isAlive) continue;
+      if (f) {
+        // The battle square's own coordinates (0..1): across it from its west side to its east.
+        const dx = ship.x - f.cx;
+        const dy = ship.y - f.cy;
+        const lx = (dx * f.cos + dy * f.sin) / f.size + 0.5;
+        const ly = (-dx * f.sin + dy * f.cos) / f.size + 0.5;
+        if (lx >= 1 - CONVOY_EXIT_MARGIN / f.size) {
+          this.convoyEscaped++;
+          ship.setActive(false).setVisible(false);
+          (ship.body as Phaser.Physics.Arcade.Body).enable = false;
+          continue;
+        }
+        const s = waypointSteer(ship, framePoint(f, { x: 1.05, y: ly }), 10);
+        if (s) ship.steer({ headingDeg: s.headingDeg, throttle: 1 }, dtSec, 40);
+        continue;
+      }
       if (ship.x >= WORLD.w - CONVOY_EXIT_MARGIN) {
         this.convoyEscaped++;
         ship.setActive(false).setVisible(false);
@@ -1096,7 +1153,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Bombardment: batteries, a harbour and an airfield spread over the biggest island. */
   private spawnLandTargets(): void {
-    const island = [...this.map.islands].sort((a, b) => b.reduce((n, c) => n + c.r, 0) - a.reduce((n, c) => n + c.r, 0))[0];
+    const island = this.frame ? [this.seaIsland()] : [...this.map.islands].sort((a, b) => b.reduce((n, c) => n + c.r, 0) - a.reduce((n, c) => n + c.r, 0))[0];
     if (!island) return;
     const special = specialData as unknown as ISpecialData;
     const core = island[0];
@@ -2018,8 +2075,17 @@ export class BattleScene extends Phaser.Scene {
     this.seaCheckAt = time + 500;
     const eng = this.engagement;
     if (eng) {
-      const live = this.enemies.some((e) => e.isAlive && !e.isLand);
-      if (!live) {
+      // An area's objective decides its fight (0.0.70); a group met at sea is over once it is sunk.
+      if (eng.kind === 'area') {
+        const state = this.objectiveState();
+        const status = objectiveStatus(this.objective, state);
+        if (status && this.objectiveText && this.objectiveText.text !== status) this.objectiveText.setText(status);
+        const outcome = evaluateObjective(this.objective, state);
+        if (outcome) {
+          this.settleSeaFight(outcome === 'victory');
+          return;
+        }
+      } else if (!this.enemies.some((e) => e.isAlive && !e.isLand)) {
         this.settleSeaFight(true);
         return;
       }
@@ -2031,15 +2097,27 @@ export class BattleScene extends Phaser.Scene {
     const here = v.here();
     const areaId = areaAt(here);
     for (const id of [...this.engagedAreas]) if (id !== areaId) this.engagedAreas.delete(id);
+    for (const id of [...this.notedAreas]) if (id !== areaId) this.notedAreas.delete(id);
     const data = campaignData as ICampaignData;
     if (areaId && !this.engagedAreas.has(areaId)) {
       const area = data.areas.find((a) => a.id === areaId);
       const progress = loadProgress();
-      if (area && !area.training && (OPEN_SEA_OBJECTIVES as readonly string[]).includes(area.objective ?? Objective.Annihilate)
-        && this.seaTheaters().has(area.theater) && isUnlocked(area, progress.campaign)) {
-        this.engagedAreas.add(areaId);
-        this.startAreaFight(area);
-        return;
+      if (area && !area.training && this.seaTheaters().has(area.theater) && isUnlocked(area, progress.campaign)) {
+        // An objective with a clock or a ground (0.0.70) starts on its battle square, as near as a campaign battle's.
+        const objective = area.objective ?? Objective.Annihilate;
+        const plain = objective === Objective.Annihilate || objective === Objective.SinkTargets;
+        const block = WORLD_MAP.areas[area.id];
+        const c = block ? areaCentre(block) : null;
+        const near = !c || Math.hypot(this.nearX(c.x) - this.flagship.x, c.y - this.flagship.y) <= SEA_SQUARE_ENTRY;
+        if (plain || near) {
+          this.engagedAreas.add(areaId);
+          this.startAreaFight(area);
+          return;
+        }
+        if (!this.notedAreas.has(areaId)) {
+          this.notedAreas.add(areaId);
+          this.seaNote(`作戦海域: ${area.name} — ${OBJECTIVE_LABEL[objective]}。中心へ進むと始まります`);
+        }
       }
     }
     // A group lying within a sector and a half.
@@ -2064,7 +2142,11 @@ export class BattleScene extends Phaser.Scene {
     return best;
   }
 
-  /** A campaign area's fight at sea: its escorts (if its route has them) off the block's edge, its main fleet in the middle. */
+  /**
+   * A campaign area's fight at sea: its escorts (if its route has them) between the fleet and the area, its main fleet
+   * in the middle. Its objective (0.0.70: all seven) is laid on the battle square turned to face the fleet (SeaFrame):
+   * the zone, the escape point, the convoy's way, the batteries' island and the minefields.
+   */
   private startAreaFight(area: ICampaignArea): void {
     const block = WORLD_MAP.areas[area.id];
     if (!block) return;
@@ -2075,6 +2157,11 @@ export class BattleScene extends Phaser.Scene {
     if (ships.length === 0) return;
     const c = areaCentre(block);
     const centre = { x: this.nearX(c.x), y: c.y };
+    const objective = area.objective ?? Objective.Annihilate;
+    this.objective = objective;
+    this.side = campaignSide(area);
+    this.frame = seaFrame(centre, this.flagship, objective === Objective.Convoy ? 'west' : 'south');
+    this.enemyNation = nation;
     const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(enemyScale(data, area, this.playerNation)) };
     const route = sortieRoute(area, ships);
     // The escorts wait between the fleet and the main body; a supply cache or a whirlpool pays or costs on entry.
@@ -2090,8 +2177,39 @@ export class BattleScene extends Phaser.Scene {
       saveProgress({ ...progress, resources: g.resources });
       this.seaNote(node.kind === 'whirlpool' ? `渦潮を抜けました: ${formatResources(node.loot)} を失いました` : `補給の場所: ${formatResources(node.loot)} を得ました`);
     }
-    this.spawnSeaEnemies(ships, nation, centre, mods);
-    this.beginSeaFight({ kind: 'area', areaId: area.id, ...centre }, `作戦海域: ${area.name}`, nation);
+    // The plain fights keep 0.0.69's place (the middle); the others meet the enemy where the campaign's battle does.
+    const plain = objective === Objective.Annihilate || objective === Objective.SinkTargets;
+    const main = plain ? centre : this.zonePoint(this.mainSpawn(ships.length));
+    this.spawnSeaEnemies(ships, nation, main, mods, true);
+    if (objective === Objective.Convoy) this.spawnConvoy();
+    if (objective === Objective.Bombard) this.spawnLandTargets();
+    this.setupHazards(area);
+    this.drawObjectiveZone();
+    if (objective !== Objective.Annihilate) {
+      this.objectiveText = this.add
+        .text(IS_PORTRAIT ? 20 : 140, IS_PORTRAIT ? 316 : 84, '', textStyle(12, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 3 }))
+        .setOrigin(0, 0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 2);
+    }
+    this.beginSeaFight({ kind: 'area', areaId: area.id, ...centre }, `作戦海域: ${area.name}`, nation, plain ? '全艦を沈めると勝利' : objectiveText(area));
+  }
+
+  /** The middle of the enemy's starting line on the battle square (0..1), as the campaign's battle places it. */
+  private mainSpawn(count: number): { x: number; y: number } {
+    const line = enemySpawnPoints(count, BATTLE_WORLD);
+    const p = line[Math.floor(line.length / 2)] ?? { x: BATTLE_WORLD.w / 2, y: BATTLE_WORLD.h * 0.25 };
+    return { x: p.x / BATTLE_WORLD.w, y: p.y / BATTLE_WORLD.h };
+  }
+
+  /** The island an area's batteries stand on at sea (drawn on the water; the ships are not stopped by it). */
+  private seaIsland(): { x: number; y: number; r: number } {
+    const at = this.zonePoint({ x: 0.5, y: 0.5 });
+    const g = this.add.graphics().setDepth(DEPTH_WATER_FX - 1);
+    g.fillStyle(0x6b7a4e, 0.85);
+    g.fillCircle(at.x, at.y, SEA_ISLAND_R);
+    g.fillStyle(0xc9b27a, 0.9);
+    g.fillCircle(at.x, at.y, SEA_ISLAND_R * 0.82);
+    this.frameGfx.push(g);
+    return { ...at, r: SEA_ISLAND_R };
   }
 
   /** A group met at sea, by the danger of the water. */
@@ -2105,24 +2223,26 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     const at = { x: this.nearX((g.c + 0.5) * SECTOR_PX), y: (g.r + 0.5) * SECTOR_PX };
-    this.spawnSeaEnemies(ships, nation, at, { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(g.danger)) });
-    this.beginSeaFight({ kind: 'encounter', spotId: g.id, danger: g.danger, ...at }, `敵艦隊と遭遇 (危険度 ${g.danger})`, nation);
-  }
-
-  private beginSeaFight(eng: NonNullable<BattleScene['engagement']>, title: string, nation: Nation): void {
-    this.engagement = eng;
-    this.enemyNation = nation;
     this.objective = Objective.Annihilate;
     this.side = null;
+    this.frame = null;
+    this.enemyNation = nation;
+    this.spawnSeaEnemies(ships, nation, at, { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(g.danger)) });
+    this.beginSeaFight({ kind: 'encounter', spotId: g.id, danger: g.danger, ...at }, `敵艦隊と遭遇 (危険度 ${g.danger})`, nation, '全艦を沈めると勝利');
+  }
+
+  private beginSeaFight(eng: NonNullable<BattleScene['engagement']>, title: string, nation: Nation, goal: string): void {
+    this.engagement = eng;
+    this.enemyNation = nation;
     this.battleStartedAt = -1;
     this.voyage?.clearRoute();
     audio.music('battle');
-    this.seaNote(`${title} — 全艦を沈めると勝利、2 区画ほど離れると撤退`);
+    this.seaNote(`${title} — ${goal}。2 区画ほど離れると撤退`);
     this.comment('start', {});
   }
 
   /** Enemy ships at sea round `at`, in line ahead, with the battle's own AI, trails and sightings. */
-  private spawnSeaEnemies(ships: IShipData[], nation: Nation, at: { x: number; y: number }, mods: IShipModifiers): void {
+  private spawnSeaEnemies(ships: IShipData[], nation: Nation, at: { x: number; y: number }, mods: IShipModifiers, main = false): void {
     const offsets = FormationSystem.getOffsets(Formation.LineAhead, Math.max(0, ships.length - 1));
     let lead: BaseShip | null = null;
     const heading = Phaser.Math.RadToDeg(Math.atan2(this.flagship.y - at.y, this.flagship.x - at.x)) + 90;
@@ -2142,6 +2262,17 @@ export class BattleScene extends Phaser.Scene {
       ai.patrol = { x: enemy.x, y: enemy.y };
       if (i === 0) lead = enemy;
       else if (lead) ai.station = { lead, offset: offsets[i - 1] };
+      // The area's main fleet carries its objective (0.0.70): the ship to sink, the one making for the zone.
+      const side = this.side;
+      if (main && side) {
+        const target = (side.targets ?? []).includes(shipData.id) || (side.targetLead === true && i === 0);
+        if (side.zone && side.enemyGoesForZone && (side.targets ?? []).includes(shipData.id)) ai.goal = this.zonePoint(side.zone);
+        if (side.zone && side.enemyGoesForZone && target && side.targetLead) {
+          ai.goal = this.zonePoint(side.zone);
+          ai.goalThrottle = goalThrottle(Math.hypot(ai.goal.x - enemy.x, ai.goal.y - enemy.y), enemy.currentSpeed, side.arrivalSec);
+        }
+        if (target) this.scenarioTargets.push(enemy);
+      }
       this.aiSystems.push(ai);
     });
   }
@@ -2173,6 +2304,26 @@ export class BattleScene extends Phaser.Scene {
     for (const e of this.enemies) if (e.active) e.destroy();
     this.enemies.length = 0;
     this.aiSystems.length = 0;
+    // The objective's ground (0.0.70): convoy, batteries, zone, minefields, the line on the HUD.
+    for (const c of this.convoy) if (c.active) c.destroy();
+    this.convoy.length = 0;
+    this.convoyEscaped = 0;
+    this.landTargets = [];
+    this.scenarioTargets = [];
+    this.escapeStart = null;
+    this.escapeProgress = 0;
+    for (const o of this.frameGfx) o.destroy();
+    this.frameGfx = [];
+    this.hazards = [];
+    this.hazardGfx?.destroy();
+    this.hazardGfx = null;
+    for (const t of this.hazardLabels) t.destroy();
+    this.hazardLabels = [];
+    this.objectiveText?.destroy();
+    this.objectiveText = null;
+    this.frame = null;
+    this.side = null;
+    this.objective = Objective.Annihilate;
     for (const ws of [this.playerWeapons, this.enemyWeapons]) {
       for (const p of ws.projectiles) if (p.active) p.deactivate();
       ws.fired.shells = 0;
@@ -2212,8 +2363,12 @@ export class BattleScene extends Phaser.Scene {
   /** A band at the top of the screen for the fight's start and its result. */
   private seaNote(text: string, ms = 4000): void {
     for (const o of this.seaBanner) o.destroy();
+    // A fight met just off the harbour: its band takes the opening band's place (0.0.70).
+    for (const o of this.openingBanner) if (o.active) o.destroy();
+    this.openingBanner = [];
     const w = Math.min(CANVAS_W - 40, 720);
-    const y = IS_PORTRAIT ? 470 : 150;
+    // Below the voyage's readout on the right (the chart button, the place and the fuel).
+    const y = IS_PORTRAIT ? 600 : 150;
     const t = this.add.text(CANVAS_W / 2, y, text, textStyle(IS_PORTRAIT ? 15 : 14, Css.text, { align: 'center', lineSpacing: 6, wordWrap: { width: w - 40, useAdvancedWrap: true } }))
       .setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH_HUD + 8);
     const band = this.add.rectangle(CANVAS_W / 2, y - 12, w, t.height + 24, Colors.bgDeep, 0.85).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
@@ -2452,7 +2607,7 @@ export class BattleScene extends Phaser.Scene {
     const zone = this.side?.zone;
     if (this.autoMode && zone && this.objective === Objective.Breakthrough) {
       // Breakthrough: AUTO makes for the zone and fights on the way.
-      const goal = placeAt(zone, WORLD.w, WORLD.h);
+      const goal = this.zonePoint(zone);
       this.flagship.steer({ headingDeg: headingTo(this.flagship, goal), throttle: 1 }, dtSec, SHIP_ROTATE_SPEED);
       return;
     }
@@ -2810,8 +2965,8 @@ export class BattleScene extends Phaser.Scene {
       targetsAlive: this.scenarioTargets.filter((t) => t.isAlive).length,
       targetsTotal: this.scenarioTargets.length,
       escapeProgress: this.trackEscape(),
-      flagshipInZone: zone ? inZone(this.flagship.x, this.flagship.y, zone, WORLD.w, WORLD.h) : false,
-      enemyInZone: zone ? this.scenarioTargets.some((t) => t.isAlive && inZone(t.x, t.y, zone, WORLD.w, WORLD.h)) : false,
+      flagshipInZone: zone ? this.inZoneHere(this.flagship.x, this.flagship.y, zone) : false,
+      enemyInZone: zone ? this.scenarioTargets.some((t) => t.isAlive && this.inZoneHere(t.x, t.y, zone)) : false,
       elapsedSec: this.elapsedSec(),
       timeLimitSec: this.side?.timeLimitSec ?? 0,
     };
@@ -2821,8 +2976,8 @@ export class BattleScene extends Phaser.Scene {
   private trackEscape(): number {
     const zone = this.side?.zone;
     if (!zone || (this.objective !== Objective.PreventEscape && this.objective !== Objective.Delay)) return 0;
-    const c = placeAt(zone, WORLD.w, WORLD.h);
-    const r = zoneRadius(zone.r, WORLD.w, WORLD.h);
+    const c = this.zonePoint(zone);
+    const r = this.zoneRadiusHere(zone.r);
     const alive = this.scenarioTargets.filter((t) => t.isAlive);
     if (alive.length === 0) return this.escapeProgress;
     const d = Math.max(0, Math.min(...alive.map((t) => Math.hypot(t.x - c.x, t.y - c.y))) - r);
@@ -2968,6 +3123,7 @@ export class BattleScene extends Phaser.Scene {
     const t1 = this.add.text(CANVAS_W / 2, y - (IS_PORTRAIT ? 22 : 18), kind, textStyle(IS_PORTRAIT ? 20 : 20, Css.gold, { fontStyle: 'bold' })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
     const t2 = this.add.text(CANVAS_W / 2, y + (IS_PORTRAIT ? 22 : 18), goal, textStyle(IS_PORTRAIT ? 14 : 15, Css.text, { align: 'center', wordWrap: { width: w - 32, useAdvancedWrap: true } })).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH_HUD + 7);
     for (const t of [t1, t2]) fitText(t, w - 24);
+    this.openingBanner = [band, t1, t2];
     this.time.delayedCall(3000, () => this.tweens.add({ targets: [band, t1, t2], alpha: 0, duration: 500, onComplete: () => [band, t1, t2].forEach((o) => o.destroy()) }));
     // ナレーション (#106): the area and its goal read out; then the battle's first call.
     voice.say(narrationLine('areaStart', { area: area?.name ?? this.scenario?.name ?? kind, objective: this.goalText() }), 'narration');

@@ -12,8 +12,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { loadProgress } from '@/utils/ProgressStore';
 
-/** Areas the open sea fights in 0.0.69 (案 2): the plain fights. The other objectives still sail from the 作戦 screen. */
-export const OPEN_SEA_OBJECTIVES = ['Annihilate', 'SinkTargets'] as const;
+export { OPEN_SEA_OBJECTIVES } from '@/systems/OpenSeaSystem';
 
 interface ICandidate {
   ships: IShipData[];

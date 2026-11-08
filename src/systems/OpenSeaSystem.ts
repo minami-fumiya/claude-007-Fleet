@@ -597,3 +597,6 @@ export function encounterAt(nation: string, s: ISectorRef, hour: number, theater
 export function encountersNear(nation: string, centre: ISectorRef, hour: number, theaters: ReadonlySet<string>, ports: readonly ISectorRef[], radius = 1): IEncounter[] {
   return sectorWindow(centre, radius).map((s) => encounterAt(nation, s, hour, theaters, ports)).filter((g): g is IEncounter => g !== null);
 }
+
+/** Areas the open sea fights: the plain fights from 0.0.69 (案 2), every objective from 0.0.70. */
+export const OPEN_SEA_OBJECTIVES = ['Annihilate', 'SinkTargets', 'Convoy', 'Bombard', 'Breakthrough', 'PreventEscape', 'Delay'] as const;
