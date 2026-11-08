@@ -656,6 +656,28 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 
+  test('作戦の出撃準備 (0.0.70): a campaign sortie sails from the anchorage to its area', async ({ page }, info) => {
+    const errors = await boot(page, info.project.metadata.layout as string);
+    type G = { game: Phaser.Game };
+    await page.evaluate(() => (window as unknown as G).game.registry.set('campaign.area', 'p5'));
+    await open(page, 'FleetBuilderScene');
+    await page.evaluate(() => {
+      const s = (window as unknown as G).game.scene.getScene('FleetBuilderScene') as unknown as {
+        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
+      };
+      s.openPicker(0);
+      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
+      s.startBattle();
+    });
+    await page.waitForFunction(() => (window as unknown as G).game.scene.isActive('BattleScene'), null, { timeout: 20_000 });
+    const sailing = await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: { hasRoute: boolean } | null; autoMode: boolean; battleData: { openSeaRoute?: unknown[] } };
+      return { sea: b.voyage !== null, route: b.voyage?.hasRoute, auto: b.autoMode, legs: (b.battleData.openSeaRoute?.length ?? 0) > 1 };
+    });
+    expect(sailing).toEqual({ sea: true, route: true, auto: true, legs: true });
+    expect(errors).toEqual([]);
+  });
+
   test('広い海 (#445): the battle screen sails the world, the chart plans a route, the voyage ends in port', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     type G = { game: Phaser.Game };
@@ -1358,16 +1380,9 @@ test.describe('screens', () => {
 
   test('a campaign sortie fights its escorts first, then advances to the main fleet (#53)', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
-    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p5'));
-    await open(page, 'FleetBuilderScene');
-    await page.evaluate(() => {
-      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
-        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
-      };
-      s.openPicker(0);
-      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
-      s.startBattle();
-    });
+    // 0.0.70: the builder sails to sea; a node-by-node sortie is what an older save may still hold (#53 #138).
+    await open(page, 'CampaignMapScene');
+    await startNodeSortie(page);
     await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
     const first = await page.evaluate(() => {
       const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { battleData: { sortie: unknown }; setPaused(p: boolean): void; triggerGameOver(v: boolean): void };
@@ -1395,16 +1410,9 @@ test.describe('screens', () => {
   test('a sortie left after its first battle is continued from the map after a reload (#138)', async ({ page }, info) => {
     const layout = info.project.metadata.layout as string;
     const errors = await boot(page, layout);
-    await page.evaluate(() => (window as unknown as { game: Phaser.Game }).game.registry.set('campaign.area', 'p5'));
-    await open(page, 'FleetBuilderScene');
-    await page.evaluate(() => {
-      const s = (window as unknown as { game: Phaser.Game }).game.scene.getScene('FleetBuilderScene') as unknown as {
-        ships: Array<{ id: string }>; openPicker(i: number): void; pickShip(s: { id: string }): void; startBattle(): void;
-      };
-      s.openPicker(0);
-      s.pickShip(s.ships.find((x) => x.id === 'yamato')!);
-      s.startBattle();
-    });
+    // 0.0.70: the builder sails to sea; a node-by-node sortie is what an older save may still hold (#53 #138).
+    await open(page, 'CampaignMapScene');
+    await startNodeSortie(page);
     await page.waitForFunction(() => (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene')?.sys.settings.active === true);
     await page.evaluate(() => {
       const b = (window as unknown as { game: Phaser.Game }).game.scene.getScene('BattleScene') as unknown as { setPaused(p: boolean): void; triggerGameOver(v: boolean): void };
@@ -1449,6 +1457,23 @@ test.describe('screens', () => {
     expect(errors).toEqual([]);
   });
 });
+
+/** A node-by-node campaign sortie of p5 with Yamato, as the builder started one before 0.0.70 (an older save's). */
+async function startNodeSortie(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    type G = { game: Phaser.Game };
+    const flow = await import('/src/utils/SortieFlow.ts');
+    const camp = (await import('/src/data/campaign.json')).default as unknown as { areas: Array<{ id: string; enemy: { nation: string } }> };
+    const { DataLoader } = await import('/src/utils/DataLoader.ts');
+    const { enemyShips } = await import('/src/systems/CampaignSystem.ts');
+    const scene = (window as unknown as G).game.scene.getScene('CampaignMapScene');
+    const registry = DataLoader.getRegistry(scene);
+    const area = camp.areas.find((a) => a.id === 'p5')!;
+    const nation = area.enemy.nation;
+    const init = flow.beginSortie(scene, area as never, [registry.byId('yamato')!], [null], 'LineAhead' as never, 'IJN' as never, nation as never, enemyShips(area as never, registry, nation as never));
+    scene.scene.start('BattleScene', init!);
+  });
+}
 
 /**
  * 量が最大のセーブ (#286): every Japanese ship, captain and research, eight docks full, a long damaged list, every
