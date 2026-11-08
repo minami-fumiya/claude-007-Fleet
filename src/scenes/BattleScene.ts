@@ -1970,7 +1970,9 @@ export class BattleScene extends Phaser.Scene {
     const route = this.battleData?.openSeaRoute;
     if (route && route.length > 1) {
       this.voyage.setRoute(route);
-      this.setAutoMode(true);
+      // The HUD's buttons are made later in create(): the 自動 button reads the mode when it is made (0.0.69 review).
+      this.autoMode = true;
+      this.waypoint = null;
     }
   }
 
@@ -2526,8 +2528,8 @@ export class BattleScene extends Phaser.Scene {
       fontSize: 15,
     }).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
 
-    this.autoBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2, b.y, '自動  OFF', () => this.setAutoMode(!this.autoMode), {
-      variant: 'secondary',
+    this.autoBtn = new UIButton(this, CANVAS_W - 20 - b.w / 2, b.y, this.autoMode ? '自動  ON' : '自動  OFF', () => this.setAutoMode(!this.autoMode), {
+      variant: this.autoMode ? 'primary' : 'secondary',
       width: b.w,
       height: b.h,
       fontSize: 15,

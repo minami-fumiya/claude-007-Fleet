@@ -74,6 +74,9 @@
     {"id": "d_skill", "kind": "daily", "name": "艦長の教育", "text": "艦長にスキルを 2 回習得させる", "event": "learnSkill", "goal": 2, "reward": {"fuel": 450, "ammo": 450}},
     {"id": "d_history", "kind": "daily", "name": "戦史に学ぶ", "text": "史実シナリオで 2 回勝利する", "event": "scenarioWin", "goal": 2, "reward": {"fuel": 450, "ammo": 450, "steel": 450}},
     {"id": "d_event", "kind": "daily", "name": "イベント参加", "text": "資源 2 倍のイベント中に 6 回勝利する", "event": "event_double", "goal": 6, "reward": {"fuel": 680, "ammo": 680}},
+    {"id": "d_sea_area", "kind": "daily", "name": "洋上の攻略", "text": "広い海の作戦海域で 3 回勝利する", "event": "seaAreaWin", "goal": 3, "reward": {"fuel": 600, "ammo": 450}},
+    {"id": "d_sea_group", "kind": "daily", "name": "遭遇戦", "text": "広い海で遭遇した敵艦隊に 5 回勝利する", "event": "seaGroupWin", "goal": 5, "reward": {"fuel": 500, "steel": 400}},
+    {"id": "d_mine", "kind": "daily", "name": "掃海", "text": "機雷原を 3 つ掃海する", "event": "mineSwept", "goal": 3, "reward": {"fuel": 400, "ammo": 300}},
     {"id": "w_sortie", "kind": "weekly", "name": "週間出撃", "text": "作戦か演習に 400 回出撃する", "event": "sortie", "goal": 400, "gold": 150, "reward": {"fuel": 4800, "ammo": 4800, "steel": 7200}, "items": {"fastRepair": 6, "fastBuild": 4, "trainingManual": 3, "supplyShip": 2}, "captains": 1},
     {"id": "w_carrier", "kind": "weekly", "name": "機動部隊を叩け", "text": "空母を 200 隻撃沈する", "event": "sinkCarrier", "goal": 200, "gold": 150, "reward": {"steel": 7500, "bauxite": 5620}},
     {"id": "w_sub", "kind": "weekly", "name": "対潜掃討", "text": "潜水艦を 400 隻撃沈する", "event": "sinkSubmarine", "goal": 400, "gold": 150, "reward": {"fuel": 7500, "ammo": 7500}},
@@ -236,6 +239,9 @@
     {"id": "a_focus1", "kind": "once", "name": "国の進む道", "text": "国家方針を 1 つ終える", "event": "focusDone", "goal": 1, "gold": 300, "reward": {"fuel": 800, "ammo": 800, "steel": 800}},
     {"id": "a_focus5", "kind": "once", "name": "国策の完遂", "text": "国家方針を 5 つ終える", "event": "focusDone", "goal": 5, "gold": 300, "reward": {"fuel": 1500, "ammo": 1500, "steel": 1500}},
     {"id": "a_design1", "kind": "once", "name": "設計室", "text": "艦を 1 隻設計する", "event": "designMade", "goal": 1, "gold": 300, "reward": {"steel": 1000, "bauxite": 300}},
-    {"id": "w_improve3", "kind": "weekly", "name": "装備の改修", "text": "装備を 3 回改修する", "event": "equipImprove", "goal": 3, "reward": {"fuel": 900, "ammo": 900, "steel": 600, "bauxite": 200}}
+    {"id": "w_improve3", "kind": "weekly", "name": "装備の改修", "text": "装備を 3 回改修する", "event": "equipImprove", "goal": 3, "reward": {"fuel": 900, "ammo": 900, "steel": 600, "bauxite": 200}},
+    {"id": "w_sea_area", "kind": "weekly", "name": "洋上作戦の週", "text": "広い海の作戦海域で 20 回勝利する", "event": "seaAreaWin", "goal": 20, "gold": 150, "reward": {"fuel": 7500, "ammo": 6000}},
+    {"id": "w_anchored", "kind": "weekly", "name": "前進停泊", "text": "軍港の外の基地に 3 回入港して停泊する", "event": "anchoredAway", "goal": 3, "reward": {"fuel": 6000, "ammo": 3000, "steel": 3000}},
+    {"id": "w_defense", "kind": "weekly", "name": "海域の防衛", "text": "敵の反攻を防衛戦で 3 回退ける", "event": "defenseWin", "goal": 3, "gold": 150, "reward": {"fuel": 4500, "steel": 6000, "bauxite": 1500}}
   ]
 }

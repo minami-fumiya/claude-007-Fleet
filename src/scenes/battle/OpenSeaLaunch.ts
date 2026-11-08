@@ -53,6 +53,12 @@ export function launchToArea(scene: Phaser.Scene, areaId: string): string | null
   if (chosen.length > 0 && places.every((pl) => pl.base === places[0].base && pl.x === places[0].x && pl.y === places[0].y)) {
     const caps = (sel?.slotIds ?? []).flatMap((id, i) => (id && chosen.some((s) => s.id === id) ? [sel?.captainIds?.[i] ?? null] : []));
     consider(chosen, caps, sel?.formation ?? Formation.LineAhead, places[0] ?? home);
+  } else if (chosen.length === 0) {
+    // No fleet set up this session (a reload; 0.0.69 review): the first six ships lying at home and not in dock.
+    const away = new Set(p.openSea.anchors.flatMap((a) => a.shipIds));
+    const docked = new Set(p.docks.map((d) => d.shipId));
+    const atHome = own(p.ships.filter((id) => !away.has(id) && !docked.has(id))).slice(0, 6);
+    consider(atHome, atHome.map(() => null), Formation.LineAhead, home);
   }
   if (candidates.length === 0) return '向かえる艦隊がありません。編成で艦隊を組むか、外洋の画面から艦隊を出してください';
   candidates.sort((a, b) => routeLength(a.route) - routeLength(b.route));
