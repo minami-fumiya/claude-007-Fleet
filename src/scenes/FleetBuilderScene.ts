@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { skillOf, skillText } from '@/systems/ShipSkillSystem';
-import { refitBadge } from '@/systems/CustomizationSystem';
+import { fleetHint, refitBadge } from '@/systems/CustomizationSystem';
+import { canRefit, REFIT_TABLE } from '@/systems/RefitSystem';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -1730,8 +1731,14 @@ export class FleetBuilderScene extends Phaser.Scene {
   private refitChip(ship: IShipData, x: number, y: number): Phaser.GameObjects.Container {
     const p = loadProgress();
     const stage = p.refits[ship.id] ?? 0;
-    const chip = addChip(this, x, y, refitBadge(stage, (p.upgrades[ship.id] ?? []).length), stage > 0 ? Colors.gold : Colors.rim, stage > 0 ? Css.gold : Css.muted);
-    return chip;
+    const fitted = (p.upgrades[ship.id] ?? []).length;
+    // 編成のおすすめ (#416, 0.0.70): a remodel within reach, or an empty upgrade slot with upgrades in the stock.
+    const hint = fleetHint({
+      canRefit: canRefit(REFIT_TABLE, ship, stage, p.proficiency[ship.id] ?? 0, p.resources),
+      refitStage: stage, fitted, stockTotal: Object.values(p.equipment ?? {}).reduce((n, c) => n + Math.max(0, c), 0),
+    });
+    const label = hint ? `${refitBadge(stage, fitted)}  ·  ${hint}` : refitBadge(stage, fitted);
+    return addChip(this, x, y, label, hint ? Colors.cyan : stage > 0 ? Colors.gold : Colors.rim, hint ? Css.cyan : stage > 0 ? Css.gold : Css.muted);
   }
 
   /** "41cm 連装砲 ×4": the ship's first (main) weapon. */

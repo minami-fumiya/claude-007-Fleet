@@ -132,3 +132,13 @@ describe('0.0.70 practice grounds and the places on the sea', () => {
     expect(sp.placeReward(oil, 'IJN').fuel).toBeGreaterThan(0);
   });
 });
+
+describe('0.0.70 編成のおすすめ (#416)', () => {
+  it('hints a remodel within reach first, then an empty upgrade slot with upgrades in the stock', async () => {
+    const { fleetHint, upgradeSlots } = await import('@/systems/CustomizationSystem');
+    expect(fleetHint({ canRefit: true, refitStage: 0, fitted: 0, stockTotal: 0 })).toBe('改装できる');
+    expect(fleetHint({ canRefit: false, refitStage: 1, fitted: 0, stockTotal: 3 })).toBe('装備に空き');
+    expect(fleetHint({ canRefit: false, refitStage: 1, fitted: upgradeSlots(1), stockTotal: 3 })).toBeNull();
+    expect(fleetHint({ canRefit: false, refitStage: 1, fitted: 0, stockTotal: 0 })).toBeNull();
+  });
+});
