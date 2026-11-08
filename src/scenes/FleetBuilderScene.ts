@@ -25,7 +25,7 @@ import { askShipName } from '@/ui/components/FilterBar';
 import { shipSearchNames } from '@/utils/SearchHistory';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
 import { BASES, supplyMul } from '@/systems/BaseSystem';
-import { anchorages, areaBlock, FUEL_MAX, findRoute, homeAnchor, IAnchorPlace, placeName, routeFuel, samePlace, sectorAt, shipsAt } from '@/systems/OpenSeaSystem';
+import { anchorages, areaBlock, findRoute, homeAnchor, IAnchorPlace, placeFuel, placeName, routeFuel, samePlace, sectorAt, shipsAt } from '@/systems/OpenSeaSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
@@ -598,7 +598,8 @@ export class FleetBuilderScene extends Phaser.Scene {
     if (!block) return 'この海域は広い海の上にありません';
     const route = findRoute(sectorAt(this.place.x, this.place.y), { c: block.c, r: block.r });
     if (!route) return 'この停泊地からは海でつながっていません';
-    if (routeFuel(route) > FUEL_MAX) return `燃料が足りません (燃料 ${routeFuel(route)})。前線の基地に回航してから出撃してください`;
+    const tank = placeFuel(loadProgress().openSea.anchors, this.place);
+    if (routeFuel(route) > tank) return `燃料が足りません (要 ${routeFuel(route)} / 残り ${Math.ceil(tank)})。基地か港で補給してから出撃してください`;
     this.saveSelection();
     const support = this.supportFleets();
     const init: IBattleInitData = {

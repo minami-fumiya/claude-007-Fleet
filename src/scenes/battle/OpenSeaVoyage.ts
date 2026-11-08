@@ -69,9 +69,22 @@ export class OpenSeaVoyage {
   private readonly ports: Array<{ id: string; name: string } & ISectorRef>;
   private portHere: { id: string; name: string } | null = null;
 
-  constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress, ports: Array<{ id: string; name: string } & ISectorRef>) {
+  /** The tank at the last fill (0.0.70: a fleet lying at sea puts out with what it had left) and the distance then */
+  private tank = FUEL_MAX;
+  private filledAtPx = 0;
+
+  constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress, ports: Array<{ id: string; name: string } & ISectorRef>, startFuel = FUEL_MAX) {
     this.explored = saved.explored;
     this.ports = ports;
+    this.tank = startFuel;
+    this.fuel = startFuel;
+  }
+
+  /** A full tank (a port on the sea, 0.0.70). */
+  refuel(): void {
+    this.tank = FUEL_MAX;
+    this.filledAtPx = this.sailedPx;
+    this.fuel = FUEL_MAX;
   }
 
   /** Where the fleet puts to sea: just off the base it lay at, or the very point at sea it stopped at. */
@@ -157,7 +170,7 @@ export class OpenSeaVoyage {
 
     if (this.last) this.sailedPx += Math.hypot(f.x - this.last.x, f.y - this.last.y);
     this.last = { x: f.x, y: f.y };
-    this.fuel = Math.max(0, FUEL_MAX - fuelForPx(this.sailedPx));
+    this.fuel = Math.max(0, this.tank - fuelForPx(this.sailedPx - this.filledAtPx));
     if (this.fuel <= 0) for (const s of this.host.ships()) s.envSpeedMul *= NO_FUEL_SPEED;
 
     const here = { c: Math.floor(f.x / SECTOR_PX), r: Math.max(0, Math.min(WORLD_MAP.rows - 1, Math.floor(f.y / SECTOR_PX))) };
@@ -281,7 +294,7 @@ export class OpenSeaVoyage {
 
   /** What the voyage leaves in the save. */
   result(saved: IOpenSeaProgress, shipIds: readonly string[], at: IAnchorPlace): IOpenSeaProgress {
-    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation) };
+    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation, this.fuel) };
   }
 
   /** The flagship's place, wrapped into the world (for lying at sea). */

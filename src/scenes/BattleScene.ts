@@ -37,7 +37,7 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, seaHour } from '@/systems/OpenSeaSystem';
+import { SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour } from '@/systems/OpenSeaSystem';
 import { OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
@@ -2020,7 +2020,7 @@ export class BattleScene extends Phaser.Scene {
       minimap: this.minimap,
       openChart: () => this.openChart(),
       enterPort: (baseId) => this.endVoyage(baseId),
-    }, nation, loadProgress().openSea, this.voyagePorts());
+    }, nation, loadProgress().openSea, this.voyagePorts(), placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
     this.voyage.buildUi(minimapBottom);
     audio.music('map');
     // 作戦の一覧から (0.0.69): the route to the area is sailed at once.

@@ -495,6 +495,8 @@ export interface IAnchorPlace {
 export interface IAnchoredFleet {
   shipIds: string[];
   at: IAnchorPlace;
+  /** Fuel left in the tank (0.0.70); a fleet in a base fills up there, one at sea keeps what it had (missing: full) */
+  fuel?: number;
 }
 
 /** The home port as an anchorage. */
@@ -526,13 +528,21 @@ export function fleetStart(anchors: readonly IAnchoredFleet[], shipIds: readonly
 }
 
 /** The anchorages with these ships moved to `at` (out of whatever group they were in). At the home port they join no group. */
-export function anchorAt(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], at: IAnchorPlace, nation: string): IAnchoredFleet[] {
+export function anchorAt(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], at: IAnchorPlace, nation: string, fuel?: number): IAnchoredFleet[] {
   const rest = anchors.map((a) => ({ ...a, shipIds: a.shipIds.filter((id) => !shipIds.includes(id)) })).filter((a) => a.shipIds.length > 0);
   if (at.base === homeAnchor(nation).base) return rest;
+  // In a base the tank is filled; at sea the fleet keeps what it has left (0.0.70).
+  const tank = at.base ? FUEL_MAX : Math.max(0, Math.min(FUEL_MAX, fuel ?? FUEL_MAX));
   // Joining a group already lying there.
   const there = rest.find((a) => samePlace(a.at, at));
-  if (there) return rest.map((a) => (a === there ? { ...a, shipIds: [...a.shipIds, ...shipIds] } : a));
-  return [...rest, { shipIds: [...shipIds], at }];
+  if (there) return rest.map((a) => (a === there ? { ...a, shipIds: [...a.shipIds, ...shipIds], fuel: Math.min(a.fuel ?? FUEL_MAX, tank) } : a));
+  return [...rest, { shipIds: [...shipIds], at, fuel: tank }];
+}
+
+/** The fuel a fleet puts to sea with from `at` (0.0.70): full from a base, what is left at sea. */
+export function placeFuel(anchors: readonly IAnchoredFleet[], at: IAnchorPlace): number {
+  if (at.base) return FUEL_MAX;
+  return anchors.find((a) => samePlace(a.at, at))?.fuel ?? FUEL_MAX;
 }
 
 /** Saved anchorages read safely (alpha saves: missing or broken entries are dropped). */
@@ -544,7 +554,8 @@ export function parseAnchors(raw: unknown): IAnchoredFleet[] {
     if (!Array.isArray(o?.shipIds) || !at || typeof at.x !== 'number' || typeof at.y !== 'number' || !Number.isFinite(at.x) || !Number.isFinite(at.y)) return [];
     const shipIds = o.shipIds.filter((id): id is string => typeof id === 'string');
     if (shipIds.length === 0) return [];
-    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y } }];
+    const fuel = typeof o.fuel === 'number' && Number.isFinite(o.fuel) ? { fuel: Math.max(0, Math.min(FUEL_MAX, o.fuel)) } : {};
+    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y }, ...fuel }];
   });
 }
 
