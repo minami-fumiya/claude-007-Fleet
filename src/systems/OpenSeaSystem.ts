@@ -552,3 +552,48 @@ export function placeName(at: IAnchorPlace, baseNames: Record<string, string>): 
   if (at.base) return baseNames[at.base] ?? at.base;
   return `洋上 (${lonLatText(sectorAt(at.x, at.y))})`;
 }
+
+// --- 海の上の敵艦隊 (0.0.69): groups waiting at sea, a fresh set every hour ---------------------------------------
+
+/** Share of the sea sectors holding a group in a given hour. */
+export const ENCOUNTER_RATE = 0.012;
+/** Groups keep this many sectors from the navy's harbours and from the campaign areas. */
+const ENCOUNTER_CLEAR = 3;
+
+export interface IEncounter {
+  /** Unique for the hour: "sea:<hour>:<c>:<r>" */
+  id: string;
+  c: number;
+  r: number;
+  danger: number;
+  theater: string;
+}
+
+/** The hour a time falls in (the groups change with it). */
+export function seaHour(now: number): number {
+  return Math.floor(now / 3_600_000);
+}
+
+/**
+ * The group lying in sector `s` this hour, if any: in a sea the navy fights in (`theaters`), clear of its harbours
+ * (`ports`) and of the campaign areas, by a stable hash of the sector and the hour.
+ */
+export function encounterAt(nation: string, s: ISectorRef, hour: number, theaters: ReadonlySet<string>, ports: readonly ISectorRef[]): IEncounter | null {
+  const c = wrapCol(s.c);
+  if (!isSea(c, s.r)) return null;
+  const theater = theaterOf(c, s.r);
+  if (!theater || !theaters.has(theater)) return null;
+  let h = Math.imul(c + 7, 2654435761) ^ Math.imul(s.r + 13, 2246822519) ^ Math.imul(hour, 3266489917);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = (h ^ (h >>> 12)) >>> 0;
+  if (h % 10_000 >= ENCOUNTER_RATE * 10_000) return null;
+  const near = (p: ISectorRef, gap: number): boolean => colGap(p.c, c) < gap && Math.abs(p.r - s.r) < gap;
+  if (ports.some((p) => near(p, ENCOUNTER_CLEAR))) return null;
+  if (Object.values(WORLD_MAP.areas).some((b) => near({ c: b.c, r: b.r }, ENCOUNTER_CLEAR))) return null;
+  return { id: `sea:${hour}:${c}:${s.r}`, c, r: s.r, danger: dangerAt(nation, { c, r: s.r }), theater };
+}
+
+/** The groups within the sectors round `centre` this hour. */
+export function encountersNear(nation: string, centre: ISectorRef, hour: number, theaters: ReadonlySet<string>, ports: readonly ISectorRef[], radius = 1): IEncounter[] {
+  return sectorWindow(centre, radius).map((s) => encounterAt(nation, s, hour, theaters, ports)).filter((g): g is IEncounter => g !== null);
+}

@@ -262,9 +262,11 @@ export class HUD {
     }
 
     const alive = enemies.filter((e) => e.isAlive).length;
-    const killed = this.totalEnemies - alive;
+    // The open sea (#445) brings enemies in during the battle: the count follows the list as it is now.
+    const total = Math.max(this.totalEnemies, enemies.length);
+    const killed = total - alive;
     const afloat = this.own.filter((s) => s.isAlive).length;
-    const kills = `${killed}/${this.totalEnemies}  自 ${afloat}/${this.own.length}`;
+    const kills = `${killed}/${total}  自 ${afloat}/${this.own.length}`;
     if (this.killText.text !== kills) this.killText.setText(kills);
 
     const hpFrac = player.stats.maxHp > 0 ? Math.max(0, player.stats.currentHp / player.stats.maxHp) : 0;
