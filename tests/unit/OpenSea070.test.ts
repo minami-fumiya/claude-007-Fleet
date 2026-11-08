@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { framePixel, framePoint, frameRadius, inFrameZone, seaFrame } from '@/systems/SeaFrame';
 import { BATTLE_WORLD } from '@/systems/BattleLayout';
-import { OPEN_SEA_OBJECTIVES } from '@/systems/OpenSeaSystem';
+import { anchorAt, baseAnchor, FUEL_MAX, OPEN_SEA_OBJECTIVES, parseAnchors, placeFuel } from '@/systems/OpenSeaSystem';
 import { Objective } from '@/types/Campaign';
 
 const close = (a: { x: number; y: number }, b: { x: number; y: number }): void => {
@@ -64,5 +64,26 @@ describe('0.0.70 the objective ground at sea (SeaFrame)', () => {
 describe('0.0.70 every objective is fought at sea', () => {
   it('covers all seven objectives', () => {
     expect([...OPEN_SEA_OBJECTIVES].sort()).toEqual(Object.values(Objective).sort());
+  });
+});
+
+describe('0.0.70 fuel lies with the fleet', () => {
+  it('keeps what is left at sea and fills the tank in a base', () => {
+    const sea = { x: 5000, y: 7000 };
+    let anchors = anchorAt([], ['a'], sea, 'IJN', 37.5);
+    expect(placeFuel(anchors, sea)).toBe(37.5);
+    const base = baseAnchor('ijn_fb_indian')!;
+    anchors = anchorAt(anchors, ['a'], base, 'IJN', 3);
+    expect(placeFuel(anchors, base)).toBe(FUEL_MAX);
+    expect(anchors.find((g) => g.at.base === base.base)?.fuel).toBe(FUEL_MAX);
+  });
+
+  it('a group joined at sea keeps the lower tank; a missing tank reads full', () => {
+    const sea = { x: 5000, y: 7000 };
+    const anchors = anchorAt(anchorAt([], ['a'], sea, 'IJN', 60), ['b'], sea, 'IJN', 20);
+    expect(anchors).toEqual([{ shipIds: ['a', 'b'], at: sea, fuel: 20 }]);
+    expect(placeFuel([{ shipIds: ['c'], at: sea }], sea)).toBe(FUEL_MAX);
+    expect(parseAnchors([{ shipIds: ['c'], at: sea, fuel: 250 }])[0].fuel).toBe(FUEL_MAX);
+    expect(parseAnchors([{ shipIds: ['c'], at: sea, fuel: 'x' }])[0].fuel).toBeUndefined();
   });
 });

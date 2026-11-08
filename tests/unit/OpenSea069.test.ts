@@ -104,7 +104,7 @@ describe('0.0.69 停泊: fleets lie where their voyage ended', () => {
     const sea = { x: 1000, y: 2000 };
     let anchors = anchorAt([], ['a'], sea, 'IJN');
     anchors = anchorAt(anchors, ['b'], { x: 1000, y: 2000 }, 'IJN');
-    expect(anchors).toEqual([{ shipIds: ['a', 'b'], at: sea }]);
+    expect(anchors).toEqual([{ shipIds: ['a', 'b'], at: sea, fuel: 100 }]);
     anchors = anchorAt(anchors, ['a'], baseAnchor('ijn_fb_indian')!, 'IJN');
     expect(anchors.map((g) => g.shipIds)).toEqual([['b'], ['a']]);
   });
