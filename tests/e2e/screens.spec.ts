@@ -614,7 +614,7 @@ test.describe('screens', () => {
   test('広い海 (#445): the battle screen sails the world, the chart plans a route, the voyage ends in port', async ({ page }, info) => {
     const errors = await boot(page, info.project.metadata.layout as string);
     type G = { game: Phaser.Game };
-    type V = { warp: number; fuel: number; explored: string; hasRoute: boolean; routeLeft: unknown[]; setWarp(k: number): void; here(): { c: number; r: number } };
+    type V = { fuel: number; explored: string; hasRoute: boolean; routeLeft: unknown[]; here(): { c: number; r: number } };
     await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
     await page.waitForTimeout(2500);
     const start = await page.evaluate(() => {
@@ -649,13 +649,10 @@ test.describe('screens', () => {
     await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
     await page.waitForTimeout(500);
     const planned = await page.evaluate(() => {
-      const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { at: { c: number; r: number } }; plan: unknown[] | null; pick(x: number, y: number): void; colX(c: number): number | null };
-      // Two sectors east and two south of the fleet: open water off Japan.
-      const at = c.d.at;
-      const x = c.colX(at.c + 2)!;
-      const cell = (window as unknown as G).game.scale.width > (window as unknown as G).game.scale.height ? 14 : 16;
-      const top = (window as unknown as G).game.scale.width > (window as unknown as G).game.scale.height ? 84 : 120;
-      c.pick(x + cell / 2, top + (at.r + 2) * cell + cell / 2);
+      const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { at: { c: number; r: number } }; plan: unknown[] | null; pick(x: number, y: number): void; pointOf(s: { c: number; r: number }): { x: number; y: number } | null };
+      // Eight sectors east and six south of the fleet: open water off Japan.
+      const p = c.pointOf({ c: c.d.at.c + 8, r: c.d.at.r + 6 })!;
+      c.pick(p.x, p.y);
       return c.plan?.length ?? 0;
     });
     expect(planned).toBeGreaterThan(1);
@@ -669,18 +666,47 @@ test.describe('screens', () => {
     await page.waitForTimeout(300);
     const sailing = await page.evaluate(() => {
       const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: V; autoMode: boolean; paused: boolean };
-      b.voyage.setWarp(8);
-      return { route: b.voyage.hasRoute, auto: b.autoMode, paused: b.paused, warp: b.voyage.warp };
+      return { route: b.voyage.hasRoute, auto: b.autoMode, paused: b.paused };
     });
-    expect(sailing).toEqual({ route: true, auto: true, paused: false, warp: 8 });
-    await page.waitForTimeout(3000);
+    expect(sailing).toEqual({ route: true, auto: true, paused: false });
+    await page.waitForTimeout(2000);
     await page.screenshot({ path: info.outputPath('open-sea-cruise.png') });
 
-    // The voyage ends from the pause sheet: back to the 外洋 screen, the chart and the distance kept.
+    // 海の上の交戦 (0.0.69): the fleet in the first Pacific area brings out its enemy; sunk, it settles in place.
+    await page.evaluate(async () => {
+      const os = await import('/src/systems/OpenSeaSystem.ts');
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { friendlies(): Array<{ x: number; y: number }> };
+      const c = os.areaCentre(os.WORLD_MAP.areas.p1);
+      for (const sh of b.friendlies()) {
+        sh.x = c.x - 600;
+        sh.y = c.y + 300;
+      }
+    });
+    await page.waitForFunction(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: unknown }).engagement !== null, null, { timeout: 20_000 });
+    await sea(false);
+    expect(await overlappingTexts(page, 'BattleScene')).toEqual([]);
+    await sea(true);
+    await page.screenshot({ path: info.outputPath('open-sea-fight.png') });
+    await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { enemies: Array<{ isAlive: boolean; takeDamage(n: number): void }> };
+      for (const e of b.enemies) if (e.isAlive) e.takeDamage(1e9);
+    });
+    await page.waitForFunction(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: unknown }).engagement === null, null, { timeout: 20_000 });
+    const won = await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { gameOver: boolean; enemies: unknown[] };
+      const p = JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN as { campaign: string[] };
+      return { gameOver: b.gameOver, enemies: b.enemies.length, cleared: p.campaign.includes('p1') };
+    });
+    expect(won).toEqual({ gameOver: false, enemies: 0, cleared: true });
+    await page.screenshot({ path: info.outputPath('open-sea-won.png') });
+
+    // The voyage ends from the pause sheet: back to the 外洋 screen, the chart and the distance kept, the fleet lying at sea.
     await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { retreat(): void }).retreat());
     await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('WorldMapScene')?.sys.settings.active === true);
-    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.openSea as { explored: string; sailedPx: number; voyages: number });
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('ww2fleet.progress.v2')!).nations.IJN.openSea as { explored: string; sailedPx: number; voyages: number; anchors: Array<{ at: { base?: string } }> });
     expect(saved.voyages).toBe(1);
+    expect(saved.anchors).toHaveLength(1);
+    expect(saved.anchors[0].at.base).toBeUndefined();
     expect(saved.sailedPx).toBeGreaterThan(0);
     expect(saved.explored.replace(/0/g, '').length).toBeGreaterThan(0);
     expect(errors).toEqual([]);
