@@ -4,7 +4,7 @@ import { BaseShip } from '@/entities/ships/BaseShip';
 import { resolveMap } from '@/systems/MapSystem';
 import {
   EXPLORE_RADIUS, FUEL_MAX, ISectorRef, NO_FUEL_SPEED, PORT_RADIUS, SECTOR_PX, WORLD_MAP, WORLD_PX, IOpenSeaProgress,
-  explore, fuelForPx, homePort, isSea, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
+  IAnchorPlace, anchorAt, explore, fuelForPx, isSea, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
 } from '@/systems/OpenSeaSystem';
 import { IResolvedMap } from '@/types/Map';
 import { drawMap } from '@/ui/MapView';
@@ -27,8 +27,8 @@ export interface IVoyageHost {
   minimap: Minimap;
   /** Opens the chart over the battle */
   openChart(): void;
-  /** Ends the voyage in port */
-  enterPort(): void;
+  /** Ends the voyage in the port (bases.json id) */
+  enterPort(baseId: string): void;
 }
 
 interface ILoadedSector {
@@ -65,17 +65,25 @@ export class OpenSeaVoyage {
   private info!: Phaser.GameObjects.Text;
   private portBtn!: UIButton;
   private routeGfx!: Phaser.GameObjects.Graphics;
-  private readonly home: ISectorRef & { name: string };
+  /** The navy's open bases (the home port first): where the fleet can put in */
+  private readonly ports: Array<{ id: string; name: string } & ISectorRef>;
+  private portHere: { id: string; name: string } | null = null;
 
-  constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress) {
+  constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress, ports: Array<{ id: string; name: string } & ISectorRef>) {
     this.explored = saved.explored;
-    this.home = homePort(nation) ?? { name: '軍港', c: 0, r: 0 };
+    this.ports = ports;
   }
 
-  /** Where the fleet puts to sea: just off its home port. */
-  static startPoint(nation: string): { x: number; y: number } {
-    const home = homePort(nation) ?? { c: 0, r: 0 };
-    return { x: (home.c + 0.5) * SECTOR_PX, y: (home.r + 0.5) * SECTOR_PX + PORT_RADIUS + 200 };
+  /** Where the fleet puts to sea: just off the base it lay at, or the very point at sea it stopped at. */
+  static startPoint(at: IAnchorPlace): { x: number; y: number } {
+    if (!at.base) return { x: at.x, y: at.y };
+    // Off the harbour, on the side with the most sea.
+    const s = sectorAt(at.x, at.y);
+    const off = PORT_RADIUS + 200;
+    const sides: Array<[number, number]> = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+    const best = sides.find(([dx, dy]) => isSea(s.c + dx, s.r + dy)) ?? [0, 1];
+    const len = Math.hypot(best[0], best[1]);
+    return { x: at.x + (best[0] / len) * off, y: at.y + (best[1] / len) * off };
   }
 
   /** The physics and camera bounds: the world plus one sector each side, for the east-west join. */
@@ -95,7 +103,7 @@ export class OpenSeaVoyage {
     y += h / 2 + 10;
     this.info = scene.add.text(CANVAS_W - 20, y, '', textStyle(IS_PORTRAIT ? 13 : 12, Css.text, { align: 'right', lineSpacing: 4, stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(1, 0).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
-    this.portBtn = new UIButton(scene, CANVAS_W / 2, IS_PORTRAIT ? 420 : 200, `${this.home.name}に入港する`, () => this.host.enterPort(), {
+    this.portBtn = new UIButton(scene, CANVAS_W / 2, IS_PORTRAIT ? 420 : 200, '入港する', () => this.portHere && this.host.enterPort(this.portHere.id), {
       variant: 'gold', width: IS_PORTRAIT ? 320 : 300, height: IS_PORTRAIT ? 60 : 48, fontSize: IS_PORTRAIT ? 17 : 15,
     });
     this.portBtn.setDepth(DEPTH_HUD + 3).setScrollFactor(0).setVisible(false);
@@ -158,9 +166,13 @@ export class OpenSeaVoyage {
       this.stream(here);
       this.explored = explore(this.explored, { c: wrapCol(here.c), r: here.r }, EXPLORE_RADIUS);
     }
-    const portX = this.nearestX((this.home.c + 0.5) * SECTOR_PX, f.x);
-    const inPort = Math.hypot(portX - f.x, (this.home.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS;
-    this.portBtn?.setVisible(inPort);
+    // In one of the navy's open harbours: the fleet can put in (and lie there, 停泊).
+    const port = this.ports.find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
+    if (port?.id !== this.portHere?.id) {
+      this.portHere = port;
+      if (port) this.portBtn?.setLabel(`${port.name}に入港する`);
+    }
+    this.portBtn?.setVisible(port !== null);
     this.drawRoute();
     this.refreshInfo(here);
   }
@@ -236,15 +248,15 @@ export class OpenSeaVoyage {
     };
     const drawn: Phaser.GameObjects.GameObject[] = [];
     const group = drawMap(scene, map, drawn);
-    // The home port: a harbour ring and its name.
-    if (wrapCol(at.c) === this.home.c && at.r === this.home.r) {
+    // The navy's harbours: a ring and the name.
+    for (const port of this.ports.filter((p) => p.c === wrapCol(at.c) && p.r === at.r)) {
       const cx = x0 + SECTOR_PX / 2;
       const cy = y0 + SECTOR_PX / 2;
       const ring = scene.add.graphics().setDepth(DEPTH_WATER_FX - 1);
       ring.lineStyle(6, Colors.gold, 0.55).strokeCircle(cx, cy, PORT_RADIUS);
       ring.fillStyle(Colors.gold, 0.08).fillCircle(cx, cy, PORT_RADIUS);
       drawn.push(ring);
-      drawn.push(scene.add.text(cx, cy, `⚓ ${this.home.name}`, textStyle(64, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 8 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX - 1).setAlpha(0.8));
+      drawn.push(scene.add.text(cx, cy, `⚓ ${port.name}`, textStyle(64, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 8 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX - 1).setAlpha(0.8));
     }
     return { ...at, group, colliders: this.host.addLand(group), drawn, map };
   }
@@ -268,8 +280,14 @@ export class OpenSeaVoyage {
   }
 
   /** What the voyage leaves in the save. */
-  result(saved: IOpenSeaProgress): IOpenSeaProgress {
-    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1 };
+  result(saved: IOpenSeaProgress, shipIds: readonly string[], at: IAnchorPlace): IOpenSeaProgress {
+    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation) };
+  }
+
+  /** The flagship's place, wrapped into the world (for lying at sea). */
+  seaPlace(): IAnchorPlace {
+    const f = this.host.flagship();
+    return { x: ((f.x % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w, y: f.y };
   }
 
   /** The sector the flagship is in (wrapped). */

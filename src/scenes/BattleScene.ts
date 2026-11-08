@@ -10,7 +10,7 @@ import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
-import { theaterFacility } from '@/systems/BaseSystem';
+import { openBases, theaterFacility } from '@/systems/BaseSystem';
 import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
 import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
@@ -37,7 +37,7 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { SECTOR_PX, WORLD_PX } from '@/systems/OpenSeaSystem';
+import { SECTOR_PX, WORLD_MAP, WORLD_PX, baseAnchor, homeAnchor } from '@/systems/OpenSeaSystem';
 import { OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { IResolvedMap } from '@/types/Map';
 import { addMerit, addRankStats, meritFor, rankOf } from '@/systems/RankSystem';
@@ -1273,7 +1273,7 @@ export class BattleScene extends Phaser.Scene {
   private flagshipSpawn(): { x: number; y: number } {
     const placed = this.scenarioSetup?.player.positions[0];
     if (placed) return placeAt(placed, WORLD.w, WORLD.h);
-    if (this.battleData?.openSea) return OpenSeaVoyage.startPoint(this.playerNation);
+    if (this.battleData?.openSea) return OpenSeaVoyage.startPoint(this.battleData.openSeaFrom ?? homeAnchor(this.playerNation));
     return this.objective === Objective.Convoy ? convoyEscortStart(WORLD) : playerStart(WORLD);
   }
 
@@ -1941,10 +1941,16 @@ export class BattleScene extends Phaser.Scene {
       shiftWorld: (dx) => this.shiftWorld(dx),
       minimap: this.minimap,
       openChart: () => this.openChart(),
-      enterPort: () => this.endVoyage(),
-    }, nation, loadProgress().openSea);
+      enterPort: (baseId) => this.endVoyage(baseId),
+    }, nation, loadProgress().openSea, this.voyagePorts());
     this.voyage.buildUi(minimapBottom);
     audio.music('map');
+    // 作戦の一覧から (0.0.69): the route to the area is sailed at once.
+    const route = this.battleData?.openSeaRoute;
+    if (route && route.length > 1) {
+      this.voyage.setRoute(route);
+      this.setAutoMode(true);
+    }
   }
 
   /** Crossing the east-west join (#445): shells in flight are dropped, aircraft and marks move with the sea. */
@@ -1971,12 +1977,26 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** The voyage ends in port (or from the pause sheet): what was explored and sailed is kept, back to the chart room. */
-  private endVoyage(): void {
+  /** The navy's open bases, the home port first, where the fleet can put in (停泊, 0.0.69). */
+  private voyagePorts(): Array<{ id: string; name: string; c: number; r: number }> {
+    const progress = loadProgress();
+    return openBases(progress).flatMap((b) => {
+      const s = WORLD_MAP.bases[b.id];
+      return s ? [{ id: b.id, name: b.name, ...s }] : [];
+    });
+  }
+
+  /**
+   * The voyage ends in a harbour (the fleet lies there) or from the pause sheet (it lies at sea where it stopped, 停泊):
+   * what was explored and sailed is kept, back to the chart room.
+   */
+  private endVoyage(baseId?: string): void {
     const v = this.voyage;
     if (!v) return;
     const progress = loadProgress();
-    saveProgress({ ...progress, openSea: v.result(progress.openSea) });
+    const shipIds = this.friendlies().map((s) => s.dataId).filter((id): id is string => !!id);
+    const at = (baseId ? baseAnchor(baseId) : undefined) ?? v.seaPlace();
+    saveProgress({ ...progress, openSea: v.result(progress.openSea, shipIds, at) });
     this.voyage = null;
     this.scene.start(SceneKeys.WORLD);
   }

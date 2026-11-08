@@ -3,6 +3,7 @@ import { recordLedger } from '@/systems/LedgerSystem';
 import { baseOfProgress, baseReaches, basesFor, baseState, nationBases, supplyMul } from '@/systems/BaseSystem';
 import { endSortie, pendingSortie, resumeSortie } from '@/utils/SortieFlow';
 import { TutorialGuide } from '@/ui/components/TutorialGuide';
+import { launchToArea, OPEN_SEA_OBJECTIVES } from '@/scenes/battle/OpenSeaLaunch';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
@@ -440,7 +441,10 @@ export class CampaignMapScene extends Phaser.Scene {
     const defend = seaHere === 'attacked';
     // 特別海域 (#416) shares the defence's place (a sea under attack is defended first).
     const specialBtn = !defend && specialHere !== 'none';
-    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0) + (defend || specialBtn ? 1 : 0);
+    // 海から (#445, 0.0.69): the fleet lying nearest sails for the area on the world's ocean (plain fights only for now).
+    const objective = a.objective ?? Objective.Annihilate;
+    const bySea = !a.training && (OPEN_SEA_OBJECTIVES as readonly string[]).includes(objective);
+    const count = 1 + (sweepable ? 1 : 0) + (swOpen ? 1 : 0) + (defend || specialBtn ? 1 : 0) + (bySea ? 1 : 0);
     const bw = (d.w - 48 - 12 * (count - 1)) / count;
     const bx = (i: number): number => d.x + 24 + i * (bw + 12) + bw / 2;
     const bh = IS_PORTRAIT ? 76 : 60;
@@ -470,10 +474,26 @@ export class CampaignMapScene extends Phaser.Scene {
         variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
       })).setEnabled(reach);
     }
+    if (bySea) {
+      add(new UIButton(this, bx(count - 1), by, '海から  ›', () => this.bySea(a), {
+        variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 16 : 20,
+      })).setEnabled(open && reach);
+    }
     if (sweepable) {
-      add(new UIButton(this, bx(count - 1), by, '掃討', () => this.sweep(a), {
+      add(new UIButton(this, bx(count - 1 - (bySea ? 1 : 0)), by, '掃討', () => this.sweep(a), {
         variant: 'primary', width: bw, height: bh, fontSize: count > 2 ? 17 : 20,
       })).setEnabled(reach && left > 0 && canAfford(progress.resources, sweepCost(a, enemy, supplyMul(progress, a.theater))));
+    }
+  }
+
+  /** 海から (#445): the nearest fleet lying at sea or in a base sails for the area; why not, on the panel. */
+  private bySea(a: ICampaignArea): void {
+    if (!isUnlocked(a, loadProgress().campaign)) return;
+    const problem = launchToArea(this, a.id);
+    if (problem) {
+      const t = this.add.text(CANVAS_W / 2, CANVAS_H / 2, problem, textStyle(15, Css.gold, { fontStyle: 'bold', backgroundColor: '#0b1622', padding: { x: 14, y: 10 }, wordWrap: { width: CANVAS_W - 80, useAdvancedWrap: true } }))
+        .setOrigin(0.5).setDepth(90);
+      this.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 500, onComplete: () => t.destroy() });
     }
   }
 

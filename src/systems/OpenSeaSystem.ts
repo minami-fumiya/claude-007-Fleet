@@ -436,17 +436,19 @@ export interface IOpenSeaProgress {
   sailedPx: number;
   /** Voyages made */
   voyages: number;
+  /** 停泊 (0.0.69): the groups of ships lying away from the home port */
+  anchors: IAnchoredFleet[];
 }
 
 export function emptyOpenSea(): IOpenSeaProgress {
-  return { explored: emptyExplored(), sailedPx: 0, voyages: 0 };
+  return { explored: emptyExplored(), sailedPx: 0, voyages: 0, anchors: [] };
 }
 
 /** The saved open sea read with defaults (alpha saves: missing fields don't break the load). */
 export function parseOpenSea(raw: unknown): IOpenSeaProgress {
   const o = raw && typeof raw === 'object' ? (raw as Partial<IOpenSeaProgress>) : {};
   const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
-  return { explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)) };
+  return { explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors) };
 }
 
 /** Sectors sailed, for the record and the medals. */
@@ -476,4 +478,77 @@ export function areaAt(s: ISectorRef, map: IWorldMap = WORLD_MAP): string | unde
 /** A base's sector (bases.json id). */
 export function baseSector(baseId: string, map: IWorldMap = WORLD_MAP): ISectorRef | undefined {
   return map.bases[baseId];
+}
+
+// --- 停泊 (0.0.69): where each fleet lies between voyages -----------------------------------------------------------
+
+/** Where an anchored fleet lies: at one of the navy's bases, or at sea (the exact point it stopped at). */
+export interface IAnchorPlace {
+  /** bases.json id when in harbour */
+  base?: string;
+  /** World pixels (the sector follows from them) */
+  x: number;
+  y: number;
+}
+
+/** A group of the navy's ships lying together away from the home port. Ships in no group are at the home port. */
+export interface IAnchoredFleet {
+  shipIds: string[];
+  at: IAnchorPlace;
+}
+
+/** The home port as an anchorage. */
+export function homeAnchor(nation: string): IAnchorPlace {
+  const home = homePort(nation) ?? { c: 0, r: 0 };
+  return { base: `${nation.toLowerCase()}_home`, x: (home.c + 0.5) * SECTOR_PX, y: (home.r + 0.5) * SECTOR_PX };
+}
+
+/** A base's anchorage (its sector's middle). */
+export function baseAnchor(baseId: string): IAnchorPlace | undefined {
+  const s = WORLD_MAP.bases[baseId];
+  return s ? { base: baseId, x: (s.c + 0.5) * SECTOR_PX, y: (s.r + 0.5) * SECTOR_PX } : undefined;
+}
+
+/** Where a ship lies: its group's place, or the home port. */
+export function shipPlace(anchors: readonly IAnchoredFleet[], shipId: string, nation: string): IAnchorPlace {
+  return anchors.find((a) => a.shipIds.includes(shipId))?.at ?? homeAnchor(nation);
+}
+
+const samePlace = (a: IAnchorPlace, b: IAnchorPlace): boolean => (a.base !== undefined || b.base !== undefined ? a.base === b.base : Math.hypot(a.x - b.x, a.y - b.y) < 1);
+
+/** Where a fleet of these ships puts to sea from, or why it can't (its ships lie in different places). */
+export function fleetStart(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], nation: string): { at: IAnchorPlace } | { problem: string } {
+  if (shipIds.length === 0) return { problem: '艦隊がありません' };
+  const places = shipIds.map((id) => shipPlace(anchors, id, nation));
+  if (places.some((p) => !samePlace(p, places[0]))) return { problem: '艦隊の艦が別々の場所に停泊しています。同じ場所の艦で組んでください' };
+  return { at: places[0] };
+}
+
+/** The anchorages with these ships moved to `at` (out of whatever group they were in). At the home port they join no group. */
+export function anchorAt(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], at: IAnchorPlace, nation: string): IAnchoredFleet[] {
+  const rest = anchors.map((a) => ({ ...a, shipIds: a.shipIds.filter((id) => !shipIds.includes(id)) })).filter((a) => a.shipIds.length > 0);
+  if (at.base === homeAnchor(nation).base) return rest;
+  // Joining a group already lying there.
+  const there = rest.find((a) => samePlace(a.at, at));
+  if (there) return rest.map((a) => (a === there ? { ...a, shipIds: [...a.shipIds, ...shipIds] } : a));
+  return [...rest, { shipIds: [...shipIds], at }];
+}
+
+/** Saved anchorages read safely (alpha saves: missing or broken entries are dropped). */
+export function parseAnchors(raw: unknown): IAnchoredFleet[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((a): IAnchoredFleet[] => {
+    const o = a as Partial<IAnchoredFleet>;
+    const at = o?.at as Partial<IAnchorPlace> | undefined;
+    if (!Array.isArray(o?.shipIds) || !at || typeof at.x !== 'number' || typeof at.y !== 'number' || !Number.isFinite(at.x) || !Number.isFinite(at.y)) return [];
+    const shipIds = o.shipIds.filter((id): id is string => typeof id === 'string');
+    if (shipIds.length === 0) return [];
+    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y } }];
+  });
+}
+
+/** A place's name: the base's, or the sea's position. */
+export function placeName(at: IAnchorPlace, baseNames: Record<string, string>): string {
+  if (at.base) return baseNames[at.base] ?? at.base;
+  return `洋上 (${lonLatText(sectorAt(at.x, at.y))})`;
 }
