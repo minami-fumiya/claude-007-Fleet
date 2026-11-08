@@ -35,13 +35,15 @@ export interface IVoyageHost {
   passBy(placeId: string): void;
   /** The sheet of 帰投・待機・合流 orders (艦隊の分離, 0.0.70) */
   openSeparation(): void;
+  /** Starts a drill at a practice ground (訓練海域・演習場, 0.0.70) */
+  startDrill(kind: 'training' | 'exercise'): void;
 }
 
 /** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
-export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine';
+export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise';
 export type IVoyageStop = { id: string; name: string; kind?: VoyageStopKind } & ISectorRef;
 
-const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱' };
+const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演' };
 
 interface ILoadedSector {
   /** Unwrapped column (may be -1 or cols) and row */
@@ -137,6 +139,7 @@ export class OpenSeaVoyage {
       const here = this.portHere;
       if (!here) return;
       if (here.kind === 'port') this.host.callAt(here.id);
+      else if (here.kind === 'training' || here.kind === 'exercise') this.host.startDrill(here.kind);
       else this.host.enterPort(here.id);
     }, {
       variant: 'gold', width: IS_PORTRAIT ? 320 : 300, height: IS_PORTRAIT ? 60 : 48, fontSize: IS_PORTRAIT ? 17 : 15,
@@ -210,7 +213,7 @@ export class OpenSeaVoyage {
     const port = resource ? null : ring;
     if (port?.id !== this.portHere?.id) {
       this.portHere = port;
-      if (port) this.portBtn?.setLabel(port.kind === 'port' ? `${port.name}で補給する` : `${port.name}に入港する`);
+      if (port) this.portBtn?.setLabel(port.kind === 'port' ? `${port.name}で補給する` : port.kind === 'training' ? '訓練を始める' : port.kind === 'exercise' ? '演習を始める' : `${port.name}に入港する`);
     }
     this.portBtn?.setVisible(port !== null);
     this.drawRoute();
@@ -293,8 +296,8 @@ export class OpenSeaVoyage {
       const cx = x0 + SECTOR_PX / 2;
       const cy = y0 + SECTOR_PX / 2;
       const kind = port.kind ?? 'base';
-      const color = kind === 'base' ? Colors.gold : kind === 'port' ? Colors.cyan : Colors.success;
-      const css = kind === 'base' ? Css.gold : kind === 'port' ? Css.cyan : Css.success;
+      const color = kind === 'base' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
+      const css = kind === 'base' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
       const ring = scene.add.graphics().setDepth(DEPTH_WATER_FX - 1);
       ring.lineStyle(6, color, 0.55).strokeCircle(cx, cy, PORT_RADIUS);
       ring.fillStyle(color, 0.08).fillCircle(cx, cy, PORT_RADIUS);

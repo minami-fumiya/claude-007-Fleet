@@ -28,7 +28,8 @@ import { AircraftType } from '@/types/Aircraft';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { FormationSystem } from '@/systems/FormationSystem';
 import { ShipRegistry } from '@/systems/ShipRegistry';
-import { generateEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { exerciseEnemyCount, exerciseEnemyFleet, generateEnemyFleet, trainingEnemyFleet } from '@/systems/EnemyFleetGenerator';
+import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { canDive, createSubmarineState, updateSubmarine } from '@/systems/SubmarineSystem';
 import { applyCritical, applyStatus, CRITICAL_LABEL, effectiveShell, LAND_CRITICAL_LABEL, nextShellMode, rollCriticalHit, rollStatus, SHELL_LABEL, statusDamage, STATUS_LABEL, damageReadout, weaponReadout } from '@/systems/DamageSystem';
 import { depthChargeFalloff, isDetected, ISonarHunter, sonarRange } from '@/systems/SonarSystem';
@@ -37,7 +38,7 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { anchorAt, FUEL_MAX, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
+import { anchorAt, FUEL_MAX, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
 import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
 import { nearestDock } from '@/systems/AnchorageSystem';
@@ -230,7 +231,9 @@ export class BattleScene extends Phaser.Scene {
    * 海の上の交戦 (#445, 0.0.69): the fight going on at sea — a campaign area's (its block's middle) or a group met at
    * sea — settled in place when its enemies are gone or the fleet draws off. Areas fought stay quiet until left.
    */
-  private engagement: ({ kind: 'area'; areaId: string } | { kind: 'encounter'; spotId: string; danger: number; fort?: boolean; convoy?: boolean }) & { x: number; y: number } | null = null;
+  private engagement: ({ kind: 'area'; areaId: string } | { kind: 'encounter'; spotId: string; danger: number; fort?: boolean; convoy?: boolean; drill?: boolean }) & { x: number; y: number } | null = null;
+  /** A drill's HP before it began (訓練・演習 at sea, 0.0.70): put back when it ends, as an exercise leaves no damage. */
+  private drillHp: Map<BaseShip, number> | null = null;
   private engagedAreas = new Set<string>();
   /** Objective areas whose 'go to the middle' note was shown on entering (0.0.70). */
   private notedAreas = new Set<string>();
@@ -486,6 +489,7 @@ export class BattleScene extends Phaser.Scene {
     this.frame = null;
     this.frameGfx = [];
     this.openingBanner = [];
+    this.drillHp = null;
     this.scenarioTargets = [];
     this.captains = new Map();
     this.spawnedAt = [];
@@ -2026,6 +2030,7 @@ export class BattleScene extends Phaser.Scene {
       callAt: (id) => this.callAtSeaPort(id),
       passBy: (id) => this.passResource(id),
       openSeparation: () => this.openSeparation(),
+      startDrill: (kind) => this.startDrill(kind),
     }, nation, loadProgress().openSea, this.voyagePorts(), placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
     this.voyage.buildUi(minimapBottom);
     audio.music('map');
@@ -2339,7 +2344,7 @@ export class BattleScene extends Phaser.Scene {
     const eng = this.engagement;
     if (!eng || !this.battleData) return;
     const keep = this.battleData;
-    this.battleData = { ...keep, ...(eng.kind === 'area' ? { areaId: eng.areaId } : { world: { spotId: eng.spotId, danger: eng.danger, fort: eng.fort, convoy: eng.convoy } }) };
+    this.battleData = { ...keep, ...(eng.kind === 'area' ? { areaId: eng.areaId } : eng.drill ? {} : { world: { spotId: eng.spotId, danger: eng.danger, fort: eng.fort, convoy: eng.convoy } }) };
     this.settlingInPlace = true;
     this.triggerGameOver(victory);
     this.battleData = keep;
@@ -2355,6 +2360,12 @@ export class BattleScene extends Phaser.Scene {
   /** After the settlement: the enemy gone, the battle's counts started afresh, the result on a band; sailing on. */
   private finishSeaFight(victory: boolean, result: IBattleResultData): void {
     const eng = this.engagement;
+    // A drill leaves no damage (0.0.70).
+    if (this.drillHp) {
+      for (const [ship, hp] of this.drillHp) if (ship.active) ship.stats.currentHp = Math.max(ship.stats.currentHp, hp);
+      this.drillHp = null;
+    }
+    this.exercise = false;
     this.gameOver = false;
     this.engagement = null;
     if (eng?.kind === 'encounter' && victory) this.seaWon.add(eng.spotId);
@@ -2580,7 +2591,42 @@ export class BattleScene extends Phaser.Scene {
     // 0.0.70: the navy's ports, oil fields and mines on the sea.
     const stops: IVoyageStop[] = seaPlaces(progress.nation).filter((p) => p.kind === 'port' || p.kind === 'oil' || p.kind === 'mine')
       .map((p) => ({ id: p.id, name: p.name, kind: p.kind as 'port' | 'oil' | 'mine', c: p.c, r: p.r }));
-    return [...bases, ...stops];
+    // 訓練海域・演習場 (0.0.70): off the home port.
+    const grounds = practiceGrounds(progress.nation);
+    const drills: IVoyageStop[] = grounds
+      ? [{ id: 'drill:training', name: '訓練海域', kind: 'training', ...grounds.training }, { id: 'drill:exercise', name: '演習場', kind: 'exercise', ...grounds.exercise }]
+      : [];
+    return [...bases, ...stops, ...drills];
+  }
+
+  /**
+   * 訓練海域・演習場 (0.0.70): an exercise fought where the fleet is, with the settings last chosen in the builder
+   * (or the standard ones). The training ground brings the training enemy. Nothing is lost: the HP comes back after.
+   */
+  private startDrill(kind: 'training' | 'exercise'): void {
+    if (!this.voyage || this.engagement) return;
+    const registry = DataLoader.getRegistry(this);
+    const sel = (this.registry.get(SELECTION_KEY) as Partial<Record<Nation, { enemyNation?: string; mode?: string; enemyCount?: number }>> | undefined)?.[this.playerNation];
+    const theater = (campaignData as ICampaignData).theaters.find((t) => (t.opponents as Partial<Record<Nation, Nation>> | undefined)?.[this.playerNation]);
+    const usual = ((theater?.opponents as Partial<Record<Nation, Nation>> | undefined)?.[this.playerNation]) ?? Nation.USN;
+    const foes = Object.values(Nation).filter((n) => n !== this.playerNation);
+    const nation = (sel?.enemyNation && sel.enemyNation !== 'random' ? sel.enemyNation : sel?.enemyNation === 'random' ? foes[Math.floor(Math.random() * foes.length)] : usual) as Nation;
+    const modes = [BattleMode.Surface, BattleMode.CarrierStrike, BattleMode.ASW];
+    const mode = (sel?.mode && sel.mode !== 'random' ? sel.mode : sel?.mode === 'random' ? modes[Math.floor(Math.random() * modes.length)] : BattleMode.Surface) as BattleMode;
+    const own = this.friendlies().filter((s) => s.isAlive);
+    const ownData = own.map((s) => (s.dataId ? registry.byId(s.dataId) : undefined)).filter((d): d is IShipData => d !== undefined);
+    const count = exerciseEnemyCount(sel?.enemyCount && sel.enemyCount > 0 ? sel.enemyCount : own.length);
+    const ships = kind === 'training' ? trainingEnemyFleet(registry, nation, count) : exerciseEnemyFleet(registry, nation, mode, ownData, count);
+    if (ships.length === 0) return;
+    this.drillHp = new Map(own.map((s) => [s, s.stats.currentHp]));
+    const ahead = Phaser.Math.DegToRad(this.flagship.angle - 90);
+    const at = { x: this.flagship.x + Math.cos(ahead) * 1500, y: this.flagship.y + Math.sin(ahead) * 1500 };
+    this.objective = Objective.Annihilate;
+    this.side = null;
+    this.frame = null;
+    this.exercise = true;
+    this.spawnSeaEnemies(ships, nation, at, { ...NO_MODIFIERS });
+    this.beginSeaFight({ kind: 'encounter', spotId: `drill:${kind}:${Date.now()}`, danger: 1, drill: true, ...at }, kind === 'training' ? '訓練海域' : '演習場', nation, '全艦を沈めると勝利 (損傷は残らない)');
   }
 
   /** A port on the sea (0.0.70): a full tank, the ships patched to PORT_REPAIR; the voyage goes on. */

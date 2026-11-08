@@ -624,3 +624,39 @@ export function encountersNear(nation: string, centre: ISectorRef, hour: number,
 
 /** Areas the open sea fights: the plain fights from 0.0.69 (案 2), every objective from 0.0.70. */
 export const OPEN_SEA_OBJECTIVES = ['Annihilate', 'SinkTargets', 'Convoy', 'Bombard', 'Breakthrough', 'PreventEscape', 'Delay'] as const;
+
+// --- 訓練海域と演習場 (0.0.70): two practice grounds off the home port --------------------------------------------
+
+/** Sea steps from the home port to the training ground and to the exercise ground. */
+export const PRACTICE_STEPS = { training: 3, exercise: 4 } as const;
+
+const practiceCache = new Map<string, { training: ISectorRef; exercise: ISectorRef }>();
+
+/**
+ * The navy's practice grounds (訓練海域・演習場): sea sectors a few steps off the home port, clear of the campaign's
+ * areas and of the other harbours; the exercise ground as far from the training ground as its ring allows.
+ */
+export function practiceGrounds(nation: string): { training: ISectorRef; exercise: ISectorRef } | null {
+  const cached = practiceCache.get(nation);
+  if (cached) return cached;
+  const home = homePort(nation);
+  if (!home) return null;
+  const steps = seaSteps(home);
+  const busy = (c: number, r: number): boolean => areaAt({ c, r }) !== undefined
+    || Object.values(WORLD_MAP.bases).some((b) => b.c === c && b.r === r && (b.c !== home.c || b.r !== home.r))
+    || Object.values(WORLD_MAP.places ?? {}).some((p) => p.c === c && p.r === r);
+  const ring = (n: number): ISectorRef[] => {
+    const out: ISectorRef[] = [];
+    for (let r = 0; r < WORLD_MAP.rows; r++) for (let c = 0; c < WORLD_MAP.cols; c++) if (steps[r * WORLD_MAP.cols + c] === n && !busy(c, r)) out.push({ c, r });
+    return out;
+  };
+  const near = ring(PRACTICE_STEPS.training);
+  const far = ring(PRACTICE_STEPS.exercise);
+  const training = near[0] ?? far[0];
+  if (!training) return null;
+  const exercise = far.filter((s) => s.c !== training.c || s.r !== training.r)
+    .sort((a, b) => colGap(b.c, training.c) + Math.abs(b.r - training.r) - (colGap(a.c, training.c) + Math.abs(a.r - training.r)))[0] ?? training;
+  const out = { training, exercise };
+  practiceCache.set(nation, out);
+  return out;
+}

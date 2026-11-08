@@ -87,3 +87,48 @@ describe('0.0.70 fuel lies with the fleet', () => {
     expect(parseAnchors([{ shipIds: ['c'], at: sea, fuel: 'x' }])[0].fuel).toBeUndefined();
   });
 });
+
+describe('0.0.70 practice grounds and the places on the sea', () => {
+  it('gives every navy a training ground and an exercise ground at sea, off its home port and clear of the areas', async () => {
+    const os = await import('@/systems/OpenSeaSystem');
+    for (const n of Object.keys(os.WORLD_MAP.homePorts)) {
+      const g = os.practiceGrounds(n);
+      expect(g, n).not.toBeNull();
+      for (const s of [g!.training, g!.exercise]) {
+        expect(os.isSea(s.c, s.r), n).toBe(true);
+        expect(os.areaAt(s), n).toBeUndefined();
+      }
+      expect(g!.training.c !== g!.exercise.c || g!.training.r !== g!.exercise.r, n).toBe(true);
+    }
+  });
+
+  it("puts each navy's six places (two ports, oil, mine, convoy, stronghold) at sea, reachable from its home port", async () => {
+    const os = await import('@/systems/OpenSeaSystem');
+    const sp = await import('@/systems/SeaPlaceSystem');
+    for (const n of Object.keys(os.WORLD_MAP.homePorts)) {
+      const places = sp.seaPlaces(n);
+      expect(places.map((p) => p.kind).sort(), n).toEqual(['convoy', 'fort', 'mine', 'oil', 'port', 'port']);
+      const steps = os.seaSteps(os.homePort(n)!);
+      for (const p of places) {
+        expect(os.isSea(p.c, p.r), p.id).toBe(true);
+        expect(steps[p.r * os.WORLD_MAP.cols + p.c], p.id).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it('pays a resource point once a game hour and the stronghold once a week', async () => {
+    const sp = await import('@/systems/SeaPlaceSystem');
+    const ws = await import('@/systems/WorldSystem');
+    const [oil] = sp.seaPlaces('IJN').filter((p) => p.kind === 'oil');
+    const [fort] = sp.seaPlaces('IJN').filter((p) => p.kind === 'fort');
+    const now = Date.UTC(2026, 10, 9, 3, 10);
+    let world = ws.emptyWorld();
+    expect(sp.placeReady(world, oil, 'IJN', now)).toBe(true);
+    world = sp.markPlace(world, oil, now);
+    expect(sp.placeReady(world, oil, 'IJN', now + 60_000)).toBe(false);
+    expect(sp.placeReady(world, oil, 'IJN', now + 3_600_000)).toBe(true);
+    world = sp.markPlace(world, fort, now);
+    expect(sp.placeReady(world, fort, 'IJN', now + 3_600_000)).toBe(false);
+    expect(sp.placeReward(oil, 'IJN').fuel).toBeGreaterThan(0);
+  });
+});
