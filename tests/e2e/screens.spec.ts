@@ -2387,3 +2387,36 @@ test('指揮を移す (0.0.72): the chart lists the fleets, sends one off and ha
   await page.screenshot({ path: info.outputPath('switched.png') });
   expect(errors).toEqual([]);
 });
+
+test('超兵器と特別海域 (0.0.72): the giant patrols its sea and is met there; the weekly special sea lies beside its area (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const campaign = (JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', 'campaign.json'), 'utf8')) as { areas: Array<{ id: string; theater: string; training?: boolean }> }).areas
+    .filter((a) => a.theater === 'pacific').map((a) => a.id);
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS, nations: { IJN: { ...SAVE.nations.IJN, campaign } } });
+  type G = { game: Phaser.Game };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  const state = await page.evaluate(async () => {
+    const ws = await import('/src/systems/WorldSim.ts');
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as {
+      residentList(): Array<{ id: string; kind: string }>; specialSea(): { c: number; r: number } | null; friendlies(): Array<{ x: number; y: number }>;
+    };
+    const giant = b.residentList().find((r) => r.kind === 'superweapon');
+    if (!giant) return { giant: null, special: b.specialSea() !== null };
+    const p = ws.residentPos(giant as never, Date.now());
+    for (const sh of b.friendlies()) {
+      sh.x = p.x + 700;
+      sh.y = p.y + 300;
+    }
+    return { giant: giant.id, special: b.specialSea() !== null };
+  });
+  expect(state.giant).not.toBeNull();
+  expect(state.special).toBe(true);
+  await page.waitForFunction(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { sw?: boolean } | null; superweapon: unknown };
+    return b.engagement?.sw === true && b.superweapon !== null;
+  }, null, { timeout: 20_000 });
+  await page.screenshot({ path: info.outputPath('giant-at-sea.png') });
+  expect(errors).toEqual([]);
+});

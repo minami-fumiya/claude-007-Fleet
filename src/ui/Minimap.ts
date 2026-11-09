@@ -88,7 +88,7 @@ export class Minimap {
     }
     for (const m of marks) {
       if (m.x < ox || m.y < oy || m.x > ox + this.worldW || m.y > oy + this.worldH) continue;
-      const color = m.kind === 'friend' ? Colors.success : m.kind === 'convoy' ? Colors.gold : Colors.danger;
+      const color = m.kind === 'friend' ? Colors.success : m.kind === 'convoy' ? Colors.gold : m.kind === 'superweapon' ? 0xb07cff : Colors.danger;
       g.lineStyle(1.5, color, 0.9);
       g.strokeCircle(this.x + (m.x - ox) * k, this.y + (m.y - oy) * k, 4);
     }

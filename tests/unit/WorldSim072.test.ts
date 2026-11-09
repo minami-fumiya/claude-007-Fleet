@@ -84,3 +84,22 @@ describe('0.0.72 発見 → 追跡 / 逃走', () => {
     expect(q.x).toBeGreaterThan(100);
   });
 });
+
+describe('0.0.72 超兵器の巡回', () => {
+  it('patrols slowly round its open sea, one a day per sea, and keeps to the sea', async () => {
+    const os = await import('@/systems/OpenSeaSystem');
+    const block = os.WORLD_MAP.areas.p6 ?? Object.values(os.WORLD_MAP.areas)[0];
+    const giants = [{ areaId: 'p6', at: { c: block.c, r: block.r }, theater: 'pacific' }];
+    const list = residentsFor('IJN', IJN_SEAS, residentDay(T0), giants);
+    const g = list.filter((r) => r.kind === 'superweapon');
+    expect(g).toHaveLength(1);
+    expect(g[0].areaId).toBe('p6');
+    expect(g[0].speed).toBeLessThan(list.find((r) => r.kind === 'patrol')!.speed);
+    for (let k = 0; k < 5; k++) {
+      const p = residentPos(g[0], T0 + k * WORLD_HOUR_MS * 2.3);
+      expect(isSea(Math.floor(p.x / SECTOR_PX), Math.floor(p.y / SECTOR_PX))).toBe(true);
+      // Never far from its area.
+      expect(Math.abs(Math.floor(p.y / SECTOR_PX) - block.r)).toBeLessThan(16);
+    }
+  });
+});

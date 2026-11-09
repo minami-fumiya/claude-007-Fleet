@@ -146,7 +146,7 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
     const end = Math.min(now, arrivesAt(order));
     for (let t = from; t <= end && order; t += STEP_HOURS * WORLD_HOUR_MS) {
       const at = orderPos(order, t);
-      const foe = w.residents.find((r) => r.kind !== 'friend' && !order!.met.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= MEET_PX);
+      const foe = w.residents.find((r) => r.kind !== 'friend' && r.kind !== 'superweapon' && !order!.met.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= MEET_PX);
       if (!foe) continue;
       const ours = w.power(f.shipIds, health);
       const theirs = w.enemyPower(foe);

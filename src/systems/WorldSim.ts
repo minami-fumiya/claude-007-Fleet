@@ -12,7 +12,7 @@ import {
 } from '@/systems/OpenSeaSystem';
 import { worldHours } from '@/systems/WorldClock';
 
-export type ResidentKind = 'patrol' | 'convoy' | 'friend';
+export type ResidentKind = 'patrol' | 'convoy' | 'friend' | 'superweapon';
 
 export interface IResident {
   /** `<day>:<kind>:<theater>:<n>` — the day first, so a sinking is kept for the day only (WorldSystem's spots) */
@@ -26,13 +26,22 @@ export interface IResident {
   speed: number;
   /** Where on its path it was at the day's start (0..1) */
   phase: number;
+  /** 超兵器 (0.0.72): the campaign area whose superweapon it is (it patrols round that area) */
+  areaId?: string;
+}
+
+/** A superweapon's sea open to the navy: the area, its middle sector and its theater. */
+export interface IGiantSea {
+  areaId: string;
+  at: ISectorRef;
+  theater: string;
 }
 
 /** A world day: the residents are drawn again each day. */
 export const RESIDENT_DAY_HOURS = 24;
 /** Residents close enough to the fleet to be drawn and watched at once (重さの目安). */
 export const MAX_NEAR = 60;
-export const SPEED: Record<ResidentKind, number> = { patrol: 4, convoy: 3, friend: 4 };
+export const SPEED: Record<ResidentKind, number> = { patrol: 4, convoy: 3, friend: 4, superweapon: 2 };
 /** Residents a sea sector, by kind (an enemy patrol every ~170 sectors). */
 export const PATROL_DENSITY = 0.006;
 export const CONVOY_DENSITY = 0.0012;
@@ -151,8 +160,8 @@ const cache = new Map<string, IResident[]>();
  * The residents of a day in the seas a navy sails (`theaters`): the enemy's patrols and convoys there, and the navy's
  * own patrols in the sea of its home port. Drawn by a fixed seed, so the same for every call.
  */
-export function residentsFor(nation: string, theaters: readonly string[], day: number): IResident[] {
-  const key = `${nation}|${day}|${[...theaters].sort().join(',')}`;
+export function residentsFor(nation: string, theaters: readonly string[], day: number, giants: readonly IGiantSea[] = []): IResident[] {
+  const key = `${nation}|${day}|${[...theaters].sort().join(',')}|${giants.map((g) => g.areaId).join(',')}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const cells = theaterCells();
@@ -189,6 +198,15 @@ export function residentsFor(nation: string, theaters: readonly string[], day: n
     add('patrol', Math.max(2, Math.round(sea.length * PATROL_DENSITY)));
     add('convoy', Math.max(1, Math.round(sea.length * CONVOY_DENSITY)));
     if (theater === homeTheater) add('friend', Math.max(2, Math.round(sea.length * FRIEND_DENSITY)));
+  }
+  // 超兵器 (0.0.72): each open superweapon's sea has its giant slowly patrolling round the area.
+  for (const g of giants) {
+    const sea = cells[g.theater] ?? [];
+    const next = rng(hashText(`${nation}:giant:${g.areaId}:${day}`));
+    const start = sea.length > 0 ? sea.reduce((best, s) => (colGap(s.c, g.at.c) + Math.abs(s.r - g.at.r) < colGap(best.c, g.at.c) + Math.abs(best.r - g.at.r) ? s : best)) : null;
+    const path = start ? loopFrom(start, sea, next) : null;
+    if (!start || !path) continue;
+    out.push({ id: `${day}:superweapon:${g.areaId}`, kind: 'superweapon', theater: g.theater, danger: 10, path, speed: SPEED.superweapon, phase: next(), areaId: g.areaId });
   }
   if (cache.size > 8) cache.clear();
   cache.set(key, out);
