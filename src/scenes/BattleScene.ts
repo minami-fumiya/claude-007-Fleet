@@ -69,6 +69,8 @@ import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ISeaSky, seaSky } from '@/systems/WorldClock';
 import { arrivesAt, orderPos, orderVoyage, RETURN_AT, ReturnRule, runMs } from '@/systems/FleetOrders';
+import { recallExpedition } from '@/systems/ExpeditionSystem';
+import { expeditionPlan, expeditionPos } from '@/systems/ExpeditionRoute';
 import { fightNote, runFleetOrders } from '@/utils/FleetOrderRunner';
 import type { IChartFleet } from '@/scenes/OpenSeaChartScene';
 import { fleePoint, IGiantSea, IResident, IResidentPos, meetResponse, MEET_PX, RESIDENT_CLEAR, ResidentKind, residentDay, residentsFor, residentsNear, worldGap } from '@/systems/WorldSim';
@@ -2157,7 +2159,19 @@ export class BattleScene extends Phaser.Scene {
         minHp: Math.min(...a.shipIds.map((id) => p.damage[id] ?? 1)), fuel: a.fuel ?? FUEL_MAX, rule: a.returnAt ?? 'heavy',
       };
     });
-    return [steered, ...others];
+    // 遠征の航路 (0.0.73): the expeditions on their routes, to be taken over too.
+    const away = p.expeditions.flatMap((run): IChartFleet[] => {
+      const exp = EXPEDITIONS.find((e) => e.id === run.id);
+      const plan = exp ? expeditionPlan(p.nation, exp) : null;
+      if (!exp || !plan || run.startedAt === undefined || run.endsAt <= now) return [];
+      const pos = expeditionPos(plan, run.startedAt, now);
+      const leg = run.cut ? '引き返し中' : pos.leg === 'out' ? '往路' : pos.leg === 'station' ? '現地で行動中' : '帰路';
+      return [{
+        index: -2, expedition: run.id, label: `遠征「${exp.name}」`, place: `${leg} · 帰還まで ${Math.ceil((run.endsAt - now) / 60000)} 分`, at: sectorAt(pos.x, pos.y), moving: true,
+        minHp: Math.min(...run.shipIds.map((id) => p.damage[id] ?? 1)), fuel: FUEL_MAX * 0.6, rule: 'heavy',
+      }];
+    });
+    return [steered, ...others, ...away];
   }
 
   /** Enemy residents within six sectors of any of the navy's fleets at sea (the chart shows them, 0.0.72). */
@@ -2202,31 +2216,48 @@ export class BattleScene extends Phaser.Scene {
    * way is sailed by the autopilot). The fleet steered so far lies at sea here — or, if it had a route, sails it on by
    * itself. Leaving a fight counts as a withdrawal (a loss), so a losing fight can't be left without cost.
    */
-  private switchToFleet(index: number): void {
+  private switchToFleet(index: number | { expedition: string }): void {
     const v = this.voyage;
     if (!v) return;
     const eng = this.engagement;
     if (eng && eng.kind === 'encounter' && eng.drill) this.dropSeaFight('演習を打ち切りました');
     else if (eng) this.settleSeaFight(false);
     const p = loadProgress();
-    const target = p.openSea.anchors[index];
-    if (!target) return;
     const now = Date.now();
+    // The fleet taken over: an anchorage (lying or under way), or an expedition on its route (0.0.73: called off,
+    // without its reward, and steered from where it is; the way home is left to sail).
+    let target: { shipIds: string[]; from: IAnchorPlace; rest: Array<{ c: number; r: number }> | null; fuel: number } | null = null;
+    let base = p;
+    if (typeof index === 'number') {
+      const a = p.openSea.anchors[index];
+      if (a) {
+        const pos = a.order ? orderPos(a.order, now) : a.at;
+        const dest = a.order?.dest;
+        target = { shipIds: a.shipIds, from: a.order ? { x: pos.x, y: pos.y } : a.at, rest: dest ? findRoute(sectorAt(pos.x, pos.y), sectorAt(dest.x, dest.y)) : null, fuel: a.fuel ?? FUEL_MAX };
+        base = { ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.filter((_, i) => i !== index) } };
+      }
+    } else {
+      const run = p.expeditions.find((x) => x.id === index.expedition);
+      const exp = EXPEDITIONS.find((e) => e.id === index.expedition);
+      const plan = exp ? expeditionPlan(p.nation, exp) : null;
+      if (run && plan && run.startedAt !== undefined) {
+        const pos = expeditionPos(plan, run.startedAt, now);
+        target = { shipIds: run.shipIds, from: { x: pos.x, y: pos.y }, rest: findRoute(sectorAt(pos.x, pos.y), plan.start), fuel: FUEL_MAX * 0.6 };
+        base = { ...p, expeditions: recallExpedition(p.expeditions, run.id) };
+      }
+    }
+    if (!target) return;
     const registry = DataLoader.getRegistry(this);
     const ships = target.shipIds.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined).slice(0, 6);
     if (ships.length === 0) return;
-    // Where the fleet taken over is, and what is left of its way.
-    const pos = target.order ? orderPos(target.order, now) : target.at;
-    const from: IAnchorPlace = target.order ? { x: pos.x, y: pos.y } : target.at;
-    const dest = target.order?.dest;
-    const rest = dest ? findRoute(sectorAt(pos.x, pos.y), sectorAt(dest.x, dest.y)) : null;
+    const { from, rest } = target;
     // The fleet steered so far: its HP kept, it lies here or sails on along its route.
-    let next = p;
+    let next = base;
     const mine = this.friendlies().filter((s) => s.isAlive && s.dataId);
     for (const s of mine) next = { ...next, ...setDamage(next, s.dataId as string, s.stats.currentHp / Math.max(1, s.stats.maxHp)) };
     const ids = mine.map((s) => s.dataId as string);
     const here = v.seaPlace();
-    let openSea = v.result({ ...next.openSea, anchors: next.openSea.anchors.filter((_, i) => i !== index) }, ids, here);
+    let openSea = v.result(next.openSea, ids, here);
     const left = v.routeLeft;
     if (left.length > 1) {
       const end = left[left.length - 1];
@@ -2246,7 +2277,7 @@ export class BattleScene extends Phaser.Scene {
       captainIds: ships.map(() => null),
       openSea: true,
       openSeaFrom: from,
-      openSeaFuel: target.fuel ?? FUEL_MAX,
+      openSeaFuel: target.fuel,
       ...(rest && rest.length > 1 ? { openSeaRoute: rest } : {}),
     };
     this.scene.stop(SceneKeys.OPEN_SEA_CHART);
@@ -2268,6 +2299,7 @@ export class BattleScene extends Phaser.Scene {
       fleets: () => this.chartFleets(),
       onOrder: (index: number, route: Array<{ c: number; r: number }>) => this.orderFleet(index, route),
       onSwitch: (index: number) => this.switchToFleet(index),
+      onSwitchExpedition: (id: string) => this.switchToFleet({ expedition: id }),
       onRule: (index: number, rule: ReturnRule) => this.setFleetRule(index, rule),
       sightings: () => this.sightings(),
     });

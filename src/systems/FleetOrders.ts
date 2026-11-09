@@ -112,6 +112,8 @@ export interface IOffscreenFight {
   hurt: Record<string, number>;
   turnedHome: boolean;
   at: number;
+  /** 0.0.73: an expedition's fight on its route (its id) */
+  expedition?: string;
 }
 
 /** A fixed pseudo-random 0..1 from a text (the same fight always hurts the same). */

@@ -33,6 +33,8 @@ export interface IOpenSeaChartData {
   onOrder?: (index: number, route: ISectorRef[]) => string | null;
   /** 指揮を移す */
   onSwitch?: (index: number) => void;
+  /** 指揮を移す to an expedition on its route (0.0.73) */
+  onSwitchExpedition?: (id: string) => void;
   /** 自動の帰投の基準 */
   onRule?: (index: number, rule: ReturnRule) => void;
   /** Enemy residents within sight of the navy's fleets (0.0.72) */
@@ -41,8 +43,10 @@ export interface IOpenSeaChartData {
 
 /** A fleet in the chart's list (0.0.72). */
 export interface IChartFleet {
-  /** Its place in the anchorages; -1 for the fleet steered */
+  /** Its place in the anchorages; -1 for the fleet steered, -2 for an expedition */
   index: number;
+  /** An expedition on its route (0.0.73) */
+  expedition?: string;
   label: string;
   place: string;
   at: ISectorRef;
@@ -302,7 +306,7 @@ export class OpenSeaChartScene extends Phaser.Scene {
     }
     // 艦隊の一覧 (0.0.72): the fleets away (squares; hollow when under way) and the enemy seen near them (red).
     for (const fl of this.d.fleets?.() ?? []) {
-      if (fl.index < 0) continue;
+      if (fl.index === -1) continue;
       const p = this.pointOf(fl.at);
       if (!p) continue;
       const s = Math.max(4, k * 0.45);
@@ -432,6 +436,14 @@ export class OpenSeaChartScene extends Phaser.Scene {
       const bw = (w - 16) / 3;
       const by = y + bh / 2;
       const ruleNext = RETURN_RULES[(RETURN_RULES.indexOf(fl.rule) + 1) % RETURN_RULES.length];
+      // An expedition: taken over where it is (its reward is given up); its 帰投の基準 is always 大破.
+      if (fl.expedition) {
+        const id = fl.expedition;
+        add(new UIButton(this, x + bw / 2, by, '指揮を移す', () => this.d.onSwitchExpedition?.(id), { variant: 'gold', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 }));
+        add(this.add.text(x + bw + 16, by, '移すと遠征は取りやめ (報酬なし)', textStyle(11, Css.muted)).setOrigin(0, 0.5));
+        y += bh + 10;
+        continue;
+      }
       add(new UIButton(this, x + bw * 2.5 + 16, by, `帰投 ${RETURN_SHORT[fl.rule]}`, () => {
         this.d.onRule?.(fl.index, ruleNext);
         this.listNote = `帰投の基準を「${RETURN_JA[ruleNext]}」にしました`;

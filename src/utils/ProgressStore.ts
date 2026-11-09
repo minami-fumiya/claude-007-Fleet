@@ -425,7 +425,12 @@ function parseNation(data: Record<string, unknown>, defaultResources: IResources
     baseWork: isObject(data.baseWork) && typeof data.baseWork.base === 'string' && isNum(data.baseWork.endsAt) ? { base: data.baseWork.base, endsAt: data.baseWork.endsAt } : null,
     expeditions: (Array.isArray(data.expeditions) ? data.expeditions : [])
       .filter((r): r is IExpeditionRun => isObject(r) && typeof r.id === 'string' && Array.isArray(r.shipIds) && isNum(r.endsAt))
-      .map((r) => ({ id: r.id, shipIds: strings(r.shipIds), endsAt: r.endsAt })),
+      // 0.0.73: the route's clock and the enemies met on the way (missing: an expedition sent before the routes).
+      .map((r) => ({
+        id: r.id, shipIds: strings(r.shipIds), endsAt: r.endsAt,
+        ...(isNum(r.startedAt) ? { startedAt: r.startedAt, checkedAt: isNum(r.checkedAt) ? r.checkedAt : r.startedAt, met: strings(r.met) } : {}),
+        ...(r.cut === true ? { cut: true } : {}),
+      })),
     expeditionGroups: isObject(data.expeditionGroups)
       ? Object.fromEntries(Object.entries(data.expeditionGroups).filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, strings(v)]))
       : {},
