@@ -13,7 +13,8 @@ import { voice } from '@/systems/VoiceSystem';
 import { shortVoiceName } from '@/systems/SpeechStyle';
 import { applyFrameLimit } from '@/utils/FrameLimit';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
-import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
+import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveProgress, saveSave } from '@/utils/ProgressStore';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { backupLabel, ISaveBackup } from '@/utils/SaveBackup';
@@ -336,6 +337,8 @@ export class SettingsScene extends Phaser.Scene {
   /** The write-out remembered on this device (#116), so the notice stops asking. */
   private markExported(): void {
     saveExportState(exported(Date.now(), loadSave().record.sorties, __APP_VERSION__));
+    // 書き出し章 (0.0.71): counted with the quest totals.
+    saveProgress(withQuestEvents(loadProgress(), [['saveExport', 1]], Date.now()));
   }
 
   /** ファイルに保存 (0.0.71): the save code as a text file to keep anywhere. */

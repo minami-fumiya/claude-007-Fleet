@@ -124,4 +124,16 @@ describe('ladder names', () => {
     expect(ids).toEqual(expect.arrayContaining(['research_peak', 'manual_use']));
     expect(ids).not.toContain('mid_classes');
   });
+  it('0.0.71: 二砲章 and 設計段階章 (#416), 書き出し章 (#116)', () => {
+    const np = {
+      ...emptyNationProgress(), nation: Nation.IJN, research: ['fictional_ships'], focus: { done: ['a', 'b', 'c'], current: null },
+      designs: [{ id: 'design_ijn_1', name: '二砲', shipClass: ShipClass.Battleship, hull: 'hull_bb', modules: ['36cm_main_gun', '20cm_twin_gun'] }],
+    };
+    const ctx = medalContext({ ...emptySave(), nations: { [Nation.IJN]: np } });
+    expect(ctx.twinMainDesigns).toBe(1);
+    expect(ctx.designStage).toBe(2);
+    const ids = newMedals(emptyRecord(), { ...ctx, totals: { saveExport: 1 } }).map((m) => m.id);
+    expect(ids).toEqual(expect.arrayContaining(['twin_main', 'design_stage', 'design_stage_2', 'save_export']));
+    expect(ids).not.toContain('design_stage_3');
+  });
 });

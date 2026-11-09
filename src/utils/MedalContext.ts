@@ -1,6 +1,7 @@
 import { exploredCount, sectorsSailed } from '@/systems/OpenSeaSystem';
 import campaignData from '@/data/campaign.json';
 import { sunkTotal } from '@/systems/ShipRecordSystem';
+import { designTier, mainGunCount } from '@/systems/DesignSystem';
 import { heldAreas, parseSeaControl } from '@/systems/SeaControlSystem';
 import ijn from '@/data/ships/ijn.json';
 import usn from '@/data/ships/usn.json';
@@ -72,7 +73,7 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet; 
   const theaters = new Set<string>();
   const groundSeen = new Set<string>();
   const ctx: Required<Omit<IMedalContext, 'totals' | 'clearedTheaters' | 'goldEarned'>> = {
-    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, aircraftDeveloped: 0, worldBest: 0, openSeaSectors: 0, openSeaExplored: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, equipStarsMax: 0, foreignOwned: 0, shipsKnown: 0, seasHeld: 0, waysDone: 0, bestShipSinks: 0,
+    areasCleared: 0, areasS: 0, shipsOwned: 0, researchDone: 0, captains: 0, captainLevel: 0, captainSinks: 0, carriersOwned: 0, maxDocks: 0, fullStock: 0, steelCap: 0, supplyLevel: 0, basesOpen: 0, farthestSea: 0, classesComplete: 0, expeditionKinds: 0, equipmentKinds: 0, ownSuperweapon: 0, aircraftComplete: 0, aircraftDeveloped: 0, worldBest: 0, openSeaSectors: 0, openSeaExplored: 0, groundTotal: 0, groundKinds: 0, shipTypes: 0, techLevels: 0, captainTraits: 0, midClasses: 0, escortsOwned: 0, researchTop: 0, parallelFacilities: 0, facilityLevels: 0, nationsPlayed: nations.length, rankIndex: 0, focusDone: 0, plannedOwned: 0, designsDrawn: 0, designsOwned: 0, twinMainDesigns: 0, designStage: 0, equipStarsMax: 0, foreignOwned: 0, shipsKnown: 0, seasHeld: 0, waysDone: 0, bestShipSinks: 0,
   };
   for (const [nation, np] of nations) {
     if (!np) continue;
@@ -141,6 +142,8 @@ export function medalContext(save: Pick<ISave, 'nations'> & { wallet?: IWallet; 
     ctx.seasHeld = Math.max(ctx.seasHeld, heldAreas(CAMPAIGN.areas, np.campaign, parseSeaControl(np.sea)).length);
     ctx.plannedOwned = Math.max(ctx.plannedOwned, np.ships.filter((id) => PLANNED.has(id)).length);
     ctx.designsDrawn = Math.max(ctx.designsDrawn, np.designs?.length ?? 0);
+    ctx.twinMainDesigns = Math.max(ctx.twinMainDesigns, (np.designs ?? []).filter((d) => mainGunCount(d.modules) > 1).length);
+    ctx.designStage = Math.max(ctx.designStage, designTier(np.focus?.done.length ?? 0, np.research ?? []));
     ctx.designsOwned += np.ships.filter((id) => (np.designs ?? []).some((d) => d.id === id)).length;
     ctx.equipStarsMax = Math.max(ctx.equipStarsMax, ...Object.values(np.equipStars ?? {}), 0);
     ctx.foreignOwned += np.ships.filter((id) => id.includes('@')).length;
