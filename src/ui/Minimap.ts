@@ -71,7 +71,8 @@ export class Minimap {
     return this.worldH * this.scale;
   }
 
-  update(friendlies: BaseShip[], enemies: BaseShip[], seen: Set<BaseShip>): void {
+  /** `marks`: the residents of the open sea near the fleet (0.0.72) — enemy patrols red rings, convoys amber, the navy's patrols green. */
+  update(friendlies: BaseShip[], enemies: BaseShip[], seen: Set<BaseShip>, marks: ReadonlyArray<{ x: number; y: number; kind: string }> = []): void {
     const g = this.g;
     const k = this.scale;
     g.clear();
@@ -84,6 +85,12 @@ export class Minimap {
       if (!s.isAlive) continue;
       g.fillStyle(Colors.blue, s.submerged ? 0.5 : 1);
       g.fillCircle(this.x + (s.x - ox) * k, this.y + (s.y - oy) * k, 2.5);
+    }
+    for (const m of marks) {
+      if (m.x < ox || m.y < oy || m.x > ox + this.worldW || m.y > oy + this.worldH) continue;
+      const color = m.kind === 'friend' ? Colors.success : m.kind === 'convoy' ? Colors.gold : Colors.danger;
+      g.lineStyle(1.5, color, 0.9);
+      g.strokeCircle(this.x + (m.x - ox) * k, this.y + (m.y - oy) * k, 4);
     }
     g.fillStyle(Colors.danger, 1);
     for (const s of enemies) {

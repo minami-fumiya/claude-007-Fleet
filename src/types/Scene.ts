@@ -33,6 +33,9 @@ export interface IBattleInitData {
     spotId: string; danger: number; fort?: boolean;
     /** 0.0.70: the enemy's convoy at the start of its route (its cargo on a win) */
     convoy?: boolean;
+    /** 0.0.72: a resident convoy raided (its cargo on a win); a running patrol caught */
+    raid?: boolean;
+    chase?: boolean;
     /** 0.0.67: the ring is the navy's this week; the day's historical battle; the navy's patrol joining */
     controlled?: boolean; historic?: boolean; ally?: { name: string; nation: string; shipIds: string[] };
   };

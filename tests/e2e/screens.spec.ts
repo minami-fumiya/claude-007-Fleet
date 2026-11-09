@@ -2274,3 +2274,64 @@ test('設計 (0.0.71): a stage reached is told once, a battleship designed with 
   expect((await shown('HomeScene')).some((t) => t.includes('設計段階 1')), 'notice read').toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('動く世界 (0.0.72): the sky follows the world clock, residents sail and are met at sea (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS });
+  type G = { game: Phaser.Game };
+  type R = { id: string; kind: string; path: Array<{ c: number; r: number }> };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2500);
+  // The voyage readout tells the local time and the weather.
+  const readout = await page.evaluate(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: { info: { text: string } } };
+    return b.voyage.info.text;
+  });
+  expect(readout).toMatch(/現地 \d\d:\d\d/);
+  // Sail up to an enemy convoy and then a patrol, each well clear of the harbours and the areas.
+  for (const kind of ['convoy', 'patrol']) {
+    const met = await page.evaluate(async (k) => {
+      const ws = await import('/src/systems/WorldSim.ts');
+      const os = await import('/src/systems/OpenSeaSystem.ts');
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { residentList(): R[]; friendlies(): Array<{ x: number; y: number }>; seaWon: Set<string> };
+      const places = [...Object.values(os.WORLD_MAP.bases), ...Object.values(os.WORLD_MAP.places ?? {}), ...Object.values(os.WORLD_MAP.areas)] as Array<{ c: number; r: number }>;
+      const now = Date.now();
+      const r = b.residentList().find((x) => {
+        if (x.kind !== k || b.seaWon.has(x.id)) return false;
+        const p = ws.residentPos(x as never, now);
+        const c = Math.floor(p.x / os.SECTOR_PX);
+        const row = Math.floor(p.y / os.SECTOR_PX);
+        return !places.some((s) => os.colGap(s.c, c) < ws.RESIDENT_CLEAR + 2 && Math.abs(s.r - row) < ws.RESIDENT_CLEAR + 2);
+      });
+      if (!r) return null;
+      const p = ws.residentPos(r as never, now);
+      for (const sh of b.friendlies()) {
+        sh.x = p.x + 900;
+        sh.y = p.y + 400;
+      }
+      return r.id;
+    }, kind);
+    expect(met, kind).not.toBeNull();
+    await page.waitForFunction((id) => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { spotId?: string } | null }).engagement?.spotId === id, met, { timeout: 20_000 });
+    const eng = await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { resident?: string; flee?: boolean } }).engagement);
+    expect(eng.resident).toBe(kind);
+    if (kind === 'convoy') expect(eng.flee).toBe(true);
+    await page.screenshot({ path: info.outputPath(`resident-${kind}.png`) });
+    await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { enemies: Array<{ isAlive: boolean; takeDamage(n: number): void }> };
+      for (const e of b.enemies) if (e.isAlive) e.takeDamage(1e9);
+    });
+    await page.waitForFunction(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: unknown }).engagement === null, null, { timeout: 20_000 });
+  }
+  const totals = await page.evaluate(() => (JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { quests: { totals: Record<string, number> } } } }).nations.IJN.quests.totals);
+  expect(totals.convoyRaid).toBe(1);
+  // The chart shows the fronts and the clock.
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  await page.waitForTimeout(400);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene')).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene')).toEqual([]);
+  await page.screenshot({ path: info.outputPath('chart-fronts.png') });
+  expect(errors).toEqual([]);
+});
