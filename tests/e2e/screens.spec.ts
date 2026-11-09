@@ -2206,3 +2206,33 @@ test('制海権と反攻 (0.0.62): the seas held, a counterattack with its 防�
   })).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('セーブの書き出し (0.0.71): the home asks to write the save out, the data tab says when it was (#116)', async ({ page }, info) => {
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS, record: { sorties: 12 } });
+  type G = { game: Phaser.Game };
+  const shown = (key: string): Promise<string[]> => page.evaluate((k) => {
+    const out: string[] = [];
+    const walk = (list: Phaser.GameObjects.GameObject[]): void => {
+      for (const o of list) {
+        if (o.type === 'Text' && (o as Phaser.GameObjects.Text).visible) out.push((o as Phaser.GameObjects.Text).text);
+        if (o.type === 'Container' && (o as Phaser.GameObjects.Container).visible) walk((o as Phaser.GameObjects.Container).list);
+      }
+    };
+    walk((window as unknown as G).game.scene.getScene(k).children.list);
+    return out;
+  }, key);
+  await open(page, 'HomeScene');
+  expect((await shown('HomeScene')).some((t) => t.includes('セーブを書き出す'))).toBe(true);
+  expect(await overlappingTexts(page, 'HomeScene'), `home (${layout})`).toEqual([]);
+  await open(page, 'SettingsScene', { tab: 'data' });
+  expect((await shown('SettingsScene')).some((t) => t.includes('まだ書き出していません'))).toBe(true);
+  for (const label of ['ファイルに保存', 'ファイルから読み込む']) expect((await shown('SettingsScene')).some((t) => t.includes(label)), label).toBe(true);
+  await page.screenshot({ path: info.outputPath('settings-export.png') });
+  expect(await overflowingTexts(page, 'SettingsScene'), `data (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'SettingsScene'), `data overlaps (${layout})`).toEqual([]);
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('SettingsScene') as unknown as { markExported(): void }).markExported());
+  await open(page, 'HomeScene');
+  expect((await shown('HomeScene')).some((t) => t.includes('セーブを書き出す'))).toBe(false);
+  expect(errors).toEqual([]);
+});
