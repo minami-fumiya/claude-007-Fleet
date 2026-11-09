@@ -2420,3 +2420,36 @@ test('超兵器と特別海域 (0.0.72): the giant patrols its sea and is met th
   await page.screenshot({ path: info.outputPath('giant-at-sea.png') });
   expect(errors).toEqual([]);
 });
+
+test('船団護衛を海の上で (0.0.73): the convoy comes from the navy\'s nearest harbour and makes for the sea beyond (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS });
+  type G = { game: Phaser.Game };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  const harbour = await page.evaluate(async () => {
+    const os = await import('/src/systems/OpenSeaSystem.ts');
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { friendlies(): Array<{ x: number; y: number }>; nearestHarbour(at: { x: number; y: number }): { x: number; y: number; name: string } | null };
+    const c = os.areaCentre(os.WORLD_MAP.areas.p3);
+    for (const sh of b.friendlies()) {
+      sh.x = c.x + 300;
+      sh.y = c.y + 200;
+    }
+    return { ...b.nearestHarbour(c), cx: c.x, cy: c.y };
+  });
+  expect(harbour.name).toBeTruthy();
+  await page.waitForFunction(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { areaId?: string } | null }).engagement?.areaId === 'p3', null, { timeout: 20_000 });
+  const convoy = await page.evaluate(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { convoy: Array<{ x: number; y: number }> };
+    return b.convoy.map((s) => ({ x: s.x, y: s.y }));
+  });
+  expect(convoy.length).toBe(3);
+  // The merchants start on the harbour's side of the area.
+  const mid = { x: convoy.reduce((n, s) => n + s.x, 0) / 3, y: convoy.reduce((n, s) => n + s.y, 0) / 3 };
+  const toHarbour = Math.atan2(harbour.y! - harbour.cy, harbour.x! - harbour.cx);
+  const toConvoy = Math.atan2(mid.y - harbour.cy, mid.x - harbour.cx);
+  expect(Math.cos(toHarbour - toConvoy)).toBeGreaterThan(0.7);
+  await page.screenshot({ path: info.outputPath('convoy-at-sea.png') });
+  expect(errors).toEqual([]);
+});

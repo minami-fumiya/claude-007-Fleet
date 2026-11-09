@@ -38,7 +38,7 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { anchorAt, colGap, findRoute, FUEL_MAX, IAnchorPlace, isSea, lonLatOf, wrapCol, placeName, samePlace, sectorAt, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, homeAnchor, placeFuel, theaterOf } from '@/systems/OpenSeaSystem';
+import { anchorAt, colGap, findRoute, FUEL_MAX, homePort, IAnchorPlace, isSea, seaSectorAt, lonLatOf, wrapCol, placeName, samePlace, sectorAt, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, homeAnchor, placeFuel, theaterOf } from '@/systems/OpenSeaSystem';
 import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
 import { nearestDock } from '@/systems/AnchorageSystem';
@@ -103,7 +103,7 @@ import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
 import { afterBattle, resourceReward, spotWon, worldEnemyFleet, CONTROL_ENEMY_MUL, CONTROL_REWARD_MUL, emptyWorld, endVoyage, FORT_GOLD, FORT_NATION, FORT_REWARD, fortDanger, HISTORIC_GOLD, mustReturn, PORT_REPAIR, PATROL_ARRIVE_SEC, takeFort, winHistoric, winInRing, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
 import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
-import { ANNIVERSARY_GOLD, anniversaryRewardMul, fleetKeepsRule, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, specialState, weeklyArea, weeklyRule, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
+import { ANNIVERSARY_GOLD, ANNIVERSARY_PLACES, anniversariesOn, anniversaryKey, anniversaryRewardMul, fleetKeepsRule, IAnniversary, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, specialState, weeklyArea, weeklyRule, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
@@ -2104,6 +2104,7 @@ export class BattleScene extends Phaser.Scene {
       passBy: (id) => this.passResource(id),
       openSeparation: () => this.openSeparation(),
       startDrill: (kind) => this.startDrill(kind),
+      startAnniversary: (id) => this.startAnniversary(id),
     }, nation, loadProgress().openSea, this.voyagePorts(), this.battleData?.openSeaFuel ?? placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
     // 画面の外の艦隊 (0.0.72): the fleets under orders are brought up to now as the voyage begins.
     this.runOrders();
@@ -2478,6 +2479,54 @@ export class BattleScene extends Phaser.Scene {
     return this.residents;
   }
 
+  /** The navy's harbour (an open base or a port on the sea) nearest a point: where a convoy comes from (0.0.73). */
+  private nearestHarbour(at: { x: number; y: number }): { x: number; y: number; name: string } | null {
+    const p = loadProgress();
+    const spots = [
+      ...openBases(p).flatMap((b) => (WORLD_MAP.bases[b.id] ? [{ ...WORLD_MAP.bases[b.id], name: b.name }] : [])),
+      ...seaPlaces(p.nation).filter((pl) => pl.kind === 'port').map((pl) => ({ c: pl.c, r: pl.r, name: pl.name })),
+    ];
+    let best: { x: number; y: number; name: string } | null = null;
+    let bestD = Infinity;
+    for (const s of spots) {
+      const x = this.nearX((s.c + 0.5) * SECTOR_PX);
+      const y = (s.r + 0.5) * SECTOR_PX;
+      const d = Math.hypot(x - at.x, y - at.y);
+      if (d > SECTOR_PX && d < bestD) {
+        best = { x, y, name: s.name };
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  /** 記念日 (0.0.73): today's anniversary battles of the navy not yet won this year, each a ring where it was fought. */
+  private anniversarySeas(): Array<{ id: string; a: IAnniversary; c: number; r: number }> {
+    const p = loadProgress();
+    const now = Date.now();
+    return anniversariesOn(now).flatMap((a) => {
+      const at = ANNIVERSARY_PLACES[a.id];
+      if (!a.scenario || !at || !a.nations.includes(this.playerNation) || p.specialOps.anniversaries.includes(anniversaryKey(a, now))) return [];
+      const s = seaSectorAt(at[0], at[1]);
+      return s ? [{ id: `anniv:${a.id}`, a, ...s }] : [];
+    });
+  }
+
+  /**
+   * 記念の海戦 (0.0.73): the fleet waits at sea where the battle was fought, and the day's historical scenario opens
+   * (its own fleets, as the 史実 screen fights it).
+   */
+  private startAnniversary(id: string): void {
+    const v = this.voyage;
+    const hit = this.anniversarySeas().find((x) => x.id === id);
+    if (!v || !hit || this.engagement) return;
+    const progress = loadProgress();
+    const shipIds = this.friendlies().filter((s) => s.isAlive).map((s) => s.dataId).filter((x): x is string => !!x);
+    saveProgress({ ...progress, openSea: v.result(progress.openSea, shipIds, v.seaPlace()) });
+    this.voyage = null;
+    this.scene.start(SceneKeys.SCENARIO, { scenario: hit.a.scenario });
+  }
+
   /** 特別海域 (0.0.72): this week's special sea, open and in a sea the navy sails — the sea sector just beside its area. */
   private specialSea(): { id: string; area: ICampaignArea; c: number; r: number } | null {
     const data = campaignData as ICampaignData;
@@ -2543,7 +2592,15 @@ export class BattleScene extends Phaser.Scene {
     const objective = area.objective ?? Objective.Annihilate;
     this.objective = objective;
     this.side = campaignSide(area);
-    this.frame = seaFrame(centre, this.flagship, objective === Objective.Convoy ? 'west' : 'south');
+    // 0.0.73: a convoy comes from the navy's nearest harbour and makes for the sea beyond (港から港へ); the enemy that
+    // would escape runs for its own home port, so the fleet has to cut it off or chase it down.
+    const harbour = objective === Objective.Convoy ? this.nearestHarbour(centre) : null;
+    const enemyHome = objective === Objective.PreventEscape ? homePort(nation) : undefined;
+    const homeAt = enemyHome ? { x: this.nearX((enemyHome.c + 0.5) * SECTOR_PX), y: (enemyHome.r + 0.5) * SECTOR_PX } : null;
+    const facing = harbour ?? (homeAt ? { x: centre.x - (homeAt.x - centre.x), y: centre.y - (homeAt.y - centre.y) } : this.flagship);
+    this.frame = seaFrame(centre, facing, objective === Objective.Convoy ? 'west' : 'south');
+    if (harbour) this.seaNote(`船団は${harbour.name}の方から来て、向こうの海へ抜けます。守り抜いてください`, 5000);
+    if (homeAt && enemyHome) this.seaNote(`敵は${enemyHome.name}の方へ逃げます。先回りするか追って沈めてください`, 5000);
     this.enemyNation = nation;
     const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(enemyScale(data, area, this.playerNation)) };
     const route = sortieRoute(area, ships);
@@ -3070,7 +3127,9 @@ export class BattleScene extends Phaser.Scene {
     // 特別海域 (0.0.72): this week's, as a ring beside its area.
     const special = this.specialSea();
     const specials: IVoyageStop[] = special ? [{ id: special.id, name: `特別海域 (${weeklyRule(Date.now()).name})`, kind: 'special', c: special.c, r: special.r }] : [];
-    return [...bases, ...stops, ...drills, ...specials];
+    // 記念日 (0.0.73): the day's historical battle where it was fought.
+    const annivs: IVoyageStop[] = this.anniversarySeas().map((x) => ({ id: x.id, name: `${x.a.name} (記念日)`, kind: 'anniversary', c: x.c, r: x.r }));
+    return [...bases, ...stops, ...drills, ...specials, ...annivs];
   }
 
   /**

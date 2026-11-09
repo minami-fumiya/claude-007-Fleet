@@ -59,3 +59,19 @@ describe('0.0.73 遠征の航路 (#445)', () => {
     expect(cut.gained.fuel).toBe(Math.round(full.gained.fuel * 0.5));
   });
 });
+
+describe('0.0.73 記念日を海の上に', () => {
+  it('puts every anniversary battle with a scenario on a sea sector where it was fought', async () => {
+    const { ANNIVERSARIES, ANNIVERSARY_PLACES } = await import('@/systems/SpecialOpsSystem');
+    const os = await import('@/systems/OpenSeaSystem');
+    for (const a of ANNIVERSARIES.filter((x) => x.scenario)) {
+      const at = ANNIVERSARY_PLACES[a.id];
+      expect(at, a.id).toBeDefined();
+      const s = os.seaSectorAt(at[0], at[1]);
+      expect(s, a.id).not.toBeNull();
+      expect(os.isSea(s!.c, s!.r), a.id).toBe(true);
+      const ll = os.lonLatOf(s!);
+      expect(Math.abs(ll.lat - at[1]), a.id).toBeLessThan(6);
+    }
+  });
+});

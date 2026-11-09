@@ -106,6 +106,23 @@ export function lonLatOf(s: ISectorRef, map: IWorldMap = WORLD_MAP): { lon: numb
   return { lon, lat: map.lat0 - (s.r + 0.5) * map.dLat };
 }
 
+/** The sea sector at a longitude and latitude (0.0.73), or the nearest sea sector within three when that one is land. */
+export function seaSectorAt(lon: number, lat: number, map: IWorldMap = WORLD_MAP): ISectorRef | null {
+  const c0 = wrapCol(Math.floor((lon - map.lon0) / map.dLon), map.cols);
+  const r0 = Math.floor((map.lat0 - lat) / map.dLat);
+  for (let k = 0; k <= 3; k++) {
+    for (let dr = -k; dr <= k; dr++) {
+      for (let dc = -k; dc <= k; dc++) {
+        if (Math.max(Math.abs(dc), Math.abs(dr)) !== k) continue;
+        const c = wrapCol(c0 + dc, map.cols);
+        const r = r0 + dr;
+        if (inRows(r, map) && isSea(c, r, map)) return { c, r };
+      }
+    }
+  }
+  return null;
+}
+
 export function lonLatText(s: ISectorRef): string {
   const { lon, lat } = lonLatOf(s);
   const ew = lon >= 0 ? `東経 ${Math.round(lon)}°` : `西経 ${Math.round(-lon)}°`;
