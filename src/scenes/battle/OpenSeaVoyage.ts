@@ -4,9 +4,12 @@ import { BaseShip } from '@/entities/ships/BaseShip';
 import { resolveMap } from '@/systems/MapSystem';
 import {
   EXPLORE_RADIUS, FUEL_MAX, ISectorRef, NO_FUEL_SPEED, PORT_RADIUS, SECTOR_PX, WORLD_MAP, WORLD_PX, IOpenSeaProgress,
-  IAnchorPlace, anchorAt, explore, fuelForPx, isSea, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
+  IAnchorPlace, anchorAt, explore, fuelForPx, isSea, lonLatOf, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
 } from '@/systems/OpenSeaSystem';
 import { IResolvedMap } from '@/types/Map';
+import { TimeOfDay } from '@/types/Weather';
+import { WEATHER_LABEL } from '@/systems/WeatherSystem';
+import { clockText, seaSky } from '@/systems/WorldClock';
 import { drawMap } from '@/ui/MapView';
 import { Minimap } from '@/ui/Minimap';
 import { UIButton } from '@/ui/components/UIKit';
@@ -40,10 +43,10 @@ export interface IVoyageHost {
 }
 
 /** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
-export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise' | 'convoy' | 'fort';
+export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise' | 'convoy' | 'fort' | 'special';
 export type IVoyageStop = { id: string; name: string; kind?: VoyageStopKind } & ISectorRef;
 
-const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演', convoy: '船', fort: '要' };
+const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演', convoy: '船', fort: '要', special: '特' };
 
 interface ILoadedSector {
   /** Unwrapped column (may be -1 or cols) and row */
@@ -209,7 +212,7 @@ export class OpenSeaVoyage {
     // In one of the navy's open harbours: the fleet can put in (and lie there, 停泊); a port on the sea refills the
     // tank; an oil field or a mine pays as the fleet sails through (0.0.70).
     // The enemy's convoy and stronghold are drawn as a warning only: coming near starts their fight (BattleScene).
-    const ring = this.ports.filter((p) => p.kind !== 'convoy' && p.kind !== 'fort').find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
+    const ring = this.ports.filter((p) => p.kind !== 'convoy' && p.kind !== 'fort' && p.kind !== 'special').find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
     const resource = ring && (ring.kind === 'oil' || ring.kind === 'mine') ? ring : null;
     if (resource && this.passedHere !== resource.id) this.host.passBy(resource.id);
     this.passedHere = resource?.id ?? null;
@@ -233,9 +236,12 @@ export class OpenSeaVoyage {
     const theater = theaterOf(s.c, s.r);
     const place = sectorContent(s.c, s.r).place;
     const fuel = Math.ceil(this.fuel);
+    const sky = seaSky(Date.now(), s.c, s.r, lonLatOf(s).lon, WORLD_MAP.cols, WORLD_MAP.rows);
     const lines = [
       `${theater ? THEATER_JA[theater] : '沿岸'}${place ? ` · ${place}` : ''}`,
       lonLatText(s),
+      // 世界の時計 (0.0.72): the local hour and the weather over the sector.
+      `現地 ${clockText(sky.hour)}  ·  ${WEATHER_LABEL[sky.weather]}${sky.time === TimeOfDay.Night ? '  ·  夜' : ''}`,
       `燃料 ${fuel} / ${FUEL_MAX}${fuel <= 0 ? ' (微速)' : ''}`,
     ];
     const text = lines.join('\n');
@@ -300,7 +306,7 @@ export class OpenSeaVoyage {
       const cx = x0 + SECTOR_PX / 2;
       const cy = y0 + SECTOR_PX / 2;
       const kind = port.kind ?? 'base';
-      const enemy = kind === 'convoy' || kind === 'fort';
+      const enemy = kind === 'convoy' || kind === 'fort' || kind === 'special';
       const color = enemy ? Colors.danger : kind === 'base' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
       const css = enemy ? Css.danger : kind === 'base' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
       const ring = scene.add.graphics().setDepth(DEPTH_WATER_FX - 1);
@@ -332,7 +338,7 @@ export class OpenSeaVoyage {
 
   /** What the voyage leaves in the save. */
   result(saved: IOpenSeaProgress, shipIds: readonly string[], at: IAnchorPlace): IOpenSeaProgress {
-    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation, this.fuel) };
+    return { ...saved, explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation, this.fuel) };
   }
 
   /** The flagship's place, wrapped into the world (for lying at sea). */

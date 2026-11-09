@@ -136,4 +136,9 @@ describe('ladder names', () => {
     expect(ids).toEqual(expect.arrayContaining(['twin_main', 'design_stage', 'design_stage_2', 'save_export']));
     expect(ids).not.toContain('design_stage_3');
   });
+  it('0.0.72: 船団襲撃章・追撃戦章・指揮章 (#445)', () => {
+    const ids = newMedals(emptyRecord(), { clearedTheaters: [], totals: { convoyRaid: 1, chaseWin: 10, commandSwitch: 1 } }).map((m) => m.id);
+    expect(ids).toEqual(expect.arrayContaining(['convoy_raider', 'pursuit', 'pursuit_2', 'fleet_command']));
+    expect(ids).not.toContain('convoy_raider_2');
+  });
 });

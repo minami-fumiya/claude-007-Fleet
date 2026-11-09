@@ -24,6 +24,7 @@ export function canDockAt(at: IAnchorPlace, progress: DockProgress): boolean {
 
 /** Why a ship can't be docked where it lies, or null when it can (入渠は入渠のある基地で). */
 export function dockProblem(progress: DockProgress, shipId: string): string | null {
+  if (progress.openSea.anchors.some((a) => a.order && a.shipIds.includes(shipId))) return '回航中';
   const at = shipPlace(progress.openSea.anchors, shipId, progress.nation);
   if (canDockAt(at, progress)) return null;
   return at.base ? '入渠設備なし' : '洋上';

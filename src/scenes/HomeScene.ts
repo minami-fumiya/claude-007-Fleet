@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import { TECH_TREE } from '@/systems/ResearchSystem';
 import { shownExpeditions } from '@/systems/ExpeditionSystem';
 import { designTier, newDesignStages } from '@/systems/DesignSystem';
+import { runFleetOrders } from '@/utils/FleetOrderRunner';
 import { EXPEDITION_NEW, newIds, OPEN_BUILD_STATES, openExpeditions, openResearch, RESEARCH_NEW, SHIPYARD_NEW } from '@/systems/NewMarks';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
@@ -146,6 +147,9 @@ export class HomeScene extends Phaser.Scene {
   create(): void {
     // First-play tutorial (#90): drawn above the screen, so it can be made first.
     new TutorialGuide(this);
+    // 画面の外の艦隊 (0.0.72): fleets under orders have sailed on while the admiral was away (up to a world day).
+    const ran = runFleetOrders(loadProgress(), DataLoader.getRegistry(this), Date.now());
+    if (ran) saveProgress(ran.progress);
     // 国別 BGM (#93): the home port plays the navy's own tune — once a navy is chosen; before that (a new save, whose
     // default navy is Japan), the neutral tune (#381).
     const chosen = loadSave();

@@ -10,7 +10,7 @@ import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_W, CANVAS_H, DEPTH_HUD, DEPTH_SHIPS, DEPTH_WATER_FX, IS_PORTRAIT } from '@/config/GameConstants';
 import { BaseShip } from '@/entities/ships/BaseShip';
-import { baseOfProgress, baseReaches, openBases, theaterFacility } from '@/systems/BaseSystem';
+import { baseOfProgress, baseReaches, nationBases, openBases, theaterFacility } from '@/systems/BaseSystem';
 import { BaseProjectile } from '@/entities/weapons/BaseProjectile';
 import { DEPTH_CHARGE_RADIUS } from '@/entities/weapons/DepthCharge';
 import { CombatSystem } from '@/systems/CombatSystem';
@@ -38,7 +38,7 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { anchorAt, FUEL_MAX, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
+import { anchorAt, colGap, findRoute, FUEL_MAX, IAnchorPlace, isSea, lonLatOf, wrapCol, placeName, samePlace, sectorAt, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, homeAnchor, placeFuel, theaterOf } from '@/systems/OpenSeaSystem';
 import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
 import { nearestDock } from '@/systems/AnchorageSystem';
@@ -63,10 +63,15 @@ import {
   AA_BARRAGE, aiConsumable, BOOST_SPEED, ConsumableKind, hiddenBySmoke, IConsumableSlot, isActive, ISmokeCloud, RADAR_VISION, repairPerSec, shipConsumables, slotLabel, SMOKE_RADIUS, useConsumable,
 } from '@/systems/ConsumableSystem';
 import { airfieldYear, baseAirPerf, eraLandPerf, eraWingPerf, FLYING_BOAT_SCOUT_MUL, flyingBoatOf, pilotAfterBattle, pilotMul, wingPerf } from '@/systems/AircraftSystem';
-import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, eventGiantJoins, SUPERWEAPON_GOLD, superweaponOf } from '@/systems/SuperweaponSystem';
+import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, eventGiantJoins, SUPERWEAPON_GOLD, superweaponOf, superweaponSeaOpen } from '@/systems/SuperweaponSystem';
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
+import { ISeaSky, seaSky } from '@/systems/WorldClock';
+import { arrivesAt, orderPos, orderVoyage, RETURN_AT, ReturnRule, runMs } from '@/systems/FleetOrders';
+import { fightNote, runFleetOrders } from '@/utils/FleetOrderRunner';
+import type { IChartFleet } from '@/scenes/OpenSeaChartScene';
+import { fleePoint, IGiantSea, IResident, IResidentPos, meetResponse, MEET_PX, RESIDENT_CLEAR, ResidentKind, residentDay, residentsFor, residentsNear, worldGap } from '@/systems/WorldSim';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
@@ -94,9 +99,9 @@ import { addBattleStats, awardXp, battleXp, captainModifiers, earnedTraits, leve
 import { ShipClass } from '@/types/ShipClass';
 import { IProgress, loadProgress, loadSave, saveProgress, walletOf, withProgress as withSaveProgress } from '@/utils/ProgressStore';
 import { addGold, battleGold, GOLD_SCENARIO_FIRST } from '@/systems/GoldSystem';
-import { afterBattle, spotWon, worldEnemyFleet, CONTROL_ENEMY_MUL, CONTROL_REWARD_MUL, emptyWorld, endVoyage, FORT_GOLD, FORT_NATION, FORT_REWARD, fortDanger, HISTORIC_GOLD, mustReturn, PORT_REPAIR, PATROL_ARRIVE_SEC, takeFort, winHistoric, winInRing, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
+import { afterBattle, resourceReward, spotWon, worldEnemyFleet, CONTROL_ENEMY_MUL, CONTROL_REWARD_MUL, emptyWorld, endVoyage, FORT_GOLD, FORT_NATION, FORT_REWARD, fortDanger, HISTORIC_GOLD, mustReturn, PORT_REPAIR, PATROL_ARRIVE_SEC, takeFort, winHistoric, winInRing, worldEnemyScale, worldGold, worldReward } from '@/systems/WorldSystem';
 import { HAZARD_LABEL, hazardPlan, IHazard, inHazard, isSweeper, LANDING_DAMAGE, landingDue, mineChance, MINE_DAMAGE, netSpeedMul, placeHazards, sweep } from '@/systems/HazardSystem';
-import { ANNIVERSARY_GOLD, anniversaryRewardMul, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
+import { ANNIVERSARY_GOLD, anniversaryRewardMul, fleetKeepsRule, SPECIAL_ENEMY_SCALE, SPECIAL_GOLD, specialReward, specialState, weeklyArea, weeklyRule, winAnniversary, winSpecial } from '@/systems/SpecialOpsSystem';
 import { awardEarnedMedals } from '@/utils/MedalContext';
 import { newlyUnlocked, nationLocks } from '@/systems/NationUnlock';
 import { recordLedger } from '@/systems/LedgerSystem';
@@ -126,7 +131,7 @@ import { historyComparison, inZone, IScenarioSetup, placeAt, setupFor, zoneRadiu
 import { framePixel, framePoint, frameRadius, inFrameZone, ISeaFrame, seaFrame } from '@/systems/SeaFrame';
 import { REFIT_TABLE, refitModifiers, refitName, refitShipData } from '@/systems/RefitSystem';
 import { eventAppliesToBattle, eventEffects, eventLabel, IEventEffects, NO_EVENT } from '@/systems/EventSystem';
-import { QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
+import { gameWeek, QuestEvent, withQuestEvents } from '@/systems/QuestSystem';
 import { activeEvent } from '@/utils/GameClock';
 import { HEAVY_DAMAGE, NODE_LABEL, sortieRoute } from '@/systems/SortieMapSystem';
 import { endSortie, markSortieFought, takeSortieNotes } from '@/utils/SortieFlow';
@@ -232,7 +237,15 @@ export class BattleScene extends Phaser.Scene {
    * 海の上の交戦 (#445, 0.0.69): the fight going on at sea — a campaign area's (its block's middle) or a group met at
    * sea — settled in place when its enemies are gone or the fleet draws off. Areas fought stay quiet until left.
    */
-  private engagement: ({ kind: 'area'; areaId: string } | { kind: 'encounter'; spotId: string; danger: number; fort?: boolean; convoy?: boolean; drill?: boolean }) & { x: number; y: number } | null = null;
+  private engagement: ({ kind: 'area'; areaId: string; sw?: boolean; special?: boolean } | { kind: 'encounter'; spotId: string; danger: number; fort?: boolean; convoy?: boolean; drill?: boolean; resident?: ResidentKind; flee?: boolean; ally?: { name: string; nation: string; shipIds: string[] } }) & { x: number; y: number } | null = null;
+  /** 住人 (0.0.72): the day's residents of the seas the navy sails, and those near the fleet (for the minimap) */
+  private residents: IResident[] = [];
+  private residentsDay = -1;
+  private nearResidents: Array<{ r: IResident; pos: IResidentPos }> = [];
+  /** Friendly patrols already called to a fight (once each) */
+  private calledFriends = new Set<string>();
+  /** When the fleets under orders are next brought up to now (0.0.72) */
+  private ordersAt = 0;
   /** A drill's HP before it began (訓練・演習 at sea, 0.0.70): put back when it ends, as an exercise leaves no damage. */
   private drillHp: Map<BaseShip, number> | null = null;
   private engagedAreas = new Set<string>();
@@ -265,6 +278,10 @@ export class BattleScene extends Phaser.Scene {
   private muteBtn: UIButton | null = null;
   private minimap!: Minimap;
   private conditions: IBattleConditions = battleConditions(Weather.Clear, TimeOfDay.Day);
+  /** 世界の時計と天候 (0.0.72): the conditions chip and the storm's rain, redrawn when the sky over the fleet changes */
+  private weatherChip: Phaser.GameObjects.Container | null = null;
+  private stormFx: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private skyCheckAt = 0;
   private airText: Phaser.GameObjects.Text | null = null;
   private strikeBtn: UIButton | null = null;
   private strikeReady = false;
@@ -312,7 +329,7 @@ export class BattleScene extends Phaser.Scene {
   /** When the music's mood is looked at next (#383) */
   private musicCheckAt = 0;
   /** 友軍艦隊 still to arrive (#64) */
-  private pendingAllies: Array<{ ships: IShipData[]; arriveSec: number; name: string; nation: Nation }> = [];
+  private pendingAllies: Array<{ ships: IShipData[]; arriveSec: number; name: string; nation: Nation; at?: { x: number; y: number } }> = [];
   /** Name of the fleet the player steers now (第一艦隊 until a switch, #84) */
   private controlLabel = '第一艦隊';
   private switchBtn: UIButton | null = null;
@@ -540,7 +557,9 @@ export class BattleScene extends Phaser.Scene {
     this.waypoint = null;
 
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(DataLoader.getRegistry(this));
-    this.conditions = battleConditions(this.battleData?.weather ?? Weather.Clear, this.battleData?.time ?? TimeOfDay.Day);
+    // On the open sea (0.0.72) the sky is the world's: its clock and the weather front over the fleet's sector.
+    const sky = openSea ? this.skyAt(OpenSeaVoyage.startPoint(this.battleData?.openSeaFrom ?? homeAnchor(playerFleet.nation))) : null;
+    this.conditions = battleConditions(sky?.weather ?? this.battleData?.weather ?? Weather.Clear, sky?.time ?? this.battleData?.time ?? TimeOfDay.Day);
     this.playerNation = playerFleet.nation;
     this.enemyNation = enemyFleet.nation;
 
@@ -769,6 +788,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.applySea(dtSec);
     this.voyage?.update();
+    if (this.voyage) this.updateSky(time);
     if (this.voyage) this.updateSeaFights(time);
     this.updateHazards(dtSec);
     this.updateConvoy(dtSec);
@@ -816,7 +836,7 @@ export class BattleScene extends Phaser.Scene {
     this.drawSonar(time);
     this.drawEdgeMarkers();
     this.trails.update();
-    this.minimap.update(this.playerSide(), this.enemies, this.seenByPlayer);
+    this.minimap.update(this.playerSide(), this.enemies, this.seenByPlayer, this.nearResidents.map(({ r, pos }) => ({ x: this.nearX(pos.x), y: pos.y, kind: r.kind })));
     // The open sea (#445): its fights are settled one by one (updateSeaFights), never the whole battle.
     if (!this.voyage) this.checkWinLoss();
   }
@@ -877,8 +897,8 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  private spawnGroup(ships: IShipData[], label: string, mission: FleetMission, owned: boolean, nation: Nation, captainIds: (string | null)[] = []): void {
-    const at = this.groupSpawn(this.groups.length);
+  private spawnGroup(ships: IShipData[], label: string, mission: FleetMission, owned: boolean, nation: Nation, captainIds: (string | null)[] = [], place?: { x: number; y: number }): void {
+    const at = place ?? this.groupSpawn(this.groups.length);
     const offsets = FormationSystem.getOffsets(Formation.LineAhead, Math.max(0, ships.length - 1));
     const group: IFleetGroup = { label, ships: [], ais: [], owned, mission, nation };
     ships.forEach((raw, i) => {
@@ -937,7 +957,7 @@ export class BattleScene extends Phaser.Scene {
     this.pendingAllies = this.pendingAllies.filter((a) => !due.includes(a));
     for (const a of due) {
       const before = this.groups.length;
-      this.spawnGroup(a.ships, a.name, defaultMission(a.ships), false, a.nation);
+      this.spawnGroup(a.ships, a.name, defaultMission(a.ships), false, a.nation, [], a.at);
       for (const s of this.groups.slice(before).flatMap((g) => g.ships)) {
         this.trails.add(s);
         this.friendlyTargets.push(s);
@@ -1684,8 +1704,11 @@ export class BattleScene extends Phaser.Scene {
   /** Rain in storms, and a chip naming the conditions. */
   private addWeatherEffects(): void {
     const c = this.conditions;
-    if (c.weather === Weather.Storm) {
-      this.add
+    this.stormFx = null;
+    this.weatherChip = null;
+    // At sea the storm can come and go (0.0.72): the rain is made once and shown while the storm lasts.
+    if (c.weather === Weather.Storm || this.battleData?.openSea) {
+      this.stormFx = this.add
         .particles(0, 0, 'particle', {
           x: { min: -100, max: CANVAS_W + 100 },
           y: -20,
@@ -1700,7 +1723,9 @@ export class BattleScene extends Phaser.Scene {
           frequency: 16,
         })
         .setScrollFactor(0)
-        .setDepth(DEPTH_HUD - 4);
+        .setDepth(DEPTH_HUD - 4)
+        .setVisible(c.weather === Weather.Storm);
+      if (c.weather !== Weather.Storm) this.stormFx.stop();
     }
     this.muteBtn = new UIButton(this, 20 + 50, IS_PORTRAIT ? 286 : 122, '', () => this.toggleMute(), {
       variant: 'secondary', width: 100, height: IS_PORTRAIT ? 44 : 30, fontSize: 12,
@@ -1714,10 +1739,54 @@ export class BattleScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(DEPTH_HUD + 2);
     }
+    this.drawWeatherChip();
+  }
+
+  private drawWeatherChip(): void {
+    const c = this.conditions;
+    this.weatherChip?.destroy();
     const label = `${WEATHER_LABEL[c.weather]}  ·  ${TIME_LABEL[c.time]}`;
-    addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
+    this.weatherChip = addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
       .setScrollFactor(0)
       .setDepth(DEPTH_HUD + 2);
+  }
+
+  /** The world's sky over a point of the open sea (世界の時計と天候, 0.0.72). */
+  private skyAt(p: { x: number; y: number }, now = Date.now()): ISeaSky {
+    const s = sectorAt(((p.x % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w, p.y);
+    return seaSky(now, s.c, s.r, lonLatOf(s).lon, WORLD_MAP.cols, WORLD_MAP.rows);
+  }
+
+  /**
+   * At sea the sky changes as the world's clock runs and the fronts drift (0.0.72): night falls, a storm comes on.
+   * Every ship's sight, the guns' aim, the fog and the rain follow.
+   */
+  private updateSky(time: number): void {
+    if (time < this.skyCheckAt || !this.flagship?.active) return;
+    this.skyCheckAt = time + 2000;
+    const sky = this.skyAt(this.flagship);
+    const c = this.conditions;
+    if (sky.weather === c.weather && sky.time === c.time) return;
+    const before = c;
+    this.conditions = battleConditions(sky.weather, sky.time);
+    const now = this.conditions;
+    const night = now.time === TimeOfDay.Night;
+    this.playerWeapons.aimError = now.aimError;
+    this.enemyWeapons.aimError = now.aimError;
+    for (const ship of [...this.playerSide(), ...this.enemies]) {
+      const m = ship.mods ?? NO_MODIFIERS;
+      ship.visionMul = m.visionMul * (night ? m.nightVisionMul : 1);
+      ship.aimErrorMul = night ? m.nightAimMul : 1;
+    }
+    this.fog.setLook(now.fogColor, now.fogAlpha);
+    if (this.stormFx) {
+      this.stormFx.setVisible(now.weather === Weather.Storm);
+      if (now.weather === Weather.Storm) this.stormFx.start();
+      else this.stormFx.stop();
+    }
+    this.drawWeatherChip();
+    if (before.time !== now.time) this.seaNote(night ? '日が暮れました。夜は視界が狭くなります' : '夜が明けました');
+    else this.seaNote(`天候が変わりました: ${WEATHER_LABEL[now.weather]}`);
   }
 
   private toggleMute(): void {
@@ -2033,7 +2102,9 @@ export class BattleScene extends Phaser.Scene {
       passBy: (id) => this.passResource(id),
       openSeparation: () => this.openSeparation(),
       startDrill: (kind) => this.startDrill(kind),
-    }, nation, loadProgress().openSea, this.voyagePorts(), placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
+    }, nation, loadProgress().openSea, this.voyagePorts(), this.battleData?.openSeaFuel ?? placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
+    // 画面の外の艦隊 (0.0.72): the fleets under orders are brought up to now as the voyage begins.
+    this.runOrders();
     this.voyage.buildUi(minimapBottom);
     audio.music('map');
     // 作戦の一覧から (0.0.69): the route to the area is sailed at once.
@@ -2056,6 +2127,132 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** The chart over the battle (#445): the world, the explored seas, and a destination to set. */
+  /** The fleets under orders brought up to now, with a note for each fight on the way (0.0.72). */
+  private runOrders(): void {
+    const registry = DataLoader.getRegistry(this);
+    const done = runFleetOrders(loadProgress(), registry, Date.now());
+    if (!done) return;
+    saveProgress(done.progress);
+    for (const f of done.fights) this.seaNote(fightNote(f, registry), 5000);
+  }
+
+  /** The navy's fleets away from the home port as the chart lists them (0.0.72); -1 is the one steered. */
+  private chartFleets(): IChartFleet[] {
+    const p = loadProgress();
+    const registry = DataLoader.getRegistry(this);
+    const names = Object.fromEntries(nationBases(this.playerNation).map((b) => [b.id, b.name]));
+    const now = Date.now();
+    const steered: IChartFleet = {
+      index: -1, label: `操作中 · ${this.flagship.stats.name.replace(/\s*\(.*\)\s*$/, '')}${this.friendlies().filter((s) => s.isAlive).length > 1 ? ` ほか ${this.friendlies().filter((s) => s.isAlive).length - 1} 隻` : ''}`,
+      place: '', at: sectorAt(this.flagship.x, this.flagship.y), moving: false, minHp: Math.min(...this.friendlies().filter((s) => s.isAlive).map((s) => s.stats.currentHp / Math.max(1, s.stats.maxHp))),
+      fuel: this.voyage?.fuel ?? 0, rule: p.openSea.returnAt ?? 'heavy',
+    };
+    const others = p.openSea.anchors.map((a, index): IChartFleet => {
+      const lead = registry.byId(a.shipIds[0])?.name.replace(/\s*\(.*\)\s*$/, '') ?? a.shipIds[0];
+      const pos = a.order ? orderPos(a.order, now) : a.at;
+      const left = a.order ? Math.max(0, arrivesAt(a.order) - now) : 0;
+      const place = a.order ? `回航中 → ${placeName(a.order.dest, names)} (あと ${Math.ceil(left / 60000)} 分)` : placeName(a.at, names);
+      return {
+        index, label: `${lead}${a.shipIds.length > 1 ? ` ほか ${a.shipIds.length - 1} 隻` : ''}`, place, at: sectorAt(pos.x, pos.y), moving: !!a.order,
+        minHp: Math.min(...a.shipIds.map((id) => p.damage[id] ?? 1)), fuel: a.fuel ?? FUEL_MAX, rule: a.returnAt ?? 'heavy',
+      };
+    });
+    return [steered, ...others];
+  }
+
+  /** Enemy residents within six sectors of any of the navy's fleets at sea (the chart shows them, 0.0.72). */
+  private sightings(): Array<{ c: number; r: number; kind: string }> {
+    const p = loadProgress();
+    const now = Date.now();
+    const world = p.world;
+    const eyes = [{ x: this.flagship.x, y: this.flagship.y }, ...p.openSea.anchors.map((a) => (a.order ? orderPos(a.order, now) : a.at))];
+    const seen = new Map<string, { c: number; r: number; kind: string }>();
+    for (const e of eyes) {
+      for (const { r, pos } of residentsNear(this.residentList(), e, now, SECTOR_PX * 6)) {
+        if (r.kind === 'friend' || seen.has(r.id) || spotWon(world, r.id)) continue;
+        seen.set(r.id, { ...sectorAt(pos.x, pos.y), kind: r.kind });
+      }
+    }
+    return [...seen.values()];
+  }
+
+  /** 回航 (0.0.72): a fleet away is sent along a sea route to the chart's destination (a base of the navy there, else the sea). */
+  private orderFleet(index: number, route: Array<{ c: number; r: number }>): string | null {
+    const p = loadProgress();
+    const fleet = p.openSea.anchors[index];
+    if (!fleet || fleet.order) return '回航中の艦隊です';
+    const end = route[route.length - 1];
+    const base = openBases(p).find((b) => WORLD_MAP.bases[b.id]?.c === end?.c && WORLD_MAP.bases[b.id]?.r === end?.r);
+    const dest = (base ? baseAnchor(base.id) : undefined) ?? { x: (end.c + 0.5) * SECTOR_PX, y: (end.r + 0.5) * SECTOR_PX };
+    const ordered = orderVoyage(fleet, route, dest, Date.now());
+    if (typeof ordered === 'string') return ordered;
+    saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? ordered : a)) } });
+    return null;
+  }
+
+  /** 自動の帰投の基準 (0.0.72) of a fleet away, or (-1) of the one steered. */
+  private setFleetRule(index: number, rule: ReturnRule): void {
+    const p = loadProgress();
+    if (index < 0) saveProgress({ ...p, openSea: { ...p.openSea, returnAt: rule } });
+    else saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? { ...a, returnAt: rule } : a)) } });
+  }
+
+  /**
+   * 指揮を移す (0.0.72): the helm goes to another fleet, where it is now (on its way, it stops there and the rest of its
+   * way is sailed by the autopilot). The fleet steered so far lies at sea here — or, if it had a route, sails it on by
+   * itself. Leaving a fight counts as a withdrawal (a loss), so a losing fight can't be left without cost.
+   */
+  private switchToFleet(index: number): void {
+    const v = this.voyage;
+    if (!v) return;
+    const eng = this.engagement;
+    if (eng && eng.kind === 'encounter' && eng.drill) this.dropSeaFight('演習を打ち切りました');
+    else if (eng) this.settleSeaFight(false);
+    const p = loadProgress();
+    const target = p.openSea.anchors[index];
+    if (!target) return;
+    const now = Date.now();
+    const registry = DataLoader.getRegistry(this);
+    const ships = target.shipIds.map((id) => registry.byId(id)).filter((s): s is IShipData => s !== undefined).slice(0, 6);
+    if (ships.length === 0) return;
+    // Where the fleet taken over is, and what is left of its way.
+    const pos = target.order ? orderPos(target.order, now) : target.at;
+    const from: IAnchorPlace = target.order ? { x: pos.x, y: pos.y } : target.at;
+    const dest = target.order?.dest;
+    const rest = dest ? findRoute(sectorAt(pos.x, pos.y), sectorAt(dest.x, dest.y)) : null;
+    // The fleet steered so far: its HP kept, it lies here or sails on along its route.
+    let next = p;
+    const mine = this.friendlies().filter((s) => s.isAlive && s.dataId);
+    for (const s of mine) next = { ...next, ...setDamage(next, s.dataId as string, s.stats.currentHp / Math.max(1, s.stats.maxHp)) };
+    const ids = mine.map((s) => s.dataId as string);
+    const here = v.seaPlace();
+    let openSea = v.result({ ...next.openSea, anchors: next.openSea.anchors.filter((_, i) => i !== index) }, ids, here);
+    const left = v.routeLeft;
+    if (left.length > 1) {
+      const end = left[left.length - 1];
+      const group = openSea.anchors.findIndex((a) => !a.order && samePlace(a.at, here));
+      if (group >= 0) {
+        const ordered = orderVoyage(openSea.anchors[group], [...left], { x: (end.c + 0.5) * SECTOR_PX, y: (end.r + 0.5) * SECTOR_PX }, now);
+        if (typeof ordered !== 'string') openSea = { ...openSea, anchors: openSea.anchors.map((a, i) => (i === group ? ordered : a)) };
+      }
+    }
+    saveProgress(withQuestEvents({ ...next, openSea }, [['commandSwitch', 1]], now));
+    this.voyage = null;
+    const init: IBattleInitData = {
+      playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', this.playerNation, ships, 0),
+      enemyFleet: FleetSystem.createFleet('enemy-fleet', '—', this.playerNation, [], 0),
+      mapKey: 'open-sea',
+      formation: this.formation,
+      captainIds: ships.map(() => null),
+      openSea: true,
+      openSeaFrom: from,
+      openSeaFuel: target.fuel ?? FUEL_MAX,
+      ...(rest && rest.length > 1 ? { openSeaRoute: rest } : {}),
+    };
+    this.scene.stop(SceneKeys.OPEN_SEA_CHART);
+    this.scene.restart(init);
+  }
+
   private openChart(): void {
     if (!this.voyage) return;
     this.setPaused(true, false);
@@ -2067,6 +2264,12 @@ export class BattleScene extends Phaser.Scene {
         if (route.length > 1 && !this.autoMode) this.setAutoMode(true);
       },
       onClose: () => this.setPaused(false),
+      // 艦隊の一覧 (0.0.72): the other fleets — 回航, 指揮を移す, 帰投の基準.
+      fleets: () => this.chartFleets(),
+      onOrder: (index: number, route: Array<{ c: number; r: number }>) => this.orderFleet(index, route),
+      onSwitch: (index: number) => this.switchToFleet(index),
+      onRule: (index: number, rule: ReturnRule) => this.setFleetRule(index, rule),
+      sightings: () => this.sightings(),
     });
   }
 
@@ -2086,10 +2289,13 @@ export class BattleScene extends Phaser.Scene {
     const v = this.voyage;
     if (!v || time < this.seaCheckAt) return;
     this.seaCheckAt = time + 500;
+    this.refreshNearResidents();
     // 大破で自動の帰投 (0.0.70): a ship of the fleet (not the flagship) badly hurt leaves for the nearest dock and
     // can no longer be sunk.
     for (const ship of this.separable()) {
-      if (ship.isAlive && ship.stats.currentHp / Math.max(1, ship.stats.maxHp) <= HEAVY_DAMAGE) this.separate(ship, 'home', true);
+      // 自動の帰投の基準 (0.0.72): the steered fleet's own (大破 unless changed; なし keeps every ship in the fight).
+      const rule = RETURN_AT[loadProgress().openSea.returnAt ?? 'heavy'];
+      if (rule > 0 && ship.isAlive && ship.stats.currentHp / Math.max(1, ship.stats.maxHp) <= rule) this.separate(ship, 'home', true);
     }
     const eng = this.engagement;
     if (eng) {
@@ -2107,10 +2313,29 @@ export class BattleScene extends Phaser.Scene {
         this.settleSeaFight(true);
         return;
       }
+      // 住人 (0.0.72): a fight with a resident moves with the enemy; a running fleet two and a half sectors clear of
+      // ours has got away (a win if it lost ships, else no fight at all).
+      if (eng.kind === 'encounter' && eng.resident) {
+        const alive = this.enemies.filter((e) => e.isAlive && !e.isLand);
+        if (alive.length > 0) {
+          eng.x = alive.reduce((sum, e) => sum + e.x, 0) / alive.length;
+          eng.y = alive.reduce((sum, e) => sum + e.y, 0) / alive.length;
+        }
+        if (eng.flee && alive.every((e) => worldGap(e, this.flagship) > SECTOR_PX * 2.5)) {
+          const sunk = this.enemies.some((e) => !e.isAlive);
+          if (sunk) this.settleSeaFight(true);
+          else this.dropSeaFight('敵に逃げられました');
+          return;
+        }
+      }
       // Drawing off: two and a half sectors from the fight ends it (a withdrawal, counted as a loss).
       const dx = Math.abs(this.flagship.x - eng.x) % WORLD_PX.w;
       if (Math.hypot(Math.min(dx, WORLD_PX.w - dx), this.flagship.y - eng.y) > SECTOR_PX * 2.5) this.settleSeaFight(false);
       return;
+    }
+    if (time >= this.ordersAt) {
+      this.ordersAt = time + 5000;
+      this.runOrders();
     }
     const here = v.here();
     const areaId = areaAt(here);
@@ -2149,19 +2374,90 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
     }
-    // A group lying within a sector and a half (clear of the bases and, 0.0.70, of the ports and places on the sea).
-    const ports = [...Object.values(WORLD_MAP.bases), ...Object.values(WORLD_MAP.places ?? {})];
-    const hour = seaHour(Date.now());
+    // 特別海域 (0.0.72): this week's special sea, a ring beside its area.
+    const special = this.specialSea();
+    if (special && !this.seaWon.has(special.id)) {
+      const px = this.nearX((special.c + 0.5) * SECTOR_PX);
+      const py = (special.r + 0.5) * SECTOR_PX;
+      if (Math.hypot(this.flagship.x - px, this.flagship.y - py) < PLACE_FIGHT_RANGE) {
+        const rule = weeklyRule(Date.now());
+        if (fleetKeepsRule(rule, this.friendlies().filter((sh) => sh.isAlive).map((sh) => sh.stats.shipClass))) {
+          this.seaWon.add(special.id);
+          this.startSpecial(special.area, { x: px, y: py });
+          return;
+        }
+        if (!this.notedAreas.has(special.id)) {
+          this.notedAreas.add(special.id);
+          this.seaNote(`特別海域: 今週は${rule.name}。その艦種だけの艦隊で入ると戦えます`);
+        }
+      } else this.notedAreas.delete(special.id);
+    }
+    // 住人 (0.0.72): the enemy's patrols and convoys sail the sea; one within sight closes or runs (clear of the
+    // harbours and the campaign areas, which keep their own fights).
+    const ports = [...Object.values(WORLD_MAP.bases), ...Object.values(WORLD_MAP.places ?? {}), ...Object.values(WORLD_MAP.areas)];
+    const harbour = ports.some((p) => colGap(p.c, here.c) < RESIDENT_CLEAR && Math.abs(p.r - here.r) < RESIDENT_CLEAR);
     const world = loadProgress().world;
-    for (const g of encountersNear(this.playerNation, here, hour, this.seaTheaters(), ports)) {
-      if (this.seaWon.has(g.id) || spotWon(world, g.id)) continue;
-      const cx = (g.c + 0.5) * SECTOR_PX;
-      const dx = Math.abs(this.flagship.x - cx) % WORLD_PX.w;
-      if (Math.hypot(Math.min(dx, WORLD_PX.w - dx), this.flagship.y - (g.r + 0.5) * SECTOR_PX) < SECTOR_PX * 1.5) {
-        this.startEncounter(g);
+    for (const { r, pos, dist } of residentsNear(this.residentList(), this.flagship, Date.now(), MEET_PX)) {
+      if (r.kind === 'friend' || this.seaWon.has(r.id) || spotWon(world, r.id) || dist > MEET_PX) continue;
+      // The giant patrols round its own area; the others keep clear of the harbours and the areas.
+      if (r.kind === 'superweapon') {
+        this.startGiant(r, pos);
         return;
       }
+      if (harbour) continue;
+      this.startResident(r, pos);
+      return;
     }
+  }
+
+  /** The day's residents of the seas the navy sails (drawn again when the world's day turns). */
+  private residentList(): IResident[] {
+    const day = residentDay(Date.now());
+    if (day !== this.residentsDay) {
+      this.residentsDay = day;
+      this.residents = residentsFor(this.playerNation, [...this.seaTheaters()], day, this.giantSeas());
+    }
+    return this.residents;
+  }
+
+  /** 特別海域 (0.0.72): this week's special sea, open and in a sea the navy sails — the sea sector just beside its area. */
+  private specialSea(): { id: string; area: ICampaignArea; c: number; r: number } | null {
+    const data = campaignData as ICampaignData;
+    const p = loadProgress();
+    const now = Date.now();
+    const area = weeklyArea(data.areas, p.campaign, now);
+    const block = area ? WORLD_MAP.areas[area.id] : undefined;
+    if (!area || !block || specialState(p.specialOps, area, now) !== 'open' || !this.seaTheaters().has(area.theater)) return null;
+    // Beside the area (outside its block, so the area's own fight doesn't start), on the sea.
+    for (const [dc, dr] of [[block.size + 1, 0], [-2, 0], [0, block.size + 1], [0, -2], [block.size + 1, block.size + 1], [-2, -2]]) {
+      const c = wrapCol(block.c + dc);
+      const r2 = block.r + dr;
+      if (r2 >= 0 && r2 < WORLD_MAP.rows && isSea(c, r2)) return { id: `special:${gameWeek(now)}:${area.id}`, area, c, r: r2 };
+    }
+    return null;
+  }
+
+  /** 超兵器 (0.0.72): the superweapon seas open to the navy, whose giants patrol round them on the world's sea. */
+  private giantSeas(): IGiantSea[] {
+    const data = campaignData as ICampaignData;
+    const cleared = loadProgress().campaign;
+    const seas = this.seaTheaters();
+    return data.areas.flatMap((a) => {
+      const block = WORLD_MAP.areas[a.id];
+      if (!block || !seas.has(a.theater) || !superweaponSeaOpen(data, a, cleared) || !superweaponOf(enemyNationFor(data, a, this.playerNation))) return [];
+      return [{ areaId: a.id, at: { c: block.c, r: block.r }, theater: a.theater }];
+    });
+  }
+
+  /** Residents near the fleet for the minimap (0.0.72), refreshed with the sea checks. */
+  private refreshNearResidents(): void {
+    if (!this.voyage || !this.flagship?.active) {
+      this.nearResidents = [];
+      return;
+    }
+    const world = loadProgress().world;
+    this.nearResidents = residentsNear(this.residentList(), this.flagship, Date.now())
+      .filter(({ r }) => !this.seaWon.has(r.id) && !spotWon(world, r.id) && (this.engagement?.kind !== 'encounter' || this.engagement.spotId !== r.id));
   }
 
   /** The nearest copy across the east-west join of a world x. */
@@ -2241,23 +2537,114 @@ export class BattleScene extends Phaser.Scene {
     return { ...at, r: SEA_ISLAND_R };
   }
 
-  /** A group met at sea, by the danger of the water. */
-  private startEncounter(g: IEncounter): void {
+  /**
+   * A resident met at sea (0.0.72): an enemy patrol closes on the fleet or, much weaker, runs; a convoy (merchants
+   * and a light escort) always runs. A running fleet makes straight away from ours and gets away once it is two and a
+   * half sectors clear; a friendly patrol near the fight joins it after a while.
+   */
+  private startResident(r: IResident, pos: IResidentPos): void {
     const registry = DataLoader.getRegistry(this);
-    const theater = (campaignData as ICampaignData).theaters.find((t) => t.id === g.theater);
-    const nation = (theater?.opponents?.[this.playerNation] ?? Nation.USN) as Nation;
-    const ships = worldEnemyFleet(registry.byNation(nation), { id: g.id, danger: g.danger });
-    if (ships.length === 0) {
-      this.seaWon.add(g.id);
+    const theater = (campaignData as ICampaignData).theaters.find((t) => t.id === r.theater);
+    const nation = (theater?.opponents?.[this.playerNation] ?? FORT_NATION[this.playerNation] ?? Nation.USN) as Nation;
+    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(r.danger)) };
+    const at = { x: this.nearX(pos.x), y: pos.y };
+    const warships = worldEnemyFleet(registry.byNation(nation), { id: r.id, danger: r.danger });
+    if (warships.length === 0) {
+      this.seaWon.add(r.id);
       return;
     }
-    const at = { x: this.nearX((g.c + 0.5) * SECTOR_PX), y: (g.r + 0.5) * SECTOR_PX };
+    const convoy = r.kind === 'convoy';
+    const ours = this.playerSide().filter((s) => s.isAlive).map((s) => registry.byId(s.dataId ?? '')).filter((s): s is IShipData => s !== undefined);
+    const theirs = fleetPower(warships) * worldEnemyScale(r.danger);
+    const flee = meetResponse(r.kind, theirs, fleetPower(ours)) === 'flee';
     this.objective = Objective.Annihilate;
     this.side = null;
     this.frame = null;
     this.enemyNation = nation;
-    this.spawnSeaEnemies(ships, nation, at, { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(g.danger)) });
-    this.beginSeaFight({ kind: 'encounter', spotId: g.id, danger: g.danger, ...at }, `敵艦隊と遭遇 (危険度 ${g.danger})`, nation, '全艦を沈めると勝利');
+    const before = this.enemies.length;
+    if (convoy) {
+      const merchant = (specialData as unknown as ISpecialData).convoy as IShipData;
+      this.spawnSeaEnemies([merchant, merchant, merchant], nation, at, { ...NO_MODIFIERS });
+      this.spawnSeaEnemies(warships.slice(0, 2), nation, { x: at.x + 500, y: at.y + 300 }, mods);
+    } else this.spawnSeaEnemies(warships, nation, at, mods);
+    if (flee) {
+      const goal = fleePoint(at, this.flagship);
+      for (const ai of this.aiSystems.slice(before)) {
+        ai.goal = goal;
+        ai.goalThrottle = 1;
+      }
+    }
+    const title = convoy ? `敵の船団 (危険度 ${r.danger})` : `敵の巡回艦隊 (危険度 ${r.danger})${flee ? ' — 逃げ出した' : ''}`;
+    const goalText = convoy ? '逃げる船団と護衛を沈めると積荷が入る' : flee ? '逃げ切られる前に沈める' : '全艦を沈めると勝利';
+    this.beginSeaFight({ kind: 'encounter', spotId: r.id, danger: r.danger, resident: r.kind, flee, convoy: false, ...at }, title, nation, goalText);
+    this.callFriends(at);
+  }
+
+  /**
+   * 超兵器 (0.0.72): the giant met on its patrol, at the head of its sea's main fleet. Fought and settled as the
+   * superweapon sea (its parts, its drops, its blueprints); it can be met again the next day.
+   */
+  private startGiant(r: IResident, pos: IResidentPos): void {
+    const data = campaignData as ICampaignData;
+    const area = data.areas.find((a) => a.id === r.areaId);
+    if (!area) return;
+    const nation = enemyNationFor(data, area, this.playerNation);
+    const giant = superweaponOf(nation);
+    if (!giant) return;
+    this.seaWon.add(r.id);
+    const registry = DataLoader.getRegistry(this);
+    const at = { x: this.nearX(pos.x), y: pos.y };
+    this.objective = Objective.Annihilate;
+    this.side = null;
+    this.frame = null;
+    this.enemyNation = nation;
+    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(enemyScale(data, area, this.playerNation)) };
+    const before = this.enemies.length;
+    this.spawnSeaEnemies([giant, ...enemyShips(area, registry, nation).slice(0, 4)], nation, at, mods);
+    const head = this.enemies[before];
+    if (head) {
+      head.setScale(giant.scale ?? 1.6);
+      this.superweapon = head;
+      this.superweaponParts?.destroy();
+      this.superweaponParts = this.add.text(head.x, head.y - 80, partsLine(1), textStyle(12, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 4 }))
+        .setOrigin(0.5).setDepth(DEPTH_HUD - 3);
+    }
+    this.beginSeaFight({ kind: 'area', areaId: area.id, sw: true, ...at }, `超兵器: ${giant.name.replace(/\s*\(.*\)\s*$/, '')} (${area.name}の海)`, nation, '超兵器と主力艦隊を沈めると勝利');
+  }
+
+  /**
+   * 特別海域 (0.0.72): this week's special sea lies on the world's sea as a ring at its area; a fleet that keeps the
+   * week's rule (one class of ship) and sails in fights its main fleet there, a little weaker, for the week's reward.
+   */
+  private startSpecial(area: ICampaignArea, at: { x: number; y: number }): void {
+    const data = campaignData as ICampaignData;
+    const registry = DataLoader.getRegistry(this);
+    const nation = enemyNationFor(data, area, this.playerNation);
+    this.objective = Objective.Annihilate;
+    this.side = null;
+    this.frame = null;
+    this.enemyNation = nation;
+    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(enemyScale(data, area, this.playerNation) * SPECIAL_ENEMY_SCALE) };
+    this.spawnSeaEnemies(enemyShips(area, registry, nation), nation, at, mods);
+    this.beginSeaFight({ kind: 'area', areaId: area.id, special: true, ...at }, `特別海域: ${area.name} (${weeklyRule(Date.now()).name})`, nation, '主力艦隊を沈めると今週の報酬');
+  }
+
+  /** The navy's own patrols within three sectors of a fight join it after a while (友軍の巡回, 0.0.72). */
+  private callFriends(at: { x: number; y: number }): void {
+    const eng = this.engagement;
+    if (!eng || eng.kind !== 'encounter') return;
+    const registry = DataLoader.getRegistry(this);
+    for (const { r, pos } of residentsNear(this.residentList(), at, Date.now(), SECTOR_PX * 3)) {
+      if (r.kind !== 'friend' || this.calledFriends.has(r.id)) continue;
+      const ships = worldEnemyFleet(registry.byNation(this.playerNation), { id: r.id, danger: Math.max(2, r.danger) }).slice(0, 4);
+      if (ships.length === 0) continue;
+      this.calledFriends.add(r.id);
+      const name = '友軍の巡回艦隊';
+      this.pendingAllies.push({ ships, arriveSec: PATROL_ARRIVE_SEC, name, nation: this.playerNation, at: { x: this.nearX(pos.x), y: pos.y } });
+      eng.ally = { name, nation: this.playerNation, shipIds: ships.map((s) => s.id) };
+      this.seaNote(`近くの友軍の巡回艦隊が向かっています (${PATROL_ARRIVE_SEC} 秒ほど)`);
+      return;
+    }
   }
 
   /**
@@ -2346,10 +2733,15 @@ export class BattleScene extends Phaser.Scene {
     const eng = this.engagement;
     if (!eng || !this.battleData) return;
     const keep = this.battleData;
-    this.battleData = { ...keep, ...(eng.kind === 'area' ? { areaId: eng.areaId } : eng.drill ? {} : { world: { spotId: eng.spotId, danger: eng.danger, fort: eng.fort, convoy: eng.convoy } }) };
+    this.battleData = { ...keep, ...(eng.kind === 'area' ? { areaId: eng.areaId, ...(eng.sw ? { swArea: true } : {}), ...(eng.special ? { special: true } : {}) } : eng.drill ? {} : { world: { spotId: eng.spotId, danger: eng.danger, fort: eng.fort, convoy: eng.convoy, raid: eng.resident === 'convoy', chase: eng.resident === 'patrol' && eng.flee === true, ally: eng.ally } }) };
     this.settlingInPlace = true;
     this.triggerGameOver(victory);
     this.battleData = keep;
+  }
+
+  /** A fight that ends with no settlement (住人, 0.0.72): the enemy got away before a ship was lost on either side. */
+  private dropSeaFight(note: string): void {
+    this.finishSeaFight(false, null, note);
   }
 
   /** The flagship lost in a fight at sea: the fight is settled as lost before the results. */
@@ -2360,7 +2752,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** After the settlement: the enemy gone, the battle's counts started afresh, the result on a band; sailing on. */
-  private finishSeaFight(victory: boolean, result: IBattleResultData): void {
+  private finishSeaFight(victory: boolean, result: IBattleResultData | null, note = ''): void {
     const eng = this.engagement;
     // A drill leaves no damage (0.0.70).
     if (this.drillHp) {
@@ -2394,6 +2786,10 @@ export class BattleScene extends Phaser.Scene {
     this.frame = null;
     this.side = null;
     this.objective = Objective.Annihilate;
+    // 超兵器 at sea (0.0.72): its parts line goes with it.
+    this.superweapon = null;
+    this.superweaponParts?.destroy();
+    this.superweaponParts = null;
     for (const ws of [this.playerWeapons, this.enemyWeapons]) {
       for (const p of ws.projectiles) if (p.active) p.deactivate();
       ws.fired.shells = 0;
@@ -2419,6 +2815,10 @@ export class BattleScene extends Phaser.Scene {
     this.lastSeen = new Map();
     this.lockedTarget = null;
     audio.music('map');
+    if (!result) {
+      this.seaNote(note, 5000);
+      return;
+    }
     const lines = [
       `${victory ? '勝利' : '撤退'}${result.rank ? `  評価 ${result.rank}` : ''}`,
       result.campaign ?? '',
@@ -2469,8 +2869,16 @@ export class BattleScene extends Phaser.Scene {
     if (order === 'home') {
       const base = nearestDock(progress, v.here());
       const at = (base ? baseAnchor(base.id) : undefined) ?? homeAnchor(this.playerNation);
-      saveProgress({ ...damaged, openSea: { ...progress.openSea, anchors: anchorAt(progress.openSea.anchors, [id], at, this.playerNation) } });
-      this.seaNote(`${heavy ? '大破: ' : ''}${name}は${base?.name ?? '軍港'}へ帰投しました`);
+      // 画面の外の艦隊 (0.0.72): it sails home by itself in the world's time (it can't be sunk off-screen).
+      const here = { x: ((ship.x % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w, y: ship.y };
+      const route = findRoute(sectorAt(here.x, here.y), sectorAt(at.x, at.y));
+      const lone = { shipIds: [id], at: here, fuel: FUEL_MAX, returnAt: 'none' as ReturnRule };
+      const ordered = route && route.length > 1 ? orderVoyage(lone, route, at, Date.now()) : null;
+      const anchors = ordered && typeof ordered !== 'string'
+        ? [...progress.openSea.anchors.map((a) => ({ ...a, shipIds: a.shipIds.filter((x) => x !== id) })).filter((a) => a.shipIds.length > 0), ordered]
+        : anchorAt(progress.openSea.anchors, [id], at, this.playerNation);
+      saveProgress({ ...damaged, openSea: { ...progress.openSea, anchors } });
+      this.seaNote(`${heavy ? '大破: ' : ''}${name}は${base?.name ?? '軍港'}へ帰投します${ordered && typeof ordered !== 'string' ? ` (着くまで約 ${Math.ceil(runMs(route ?? []) / 60000)} 分)` : ''}`);
     } else {
       const at = { x: ((ship.x % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w, y: ship.y };
       saveProgress({ ...damaged, openSea: { ...progress.openSea, anchors: anchorAt(progress.openSea.anchors, [id], at, this.playerNation, v.fuel) } });
@@ -2601,7 +3009,10 @@ export class BattleScene extends Phaser.Scene {
     const drills: IVoyageStop[] = grounds
       ? [{ id: 'drill:training', name: '訓練海域', kind: 'training', ...grounds.training }, { id: 'drill:exercise', name: '演習場', kind: 'exercise', ...grounds.exercise }]
       : [];
-    return [...bases, ...stops, ...drills];
+    // 特別海域 (0.0.72): this week's, as a ring beside its area.
+    const special = this.specialSea();
+    const specials: IVoyageStop[] = special ? [{ id: special.id, name: `特別海域 (${weeklyRule(Date.now()).name})`, kind: 'special', c: special.c, r: special.r }] : [];
+    return [...bases, ...stops, ...drills, ...specials];
   }
 
   /**
@@ -3752,6 +4163,15 @@ export class BattleScene extends Phaser.Scene {
         world = ring.world;
         if (ring.took) progress = withQuestEvents(progress, [['worldControl', 1]], now);
         if (w.ally) progress = withQuestEvents(progress, [['patrolWin', 1]], now);
+        // 住人 (0.0.72): a running patrol caught, a convoy raided (its cargo by the danger of the water).
+        if (w.chase) progress = withQuestEvents(progress, [['chaseWin', 1]], now);
+        if (w.raid) {
+          const cargo = resourceReward('convoy', w.danger);
+          const g4 = gainResources(progress.resources, cargo, holdCap(progress.facilities));
+          progress = withQuestEvents({ ...progress, resources: g4.resources, ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(cargo, g4.lost, -1), now), 'overflow', g4.lost, now) }, [['convoyRaid', 1]], now);
+          lost = addResources(lost, g4.lost);
+          line += `  ·  船団の積荷 ${formatResources(cargo)}`;
+        }
         if (w.historic) {
           world = winHistoric(world, now);
           progress = withQuestEvents({ ...progress, wallet: addGold(walletOf(progress), HISTORIC_GOLD) }, [['historicWin', 1]], now);

@@ -18,8 +18,8 @@ export class FogOfWar {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly color = FOG_COLOR,
-    private readonly alpha = FOG_ALPHA,
+    private color = FOG_COLOR,
+    private alpha = FOG_ALPHA,
   ) {
     if (!scene.textures.exists(BRUSH_KEY)) {
       const tex = scene.textures.createCanvas(BRUSH_KEY, BRUSH_SIZE, BRUSH_SIZE)!;
@@ -36,6 +36,12 @@ export class FogOfWar {
     this.rt = scene.add.renderTexture(0, 0, CANVAS_W, CANVAS_H).setOrigin(0, 0).setScrollFactor(0).setDepth(DEPTH_HUD - 5);
     this.brush = scene.make.image({ key: BRUSH_KEY, add: false });
     this.cone = scene.make.graphics({}, false);
+  }
+
+  /** The colour and darkness of the fog, when night falls or the weather changes at sea (0.0.72). */
+  setLook(color: number, alpha: number): void {
+    this.color = color;
+    this.alpha = alpha;
   }
 
   update(sources: VisionSource[]): void {
