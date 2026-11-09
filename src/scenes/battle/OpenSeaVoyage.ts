@@ -338,7 +338,7 @@ export class OpenSeaVoyage {
 
   /** What the voyage leaves in the save. */
   result(saved: IOpenSeaProgress, shipIds: readonly string[], at: IAnchorPlace): IOpenSeaProgress {
-    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation, this.fuel) };
+    return { ...saved, explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation, this.fuel) };
   }
 
   /** The flagship's place, wrapped into the world (for lying at sea). */

@@ -2335,3 +2335,55 @@ test('動く世界 (0.0.72): the sky follows the world clock, residents sail and
   await page.screenshot({ path: info.outputPath('chart-fronts.png') });
   expect(errors).toEqual([]);
 });
+
+test('指揮を移す (0.0.72): the chart lists the fleets, sends one off and hands the helm to another (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  // Two groups lying at sea a few sectors off Yokosuka (IJN's home port sector is c 255 r 50 on the 1.25° map).
+  const sea = (dc: number, dr: number): { x: number; y: number } => ({ x: (255 + dc + 0.5) * 3200, y: (50 + dr + 0.5) * 3200 });
+  const anchors = [{ shipIds: ['nagato'], at: sea(6, 6), fuel: 90 }, { shipIds: ['takao', 'sendai'], at: sea(9, 3), fuel: 70 }];
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: [...SCREENS, 'OpenSeaChartScene'], nations: { IJN: { ...SAVE.nations.IJN, openSea: { anchors } } } });
+  type G = { game: Phaser.Game };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  // The list: the steered fleet first, then the two lying at sea.
+  const listed = await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { listMode: boolean; drawPanel(): void; d: { fleets(): Array<{ index: number; label: string }> } };
+    c.listMode = true;
+    c.drawPanel();
+    return c.d.fleets().map((f) => f.index);
+  });
+  expect(listed).toEqual([-1, 0, 1]);
+  await page.waitForTimeout(300);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene'), `list (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene'), `list overlaps (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('fleet-list.png') });
+  // 回航: the second group is sent four sectors east; it is under way, out of the anchorages.
+  const ordered = await page.evaluate(async () => {
+    const os = await import('/src/systems/OpenSeaSystem.ts');
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { fleets(): Array<{ index: number; at: { c: number; r: number } }>; onOrder(i: number, r: unknown[]): string | null } };
+    const f = c.d.fleets().find((x) => x.index === 1)!;
+    const route = os.findRoute(f.at, { c: f.at.c + 4, r: f.at.r });
+    return c.d.onOrder(1, route!);
+  });
+  expect(ordered).toBeNull();
+  const stored = (): Promise<{ anchors: Array<{ shipIds: string[]; order?: unknown }>; totals: Record<string, number> }> => page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { openSea: { anchors: Array<{ shipIds: string[]; order?: unknown }> }; quests: { totals: Record<string, number> } } } };
+    return { anchors: s.nations.IJN.openSea.anchors, totals: s.nations.IJN.quests.totals };
+  });
+  expect((await stored()).anchors.find((a) => a.shipIds.includes('takao'))?.order).toBeTruthy();
+  // 指揮を移す: the helm goes to 長門; 大和 lies at sea where it was.
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { onSwitch(i: number): void } }).d.onSwitch(0));
+  await page.waitForFunction(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { flagship?: { dataId?: string }; voyage: unknown };
+    return b.sys.settings.active && b.voyage !== null && b.flagship?.dataId === 'nagato';
+  }, null, { timeout: 20_000 });
+  const after = await stored();
+  expect(after.anchors.some((a) => a.shipIds.includes('yamato'))).toBe(true);
+  expect(after.anchors.some((a) => a.shipIds.includes('nagato'))).toBe(false);
+  expect(after.totals.commandSwitch).toBe(1);
+  await page.screenshot({ path: info.outputPath('switched.png') });
+  expect(errors).toEqual([]);
+});

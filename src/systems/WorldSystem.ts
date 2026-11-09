@@ -141,6 +141,12 @@ export function afterBattle(world: IWorld, spotId: string, danger: number, victo
   return { ...world, voyage, best: victory ? Math.max(world.best, danger) : world.best, wins: world.wins + (victory ? 1 : 0), cleared };
 }
 
+/** A resident beaten off-screen (0.0.72): kept with the day's spots (its id starts with the day), others of the day kept. */
+export function markResidentWon(world: IWorld, id: string): IWorld {
+  const day = id.split(':')[0];
+  return { ...world, cleared: [...new Set([...(world.cleared ?? []).filter((c) => c.startsWith(`${day}:`)), id])] };
+}
+
 /** Whether a spot was already won this hour (on this voyage or an earlier one). */
 export function spotWon(world: IWorld | undefined, spotId: string): boolean {
   return (world?.cleared ?? []).includes(spotId) || (world?.voyage?.cleared ?? []).includes(spotId);

@@ -41,6 +41,8 @@ export function launchToArea(scene: Phaser.Scene, areaId: string): string | null
     if (route) candidates.push({ ships, captainIds, formation, at, route });
   };
   for (const a of p.openSea.anchors) {
+    // A fleet under way (回航, 0.0.72) answers to its orders, not to the campaign list.
+    if (a.order) continue;
     const ships = own(a.shipIds).slice(0, 6);
     consider(ships, ships.map(() => null), Formation.LineAhead, a.at);
   }

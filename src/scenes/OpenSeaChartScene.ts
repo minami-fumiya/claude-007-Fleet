@@ -12,6 +12,7 @@ import {
 import { ICampaignData, Objective } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
 import { Weather } from '@/types/Weather';
+import { RETURN_JA, RETURN_RULES, RETURN_SHORT, ReturnRule } from '@/systems/FleetOrders';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { clockText, frontsAt, seaSky } from '@/systems/WorldClock';
 import { addPanel, fitText, UIButton } from '@/ui/components/UIKit';
@@ -26,6 +27,30 @@ export interface IOpenSeaChartData {
   route: readonly ISectorRef[];
   onRoute: (route: ISectorRef[]) => void;
   onClose: () => void;
+  /** 艦隊の一覧 (0.0.72): the fleets away (and, index -1, the one steered); missing on older callers */
+  fleets?: () => IChartFleet[];
+  /** 回航: a fleet away sent along a route (why not, or null) */
+  onOrder?: (index: number, route: ISectorRef[]) => string | null;
+  /** 指揮を移す */
+  onSwitch?: (index: number) => void;
+  /** 自動の帰投の基準 */
+  onRule?: (index: number, rule: ReturnRule) => void;
+  /** Enemy residents within sight of the navy's fleets (0.0.72) */
+  sightings?: () => Array<{ c: number; r: number; kind: string }>;
+}
+
+/** A fleet in the chart's list (0.0.72). */
+export interface IChartFleet {
+  /** Its place in the anchorages; -1 for the fleet steered */
+  index: number;
+  label: string;
+  place: string;
+  at: ISectorRef;
+  moving: boolean;
+  /** Its most hurt ship's HP (0..1) */
+  minHp: number;
+  fuel: number;
+  rule: ReturnRule;
 }
 
 const DATA = campaignJson as unknown as ICampaignData;
@@ -65,6 +90,10 @@ export class OpenSeaChartScene extends Phaser.Scene {
   private plan: ISectorRef[] | null = null;
   private open = new Set<string>();
   private dragFrom: { x: number; y: number; left: number; top: number } | null = null;
+  /** 艦隊の一覧 (0.0.72): the panel shows the fleets instead of the route, a page at a time */
+  private listMode = false;
+  private listPage = 0;
+  private listNote = '';
 
   constructor() {
     super({ key: SceneKeys.OPEN_SEA_CHART });
@@ -83,6 +112,9 @@ export class OpenSeaChartScene extends Phaser.Scene {
     this.labels = [];
     this.images = [];
     this.dest = null;
+    this.listMode = false;
+    this.listPage = 0;
+    this.listNote = '';
     this.plan = this.d.route.length > 0 ? [this.d.at, ...this.d.route] : null;
     if (this.plan) this.dest = this.plan[this.plan.length - 1];
     const progress = loadProgress();
@@ -268,6 +300,19 @@ export class OpenSeaChartScene extends Phaser.Scene {
       const p = this.pointOf(this.dest);
       if (p) g.lineStyle(2, isSea(this.dest.c, this.dest.r) ? Colors.gold : Colors.danger, 1).strokeRect(p.x - Math.max(4, k / 2), p.y - Math.max(4, k / 2), Math.max(8, k), Math.max(8, k));
     }
+    // 艦隊の一覧 (0.0.72): the fleets away (squares; hollow when under way) and the enemy seen near them (red).
+    for (const fl of this.d.fleets?.() ?? []) {
+      if (fl.index < 0) continue;
+      const p = this.pointOf(fl.at);
+      if (!p) continue;
+      const s = Math.max(4, k * 0.45);
+      if (fl.moving) g.lineStyle(2, Colors.cyan, 1).strokeRect(p.x - s, p.y - s, s * 2, s * 2);
+      else g.fillStyle(Colors.cyan, 0.9).fillRect(p.x - s, p.y - s, s * 2, s * 2);
+    }
+    for (const e of this.d.sightings?.() ?? []) {
+      const p = this.pointOf(e);
+      if (p) g.fillStyle(e.kind === 'convoy' ? Colors.gold : Colors.danger, 0.95).fillCircle(p.x, p.y, Math.max(2.5, k * 0.3));
+    }
     const f = this.pointOf(this.d.at);
     if (f) {
       const s = Math.max(6, k * 0.6);
@@ -287,6 +332,22 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const x = P.x + 16;
     const w = P.w - 32;
     let y = P.y + 16;
+    // 艦隊の一覧 (0.0.72): a switch at the panel's top right between the route and the fleets.
+    if (this.d.fleets) {
+      const tw = IS_PORTRAIT ? 170 : 120;
+      const th = IS_PORTRAIT ? 44 : 32;
+      add(new UIButton(this, P.x + P.w - 16 - tw / 2, P.y + 16 + th / 2, this.listMode ? '航路に戻る' : '艦隊の一覧', () => {
+        this.listMode = !this.listMode;
+        this.listNote = '';
+        this.drawPanel();
+      }, { variant: this.listMode ? 'secondary' : 'primary', width: tw, height: th, fontSize: IS_PORTRAIT ? 14 : 12 }));
+      // The narrow landscape panel keeps the switch on a row of its own.
+      if (!IS_PORTRAIT) y += th + 8;
+      if (this.listMode) {
+        this.drawFleetList(add, x, y, w, P.y + P.h - 16);
+        return;
+      }
+    }
     const wrap = { wordWrap: { width: w, useAdvancedWrap: true } };
     const line = (text: string, size: number, color: string = Css.text): void => {
       const t = add(this.add.text(x, y, text, textStyle(size, color, wrap)));
@@ -337,6 +398,69 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const homeBtn = add(new UIButton(this, x + w - half / 2, by, '軍港へ', () => homeRoute && this.choose(homeRoute), { variant: 'primary', width: half, height: L.bh, fontSize: IS_PORTRAIT ? 16 : 13 }));
     homeBtn.setEnabled(homeRoute !== null && homeRoute.length > 1);
     for (const o of this.layer) if (o instanceof Phaser.GameObjects.Text) fitText(o, w);
+  }
+
+  /**
+   * 艦隊の一覧 (0.0.72): each fleet with where it is, its worst-hurt ship, its fuel and its 帰投の基準; 指揮を移す, and
+   * 回航 to the destination picked on the chart (a base of the navy there, else that sea).
+   */
+  private drawFleetList(add: <T extends Phaser.GameObjects.GameObject>(o: T) => T, x: number, top: number, w: number, bottom: number): void {
+    const fleets = this.d.fleets?.() ?? [];
+    let y = top;
+    add(this.add.text(x, y, '艦隊の一覧', eyebrowStyle(11, Css.gold)));
+    y += IS_PORTRAIT ? 40 : 22;
+    const hint = this.listNote || (this.dest ? '「ここへ回航」で、海図で選んだ所へ向かわせます' : '海図で行き先を選ぶと「ここへ回航」できます');
+    const note = add(this.add.text(x, y, hint, textStyle(12, this.listNote ? Css.gold : Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    y += note.height + 10;
+    const bh = IS_PORTRAIT ? 44 : 30;
+    const rowH = (IS_PORTRAIT ? 86 : 72) + bh;
+    const per = Math.max(1, Math.floor((bottom - y - bh - 8) / rowH));
+    const pages = Math.max(1, Math.ceil(fleets.length / per));
+    this.listPage = Math.min(this.listPage, pages - 1);
+    for (const fl of fleets.slice(this.listPage * per, this.listPage * per + per)) {
+      const title = add(this.add.text(x, y, fl.label, textStyle(13, fl.index < 0 ? Css.gold : Css.text, { fontStyle: 'bold' })));
+      fitText(title, w);
+      y += IS_PORTRAIT ? 22 : 18;
+      if (fl.place) {
+        const where = add(this.add.text(x, y, fl.place, textStyle(11, fl.moving ? Css.cyan : Css.muted)));
+        fitText(where, w);
+        y += IS_PORTRAIT ? 22 : 17;
+      }
+      const t = add(this.add.text(x, y, `耐久 ${Math.round(fl.minHp * 100)}% (一番低い艦)  ·  燃料 ${Math.ceil(fl.fuel)}`, textStyle(11, fl.minHp <= 0.25 ? Css.danger : Css.muted)));
+      fitText(t, w);
+      y += IS_PORTRAIT ? 24 : 19;
+      const bw = (w - 16) / 3;
+      const by = y + bh / 2;
+      const ruleNext = RETURN_RULES[(RETURN_RULES.indexOf(fl.rule) + 1) % RETURN_RULES.length];
+      add(new UIButton(this, x + bw * 2.5 + 16, by, `帰投 ${RETURN_SHORT[fl.rule]}`, () => {
+        this.d.onRule?.(fl.index, ruleNext);
+        this.listNote = `帰投の基準を「${RETURN_JA[ruleNext]}」にしました`;
+        this.drawPanel();
+      }, { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 12 : 10 }));
+      if (fl.index >= 0) {
+        add(new UIButton(this, x + bw / 2, by, '指揮を移す', () => {
+          this.d.onSwitch?.(fl.index);
+        }, { variant: 'gold', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 }));
+        const route = this.dest && !fl.moving ? findRoute(fl.at, this.dest) : null;
+        const go = add(new UIButton(this, x + bw * 1.5 + 8, by, 'ここへ回航', () => {
+          if (!route) return;
+          const why = this.d.onOrder?.(fl.index, route) ?? null;
+          this.listNote = why ?? `${fl.label}が回航を始めました (燃料 ${routeFuel(route)})`;
+          this.drawChart();
+          this.drawPanel();
+        }, { variant: 'primary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 }));
+        go.setEnabled(route !== null && route.length > 1);
+      }
+      y += bh + 10;
+    }
+    if (fleets.length <= 1) add(this.add.text(x, y, 'ほかの艦隊はありません。航海中に「分離・合流」の待機で艦隊を分けられます', textStyle(12, Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
+    if (pages > 1) {
+      const pw = IS_PORTRAIT ? 90 : 70;
+      const py = bottom - bh / 2;
+      add(new UIButton(this, x + pw / 2, py, '‹', () => { this.listPage = (this.listPage + pages - 1) % pages; this.drawPanel(); }, { variant: 'secondary', width: pw, height: bh, fontSize: 16 }));
+      add(new UIButton(this, x + w - pw / 2, py, '›', () => { this.listPage = (this.listPage + 1) % pages; this.drawPanel(); }, { variant: 'secondary', width: pw, height: bh, fontSize: 16 }));
+      add(this.add.text(x + w / 2, py, `${this.listPage + 1} / ${pages}`, textStyle(12, Css.muted)).setOrigin(0.5));
+    }
   }
 
   private choose(route: ISectorRef[]): void {

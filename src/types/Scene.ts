@@ -45,6 +45,8 @@ export interface IBattleInitData {
   openSeaFrom?: { base?: string; x: number; y: number };
   /** A route to sail at once (作戦の一覧 → the area's block), sector by sector */
   openSeaRoute?: Array<{ c: number; r: number }>;
+  /** 指揮を移す (0.0.72): the tank of the fleet taken over (it was under way, so no anchorage holds it) */
+  openSeaFuel?: number;
   /** 支援艦隊 (#84): the player's other fleets, each fighting by its mission */
   support?: Array<{ ships: IShipData[]; captainIds: (string | null)[]; mission: 'strike' | 'escort' | 'asw' | 'air' }>;
   /** 演習 (#404): one enemy fleet for each 支援艦隊 the player brings, each matched to it */
