@@ -5,9 +5,10 @@ import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { DataLoader } from '@/utils/DataLoader';
 import { awardPendingMedals, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import {
-  designLimit, designProblem, designShip, designTier, designWeapons, designWeight, fittingsFor, hull, HULLS, hullCapacity, moduleWeight, NAME_MAX, newDesignId, ROLE_JA, weaponRole,
+  designLimit, DESIGN_NEW, designProblem, designStageIds, mainGunsOf, newDesignStages, SECOND_MAIN_WEIGHT, stageGains, designShip, designTier, designWeapons, designWeight, fittingsFor, hull, HULLS, hullCapacity, moduleWeight, NAME_MAX, newDesignId, ROLE_JA, weaponRole,
 } from '@/systems/DesignSystem';
 import { holdCap } from '@/systems/FacilitySystem';
+import { markSeen } from '@/systems/NewMarks';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { buildCostAt, shipGrade } from '@/systems/ShipyardSystem';
 import { formatResources } from '@/systems/ResourceSystem';
@@ -56,6 +57,17 @@ export class DesignScene extends Phaser.Scene {
     this.list = undefined;
     this.status = '';
     this.draft = { id: null, name: '', hull: HULLS[0].id, modules: [] };
+    // 設計段階のお知らせ (#416, 0.0.71): a stage reached since the last visit is told here once, then remembered.
+    {
+      const p = loadProgress();
+      const tier = this.tier();
+      if (newDesignStages(p.seenNew, tier) > 0) {
+        this.status = `設計段階が ${tier} に上がりました: ${stageGains(tier)}`;
+        this.statusBad = false;
+      }
+      const seenNew = markSeen(p.seenNew, DESIGN_NEW, designStageIds(tier));
+      if (seenNew !== p.seenNew) saveProgress({ ...p, seenNew });
+    }
     addBackdrop(this, 'menu');
     const back = IS_PORTRAIT ? { x: 100, y: 46, w: 172, h: 60 } : { x: 92, y: 44, w: 136, h: 44 };
     new UIButton(this, back.x, back.y, '‹  鎮守府', () => this.scene.start(SceneKeys.HOME), { variant: 'secondary', width: back.w, height: back.h, fontSize: 15 });
@@ -121,7 +133,7 @@ export class DesignScene extends Phaser.Scene {
     // Status and the preview of the ship it makes.
     const cap = hullCapacity(h, tier);
     const weight = designWeight(this.draft.modules);
-    const line = this.status || (full ? `設計は ${designLimit(tier)} つまで (方針と研究で増えます)` : problem ?? `設計段階 ${tier}  ·  重量 ${weight} / ${cap}  ·  保存すると建造の画面に並びます`);
+    const line = this.status || (full ? `設計は ${designLimit(tier)} つまで (方針と研究で増えます)` : problem ?? `設計段階 ${tier}  ·  重量 ${weight} / ${cap}${mainGunsOf(h) > 1 ? `  ·  主砲 ${mainGunsOf(h)} 基まで (2 基目は重量 +${SECOND_MAIN_WEIGHT})` : ''}  ·  保存すると建造の画面に並びます`);
     const bad = this.status ? this.statusBad : !!problem || full;
     const st = add(this.add.text(x0, L.status, line, textStyle(13, bad ? Css.danger : this.status ? Css.success : Css.muted, { fontStyle: 'bold' })));
     fitText(st, w);

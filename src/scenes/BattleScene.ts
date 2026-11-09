@@ -78,6 +78,7 @@ import { addChip, addOceanWorld, addPanel, fitText, UIButton } from '@/ui/compon
 import { engageSteer, headingTo, hitTestTarget, inRange, pickTarget, waypointSteer, convoyGuardPoint, convoyGuardTarget } from '@/systems/AutoPilot';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { DataLoader } from '@/utils/DataLoader';
+import { designLoadout } from '@/systems/DesignSystem';
 import { angleBetween, edgePoint } from '@/utils/MathUtils';
 import { IShipData, IShipStats, ShipSubtype } from '@/types/Ship';
 import { midModifiers } from '@/systems/ShipKind';
@@ -1213,7 +1214,8 @@ export class BattleScene extends Phaser.Scene {
     const loadout = shipData.weapons
       .map((id) => DataLoader.getWeaponById(this, id))
       .filter((w): w is IWeaponData => w !== undefined);
-    return loadout.length > 0 ? loadout : [FALLBACK_WEAPON];
+    // 主砲 2 基 (#416): a design's two main guns share its turrets.
+    return loadout.length > 0 ? designLoadout(shipData, loadout) : [FALLBACK_WEAPON];
   }
 
   private spawnShip(shipData: IShipData, wantX: number, wantY: number, mods: IShipModifiers = NO_MODIFIERS, avoidLand = true): BaseShip {

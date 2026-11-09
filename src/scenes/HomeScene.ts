@@ -2,6 +2,7 @@ import { exportDue, loadExportState } from '@/utils/ExportReminder';
 import Phaser from 'phaser';
 import { TECH_TREE } from '@/systems/ResearchSystem';
 import { shownExpeditions } from '@/systems/ExpeditionSystem';
+import { designTier, newDesignStages } from '@/systems/DesignSystem';
 import { EXPEDITION_NEW, newIds, OPEN_BUILD_STATES, openExpeditions, openResearch, RESEARCH_NEW, SHIPYARD_NEW } from '@/systems/NewMarks';
 import { clock } from '@/utils/TimeFormat';
 import { nationLocks } from '@/systems/NationUnlock';
@@ -747,6 +748,9 @@ export class HomeScene extends Phaser.Scene {
     if (research > 0) items.push({ id: 'newResearch', label: '研究 NEW', count: research, scene: SceneKeys.ARSENAL });
     const expeditions = newIds(progress.seenNew, EXPEDITION_NEW, openExpeditions(shownExpeditions(rank, progress.expeditions), rank)).length;
     if (expeditions > 0) items.push({ id: 'newExpeditions', label: '遠征 NEW', count: expeditions, scene: SceneKeys.EXPEDITION });
+    // 設計段階のお知らせ (#416, 0.0.71): a design stage reached and not yet seen on the design screen.
+    const tier = designTier(progress.focus.done.length, progress.research);
+    if (newDesignStages(progress.seenNew, tier) > 0) items.push({ id: 'designStage', label: `設計段階 ${tier}`, count: 0, scene: SceneKeys.DESIGN });
     // セーブの書き出し (#116, 0.0.71): never written out, ten sorties since, or a new version — the save lives only here.
     if (exportDue(loadExportState(), progress.record.sorties, __APP_VERSION__)) items.unshift({ id: 'export', label: 'セーブを書き出す', count: 0, scene: SceneKeys.SETTINGS });
     // The strip holds a few at most; the rest wait their turn (the screens mark their own).
