@@ -106,6 +106,8 @@ export const QUEST_EVENTS = [
   'seaAreaWin', 'seaGroupWin', 'anchoredAway',
   // 0.0.70: an objective area won at sea, a drill won at the practice grounds, ships sent off and joined
   'seaObjectiveWin', 'drillWin', 'fleetDetached', 'fleetJoined',
+  // 0.0.71 (#116): the save written out (copied or saved to a file)
+  'saveExport',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

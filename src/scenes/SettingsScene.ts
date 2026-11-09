@@ -1,3 +1,4 @@
+import { exported, lastExportText, loadExportState, saveExportState } from '@/utils/ExportReminder';
 import Phaser from 'phaser';
 import { reloadAt } from '@/utils/OrientationWatch';
 import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
@@ -12,7 +13,8 @@ import { voice } from '@/systems/VoiceSystem';
 import { shortVoiceName } from '@/systems/SpeechStyle';
 import { applyFrameLimit } from '@/utils/FrameLimit';
 import { decodeSave, encodeSave } from '@/systems/SaveCodec';
-import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveSave } from '@/utils/ProgressStore';
+import { backupStoredSave, emptySave, listBackups, loadProgress, loadSave, resetNation, restoreBackup, saveProgress, saveSave } from '@/utils/ProgressStore';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { NATION_INFO, PLAYABLE_NATIONS } from '@/config/NationInfo';
 import { Nation } from '@/types/Nation';
 import { backupLabel, ISaveBackup } from '@/utils/SaveBackup';
@@ -245,10 +247,13 @@ export class SettingsScene extends Phaser.Scene {
     let y = top;
     this.track(this.add.text(x, y, '進行データ', eyebrowStyle(11)));
     y += 30;
-    y += this.note(x, y, w, `セーブコードで別の端末やブラウザへ進行状況を移せます。  (v${__APP_VERSION__})`) + (IS_PORTRAIT ? 18 : 14);
+    // セーブの書き出し (#116, 0.0.71): the save lives only in this browser until the cloud save; when it was last written out.
+    y += this.note(x, y, w, `セーブはこのブラウザの中にだけあります。セーブコードかファイルで、別の端末やブラウザへ移せます。前に書き出した日時: ${lastExportText(loadExportState())}。今の版: v${__APP_VERSION__}`) + (IS_PORTRAIT ? 18 : 14);
     const buttons: Array<[string, () => void, 'primary' | 'secondary' | 'danger']> = [
       ['セーブコードをコピー', () => this.exportSave(), 'primary'],
       ['セーブコードを読み込む', () => void this.importSave(), 'secondary'],
+      ['ファイルに保存', () => this.saveToFile(), 'primary'],
+      ['ファイルから読み込む', () => this.loadFromFile(), 'secondary'],
       // First-visit help (#61) shows again on every screen.
       ['画面の説明をもう一度表示', () => this.resetHelp(), 'secondary'],
       // The resource ledger as text (#137), for bug reports and balance work.
@@ -329,9 +334,63 @@ export class SettingsScene extends Phaser.Scene {
     this.say('各画面の説明を、次に開いた時にもう一度表示します。');
   }
 
+  /** The write-out remembered on this device (#116), so the notice stops asking. */
+  private markExported(): void {
+    saveExportState(exported(Date.now(), loadSave().record.sorties, __APP_VERSION__));
+    // 書き出し章 (0.0.71): counted with the quest totals.
+    saveProgress(withQuestEvents(loadProgress(), [['saveExport', 1]], Date.now()));
+  }
+
+  /** ファイルに保存 (0.0.71): the save code as a text file to keep anywhere. */
+  private saveToFile(): void {
+    this.resetArmed = false;
+    const code = encodeSave(loadSave());
+    const d = new Date();
+    const p = (n: number): string => String(n).padStart(2, '0');
+    const name = `ww2fleet-save-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.txt`;
+    try {
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/plain' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.markExported();
+      this.say(`セーブをファイルに保存しました (${name})`);
+    } catch {
+      this.say('ファイルに保存できませんでした。「セーブコードをコピー」を使ってください。', Css.danger);
+    }
+  }
+
+  /** ファイルから読み込む (0.0.71): a file written by ファイルに保存 (or any text holding a save code). */
+  private loadFromFile(): void {
+    this.resetArmed = false;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,text/plain';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      void file.text().then((text) => this.applySaveCode(text), () => this.say('ファイルを読めませんでした。', Css.danger));
+    };
+    input.click();
+  }
+
+  /** A save code read in: the current data goes to the backups first. */
+  private applySaveCode(text: string): void {
+    const save = decodeSave(text.trim());
+    if (!save) return this.say('セーブコードが正しくありません。読み込みを中止しました。', Css.danger);
+    backupStoredSave('import');
+    saveSave(save);
+    this.say('セーブを読み込みました (前のデータはバックアップに残っています)');
+  }
+
   private exportSave(): void {
     this.resetArmed = false;
     const code = encodeSave(loadSave());
+    this.markExported();
     // Without the clipboard, the code is shown in the game's own box to copy by hand (#308).
     const fallback = (): void => {
       void askText({ title: 'セーブコード', hint: '全部を選んでコピーし、別の端末の「セーブコードを読み込む」に貼り付けます', value: code, multiline: true, readonly: true });
@@ -356,11 +415,7 @@ export class SettingsScene extends Phaser.Scene {
     this.resetArmed = false;
     const text = await askText({ title: 'セーブコードを読み込む', hint: '別の端末でコピーしたセーブコードを貼り付けます。今のデータはバックアップに残ります', multiline: true, confirmLabel: '読み込む', placeholder: 'セーブコード' });
     if (!text) return;
-    const save = decodeSave(text);
-    if (!save) return this.say('セーブコードが正しくありません。読み込みを中止しました。', Css.danger);
-    backupStoredSave('import');
-    saveSave(save);
-    this.say('セーブコードを読み込みました (前のデータはバックアップに残っています)');
+    this.applySaveCode(text);
   }
 
   /** Sheet of the backups (#157): the first tap arms a row, the second restores it. */

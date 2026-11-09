@@ -421,6 +421,16 @@ export class CampaignMapScene extends Phaser.Scene {
     if (y > noteTop && y > briefTop) {
       const f = Math.max(0.6, (noteTop - briefTop) / (y - briefTop));
       for (const t of brief) t.setScale(f).setY(briefTop + (t.y - briefTop) * f);
+      // Still too long at the smallest size (a weekly special sea and an event line on a swept area): the last rows
+      // give way rather than run under the sweep's result.
+      // brief holds each row's label then its value: a row goes whole.
+      for (let i = 0; i + 1 < brief.length; i += 2) {
+        const v = brief[i + 1];
+        if (v.y + v.displayHeight > noteTop) {
+          brief[i].setVisible(false);
+          v.setVisible(false);
+        }
+      }
     }
     // A sortie left unfinished here (#138): continue it or withdraw.
     if (pending && pendingHere) {
