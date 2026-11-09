@@ -262,6 +262,9 @@ export interface IMedalContext {
   /** 設計艦 (#51): designs one nation has drawn, and ships of them owned in all */
   designsDrawn?: number;
   designsOwned?: number;
+  /** 0.0.71 (#416): designs one nation has drawn with two main guns, and the highest design stage reached */
+  twinMainDesigns?: number;
+  designStage?: number;
   /** 装備改修 (#368): the highest ★ any equipment has reached */
   equipStarsMax?: number;
   /** 他国艦 (#368): other navies' ships owned in all */
@@ -481,6 +484,10 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('focus_reset', '方針転換章', 'growth', [1], () => '国家方針を見直す', (_r, c) => total(c, 'focusReset')),
   ...ladder('planned', '計画艦章', 'base', [1, 4, 10], (g) => `計画艦・未成艦 (架空艦) を 1 つの国で ${g} 隻持つ`, (_r, c) => c.plannedOwned ?? 0),
   ...ladder('designer', '設計章', 'base', [1, 3, 5], (g) => `1 つの国で、艦を ${g} 隻設計する`, (_r, c) => c.designsDrawn ?? 0),
+  // 0.0.71 主砲 2 基と設計段階 (#416)・セーブの書き出し (#116)
+  ...ladder('twin_main', '二砲章', 'base', [1, 3], (g) => `1 つの国で、主砲を 2 基載せた艦を ${g} 隻設計する`, (_r, c) => c.twinMainDesigns ?? 0),
+  ...ladder('design_stage', '設計段階章', 'base', [1, 2, 3], (g) => `設計段階 ${g} に上がる`, (_r, c) => c.designStage ?? 0),
+  ...ladder('save_export', '書き出し章', 'special', [1, 10, 30], (g) => `セーブを ${g} 回書き出す (コピーかファイル)`, (_r, c) => total(c, 'saveExport')),
   ...ladder('design_built', '設計艦竣工章', 'base', [1, 5], (g) => `設計した艦を ${g} 隻建造する`, (_r, c) => c.designsOwned ?? 0),
   ...ladder('improve', '改修章', 'base', [10, 50, 200], (g) => `装備を ${g} 回改修する`, (_r, c) => total(c, 'equipImprove')),
   ...ladder('improve_max', '改修の極み章', 'base', [5, 10], (g) => `装備を 1 つ ★${g} まで改修する`, (_r, c) => c.equipStarsMax ?? 0),

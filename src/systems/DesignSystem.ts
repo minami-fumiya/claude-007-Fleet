@@ -6,7 +6,7 @@ import { ShipClass } from '@/types/ShipClass';
 import { IWeaponData, WeaponType } from '@/types/Weapon';
 
 /**
- * 設計艦 (#51, pure): the player draws up a ship from a hull and modules — at most one weapon of each role (主砲 ·
+ * 設計艦 (#51, pure): the player draws up a ship from a hull and modules — one weapon of each role (two main guns on the big battleship hulls since 0.0.71) (主砲 ·
  * 副砲 · 魚雷 · 爆雷) and fittings (装甲・機関・バルジ・格納庫) — within the hull's slots and weight, then names it.
  * Designs stand beside the historical ships (史実艦) and the planned ones (架空艦) as their own category and are
  * built like any other ship. How far a navy can design grows with its national focuses and the 架空艦計画 research
@@ -28,6 +28,8 @@ export interface IHull {
   /** Design tier it needs */
   tier: number;
   airWing?: IAirWing;
+  /** Main guns it mounts (two different calibres on the big battleship hulls, 0.0.71; one otherwise) */
+  mainGuns?: number;
 }
 
 /** Hulls a little below the middle of their kind: the fittings bring them up to the best of the real ships. */
@@ -36,9 +38,9 @@ export const HULLS: IHull[] = [
   { id: 'hull_dd_leader', name: '大型駆逐艦船体', shipClass: ShipClass.Destroyer, subtype: ShipSubtype.LeaderDestroyer, hp: 220, armor: 13, speed: 245, slots: 4, weight: 7, tier: 1 },
   { id: 'hull_cl', name: '軽巡洋艦船体', shipClass: ShipClass.Cruiser, subtype: ShipSubtype.LightCruiser, hp: 330, armor: 26, speed: 178, slots: 4, weight: 8, tier: 0 },
   { id: 'hull_ca', name: '重巡洋艦船体', shipClass: ShipClass.Cruiser, subtype: ShipSubtype.HeavyCruiser, hp: 390, armor: 34, speed: 172, slots: 5, weight: 10, tier: 1 },
-  { id: 'hull_bb', name: '戦艦船体', shipClass: ShipClass.Battleship, hp: 660, armor: 52, speed: 125, slots: 5, weight: 15, tier: 1 },
+  { id: 'hull_bb', name: '戦艦船体', shipClass: ShipClass.Battleship, hp: 660, armor: 52, speed: 125, slots: 5, weight: 15, tier: 1, mainGuns: 2 },
   { id: 'hull_bc', name: '巡洋戦艦船体', shipClass: ShipClass.Battleship, subtype: ShipSubtype.BattleCruiser, hp: 630, armor: 45, speed: 165, slots: 5, weight: 14, tier: 2 },
-  { id: 'hull_bb_large', name: '超大型戦艦船体', shipClass: ShipClass.Battleship, hp: 760, armor: 60, speed: 125, slots: 6, weight: 18, tier: 3 },
+  { id: 'hull_bb_large', name: '超大型戦艦船体', shipClass: ShipClass.Battleship, hp: 760, armor: 60, speed: 125, slots: 6, weight: 18, tier: 3, mainGuns: 2 },
   { id: 'hull_cvl', name: '軽空母船体', shipClass: ShipClass.Carrier, subtype: ShipSubtype.LightCarrier, hp: 455, armor: 18, speed: 160, slots: 3, weight: 6, tier: 0, airWing: { fighters: 3, diveBombers: 3, torpedoBombers: 3 } },
   { id: 'hull_cv', name: '正規空母船体', shipClass: ShipClass.Carrier, hp: 500, armor: 26, speed: 160, slots: 4, weight: 8, tier: 1, airWing: { fighters: 5, diveBombers: 4, torpedoBombers: 4 } },
   { id: 'hull_cv_armored', name: '装甲空母船体', shipClass: ShipClass.Carrier, subtype: ShipSubtype.ArmoredCarrier, hp: 540, armor: 40, speed: 145, slots: 4, weight: 9, tier: 2, airWing: { fighters: 4, diveBombers: 4, torpedoBombers: 4 } },
@@ -69,6 +71,8 @@ export type WeaponRole = 'main' | 'secondary' | 'torpedo' | 'charge';
 export const ROLE_JA: Record<WeaponRole, string> = { main: '主砲', secondary: '副砲・両用砲', torpedo: '魚雷', charge: '爆雷' };
 
 export const TIER_WEIGHT = 1;
+/** A second main gun's turret and magazine weigh this on top of the gun (主砲 2 基, #416). */
+export const SECOND_MAIN_WEIGHT = 2;
 export const MAX_TIER = 3;
 export const NAME_MAX = 16;
 
@@ -152,8 +156,34 @@ export function moduleWeight(id: string): number {
   return w ? weaponWeight(w) : (fitting(id)?.weight ?? 0);
 }
 
+/**
+ * Two main guns split the hull's turrets between them (主砲 2 基, #416): each loads this much slower, so a design
+ * covers two ranges with about 1.1 times one gun's fire, not twice it.
+ */
+export const SPLIT_MAIN_RELOAD = 1.75;
+
+/** The battle loadout of a ship: a design's split main battery reloads slower (others are as they are). */
+export function designLoadout(ship: Pick<IShipData, 'designed'>, loadout: readonly IWeaponData[]): IWeaponData[] {
+  if (!ship.designed || loadout.filter((w) => weaponRole(w) === 'main').length < 2) return [...loadout];
+  return loadout.map((w) => (weaponRole(w) === 'main' ? { ...w, reloadTime: Math.round(w.reloadTime * SPLIT_MAIN_RELOAD) } : w));
+}
+
+/** Main guns a hull mounts. */
+export function mainGunsOf(h: IHull): number {
+  return h.mainGuns ?? 1;
+}
+
+/** How many main guns a design carries. */
+export function mainGunCount(modules: readonly string[]): number {
+  return modules.filter((id) => {
+    const w = weapon(id);
+    return w !== undefined && weaponRole(w) === 'main';
+  }).length;
+}
+
 export function designWeight(modules: readonly string[]): number {
-  return modules.reduce((sum, id) => sum + moduleWeight(id), 0);
+  const extra = Math.max(0, mainGunCount(modules) - 1) * SECOND_MAIN_WEIGHT;
+  return modules.reduce((sum, id) => sum + moduleWeight(id), 0) + extra;
 }
 
 /** Why the design can't be drawn as it stands (null when it can). */
@@ -166,15 +196,17 @@ export function designProblem(d: Pick<IShipDesign, 'name' | 'hull' | 'modules'>,
   if (d.modules.length > h.slots) return `枠は ${h.slots} つまでです`;
   const usable = new Set(designWeapons(roster, nation, h).map((w) => w.id));
   const fits = new Set(fittingsFor(h).map((f) => f.id));
-  const roles = new Set<WeaponRole>();
+  const roles = new Map<WeaponRole, number>();
   let weapons = 0;
   for (const id of d.modules) {
     const w = weapon(id);
     if (w) {
       if (!usable.has(id)) return `${w.name} は載せられません`;
       const role = weaponRole(w)!;
-      if (roles.has(role)) return `${ROLE_JA[role]} は 1 つまでです`;
-      roles.add(role);
+      // 主砲 2 基 (#416, 0.0.71): the big battleship hulls take two main guns of different calibres.
+      const most = role === 'main' ? mainGunsOf(h) : 1;
+      if ((roles.get(role) ?? 0) >= most) return `${ROLE_JA[role]} は ${most} つまでです`;
+      roles.set(role, (roles.get(role) ?? 0) + 1);
       weapons++;
     } else if (!fits.has(id)) return '載せられない装備があります';
   }
@@ -279,7 +311,7 @@ export function designLook(d: Pick<IShipDesign, 'hull' | 'modules'>): IDesignLoo
   const guns = main ?? second;
   const big = h.id === 'hull_bb_large';
   const mounts = !guns || h.shipClass === ShipClass.Carrier || h.shipClass === ShipClass.Submarine ? 0
-    : h.shipClass === ShipClass.Battleship ? (big ? 4 : 3)
+    : h.shipClass === ShipClass.Battleship ? (big || mainGunCount(d.modules) > 1 ? 4 : 3)
       : h.shipClass === ShipClass.Cruiser ? (main ? 4 : 3) : 2;
   const fp = guns?.firePower ?? 0;
   return {
@@ -301,4 +333,23 @@ export function designLook(d: Pick<IShipDesign, 'hull' | 'modules'>): IDesignLoo
 /** The texture key of a design's drawing: it changes with the design, so an edited design is drawn again. */
 export function designSpriteKey(id: string, d: Pick<IShipDesign, 'hull' | 'modules'>): string {
   return `design:${id}:${d.hull}:${[...d.modules].sort().join('+')}`;
+}
+
+/** 設計段階のお知らせ (#416, 0.0.71): the NEW-mark key of the design screen and the ids of the stages reached. */
+export const DESIGN_NEW = 'design';
+
+export function designStageIds(tier: number): string[] {
+  return Array.from({ length: Math.max(0, Math.min(MAX_TIER, tier)) }, (_, i) => `stage${i + 1}`);
+}
+
+/** Stages reached and not yet shown on the design screen (an old save sees its stage once). */
+export function newDesignStages(seen: Record<string, string[]> | undefined, tier: number): number {
+  const known = new Set(seen?.[DESIGN_NEW] ?? []);
+  return designStageIds(tier).filter((id) => !known.has(id)).length;
+}
+
+/** What reaching a stage brings, for the design screen's notice. */
+export function stageGains(tier: number): string {
+  const hulls = HULLS.filter((h) => h.tier === tier).map((h) => h.name);
+  return [hulls.length > 0 ? `${hulls.join('・')}` : '', `重量 +${TIER_WEIGHT}`, `設計 ${designLimit(tier)} つまで`].filter((s) => s).join('・');
 }
