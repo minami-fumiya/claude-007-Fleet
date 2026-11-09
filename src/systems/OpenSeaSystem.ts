@@ -42,6 +42,8 @@ export interface IWorldMap {
   bases: Record<string, ISectorRef>;
   /** Each campaign area's block of sea (0.0.69) */
   areas: Record<string, IAreaBlock>;
+  /** The old 外洋 chart's places at their real spots (0.0.70): "<kind>:<nation>" → place */
+  places: Record<string, { kind: string; nation: string; name: string } & ISectorRef>;
 }
 
 export const WORLD_MAP = worldJson as IWorldMap;
@@ -495,6 +497,8 @@ export interface IAnchorPlace {
 export interface IAnchoredFleet {
   shipIds: string[];
   at: IAnchorPlace;
+  /** Fuel left in the tank (0.0.70); a fleet in a base fills up there, one at sea keeps what it had (missing: full) */
+  fuel?: number;
 }
 
 /** The home port as an anchorage. */
@@ -514,7 +518,8 @@ export function shipPlace(anchors: readonly IAnchoredFleet[], shipId: string, na
   return anchors.find((a) => a.shipIds.includes(shipId))?.at ?? homeAnchor(nation);
 }
 
-const samePlace = (a: IAnchorPlace, b: IAnchorPlace): boolean => (a.base !== undefined || b.base !== undefined ? a.base === b.base : Math.hypot(a.x - b.x, a.y - b.y) < 1);
+/** Whether two anchorages are the same place: the same base, or the same point at sea. */
+export const samePlace = (a: IAnchorPlace, b: IAnchorPlace): boolean => (a.base !== undefined || b.base !== undefined ? a.base === b.base : Math.hypot(a.x - b.x, a.y - b.y) < 1);
 
 /** Where a fleet of these ships puts to sea from, or why it can't (its ships lie in different places). */
 export function fleetStart(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], nation: string): { at: IAnchorPlace } | { problem: string } {
@@ -525,13 +530,21 @@ export function fleetStart(anchors: readonly IAnchoredFleet[], shipIds: readonly
 }
 
 /** The anchorages with these ships moved to `at` (out of whatever group they were in). At the home port they join no group. */
-export function anchorAt(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], at: IAnchorPlace, nation: string): IAnchoredFleet[] {
+export function anchorAt(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], at: IAnchorPlace, nation: string, fuel?: number): IAnchoredFleet[] {
   const rest = anchors.map((a) => ({ ...a, shipIds: a.shipIds.filter((id) => !shipIds.includes(id)) })).filter((a) => a.shipIds.length > 0);
   if (at.base === homeAnchor(nation).base) return rest;
+  // In a base the tank is filled; at sea the fleet keeps what it has left (0.0.70).
+  const tank = at.base ? FUEL_MAX : Math.max(0, Math.min(FUEL_MAX, fuel ?? FUEL_MAX));
   // Joining a group already lying there.
   const there = rest.find((a) => samePlace(a.at, at));
-  if (there) return rest.map((a) => (a === there ? { ...a, shipIds: [...a.shipIds, ...shipIds] } : a));
-  return [...rest, { shipIds: [...shipIds], at }];
+  if (there) return rest.map((a) => (a === there ? { ...a, shipIds: [...a.shipIds, ...shipIds], fuel: Math.min(a.fuel ?? FUEL_MAX, tank) } : a));
+  return [...rest, { shipIds: [...shipIds], at, fuel: tank }];
+}
+
+/** The fuel a fleet puts to sea with from `at` (0.0.70): full from a base, what is left at sea. */
+export function placeFuel(anchors: readonly IAnchoredFleet[], at: IAnchorPlace): number {
+  if (at.base) return FUEL_MAX;
+  return anchors.find((a) => samePlace(a.at, at))?.fuel ?? FUEL_MAX;
 }
 
 /** Saved anchorages read safely (alpha saves: missing or broken entries are dropped). */
@@ -543,8 +556,19 @@ export function parseAnchors(raw: unknown): IAnchoredFleet[] {
     if (!Array.isArray(o?.shipIds) || !at || typeof at.x !== 'number' || typeof at.y !== 'number' || !Number.isFinite(at.x) || !Number.isFinite(at.y)) return [];
     const shipIds = o.shipIds.filter((id): id is string => typeof id === 'string');
     if (shipIds.length === 0) return [];
-    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y } }];
+    const fuel = typeof o.fuel === 'number' && Number.isFinite(o.fuel) ? { fuel: Math.max(0, Math.min(FUEL_MAX, o.fuel)) } : {};
+    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y }, ...fuel }];
   });
+}
+
+/** Every place the navy's ships lie (0.0.70): the home port first, then each group away. */
+export function anchorages(anchors: readonly IAnchoredFleet[], nation: string): IAnchorPlace[] {
+  return [homeAnchor(nation), ...anchors.map((a) => a.at)];
+}
+
+/** The ships of `shipIds` lying at `at` (編成は同じ停泊地の艦で, 0.0.70). */
+export function shipsAt<T extends string>(anchors: readonly IAnchoredFleet[], shipIds: readonly T[], at: IAnchorPlace, nation: string): T[] {
+  return shipIds.filter((id) => samePlace(shipPlace(anchors, id, nation), at));
 }
 
 /** A place's name: the base's, or the sea's position. */
@@ -596,4 +620,43 @@ export function encounterAt(nation: string, s: ISectorRef, hour: number, theater
 /** The groups within the sectors round `centre` this hour. */
 export function encountersNear(nation: string, centre: ISectorRef, hour: number, theaters: ReadonlySet<string>, ports: readonly ISectorRef[], radius = 1): IEncounter[] {
   return sectorWindow(centre, radius).map((s) => encounterAt(nation, s, hour, theaters, ports)).filter((g): g is IEncounter => g !== null);
+}
+
+/** Areas the open sea fights: the plain fights from 0.0.69 (案 2), every objective from 0.0.70. */
+export const OPEN_SEA_OBJECTIVES = ['Annihilate', 'SinkTargets', 'Convoy', 'Bombard', 'Breakthrough', 'PreventEscape', 'Delay'] as const;
+
+// --- 訓練海域と演習場 (0.0.70): two practice grounds off the home port --------------------------------------------
+
+/** Sea steps from the home port to the training ground and to the exercise ground. */
+export const PRACTICE_STEPS = { training: 3, exercise: 4 } as const;
+
+const practiceCache = new Map<string, { training: ISectorRef; exercise: ISectorRef }>();
+
+/**
+ * The navy's practice grounds (訓練海域・演習場): sea sectors a few steps off the home port, clear of the campaign's
+ * areas and of the other harbours; the exercise ground as far from the training ground as its ring allows.
+ */
+export function practiceGrounds(nation: string): { training: ISectorRef; exercise: ISectorRef } | null {
+  const cached = practiceCache.get(nation);
+  if (cached) return cached;
+  const home = homePort(nation);
+  if (!home) return null;
+  const steps = seaSteps(home);
+  const busy = (c: number, r: number): boolean => areaAt({ c, r }) !== undefined
+    || Object.values(WORLD_MAP.bases).some((b) => b.c === c && b.r === r && (b.c !== home.c || b.r !== home.r))
+    || Object.values(WORLD_MAP.places ?? {}).some((p) => p.c === c && p.r === r);
+  const ring = (n: number): ISectorRef[] => {
+    const out: ISectorRef[] = [];
+    for (let r = 0; r < WORLD_MAP.rows; r++) for (let c = 0; c < WORLD_MAP.cols; c++) if (steps[r * WORLD_MAP.cols + c] === n && !busy(c, r)) out.push({ c, r });
+    return out;
+  };
+  const near = ring(PRACTICE_STEPS.training);
+  const far = ring(PRACTICE_STEPS.exercise);
+  const training = near[0] ?? far[0];
+  if (!training) return null;
+  const exercise = far.filter((s) => s.c !== training.c || s.r !== training.r)
+    .sort((a, b) => colGap(b.c, training.c) + Math.abs(b.r - training.r) - (colGap(a.c, training.c) + Math.abs(a.r - training.r)))[0] ?? training;
+  const out = { training, exercise };
+  practiceCache.set(nation, out);
+  return out;
 }

@@ -513,6 +513,11 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('sea_area', '洋上攻略章', 'campaign', [1, 10, 50], (g) => `広い海の作戦海域で ${g} 回勝つ`, (_r, c) => total(c, 'seaAreaWin')),
   ...ladder('sea_group', '遭遇戦章', 'campaign', [1, 20, 100], (g) => `広い海で出会った敵艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'seaGroupWin')),
   ...ladder('anchored_away', '前進停泊章', 'campaign', [1, 10, 30], (g) => `軍港の外の基地に ${g} 回入港する`, (_r, c) => total(c, 'anchoredAway')),
+  // 0.0.70: every objective at sea, the practice grounds, fleets parted and joined again
+  ...ladder('sea_objective', '洋上作戦章', 'campaign', [1, 10, 30], (g) => `広い海で目標のある作戦海域を ${g} 回攻略する (殲滅以外)`, (_r, c) => total(c, 'seaObjectiveWin')),
+  ...ladder('drill_ground', '演習場章', 'campaign', [1, 20, 100], (g) => `訓練海域か演習場で ${g} 回勝つ`, (_r, c) => total(c, 'drillWin')),
+  ...ladder('detach', '分離章', 'campaign', [1, 10, 30], (g) => `艦隊から艦を ${g} 回分離する (帰投・待機)`, (_r, c) => total(c, 'fleetDetached')),
+  ...ladder('rejoin', '合流章', 'campaign', [1, 10], (g) => `待機していた艦を ${g} 回合流させる`, (_r, c) => total(c, 'fleetJoined')),
   // 0.0.66 外洋の第 2 段階 (#65)
   ...ladder('port_call', '寄港章', 'campaign', [1, 10, 50], (g) => `外洋で港に ${g} 回寄る`, (_r, c) => total(c, 'portCall')),
   ...ladder('resource_run', '資源輸送章', 'campaign', [1, 20, 100], (g) => `外洋の資源の場所に ${g} 回寄る`, (_r, c) => total(c, 'resourceRun')),

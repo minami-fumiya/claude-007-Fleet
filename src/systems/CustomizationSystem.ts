@@ -127,3 +127,13 @@ export function refitBadge(refitStage: number, fitted: number): string {
   const stage = STAGE_SHORT[Math.max(0, Math.min(refitStage, STAGE_SHORT.length - 1))];
   return `${stage ? `${stage} · ` : ''}装備 ${Math.min(fitted, upgradeSlots(refitStage))}/${upgradeSlots(refitStage)}`;
 }
+
+/**
+ * 編成のおすすめ (#416, 0.0.70): a short hint on a fleet slot — the ship can be remodelled now (its proficiency and
+ * the resources are there), or it has an empty upgrade slot while upgrades lie in the stock. Null when neither.
+ */
+export function fleetHint(opts: { canRefit: boolean; refitStage: number; fitted: number; stockTotal: number }): string | null {
+  if (opts.canRefit) return '改装できる';
+  if (opts.fitted < upgradeSlots(opts.refitStage) && opts.stockTotal > 0) return '装備に空き';
+  return null;
+}

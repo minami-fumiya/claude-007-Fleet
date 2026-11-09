@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { SceneKeys } from '@/config/SceneKeys';
 import {
-  FUEL_MAX, IAnchorPlace, ISectorRef, WORLD_MAP, areaBlock, findRoute, homeAnchor, routeFuel, routeLength, sectorAt, shipPlace,
+  IAnchorPlace, placeFuel, ISectorRef, WORLD_MAP, areaBlock, findRoute, homeAnchor, routeFuel, routeLength, sectorAt, shipPlace,
 } from '@/systems/OpenSeaSystem';
 import { FleetSystem } from '@/systems/FleetSystem';
 import { IShipData } from '@/types/Ship';
@@ -12,8 +12,7 @@ import { DataLoader } from '@/utils/DataLoader';
 import { SELECTION_KEY } from '@/utils/FleetSelection';
 import { loadProgress } from '@/utils/ProgressStore';
 
-/** Areas the open sea fights in 0.0.69 (案 2): the plain fights. The other objectives still sail from the 作戦 screen. */
-export const OPEN_SEA_OBJECTIVES = ['Annihilate', 'SinkTargets'] as const;
+export { OPEN_SEA_OBJECTIVES } from '@/systems/OpenSeaSystem';
 
 interface ICandidate {
   ships: IShipData[];
@@ -63,7 +62,7 @@ export function launchToArea(scene: Phaser.Scene, areaId: string): string | null
   if (candidates.length === 0) return '向かえる艦隊がありません。編成で艦隊を組むか、外洋の画面から艦隊を出してください';
   candidates.sort((a, b) => routeLength(a.route) - routeLength(b.route));
   const best = candidates[0];
-  if (routeFuel(best.route) > FUEL_MAX) return `一番近い艦隊からも燃料が足りません (燃料 ${routeFuel(best.route)})。前線の基地に回航してください`;
+  if (routeFuel(best.route) > placeFuel(p.openSea.anchors, best.at)) return `一番近い艦隊からも燃料が足りません (燃料 ${routeFuel(best.route)})。前線の基地に回航するか、基地か港で補給してください`;
   const init: IBattleInitData = {
     playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', p.nation, best.ships, 0),
     enemyFleet: FleetSystem.createFleet('enemy-fleet', '—', p.nation, [], 0),
