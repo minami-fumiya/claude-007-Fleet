@@ -108,6 +108,8 @@ export const QUEST_EVENTS = [
   'seaObjectiveWin', 'drillWin', 'fleetDetached', 'fleetJoined',
   // 0.0.71 (#116): the save written out (copied or saved to a file)
   'saveExport',
+  // 0.0.72 (#445): a resident convoy raided, a running patrol caught, the helm moved to another fleet
+  'convoyRaid', 'chaseWin', 'commandSwitch',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

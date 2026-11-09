@@ -2274,3 +2274,149 @@ test('設計 (0.0.71): a stage reached is told once, a battleship designed with 
   expect((await shown('HomeScene')).some((t) => t.includes('設計段階 1')), 'notice read').toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('動く世界 (0.0.72): the sky follows the world clock, residents sail and are met at sea (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS });
+  type G = { game: Phaser.Game };
+  type R = { id: string; kind: string; path: Array<{ c: number; r: number }> };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2500);
+  // The voyage readout tells the local time and the weather.
+  const readout = await page.evaluate(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { voyage: { info: { text: string } } };
+    return b.voyage.info.text;
+  });
+  expect(readout).toMatch(/現地 \d\d:\d\d/);
+  // Sail up to an enemy convoy and then a patrol, each well clear of the harbours and the areas.
+  for (const kind of ['convoy', 'patrol']) {
+    const met = await page.evaluate(async (k) => {
+      const ws = await import('/src/systems/WorldSim.ts');
+      const os = await import('/src/systems/OpenSeaSystem.ts');
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { residentList(): R[]; friendlies(): Array<{ x: number; y: number }>; seaWon: Set<string> };
+      const places = [...Object.values(os.WORLD_MAP.bases), ...Object.values(os.WORLD_MAP.places ?? {}), ...Object.values(os.WORLD_MAP.areas)] as Array<{ c: number; r: number }>;
+      const now = Date.now();
+      const r = b.residentList().find((x) => {
+        if (x.kind !== k || b.seaWon.has(x.id)) return false;
+        const p = ws.residentPos(x as never, now);
+        const c = Math.floor(p.x / os.SECTOR_PX);
+        const row = Math.floor(p.y / os.SECTOR_PX);
+        return !places.some((s) => os.colGap(s.c, c) < ws.RESIDENT_CLEAR + 2 && Math.abs(s.r - row) < ws.RESIDENT_CLEAR + 2);
+      });
+      if (!r) return null;
+      const p = ws.residentPos(r as never, now);
+      for (const sh of b.friendlies()) {
+        sh.x = p.x + 900;
+        sh.y = p.y + 400;
+      }
+      return r.id;
+    }, kind);
+    expect(met, kind).not.toBeNull();
+    await page.waitForFunction((id) => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { spotId?: string } | null }).engagement?.spotId === id, met, { timeout: 20_000 });
+    const eng = await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { resident?: string; flee?: boolean } }).engagement);
+    expect(eng.resident).toBe(kind);
+    if (kind === 'convoy') expect(eng.flee).toBe(true);
+    await page.screenshot({ path: info.outputPath(`resident-${kind}.png`) });
+    await page.evaluate(() => {
+      const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { enemies: Array<{ isAlive: boolean; takeDamage(n: number): void }> };
+      for (const e of b.enemies) if (e.isAlive) e.takeDamage(1e9);
+    });
+    await page.waitForFunction(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: unknown }).engagement === null, null, { timeout: 20_000 });
+  }
+  const totals = await page.evaluate(() => (JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { quests: { totals: Record<string, number> } } } }).nations.IJN.quests.totals);
+  expect(totals.convoyRaid).toBe(1);
+  // The chart shows the fronts and the clock.
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  await page.waitForTimeout(400);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene')).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene')).toEqual([]);
+  await page.screenshot({ path: info.outputPath('chart-fronts.png') });
+  expect(errors).toEqual([]);
+});
+
+test('指揮を移す (0.0.72): the chart lists the fleets, sends one off and hands the helm to another (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  // Two groups lying at sea a few sectors off Yokosuka (IJN's home port sector is c 255 r 50 on the 1.25° map).
+  const sea = (dc: number, dr: number): { x: number; y: number } => ({ x: (255 + dc + 0.5) * 3200, y: (50 + dr + 0.5) * 3200 });
+  const anchors = [{ shipIds: ['nagato'], at: sea(6, 6), fuel: 90 }, { shipIds: ['takao', 'sendai'], at: sea(9, 3), fuel: 70 }];
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: [...SCREENS, 'OpenSeaChartScene'], nations: { IJN: { ...SAVE.nations.IJN, openSea: { anchors } } } });
+  type G = { game: Phaser.Game };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  // The list: the steered fleet first, then the two lying at sea.
+  const listed = await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { listMode: boolean; drawPanel(): void; d: { fleets(): Array<{ index: number; label: string }> } };
+    c.listMode = true;
+    c.drawPanel();
+    return c.d.fleets().map((f) => f.index);
+  });
+  expect(listed).toEqual([-1, 0, 1]);
+  await page.waitForTimeout(300);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene'), `list (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene'), `list overlaps (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('fleet-list.png') });
+  // 回航: the second group is sent four sectors east; it is under way, out of the anchorages.
+  const ordered = await page.evaluate(async () => {
+    const os = await import('/src/systems/OpenSeaSystem.ts');
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { fleets(): Array<{ index: number; at: { c: number; r: number } }>; onOrder(i: number, r: unknown[]): string | null } };
+    const f = c.d.fleets().find((x) => x.index === 1)!;
+    const route = os.findRoute(f.at, { c: f.at.c + 4, r: f.at.r });
+    return c.d.onOrder(1, route!);
+  });
+  expect(ordered).toBeNull();
+  const stored = (): Promise<{ anchors: Array<{ shipIds: string[]; order?: unknown }>; totals: Record<string, number> }> => page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { openSea: { anchors: Array<{ shipIds: string[]; order?: unknown }> }; quests: { totals: Record<string, number> } } } };
+    return { anchors: s.nations.IJN.openSea.anchors, totals: s.nations.IJN.quests.totals };
+  });
+  expect((await stored()).anchors.find((a) => a.shipIds.includes('takao'))?.order).toBeTruthy();
+  // 指揮を移す: the helm goes to 長門; 大和 lies at sea where it was.
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { onSwitch(i: number): void } }).d.onSwitch(0));
+  await page.waitForFunction(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { flagship?: { dataId?: string }; voyage: unknown };
+    return b.sys.settings.active && b.voyage !== null && b.flagship?.dataId === 'nagato';
+  }, null, { timeout: 20_000 });
+  const after = await stored();
+  expect(after.anchors.some((a) => a.shipIds.includes('yamato'))).toBe(true);
+  expect(after.anchors.some((a) => a.shipIds.includes('nagato'))).toBe(false);
+  expect(after.totals.commandSwitch).toBe(1);
+  await page.screenshot({ path: info.outputPath('switched.png') });
+  expect(errors).toEqual([]);
+});
+
+test('超兵器と特別海域 (0.0.72): the giant patrols its sea and is met there; the weekly special sea lies beside its area (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const campaign = (JSON.parse(readFileSync(join(process.cwd(), 'src', 'data', 'campaign.json'), 'utf8')) as { areas: Array<{ id: string; theater: string; training?: boolean }> }).areas
+    .filter((a) => a.theater === 'pacific').map((a) => a.id);
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: SCREENS, nations: { IJN: { ...SAVE.nations.IJN, campaign } } });
+  type G = { game: Phaser.Game };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  const state = await page.evaluate(async () => {
+    const ws = await import('/src/systems/WorldSim.ts');
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as {
+      residentList(): Array<{ id: string; kind: string }>; specialSea(): { c: number; r: number } | null; friendlies(): Array<{ x: number; y: number }>;
+    };
+    const giant = b.residentList().find((r) => r.kind === 'superweapon');
+    if (!giant) return { giant: null, special: b.specialSea() !== null };
+    const p = ws.residentPos(giant as never, Date.now());
+    for (const sh of b.friendlies()) {
+      sh.x = p.x + 700;
+      sh.y = p.y + 300;
+    }
+    return { giant: giant.id, special: b.specialSea() !== null };
+  });
+  expect(state.giant).not.toBeNull();
+  expect(state.special).toBe(true);
+  await page.waitForFunction(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { engagement: { sw?: boolean } | null; superweapon: unknown };
+    return b.engagement?.sw === true && b.superweapon !== null;
+  }, null, { timeout: 20_000 });
+  await page.screenshot({ path: info.outputPath('giant-at-sea.png') });
+  expect(errors).toEqual([]);
+});

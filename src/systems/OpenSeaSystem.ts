@@ -3,6 +3,7 @@ import archipelago from '@/data/maps/archipelago.json';
 import atoll from '@/data/maps/atoll.json';
 import strait from '@/data/maps/strait.json';
 import { IMapCircle, IMapData } from '@/types/Map';
+import { IFleetOrder, parseOrder, parseReturnRule, ReturnRule } from '@/systems/FleetOrderTypes';
 
 /**
  * 本当のオープンワールド (#445, 0.0.68 段階 A1, pure): one world of sectors, each the size of a battle sea.
@@ -440,6 +441,8 @@ export interface IOpenSeaProgress {
   voyages: number;
   /** 停泊 (0.0.69): the groups of ships lying away from the home port */
   anchors: IAnchoredFleet[];
+  /** 自動の帰投の基準 of the fleet the player steers (0.0.72); missing: 大破 */
+  returnAt?: ReturnRule;
 }
 
 export function emptyOpenSea(): IOpenSeaProgress {
@@ -450,7 +453,8 @@ export function emptyOpenSea(): IOpenSeaProgress {
 export function parseOpenSea(raw: unknown): IOpenSeaProgress {
   const o = raw && typeof raw === 'object' ? (raw as Partial<IOpenSeaProgress>) : {};
   const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
-  return { explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors) };
+  const rule = parseReturnRule(o.returnAt);
+  return { explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors), ...(rule ? { returnAt: rule } : {}) };
 }
 
 /** Sectors sailed, for the record and the medals. */
@@ -499,6 +503,10 @@ export interface IAnchoredFleet {
   at: IAnchorPlace;
   /** Fuel left in the tank (0.0.70); a fleet in a base fills up there, one at sea keeps what it had (missing: full) */
   fuel?: number;
+  /** 回航 (0.0.72): under way to another place; `at` is where it set out from */
+  order?: IFleetOrder;
+  /** 自動の帰投の基準 (0.0.72), missing: 大破 */
+  returnAt?: ReturnRule;
 }
 
 /** The home port as an anchorage. */
@@ -524,6 +532,7 @@ export const samePlace = (a: IAnchorPlace, b: IAnchorPlace): boolean => (a.base 
 /** Where a fleet of these ships puts to sea from, or why it can't (its ships lie in different places). */
 export function fleetStart(anchors: readonly IAnchoredFleet[], shipIds: readonly string[], nation: string): { at: IAnchorPlace } | { problem: string } {
   if (shipIds.length === 0) return { problem: '艦隊がありません' };
+  if (anchors.some((a) => a.order && a.shipIds.some((id) => shipIds.includes(id)))) return { problem: '回航中の艦がいます。着くまで待つか、海図から指揮を移してください' };
   const places = shipIds.map((id) => shipPlace(anchors, id, nation));
   if (places.some((p) => !samePlace(p, places[0]))) return { problem: '艦隊の艦が別々の場所に停泊しています。同じ場所の艦で組んでください' };
   return { at: places[0] };
@@ -536,7 +545,7 @@ export function anchorAt(anchors: readonly IAnchoredFleet[], shipIds: readonly s
   // In a base the tank is filled; at sea the fleet keeps what it has left (0.0.70).
   const tank = at.base ? FUEL_MAX : Math.max(0, Math.min(FUEL_MAX, fuel ?? FUEL_MAX));
   // Joining a group already lying there.
-  const there = rest.find((a) => samePlace(a.at, at));
+  const there = rest.find((a) => !a.order && samePlace(a.at, at));
   if (there) return rest.map((a) => (a === there ? { ...a, shipIds: [...a.shipIds, ...shipIds], fuel: Math.min(a.fuel ?? FUEL_MAX, tank) } : a));
   return [...rest, { shipIds: [...shipIds], at, fuel: tank }];
 }
@@ -557,18 +566,22 @@ export function parseAnchors(raw: unknown): IAnchoredFleet[] {
     const shipIds = o.shipIds.filter((id): id is string => typeof id === 'string');
     if (shipIds.length === 0) return [];
     const fuel = typeof o.fuel === 'number' && Number.isFinite(o.fuel) ? { fuel: Math.max(0, Math.min(FUEL_MAX, o.fuel)) } : {};
-    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y }, ...fuel }];
+    // 0.0.72: a run under way and the fleet's 帰投の基準, each dropped when unreadable.
+    const order = parseOrder(o.order);
+    const rule = parseReturnRule(o.returnAt);
+    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y }, ...fuel, ...(order ? { order } : {}), ...(rule ? { returnAt: rule } : {}) }];
   });
 }
 
 /** Every place the navy's ships lie (0.0.70): the home port first, then each group away. */
 export function anchorages(anchors: readonly IAnchoredFleet[], nation: string): IAnchorPlace[] {
-  return [homeAnchor(nation), ...anchors.map((a) => a.at)];
+  return [homeAnchor(nation), ...anchors.filter((a) => !a.order).map((a) => a.at)];
 }
 
 /** The ships of `shipIds` lying at `at` (編成は同じ停泊地の艦で, 0.0.70). */
 export function shipsAt<T extends string>(anchors: readonly IAnchoredFleet[], shipIds: readonly T[], at: IAnchorPlace, nation: string): T[] {
-  return shipIds.filter((id) => samePlace(shipPlace(anchors, id, nation), at));
+  const away = new Set(anchors.filter((a) => a.order).flatMap((a) => a.shipIds));
+  return shipIds.filter((id) => !away.has(id) && samePlace(shipPlace(anchors, id, nation), at));
 }
 
 /** A place's name: the base's, or the sea's position. */
