@@ -484,6 +484,10 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('focus_reset', '方針転換章', 'growth', [1], () => '国家方針を見直す', (_r, c) => total(c, 'focusReset')),
   ...ladder('planned', '計画艦章', 'base', [1, 4, 10], (g) => `計画艦・未成艦 (架空艦) を 1 つの国で ${g} 隻持つ`, (_r, c) => c.plannedOwned ?? 0),
   ...ladder('designer', '設計章', 'base', [1, 3, 5], (g) => `1 つの国で、艦を ${g} 隻設計する`, (_r, c) => c.designsDrawn ?? 0),
+  // 0.0.72 動く世界 (#445): resident convoys raided, running patrols caught, the helm moved to another fleet
+  ...ladder('convoy_raider', '船団襲撃章', 'campaign', [1, 10, 50], (g) => `広い海で敵の船団を ${g} 回襲う`, (_r, c) => total(c, 'convoyRaid')),
+  ...ladder('pursuit', '追撃戦章', 'battle', [1, 10, 30], (g) => `逃げる敵の巡回艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'chaseWin')),
+  ...ladder('fleet_command', '指揮章', 'campaign', [1, 10, 50], (g) => `海図の艦隊の一覧から、別の艦隊に指揮を ${g} 回移す`, (_r, c) => total(c, 'commandSwitch')),
   // 0.0.71 主砲 2 基と設計段階 (#416)・セーブの書き出し (#116)
   ...ladder('twin_main', '二砲章', 'base', [1, 3], (g) => `1 つの国で、主砲を 2 基載せた艦を ${g} 隻設計する`, (_r, c) => c.twinMainDesigns ?? 0),
   ...ladder('design_stage', '設計段階章', 'base', [1, 2, 3], (g) => `設計段階 ${g} に上がる`, (_r, c) => c.designStage ?? 0),

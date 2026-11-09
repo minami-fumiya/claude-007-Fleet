@@ -42,9 +42,9 @@ export const RESIDENT_DAY_HOURS = 24;
 /** Residents close enough to the fleet to be drawn and watched at once (重さの目安). */
 export const MAX_NEAR = 60;
 export const SPEED: Record<ResidentKind, number> = { patrol: 4, convoy: 3, friend: 4, superweapon: 2 };
-/** Residents a sea sector, by kind (an enemy patrol every ~170 sectors). */
-export const PATROL_DENSITY = 0.006;
-export const CONVOY_DENSITY = 0.0012;
+/** Residents a sea sector, by kind (an enemy patrol every ~85 sectors: a fleet meets about as many as the 0.0.69 groups). */
+export const PATROL_DENSITY = 0.012;
+export const CONVOY_DENSITY = 0.0024;
 export const FRIEND_DENSITY = 0.0012;
 /** A patrol's turning points lie within this many sectors of its start. */
 const PATROL_REACH = 9;
@@ -104,15 +104,15 @@ function dcol(a: number, b: number): number {
   return d;
 }
 
-/** Whether a straight run between two sectors stays on the sea (sampled every half sector). */
+/** Whether a straight run between two sector middles stays on the sea (sampled every tenth of a sector, as it is sailed). */
 export function seaLine(a: ISectorRef, b: ISectorRef): boolean {
   const dc = dcol(a.c, b.c);
   const dr = b.r - a.r;
-  const n = Math.max(1, Math.ceil(Math.hypot(dc, dr) * 2));
+  const n = Math.max(1, Math.ceil(Math.hypot(dc, dr) * 10));
   for (let i = 0; i <= n; i++) {
-    const c = wrapCol(Math.round(a.c + (dc * i) / n));
-    const r = Math.round(a.r + (dr * i) / n);
-    if (!isSea(c, r)) return false;
+    const c = wrapCol(Math.floor(a.c + 0.5 + (dc * i) / n));
+    const r = Math.floor(a.r + 0.5 + (dr * i) / n);
+    if (r < 0 || r >= WORLD_MAP.rows || !isSea(c, r)) return false;
   }
   return true;
 }
