@@ -6,11 +6,14 @@ import { baseOfProgress, baseReaches, nationBases, openBases } from '@/systems/B
 import { theatersFor } from '@/systems/CampaignSystem';
 import { OBJECTIVE_LABEL } from '@/scenes/CampaignMapScene';
 import {
-  FUEL_MAX, ISectorRef, WORLD_MAP, areaAt, exploredCount, findRoute, homePort, isExplored, isSea, lonLatText, routeFuel, routeLength,
+  FUEL_MAX, ISectorRef, WORLD_MAP, areaAt, exploredCount, findRoute, homePort, isExplored, isSea, lonLatOf, lonLatText, routeFuel, routeLength,
   theaterOf, wrapCol,
 } from '@/systems/OpenSeaSystem';
 import { ICampaignData, Objective } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
+import { Weather } from '@/types/Weather';
+import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
+import { clockText, frontsAt, seaSky } from '@/systems/WorldClock';
 import { addPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
 import { loadProgress } from '@/utils/ProgressStore';
@@ -212,6 +215,13 @@ export class OpenSeaChartScene extends Phaser.Scene {
       g.lineStyle(1, Colors.cyan, 0.1);
       for (let c = Math.ceil(this.left / 12) * 12; c < this.left + cw / k; c += 12) g.lineBetween(x0 + (c - this.left) * k, y0, x0 + (c - this.left) * k, y0 + L.chart.h);
     }
+    // 天候の前線 (0.0.72): rain, fog and storms drifting east, faint under everything else.
+    const FRONT_COLOR: Record<Weather, number> = { [Weather.Clear]: 0, [Weather.Overcast]: 0x7f9bb8, [Weather.Fog]: 0xdfe8f0, [Weather.Storm]: 0x9d6bd6 };
+    for (const f of frontsAt(Date.now(), cols, WORLD_MAP.rows)) {
+      const sx = x0 + ((((f.c - this.left) % cols) + cols) % cols) * k;
+      g.fillStyle(FRONT_COLOR[f.weather], f.weather === Weather.Storm ? 0.32 : 0.2);
+      for (const dx of [0, -cols * k]) g.fillRect(sx + dx, y0 + (f.r0 - this.top) * k, f.width * k, f.rows * k);
+    }
     // Campaign areas of the seas open to the navy (red; cleared ones green).
     const cleared = new Set(loadProgress().campaign);
     for (const a of DATA.areas) {
@@ -286,6 +296,9 @@ export class OpenSeaChartScene extends Phaser.Scene {
     add(this.add.text(x, y, '現在地', eyebrowStyle(11, Css.gold)));
     y += 20;
     line(`${here ? THEATER_JA[here] : '沿岸'} · ${lonLatText(this.d.at)}`, 14);
+    // 世界の時計 (0.0.72): a real five minutes to the world hour; the fronts drift east (紫 嵐・白 霧・青 雨).
+    const sky = seaSky(Date.now(), this.d.at.c, this.d.at.r, lonLatOf(this.d.at).lon, WORLD_MAP.cols, WORLD_MAP.rows);
+    line(`現地 ${clockText(sky.hour)} (${TIME_LABEL[sky.time]})  ·  ${WEATHER_LABEL[sky.weather]}  ·  前線: 紫 嵐・白 霧・青 雨`, 12, Css.muted);
     line(`燃料 ${Math.ceil(this.d.fuel)} / ${FUEL_MAX}  ·  探索 ${exploredCount(this.d.explored)} 区画`, 13, this.d.fuel <= 20 ? Css.danger : Css.cyan);
     y += 6;
     const home = homePort(this.d.nation);

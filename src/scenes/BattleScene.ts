@@ -38,7 +38,7 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { anchorAt, FUEL_MAX, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
+import { anchorAt, FUEL_MAX, lonLatOf, sectorAt, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, encountersNear, homeAnchor, IEncounter, placeFuel, seaHour, theaterOf } from '@/systems/OpenSeaSystem';
 import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
 import { nearestDock } from '@/systems/AnchorageSystem';
@@ -67,6 +67,7 @@ import { BRIDGE_AIM_MUL, newlyBroken, partsLine, PART_CRITICAL, PART_LABEL, even
 import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/DifficultySystem';
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
+import { ISeaSky, seaSky } from '@/systems/WorldClock';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
@@ -265,6 +266,10 @@ export class BattleScene extends Phaser.Scene {
   private muteBtn: UIButton | null = null;
   private minimap!: Minimap;
   private conditions: IBattleConditions = battleConditions(Weather.Clear, TimeOfDay.Day);
+  /** 世界の時計と天候 (0.0.72): the conditions chip and the storm's rain, redrawn when the sky over the fleet changes */
+  private weatherChip: Phaser.GameObjects.Container | null = null;
+  private stormFx: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private skyCheckAt = 0;
   private airText: Phaser.GameObjects.Text | null = null;
   private strikeBtn: UIButton | null = null;
   private strikeReady = false;
@@ -540,7 +545,9 @@ export class BattleScene extends Phaser.Scene {
     this.waypoint = null;
 
     const { playerFleet, enemyFleet, formation } = this.resolveFleets(DataLoader.getRegistry(this));
-    this.conditions = battleConditions(this.battleData?.weather ?? Weather.Clear, this.battleData?.time ?? TimeOfDay.Day);
+    // On the open sea (0.0.72) the sky is the world's: its clock and the weather front over the fleet's sector.
+    const sky = openSea ? this.skyAt(OpenSeaVoyage.startPoint(this.battleData?.openSeaFrom ?? homeAnchor(playerFleet.nation))) : null;
+    this.conditions = battleConditions(sky?.weather ?? this.battleData?.weather ?? Weather.Clear, sky?.time ?? this.battleData?.time ?? TimeOfDay.Day);
     this.playerNation = playerFleet.nation;
     this.enemyNation = enemyFleet.nation;
 
@@ -769,6 +776,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.applySea(dtSec);
     this.voyage?.update();
+    if (this.voyage) this.updateSky(time);
     if (this.voyage) this.updateSeaFights(time);
     this.updateHazards(dtSec);
     this.updateConvoy(dtSec);
@@ -1684,8 +1692,11 @@ export class BattleScene extends Phaser.Scene {
   /** Rain in storms, and a chip naming the conditions. */
   private addWeatherEffects(): void {
     const c = this.conditions;
-    if (c.weather === Weather.Storm) {
-      this.add
+    this.stormFx = null;
+    this.weatherChip = null;
+    // At sea the storm can come and go (0.0.72): the rain is made once and shown while the storm lasts.
+    if (c.weather === Weather.Storm || this.battleData?.openSea) {
+      this.stormFx = this.add
         .particles(0, 0, 'particle', {
           x: { min: -100, max: CANVAS_W + 100 },
           y: -20,
@@ -1700,7 +1711,9 @@ export class BattleScene extends Phaser.Scene {
           frequency: 16,
         })
         .setScrollFactor(0)
-        .setDepth(DEPTH_HUD - 4);
+        .setDepth(DEPTH_HUD - 4)
+        .setVisible(c.weather === Weather.Storm);
+      if (c.weather !== Weather.Storm) this.stormFx.stop();
     }
     this.muteBtn = new UIButton(this, 20 + 50, IS_PORTRAIT ? 286 : 122, '', () => this.toggleMute(), {
       variant: 'secondary', width: 100, height: IS_PORTRAIT ? 44 : 30, fontSize: 12,
@@ -1714,10 +1727,54 @@ export class BattleScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(DEPTH_HUD + 2);
     }
+    this.drawWeatherChip();
+  }
+
+  private drawWeatherChip(): void {
+    const c = this.conditions;
+    this.weatherChip?.destroy();
     const label = `${WEATHER_LABEL[c.weather]}  ·  ${TIME_LABEL[c.time]}`;
-    addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
+    this.weatherChip = addChip(this, 20, IS_PORTRAIT ? 236 : 84, label, c.time === TimeOfDay.Night ? Colors.blue : Colors.cyan, c.time === TimeOfDay.Night ? Css.blue : Css.cyan)
       .setScrollFactor(0)
       .setDepth(DEPTH_HUD + 2);
+  }
+
+  /** The world's sky over a point of the open sea (世界の時計と天候, 0.0.72). */
+  private skyAt(p: { x: number; y: number }, now = Date.now()): ISeaSky {
+    const s = sectorAt(((p.x % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w, p.y);
+    return seaSky(now, s.c, s.r, lonLatOf(s).lon, WORLD_MAP.cols, WORLD_MAP.rows);
+  }
+
+  /**
+   * At sea the sky changes as the world's clock runs and the fronts drift (0.0.72): night falls, a storm comes on.
+   * Every ship's sight, the guns' aim, the fog and the rain follow.
+   */
+  private updateSky(time: number): void {
+    if (time < this.skyCheckAt || !this.flagship?.active) return;
+    this.skyCheckAt = time + 2000;
+    const sky = this.skyAt(this.flagship);
+    const c = this.conditions;
+    if (sky.weather === c.weather && sky.time === c.time) return;
+    const before = c;
+    this.conditions = battleConditions(sky.weather, sky.time);
+    const now = this.conditions;
+    const night = now.time === TimeOfDay.Night;
+    this.playerWeapons.aimError = now.aimError;
+    this.enemyWeapons.aimError = now.aimError;
+    for (const ship of [...this.playerSide(), ...this.enemies]) {
+      const m = ship.mods ?? NO_MODIFIERS;
+      ship.visionMul = m.visionMul * (night ? m.nightVisionMul : 1);
+      ship.aimErrorMul = night ? m.nightAimMul : 1;
+    }
+    this.fog.setLook(now.fogColor, now.fogAlpha);
+    if (this.stormFx) {
+      this.stormFx.setVisible(now.weather === Weather.Storm);
+      if (now.weather === Weather.Storm) this.stormFx.start();
+      else this.stormFx.stop();
+    }
+    this.drawWeatherChip();
+    if (before.time !== now.time) this.seaNote(night ? '日が暮れました。夜は視界が狭くなります' : '夜が明けました');
+    else this.seaNote(`天候が変わりました: ${WEATHER_LABEL[now.weather]}`);
   }
 
   private toggleMute(): void {

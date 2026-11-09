@@ -4,9 +4,12 @@ import { BaseShip } from '@/entities/ships/BaseShip';
 import { resolveMap } from '@/systems/MapSystem';
 import {
   EXPLORE_RADIUS, FUEL_MAX, ISectorRef, NO_FUEL_SPEED, PORT_RADIUS, SECTOR_PX, WORLD_MAP, WORLD_PX, IOpenSeaProgress,
-  IAnchorPlace, anchorAt, explore, fuelForPx, isSea, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
+  IAnchorPlace, anchorAt, explore, fuelForPx, isSea, lonLatOf, lonLatText, sectorAt, sectorContent, sectorWindow, theaterOf, wrapCol,
 } from '@/systems/OpenSeaSystem';
 import { IResolvedMap } from '@/types/Map';
+import { TimeOfDay } from '@/types/Weather';
+import { WEATHER_LABEL } from '@/systems/WeatherSystem';
+import { clockText, seaSky } from '@/systems/WorldClock';
 import { drawMap } from '@/ui/MapView';
 import { Minimap } from '@/ui/Minimap';
 import { UIButton } from '@/ui/components/UIKit';
@@ -233,9 +236,12 @@ export class OpenSeaVoyage {
     const theater = theaterOf(s.c, s.r);
     const place = sectorContent(s.c, s.r).place;
     const fuel = Math.ceil(this.fuel);
+    const sky = seaSky(Date.now(), s.c, s.r, lonLatOf(s).lon, WORLD_MAP.cols, WORLD_MAP.rows);
     const lines = [
       `${theater ? THEATER_JA[theater] : '沿岸'}${place ? ` · ${place}` : ''}`,
       lonLatText(s),
+      // 世界の時計 (0.0.72): the local hour and the weather over the sector.
+      `現地 ${clockText(sky.hour)}  ·  ${WEATHER_LABEL[sky.weather]}${sky.time === TimeOfDay.Night ? '  ·  夜' : ''}`,
       `燃料 ${fuel} / ${FUEL_MAX}${fuel <= 0 ? ' (微速)' : ''}`,
     ];
     const text = lines.join('\n');
