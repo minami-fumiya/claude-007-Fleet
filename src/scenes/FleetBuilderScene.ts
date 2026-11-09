@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { skillOf, skillText } from '@/systems/ShipSkillSystem';
-import { refitBadge } from '@/systems/CustomizationSystem';
+import { fleetHint, refitBadge } from '@/systems/CustomizationSystem';
+import { canRefit, REFIT_TABLE } from '@/systems/RefitSystem';
 import { emitTutorial, TutorialGuide } from '@/ui/components/TutorialGuide';
 import { audio } from '@/systems/AudioSystem';
 import { SceneKeys } from '@/config/SceneKeys';
@@ -24,7 +25,8 @@ import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { askShipName } from '@/ui/components/FilterBar';
 import { shipSearchNames } from '@/utils/SearchHistory';
 import { ISortieOptions, isFreeSortie, paySortie, sortieBlockers, sortieCostFor } from '@/systems/ProgressionSystem';
-import { supplyMul } from '@/systems/BaseSystem';
+import { BASES, supplyMul } from '@/systems/BaseSystem';
+import { anchorages, areaBlock, findRoute, homeAnchor, IAnchorPlace, placeFuel, placeName, routeFuel, samePlace, sectorAt, shipsAt } from '@/systems/OpenSeaSystem';
 import { formatResources } from '@/systems/ResourceSystem';
 import { ownedShips } from '@/systems/ShipyardSystem';
 import { costCap, costText, fitsCost, fleetCost, shipCost } from '@/systems/FleetCost';
@@ -241,6 +243,8 @@ export interface ISelection {
   enemyCount?: number;
   /** 敵の強さ: 訓練 (#343) */
   training?: boolean;
+  /** 停泊地 (0.0.70): the fleet is made of the ships lying here */
+  place?: IAnchorPlace;
 }
 
 /** The setup last used with `nation`'s fleet in this session. */
@@ -333,6 +337,10 @@ export class FleetBuilderScene extends Phaser.Scene {
   private shipList: ScrollList | null = null;
   private shipCountText: Phaser.GameObjects.Text | null = null;
   private titleText!: Phaser.GameObjects.Text;
+  /** 停泊地 (0.0.70): where the fleet is made up; only the ships lying here are offered. */
+  private place!: IAnchorPlace;
+  private placeBtn: UIButton | null = null;
+  private ownedText: Phaser.GameObjects.Text | null = null;
   private nationChip: Phaser.GameObjects.Container | null = null;
 
   private slotViews: ISlotView[] = [];
@@ -379,6 +387,8 @@ export class FleetBuilderScene extends Phaser.Scene {
   private openGroup: string | null = null;
   /** Opened from the home menu's 編成 (#109) */
   private organizeOnly = false;
+  /** 外洋 (0.0.70): the fleet puts to sea from its anchorage (the old 外洋 screen's place) */
+  private seaMode = false;
   private rematch = false;
   /** Digits typed for the enemy count (#108) and when the last one came */
   private keyBuffer = '';
@@ -390,8 +400,9 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   /** `organize`: opened from the home menu's 編成 (#109): fleet only, then 作戦へ / 演習へ instead of a sortie. */
   /** `rematch` (#135): sortie again with the last fleet straight away (ships that can't go are left out). */
-  init(data?: { organize?: boolean; rematch?: boolean }): void {
+  init(data?: { organize?: boolean; rematch?: boolean; sea?: boolean }): void {
     this.organizeOnly = data?.organize === true;
+    this.seaMode = data?.sea === true;
     this.rematch = data?.rematch === true;
   }
 
@@ -421,6 +432,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.timeChoice = saved?.time ?? standard.time;
     // Setting off (#108): every visit starts the exercise settings from random again; the fleet is still kept.
     if (!audio.settings.keepExercise) this.applyExercise(standard);
+    // The place last made up here, if ships still lie there; otherwise the home port (0.0.70).
+    const places = anchorages(progress.openSea.anchors, this.nation);
+    this.place = saved?.place && places.some((pl) => samePlace(pl, saved.place as IAnchorPlace)) ? saved.place : homeAnchor(this.nation);
+    this.placeBtn = null;
+    this.ownedText = null;
     this.splitByBase();
     const used = new Set<string>();
     this.slots = Array.from({ length: this.slotCount }, (_, i) => {
@@ -437,7 +453,11 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.swArea = this.area !== null && this.registry.get(SW_AREA_KEY) === true;
     this.defense = this.area !== null && !this.swArea && this.registry.get(DEFENSE_AREA_KEY) === true;
     this.special = this.area !== null && !this.swArea && !this.defense && this.registry.get(SPECIAL_AREA_KEY) === true;
-    if (this.area) this.organizeOnly = false;
+    if (this.area) {
+      this.organizeOnly = false;
+      this.seaMode = false;
+    }
+    if (this.seaMode) this.organizeOnly = false;
     this.keyBuffer = '';
     this.keyAt = 0;
     this.captainIds = Array.from({ length: this.slotCount }, (_, i) => {
@@ -547,6 +567,65 @@ export class FleetBuilderScene extends Phaser.Scene {
   // Layout
   // -------------------------------------------------------------------------
 
+  /** The row above the list: the ships lying at the place (0.0.70) and where more come from. */
+  private refreshOwnedText(): void {
+    this.ownedText?.setText(`この停泊地の艦 ${this.ships.length} 隻  ·  新しい艦は軍港に入る (建造・作戦の報酬)`);
+  }
+
+  /** The anchorage's name on its button. */
+  private refreshPlace(): void {
+    const names = Object.fromEntries(BASES.map((b) => [b.id, b.name]));
+    this.placeBtn?.setLabel(`停泊: ${placeName(this.place, names)}  ›`);
+  }
+
+  /** The next place ships lie (0.0.70): the list shows its ships, and ships of another place leave the slots. */
+  private nextPlace(): void {
+    const places = anchorages(loadProgress().openSea.anchors, this.nation);
+    if (places.length < 2) {
+      this.toast('ほかに停泊している艦隊はありません (広い海で軍港の外に停泊すると増えます)');
+      return;
+    }
+    const i = places.findIndex((pl) => samePlace(pl, this.place));
+    this.place = places[(i + 1) % places.length];
+    this.splitByBase();
+    const here = new Set(this.ships.map((s) => s.id));
+    this.slots = this.slots.map((s) => (s && here.has(s.id) ? s : null));
+    this.captainIds = this.captainIds.map((id, k) => (this.slots[k] ? id : null));
+    this.refreshPlace();
+    this.refreshOwnedText();
+    if (!IS_PORTRAIT) this.rebuildShipList();
+    this.refresh();
+  }
+
+  /**
+   * A campaign sortie sails from the fleet's anchorage to the area by the autopilot (0.0.70): the fight is met on the
+   * world's ocean. Returns why it can't go, or null once the battle screen is on its way.
+   */
+  private sailToArea(area: ICampaignArea): string | null {
+    const block = areaBlock(area.id);
+    if (!block) return 'この海域は広い海の上にありません';
+    const route = findRoute(sectorAt(this.place.x, this.place.y), { c: block.c, r: block.r });
+    if (!route) return 'この停泊地からは海でつながっていません';
+    const tank = placeFuel(loadProgress().openSea.anchors, this.place);
+    if (routeFuel(route) > tank) return `燃料が足りません (要 ${routeFuel(route)} / 残り ${Math.ceil(tank)})。基地か港で補給してから出撃してください`;
+    this.saveSelection();
+    const support = this.supportFleets();
+    const init: IBattleInitData = {
+      playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', this.nation, this.slots, this.slots.findIndex((s) => s !== null)),
+      enemyFleet: FleetSystem.createFleet('enemy-fleet', '—', this.nation, [], 0),
+      mapKey: 'open-sea',
+      formation: this.formation,
+      captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
+      support: support.map((g) => ({ ships: g.ships, captainIds: g.captainIds, mission: g.mission })),
+      openSea: true,
+      openSeaFrom: this.place,
+      openSeaRoute: route,
+    };
+    emitTutorial('sortie', this.registry);
+    this.scene.start(SceneKeys.BATTLE, init);
+    return null;
+  }
+
   private leave(): void {
     this.scene.start(this.area ? SceneKeys.CAMPAIGN : SceneKeys.HOME);
   }
@@ -564,6 +643,12 @@ export class FleetBuilderScene extends Phaser.Scene {
     fixed.push(back);
     this.titleText = this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 100 : 56, '', displayStyle(24)).setOrigin(0.5);
     fixed.push(this.titleText);
+    // 停泊地 (0.0.70): which anchorage the fleet is made up at; tap for the next.
+    this.placeBtn = IS_PORTRAIT
+      ? new UIButton(this, CANVAS_W / 2 + 40, 46, '', () => this.nextPlace(), { variant: 'secondary', width: 260, height: 52, fontSize: 14 })
+      : new UIButton(this, 1000, 44, '', () => this.nextPlace(), { variant: 'secondary', width: 250, height: 40, fontSize: 13 });
+    fixed.push(this.placeBtn);
+    this.refreshPlace();
     this.pin(fixed, 60);
     this.refreshHeader();
   }
@@ -585,8 +670,9 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** Owned ships of the current nation (#18), designs (#51) among them. */
   private offeredShips(): IShipData[] {
     const progress = loadProgress();
-    // By kind, then class by class oldest first, hulls in order (#246).
-    return filterEntries(ownedShips(progress, this.shipRegistry.byNation(this.nation)), null);
+    // By kind, then class by class oldest first, hulls in order (#246); only those lying at the chosen place (0.0.70).
+    const here = new Set(shipsAt(progress.openSea.anchors, progress.ships, this.place, this.nation));
+    return filterEntries(ownedShips(progress, this.shipRegistry.byNation(this.nation)), null).filter((s) => here.has(s.id));
   }
 
   /** Every owned ship is at hand: ships no longer belong to a base (#281). */
@@ -597,9 +683,10 @@ export class FleetBuilderScene extends Phaser.Scene {
   /** The row above the ship list: how many ships the nation owns and where more come from. */
   private buildNationTabs(): void {
     const p = this.L.ships;
-    this.add
-      .text(p.x + PANEL_PAD + 8, p.y + PANEL_HEADER_H + this.L.tabH / 2, `保有艦 ${this.ships.length} 隻  ·  新しい艦は工廠の建造・作戦の初回報酬で入手`, textStyle(12, Css.muted, { wordWrap: { width: p.w - PANEL_PAD * 2 - 16, useAdvancedWrap: true } }))
+    this.ownedText = this.add
+      .text(p.x + PANEL_PAD + 8, p.y + PANEL_HEADER_H + this.L.tabH / 2, '', textStyle(12, Css.muted, { wordWrap: { width: p.w - PANEL_PAD * 2 - 16, useAdvancedWrap: true } }))
       .setOrigin(0, 0.5);
+    this.refreshOwnedText();
   }
 
   /** "12 隻" in the ship panel header. */
@@ -1090,7 +1177,7 @@ export class FleetBuilderScene extends Phaser.Scene {
         };
       }),
     }];
-    if (this.area || this.organizeOnly) return groups;
+    if (this.area || this.organizeOnly || this.seaMode) return groups;
     const foes: Array<Choice<Nation>> = [RANDOM, ...PLAYABLE_NATIONS.filter((n) => n !== this.nation)];
     const radio = <T>(choices: T[], current: T, label: (c: T) => string, set: (c: T) => void): IOption[] =>
       choices.map((c) => ({ label: label(c), selected: c === current, enabled: true, pick: () => set(c) }));
@@ -1138,7 +1225,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     const gap = p ? 10 : 6;
     const objs: Phaser.GameObjects.GameObject[] = [];
     let y = s.y + PANEL_HEADER_H + (p ? 4 : 0);
-    if (!this.area && !this.organizeOnly) y += this.addPresetButtons(x, y, w, objs);
+    if (!this.area && !this.organizeOnly && !this.seaMode) y += this.addPresetButtons(x, y, w, objs);
 
     for (const g of this.settingGroups()) {
       if (g.stepper) {
@@ -1186,7 +1273,7 @@ export class FleetBuilderScene extends Phaser.Scene {
 
     if (this.area) y = this.buildCampaignBriefing(this.area, x, y + gap, w, objs);
     if (p) this.L.settings.h = y - s.y + 14;
-    const frame = this.buildPanelFrame(this.L.settings, this.organizeOnly ? '陣形' : this.area ? '出撃設定 — 作戦' : '出撃設定 — 演習');
+    const frame = this.buildPanelFrame(this.L.settings, this.organizeOnly ? '陣形' : this.seaMode ? '出撃設定 — 外洋' : this.area ? '出撃設定 — 作戦' : '出撃設定 — 演習');
     // The frame is drawn last (its height depends on the rows), so the rows are lifted above it.
     for (const o of objs) (o as unknown as Phaser.GameObjects.Components.Depth).setDepth(1);
     this.settingsObjs = [...frame, ...objs];
@@ -1534,7 +1621,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       const panel = addPanel(this, f.x, f.y, f.w, f.h, { radius: 24, fillAlpha: 0.95 });
       this.countText = this.add.text(f.x + 24, f.y + 12, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
       this.summaryText = this.add.text(f.x + f.w - 24, f.y + 10, '', textStyle(13, Css.muted, { align: 'right', lineSpacing: 2, wordWrap: { width: f.w - 170, useAdvancedWrap: true } })).setOrigin(1, 0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
-      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 38, '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 64 });
+      this.startBtn = new UIButton(this, CANVAS_W / 2, f.y + f.h - 38, this.seaMode ? '出港  ▶' : '出撃  ▶', onStart, { ...btn, width: f.w - 32, height: 64 });
       this.pin([bar, panel, this.countText, this.summaryText, this.startBtn], 60);
       return;
     }
@@ -1543,7 +1630,7 @@ export class FleetBuilderScene extends Phaser.Scene {
     this.add.text(f.x + 28, f.y + 22, '艦隊', eyebrowStyle(10, Css.muted));
     this.countText = this.add.text(f.x + 28, f.y + 42, '', textStyle(22, Css.text, { fontStyle: 'bold' }));
     this.summaryText = this.add.text(f.x + 176, f.y + 26, '', textStyle(14, Css.muted, { lineSpacing: 6, wordWrap: { width: f.w - 176 - 340, useAdvancedWrap: true } })).setInteractive({ useHandCursor: true }).on('pointerup', () => this.openPowerDetail());
-    this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
+    this.startBtn = new UIButton(this, f.x + f.w - 172, f.y + f.h / 2, this.seaMode ? '出港  ▶' : '出撃  ▶', onStart, { ...btn, width: 300, height: 60 });
   }
 
   /** 編成 from the home menu (#109): 作戦へ / 演習へ instead of 出撃. The fleet is kept either way (#77). */
@@ -1644,8 +1731,14 @@ export class FleetBuilderScene extends Phaser.Scene {
   private refitChip(ship: IShipData, x: number, y: number): Phaser.GameObjects.Container {
     const p = loadProgress();
     const stage = p.refits[ship.id] ?? 0;
-    const chip = addChip(this, x, y, refitBadge(stage, (p.upgrades[ship.id] ?? []).length), stage > 0 ? Colors.gold : Colors.rim, stage > 0 ? Css.gold : Css.muted);
-    return chip;
+    const fitted = (p.upgrades[ship.id] ?? []).length;
+    // 編成のおすすめ (#416, 0.0.70): a remodel within reach, or an empty upgrade slot with upgrades in the stock.
+    const hint = fleetHint({
+      canRefit: canRefit(REFIT_TABLE, ship, stage, p.proficiency[ship.id] ?? 0, p.resources),
+      refitStage: stage, fitted, stockTotal: Object.values(p.equipment ?? {}).reduce((n, c) => n + Math.max(0, c), 0),
+    });
+    const label = hint ? `${refitBadge(stage, fitted)}  ·  ${hint}` : refitBadge(stage, fitted);
+    return addChip(this, x, y, label, hint ? Colors.cyan : stage > 0 ? Colors.gold : Colors.rim, hint ? Css.cyan : stage > 0 ? Css.gold : Css.muted);
   }
 
   /** "41cm 連装砲 ×4": the ship's first (main) weapon. */
@@ -2167,6 +2260,7 @@ export class FleetBuilderScene extends Phaser.Scene {
       formation: this.formation,
       slotIds: this.slots.map((s) => s?.id ?? null),
       captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
+      place: this.place,
       weather: this.weatherChoice,
       time: this.timeChoice,
       enemyCount: this.enemyCount,
@@ -2178,6 +2272,30 @@ export class FleetBuilderScene extends Phaser.Scene {
 
   private startBattle(): void {
     const ships = this.slots.filter((s): s is IShipData => s !== null);
+    // 外洋 (0.0.70): the fleet puts to sea from where it lies, its route chosen on the chart.
+    if (this.seaMode) {
+      this.saveSelection();
+      const support = this.supportFleets();
+      emitTutorial('sortie', this.registry);
+      this.scene.start(SceneKeys.BATTLE, {
+        playerFleet: FleetSystem.createFleet('player-fleet', '第一艦隊', this.nation, this.slots, this.slots.findIndex((s) => s !== null)),
+        enemyFleet: FleetSystem.createFleet('enemy-fleet', '—', this.nation, [], 0),
+        mapKey: 'open-sea',
+        formation: this.formation,
+        captainIds: this.captainIds.map((id, i) => (this.slots[i] ? id : null)),
+        support: support.map((g) => ({ ships: g.ships, captainIds: g.captainIds, mission: g.mission })),
+        openSea: true,
+        openSeaFrom: this.place,
+      } satisfies IBattleInitData);
+      return;
+    }
+    // 作戦は海の上で (0.0.70): a campaign area's sortie sails there; the defence, the special sea and the superweapon
+    // sea are still fought on their own battle screen until they come onto the ocean (B1).
+    if (this.area && !this.swArea && !this.defense && !this.special) {
+      const why = this.sailToArea(this.area);
+      if (why) this.toast(why);
+      return;
+    }
     // 支援艦隊 (#84) pay their sortie too and sail with the main fleet.
     const support = this.supportFleets();
     const paid = paySortie(loadProgress(), this.allShips(ships), this.sortieOptions());

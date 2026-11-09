@@ -278,5 +278,11 @@ Both `tsconfig.json` (paths) and `vitest.config.ts` (resolve.alias) must declare
 - Never touch the tree a simulation runs from (sources or `node_modules`): Vite reloads or the imports break and
   every later battle reports 0%. A worktree with a `node_modules` symlink must keep that symlink out of git
   (`.gitignore` has `node_modules/`, a directory pattern, so add `node_modules` to `.git/info/exclude`).
+- In the cloud container the sim needs `CHROMIUM_PATH=/opt/pw-browsers/chromium` (the pinned headless shell is not
+  installed), and nothing heavy beside it: an E2E run or a second dev server at the same time made page loads time out
+  and the sim stop half way (0.0.69 review). Two pages (`--pages 2`) are enough.
+- A battle-screen setting applied in `create()` before the HUD is built must not touch the HUD's buttons: the button
+  reads the state when it is made (0.0.69 review: the 海から autopilot threw and the HUD was never made). An E2E per
+  entry point (chart, 海から, …) catches it; one entry's test does not cover another's.
 - Before adding a promotion mission, check that the seas of the rank held can meet it (e.g. six-ship fleets sail
   only from the 大佐 seas on); `Progress058.test.ts` guards the S-against-six-ships case.

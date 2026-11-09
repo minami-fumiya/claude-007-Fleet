@@ -104,6 +104,8 @@ export const QUEST_EVENTS = [
   'worldControl', 'patrolWin', 'historicWin',
   // 0.0.69 (#445): campaign areas won on the open sea, groups met at sea and beaten, fleets put into a harbour away from home
   'seaAreaWin', 'seaGroupWin', 'anchoredAway',
+  // 0.0.70: an objective area won at sea, a drill won at the practice grounds, ships sent off and joined
+  'seaObjectiveWin', 'drillWin', 'fleetDetached', 'fleetJoined',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

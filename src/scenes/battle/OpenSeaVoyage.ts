@@ -29,7 +29,21 @@ export interface IVoyageHost {
   openChart(): void;
   /** Ends the voyage in the port (bases.json id) */
   enterPort(baseId: string): void;
+  /** Calls at a port on the sea (0.0.70): fuel and a patch-up, the voyage goes on */
+  callAt(placeId: string): void;
+  /** Sails through an oil field's or a mine's ring (0.0.70) */
+  passBy(placeId: string): void;
+  /** The sheet of 帰投・待機・合流 orders (艦隊の分離, 0.0.70) */
+  openSeparation(): void;
+  /** Starts a drill at a practice ground (訓練海域・演習場, 0.0.70) */
+  startDrill(kind: 'training' | 'exercise'): void;
 }
+
+/** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
+export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise' | 'convoy' | 'fort';
+export type IVoyageStop = { id: string; name: string; kind?: VoyageStopKind } & ISectorRef;
+
+const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演', convoy: '船', fort: '要' };
 
 interface ILoadedSector {
   /** Unwrapped column (may be -1 or cols) and row */
@@ -64,14 +78,31 @@ export class OpenSeaVoyage {
   private last: { x: number; y: number } | null = null;
   private info!: Phaser.GameObjects.Text;
   private portBtn!: UIButton;
+  /** 分離・合流 (0.0.70), kept just under the readout whatever its height */
+  private sepBtn: UIButton | null = null;
   private routeGfx!: Phaser.GameObjects.Graphics;
-  /** The navy's open bases (the home port first): where the fleet can put in */
-  private readonly ports: Array<{ id: string; name: string } & ISectorRef>;
-  private portHere: { id: string; name: string } | null = null;
+  /** The navy's open bases (the home port first), its ports, oil fields and mines (0.0.70) */
+  private readonly ports: IVoyageStop[];
+  private portHere: IVoyageStop | null = null;
+  /** The resource ring passed last (paid once on the way in) */
+  private passedHere: string | null = null;
 
-  constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress, ports: Array<{ id: string; name: string } & ISectorRef>) {
+  /** The tank at the last fill (0.0.70: a fleet lying at sea puts out with what it had left) and the distance then */
+  private tank = FUEL_MAX;
+  private filledAtPx = 0;
+
+  constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress, ports: IVoyageStop[], startFuel = FUEL_MAX) {
     this.explored = saved.explored;
     this.ports = ports;
+    this.tank = startFuel;
+    this.fuel = startFuel;
+  }
+
+  /** A full tank (a port on the sea, 0.0.70). */
+  refuel(): void {
+    this.tank = FUEL_MAX;
+    this.filledAtPx = this.sailedPx;
+    this.fuel = FUEL_MAX;
   }
 
   /** Where the fleet puts to sea: just off the base it lay at, or the very point at sea it stopped at. */
@@ -103,7 +134,16 @@ export class OpenSeaVoyage {
     y += h / 2 + 10;
     this.info = scene.add.text(CANVAS_W - 20, y, '', textStyle(IS_PORTRAIT ? 13 : 12, Css.text, { align: 'right', lineSpacing: 4, stroke: Css.bgDeep, strokeThickness: 3 }))
       .setOrigin(1, 0).setDepth(DEPTH_HUD + 2).setScrollFactor(0);
-    this.portBtn = new UIButton(scene, CANVAS_W / 2, IS_PORTRAIT ? 420 : 200, '入港する', () => this.portHere && this.host.enterPort(this.portHere.id), {
+    // 艦隊の分離 (0.0.70): under the readout.
+    this.sepBtn = new UIButton(scene, x, y + (IS_PORTRAIT ? 96 : 76), '分離・合流', () => this.host.openSeparation(), { variant: 'secondary', width: w, height: h, fontSize: IS_PORTRAIT ? 15 : 13 });
+    this.sepBtn.setDepth(DEPTH_HUD + 2).setScrollFactor(0);
+    this.portBtn = new UIButton(scene, CANVAS_W / 2, IS_PORTRAIT ? 420 : 200, '入港する', () => {
+      const here = this.portHere;
+      if (!here) return;
+      if (here.kind === 'port') this.host.callAt(here.id);
+      else if (here.kind === 'training' || here.kind === 'exercise') this.host.startDrill(here.kind);
+      else this.host.enterPort(here.id);
+    }, {
       variant: 'gold', width: IS_PORTRAIT ? 320 : 300, height: IS_PORTRAIT ? 60 : 48, fontSize: IS_PORTRAIT ? 17 : 15,
     });
     this.portBtn.setDepth(DEPTH_HUD + 3).setScrollFactor(0).setVisible(false);
@@ -157,7 +197,7 @@ export class OpenSeaVoyage {
 
     if (this.last) this.sailedPx += Math.hypot(f.x - this.last.x, f.y - this.last.y);
     this.last = { x: f.x, y: f.y };
-    this.fuel = Math.max(0, FUEL_MAX - fuelForPx(this.sailedPx));
+    this.fuel = Math.max(0, this.tank - fuelForPx(this.sailedPx - this.filledAtPx));
     if (this.fuel <= 0) for (const s of this.host.ships()) s.envSpeedMul *= NO_FUEL_SPEED;
 
     const here = { c: Math.floor(f.x / SECTOR_PX), r: Math.max(0, Math.min(WORLD_MAP.rows - 1, Math.floor(f.y / SECTOR_PX))) };
@@ -166,11 +206,17 @@ export class OpenSeaVoyage {
       this.stream(here);
       this.explored = explore(this.explored, { c: wrapCol(here.c), r: here.r }, EXPLORE_RADIUS);
     }
-    // In one of the navy's open harbours: the fleet can put in (and lie there, 停泊).
-    const port = this.ports.find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
+    // In one of the navy's open harbours: the fleet can put in (and lie there, 停泊); a port on the sea refills the
+    // tank; an oil field or a mine pays as the fleet sails through (0.0.70).
+    // The enemy's convoy and stronghold are drawn as a warning only: coming near starts their fight (BattleScene).
+    const ring = this.ports.filter((p) => p.kind !== 'convoy' && p.kind !== 'fort').find((p) => Math.hypot(this.nearestX((p.c + 0.5) * SECTOR_PX, f.x) - f.x, (p.r + 0.5) * SECTOR_PX - f.y) <= PORT_RADIUS) ?? null;
+    const resource = ring && (ring.kind === 'oil' || ring.kind === 'mine') ? ring : null;
+    if (resource && this.passedHere !== resource.id) this.host.passBy(resource.id);
+    this.passedHere = resource?.id ?? null;
+    const port = resource ? null : ring;
     if (port?.id !== this.portHere?.id) {
       this.portHere = port;
-      if (port) this.portBtn?.setLabel(`${port.name}に入港する`);
+      if (port) this.portBtn?.setLabel(port.kind === 'port' ? `${port.name}で補給する` : port.kind === 'training' ? '訓練を始める' : port.kind === 'exercise' ? '演習を始める' : `${port.name}に入港する`);
     }
     this.portBtn?.setVisible(port !== null);
     this.drawRoute();
@@ -196,6 +242,7 @@ export class OpenSeaVoyage {
     if (this.info.text !== text) {
       this.info.setText(text);
       this.info.setColor(fuel <= 20 ? Css.danger : Css.text);
+      this.sepBtn?.setY(this.info.y + this.info.height + 10 + (IS_PORTRAIT ? 26 : 20));
     }
   }
 
@@ -248,16 +295,20 @@ export class OpenSeaVoyage {
     };
     const drawn: Phaser.GameObjects.GameObject[] = [];
     const group = drawMap(scene, map, drawn);
-    // The navy's harbours: a ring and the name.
-    for (const port of this.ports.filter((p) => p.c === wrapCol(at.c) && p.r === at.r)) {
+    // The navy's harbours, ports and resource points: a ring and the name (a second one in the same sector below).
+    this.ports.filter((p) => p.c === wrapCol(at.c) && p.r === at.r).forEach((port, i) => {
       const cx = x0 + SECTOR_PX / 2;
       const cy = y0 + SECTOR_PX / 2;
+      const kind = port.kind ?? 'base';
+      const enemy = kind === 'convoy' || kind === 'fort';
+      const color = enemy ? Colors.danger : kind === 'base' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
+      const css = enemy ? Css.danger : kind === 'base' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
       const ring = scene.add.graphics().setDepth(DEPTH_WATER_FX - 1);
-      ring.lineStyle(6, Colors.gold, 0.55).strokeCircle(cx, cy, PORT_RADIUS);
-      ring.fillStyle(Colors.gold, 0.08).fillCircle(cx, cy, PORT_RADIUS);
+      ring.lineStyle(6, color, 0.55).strokeCircle(cx, cy, PORT_RADIUS);
+      ring.fillStyle(color, 0.08).fillCircle(cx, cy, PORT_RADIUS);
       drawn.push(ring);
-      drawn.push(scene.add.text(cx, cy, `⚓ ${port.name}`, textStyle(64, Css.gold, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 8 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX - 1).setAlpha(0.8));
-    }
+      drawn.push(scene.add.text(cx, cy + i * 90, `${STOP_MARK[kind]} ${port.name}`, textStyle(64, css, { fontStyle: 'bold', stroke: Css.bgDeep, strokeThickness: 8 })).setOrigin(0.5).setDepth(DEPTH_WATER_FX - 1).setAlpha(0.8));
+    });
     return { ...at, group, colliders: this.host.addLand(group), drawn, map };
   }
 
@@ -281,7 +332,7 @@ export class OpenSeaVoyage {
 
   /** What the voyage leaves in the save. */
   result(saved: IOpenSeaProgress, shipIds: readonly string[], at: IAnchorPlace): IOpenSeaProgress {
-    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation) };
+    return { explored: this.explored, sailedPx: saved.sailedPx + this.sailedPx, voyages: saved.voyages + 1, anchors: anchorAt(saved.anchors, shipIds, at, this.nation, this.fuel) };
   }
 
   /** The flagship's place, wrapped into the world (for lying at sea). */
