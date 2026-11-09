@@ -5,9 +5,11 @@ import { SceneKeys } from '@/config/SceneKeys';
 import { CANVAS_H, CANVAS_W, IS_PORTRAIT } from '@/config/GameConstants';
 import { audio } from '@/systems/AudioSystem';
 import { DataLoader } from '@/utils/DataLoader';
+import { expeditionDangerMul, expeditionPlan, expeditionPos, expeditionSectors } from '@/systems/ExpeditionRoute';
+import { runFleetOrders } from '@/utils/FleetOrderRunner';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { theaterFacility, nationForwardBases } from '@/systems/BaseSystem';
-import { OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions, expeditionProficiencyGain, expeditionTraining } from '@/systems/ExpeditionSystem';
+import { EXPEDITIONS, OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions, expeditionProficiencyGain, expeditionTraining } from '@/systems/ExpeditionSystem';
 import { DORM_PROFICIENCY_CAP, DORM_PROFICIENCY_PER_HOUR, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
@@ -32,7 +34,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 type Tab = 'expedition' | 'dorm';
 
 const L = IS_PORTRAIT
-  ? { left: 16, top: 250, cols: 2, cardH: 152, gap: 12, tabY: 170 }
+  ? { left: 16, top: 250, cols: 2, cardH: 160, gap: 12, tabY: 170 }
   : { left: 24, top: 166, cols: 3, cardH: 150, gap: 10, tabY: 104 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 
@@ -40,6 +42,9 @@ const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
  * 遠征 (#41) and 寮舎 (#57): ships not fighting go out for resources, or stay home to train with their captains.
  * Expeditions back are taken home as the screen opens; dorm training is credited whenever something leaves.
  */
+/** Where an expedition is on its route (0.0.73). */
+const LEG_JA = { out: '往路', station: '現地で行動中', back: '帰路' } as const;
+
 export class ExpeditionScene extends Phaser.Scene {
   private tab: Tab = 'expedition';
   private layer: Phaser.GameObjects.GameObject[] = [];
@@ -88,14 +93,23 @@ export class ExpeditionScene extends Phaser.Scene {
   /** Takes home every expedition that is back. */
   private collect(): void {
     const now = Date.now();
+    // 遠征の航路 (0.0.73): what met them on their way is reckoned first (it can turn them home early).
+    const ran = runFleetOrders(loadProgress(), DataLoader.getRegistry(this), now);
+    if (ran) saveProgress(ran.progress);
     const p = loadProgress();
     if (!p.expeditions.some((r) => r.endsAt <= now)) return;
     // 前進遠征拠点 Lv2 (#373): a sea's expedition pays more.
-    const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now, (e) => (e.theater && theaterFacility(p, e.theater, 'outpost') >= 2 ? OUTPOST_REWARD_MUL : 1) * focusExpeditionMul(p.nation, p.focus));
+    const c = collectExpeditions(p.resources, p.expeditions, holdCap(p.facilities), now, (e) => (e.theater && theaterFacility(p, e.theater, 'outpost') >= 2 ? OUTPOST_REWARD_MUL : 1) * focusExpeditionMul(p.nation, p.focus) * expeditionDangerMul(expeditionPlan(p.nation, e)?.danger ?? 3));
     const ledger = recordLedger(recordLedger(p.ledger, 'expedition', addResources(c.gained, c.lost, -1), now), 'overflow', c.lost, now);
     // 遠征の練成 (#426): the ships come home a little more practised.
     const trained = expeditionTraining(p.proficiency, p.expeditions, now);
-    saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger, proficiency: trained.proficiency }, [['expeditionDone', c.done], ['expeditionProficiency', trained.gained]], now));
+    // 遠征の航海距離 (0.0.73): the sectors sailed out and back (half for one turned home early).
+    const sailed = p.expeditions.filter((r) => r.endsAt <= now && r.startedAt !== undefined).reduce((sum, r) => {
+      const exp = EXPEDITIONS.find((e) => e.id === r.id);
+      const plan = exp ? expeditionPlan(p.nation, exp) : null;
+      return sum + (plan ? Math.round(expeditionSectors(plan) * (r.cut ? 0.5 : 1)) : 0);
+    }, 0);
+    saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger, proficiency: trained.proficiency }, [['expeditionDone', c.done], ['expeditionProficiency', trained.gained], ['expeditionSectors', sailed]], now));
     this.status = `遠征から帰還 (${c.done}): ${formatResources(c.gained)}${trained.gained > 0 ? `・熟練度 +${trained.gained}` : ''}`;
   }
 
@@ -163,12 +177,20 @@ export class ExpeditionScene extends Phaser.Scene {
       this.track(drawPanel(this.add.graphics(), x, y, CARD_W, L.cardH, { radius: 14, fillAlpha: 0.6, rim: run ? Colors.cyan : undefined, rimAlpha: run ? 0.7 : 0.2 }));
       const nameText = this.track(this.add.text(x + 14, y + 10, e.name, textStyle(15, Css.text, { fontStyle: 'bold' })));
       if (this.newExps?.has(e.id) && !run) this.track(this.add.text(nameText.x + nameText.width + 8, y + 12, 'NEW', textStyle(12, Css.gold, { fontStyle: 'bold' })));
+      // 遠征の航路 (0.0.73): the time, and how far it sails out and back.
+      const plan = expeditionPlan(p.nation, e);
       this.track(this.add.text(x + CARD_W - 14, y + 12, expeditionLength(e.minutes), textStyle(12, Css.muted)).setOrigin(1, 0));
-      // Out: who sailed (#337), in place of what it asks.
-      const line = run ? `出撃中: ${run.shipIds.map(short).join('・')}` : `${e.ships} 隻${this.needsText(e)}`;
+      // Out: who sailed (#337) and where it is on its route, in place of what it asks.
+      const leg = run && plan && run.startedAt !== undefined ? LEG_JA[expeditionPos(plan, run.startedAt, now).leg] : '';
+      const line = run ? `${run.cut ? '引き返し中' : leg || '出撃中'}: ${run.shipIds.map(short).join('・')}` : `${e.ships} 隻${this.needsText(e)}`;
       const lineText = this.track(this.add.text(x + 14, y + 36, line, textStyle(12, run ? Css.text : Css.muted)));
       fitText(lineText, CARD_W - 28);
-      this.track(this.add.text(x + 14, y + 58, `${formatResources(e.reward)}・熟練度 +${expeditionProficiencyGain(e)}`, textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
+      const rewardText = this.track(this.add.text(x + 14, y + 54, `${formatResources(e.reward)}・熟練度 +${expeditionProficiencyGain(e)}`, textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
+      if (plan) {
+        // The route on a line of its own, so that a long reward never pushes it onto the buttons.
+        const routeText = this.track(this.add.text(x + 14, rewardText.y + rewardText.height, `往復 ${expeditionSectors(plan)} 区画・危険度 ${plan.danger} (×${expeditionDangerMul(plan.danger).toFixed(2)})`, textStyle(12, Css.muted)));
+        fitText(routeText, CARD_W - 28);
+      }
       const by = y + L.cardH - (IS_PORTRAIT ? 26 : 22);
       const bh = IS_PORTRAIT ? 40 : 32;
       if (run) {

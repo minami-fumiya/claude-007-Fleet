@@ -19,7 +19,13 @@ export interface IFleetOrder {
   met: string[];
   /** Turned home by its 帰投の基準 */
   home?: boolean;
+  /** 哨戒 (0.0.73): after the route, round this loop until called off; chase what it finds, or only report it */
+  patrol?: { loop: ISectorRef[]; stance: PatrolStance };
+  /** Residents the patrol has already reported */
+  seen?: string[];
 }
+
+export type PatrolStance = 'chase' | 'report';
 
 /** Read safely from a save (alpha: a broken order is dropped and the fleet lies where it started). */
 export function parseOrder(raw: unknown): IFleetOrder | undefined {
@@ -28,6 +34,9 @@ export function parseOrder(raw: unknown): IFleetOrder | undefined {
   const route = o.route.filter((s): s is ISectorRef => typeof s?.c === 'number' && typeof s?.r === 'number').map((s) => ({ c: s.c, r: s.r }));
   const d = o.dest as Partial<IAnchorPlace>;
   if (route.length < 2 || typeof d.x !== 'number' || typeof d.y !== 'number') return undefined;
+  const p = o.patrol as { loop?: unknown; stance?: unknown } | undefined;
+  const loop = Array.isArray(p?.loop) ? p!.loop.filter((s): s is ISectorRef => typeof (s as ISectorRef)?.c === 'number' && typeof (s as ISectorRef)?.r === 'number').map((s) => ({ c: s.c, r: s.r })) : [];
+  const patrol = loop.length >= 2 ? { loop, stance: (p?.stance === 'report' ? 'report' : 'chase') as PatrolStance } : undefined;
   return {
     route,
     dest: { ...(typeof d.base === 'string' ? { base: d.base } : {}), x: d.x, y: d.y },
@@ -35,6 +44,8 @@ export function parseOrder(raw: unknown): IFleetOrder | undefined {
     checkedAt: typeof o.checkedAt === 'number' ? o.checkedAt : o.startedAt,
     met: Array.isArray(o.met) ? o.met.filter((id): id is string => typeof id === 'string') : [],
     ...(o.home === true ? { home: true } : {}),
+    ...(patrol ? { patrol } : {}),
+    ...(Array.isArray(o.seen) ? { seen: o.seen.filter((id): id is string => typeof id === 'string') } : {}),
   };
 }
 
