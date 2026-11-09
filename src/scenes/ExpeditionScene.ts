@@ -9,7 +9,7 @@ import { expeditionDangerMul, expeditionPlan, expeditionPos, expeditionSectors }
 import { runFleetOrders } from '@/utils/FleetOrderRunner';
 import { IProgress, loadProgress, saveProgress } from '@/utils/ProgressStore';
 import { theaterFacility, nationForwardBases } from '@/systems/BaseSystem';
-import { OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions, expeditionProficiencyGain, expeditionTraining } from '@/systems/ExpeditionSystem';
+import { EXPEDITIONS, OUTPOST_REWARD_MUL, collectExpeditions, expeditionLength, expeditionSlots, expeditionState, groupProblem, IExpedition, pickShips, recallExpedition, rememberedGroup, shipsAway, startExpedition, shownExpeditions, expeditionProficiencyGain, expeditionTraining } from '@/systems/ExpeditionSystem';
 import { DORM_PROFICIENCY_CAP, DORM_PROFICIENCY_PER_HOUR, DORM_XP_PER_HOUR, dormSlots, enterDorm, inDorm, leaveDorm } from '@/systems/DormSystem';
 import { holdCap } from '@/systems/FacilitySystem';
 import { addResources, formatResources } from '@/systems/ResourceSystem';
@@ -103,7 +103,13 @@ export class ExpeditionScene extends Phaser.Scene {
     const ledger = recordLedger(recordLedger(p.ledger, 'expedition', addResources(c.gained, c.lost, -1), now), 'overflow', c.lost, now);
     // 遠征の練成 (#426): the ships come home a little more practised.
     const trained = expeditionTraining(p.proficiency, p.expeditions, now);
-    saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger, proficiency: trained.proficiency }, [['expeditionDone', c.done], ['expeditionProficiency', trained.gained]], now));
+    // 遠征の航海距離 (0.0.73): the sectors sailed out and back (half for one turned home early).
+    const sailed = p.expeditions.filter((r) => r.endsAt <= now && r.startedAt !== undefined).reduce((sum, r) => {
+      const exp = EXPEDITIONS.find((e) => e.id === r.id);
+      const plan = exp ? expeditionPlan(p.nation, exp) : null;
+      return sum + (plan ? Math.round(expeditionSectors(plan) * (r.cut ? 0.5 : 1)) : 0);
+    }, 0);
+    saveProgress(withQuestEvents({ ...p, resources: c.resources, expeditions: c.runs, ledger, proficiency: trained.proficiency }, [['expeditionDone', c.done], ['expeditionProficiency', trained.gained], ['expeditionSectors', sailed]], now));
     this.status = `遠征から帰還 (${c.done}): ${formatResources(c.gained)}${trained.gained > 0 ? `・熟練度 +${trained.gained}` : ''}`;
   }
 

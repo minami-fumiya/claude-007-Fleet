@@ -110,6 +110,8 @@ export const QUEST_EVENTS = [
   'saveExport',
   // 0.0.72 (#445): a resident convoy raided, a running patrol caught, the helm moved to another fleet
   'convoyRaid', 'chaseWin', 'commandSwitch',
+  // 0.0.73 (#445): enemies a patrol found, sectors expeditions sailed
+  'patrolSighting', 'expeditionSectors',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

@@ -68,12 +68,12 @@ import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/Difficult
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ISeaSky, seaSky } from '@/systems/WorldClock';
-import { arrivesAt, orderPos, orderVoyage, RETURN_AT, ReturnRule, runMs } from '@/systems/FleetOrders';
+import { arrivesAt, orderPatrol, orderPos, orderVoyage, patrolLoop, PatrolStance, RETURN_AT, ReturnRule, runMs, SIGHTING_MS, stopOrder } from '@/systems/FleetOrders';
 import { recallExpedition } from '@/systems/ExpeditionSystem';
 import { expeditionPlan, expeditionPos } from '@/systems/ExpeditionRoute';
 import { fightNote, runFleetOrders } from '@/utils/FleetOrderRunner';
 import type { IChartFleet } from '@/scenes/OpenSeaChartScene';
-import { fleePoint, IGiantSea, IResident, IResidentPos, meetResponse, MEET_PX, RESIDENT_CLEAR, ResidentKind, residentDay, residentsFor, residentsNear, worldGap } from '@/systems/WorldSim';
+import { fleePoint, IGiantSea, IResident, IResidentPos, seaLine, meetResponse, MEET_PX, RESIDENT_CLEAR, ResidentKind, residentDay, residentsFor, residentsNear, worldGap } from '@/systems/WorldSim';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
@@ -2153,7 +2153,7 @@ export class BattleScene extends Phaser.Scene {
       const lead = registry.byId(a.shipIds[0])?.name.replace(/\s*\(.*\)\s*$/, '') ?? a.shipIds[0];
       const pos = a.order ? orderPos(a.order, now) : a.at;
       const left = a.order ? Math.max(0, arrivesAt(a.order) - now) : 0;
-      const place = a.order ? `回航中 → ${placeName(a.order.dest, names)} (あと ${Math.ceil(left / 60000)} 分)` : placeName(a.at, names);
+      const place = a.order?.patrol ? `哨戒中 (${a.order.patrol.stance === 'chase' ? '見つけた敵を追う' : '知らせるだけ'})` : a.order ? `回航中 → ${placeName(a.order.dest, names)} (あと ${Math.ceil(left / 60000)} 分)` : placeName(a.at, names);
       return {
         index, label: `${lead}${a.shipIds.length > 1 ? ` ほか ${a.shipIds.length - 1} 隻` : ''}`, place, at: sectorAt(pos.x, pos.y), moving: !!a.order,
         minHp: Math.min(...a.shipIds.map((id) => p.damage[id] ?? 1)), fuel: a.fuel ?? FUEL_MAX, rule: a.returnAt ?? 'heavy',
@@ -2187,6 +2187,8 @@ export class BattleScene extends Phaser.Scene {
         seen.set(r.id, { ...sectorAt(pos.x, pos.y), kind: r.kind });
       }
     }
+    // 哨戒 (0.0.73): what the patrols found in the last two world hours.
+    for (const x of p.openSea.sightings ?? []) if (now - x.at <= SIGHTING_MS && !seen.has(x.id) && !spotWon(world, x.id)) seen.set(x.id, { c: x.c, r: x.r, kind: x.kind });
     return [...seen.values()];
   }
 
@@ -2202,6 +2204,28 @@ export class BattleScene extends Phaser.Scene {
     if (typeof ordered === 'string') return ordered;
     saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? ordered : a)) } });
     return null;
+  }
+
+  /** 哨戒 (0.0.73): a fleet away sails to a loop round `centre` and keeps it, chasing or only reporting what it finds. */
+  private patrolFleet(index: number, centre: { c: number; r: number }, stance: PatrolStance): string | null {
+    const p = loadProgress();
+    const fleet = p.openSea.anchors[index];
+    if (!fleet || fleet.order) return '回航中の艦隊です';
+    const loop = patrolLoop(centre, isSea, seaLine);
+    const here = sectorAt(fleet.at.x, fleet.at.y);
+    const route = here.c === loop[0].c && here.r === loop[0].r ? [here] : findRoute(here, loop[0]);
+    const ordered = orderPatrol(fleet, route, loop, stance, Date.now());
+    if (typeof ordered === 'string') return ordered;
+    saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? ordered : a)) } });
+    return null;
+  }
+
+  /** 命令を解く (0.0.73): a fleet under way or on patrol stops and lies at sea where it is. */
+  private stopFleet(index: number): void {
+    const p = loadProgress();
+    const fleet = p.openSea.anchors[index];
+    if (!fleet?.order) return;
+    saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? stopOrder(a, Date.now()) : a)) } });
   }
 
   /** 自動の帰投の基準 (0.0.72) of a fleet away, or (-1) of the one steered. */
@@ -2300,6 +2324,8 @@ export class BattleScene extends Phaser.Scene {
       onOrder: (index: number, route: Array<{ c: number; r: number }>) => this.orderFleet(index, route),
       onSwitch: (index: number) => this.switchToFleet(index),
       onSwitchExpedition: (id: string) => this.switchToFleet({ expedition: id }),
+      onPatrol: (index: number, centre: { c: number; r: number }, stance: PatrolStance) => this.patrolFleet(index, centre, stance),
+      onStop: (index: number) => this.stopFleet(index),
       onRule: (index: number, rule: ReturnRule) => this.setFleetRule(index, rule),
       sightings: () => this.sightings(),
     });

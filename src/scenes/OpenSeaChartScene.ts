@@ -12,7 +12,7 @@ import {
 import { ICampaignData, Objective } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
 import { Weather } from '@/types/Weather';
-import { RETURN_JA, RETURN_RULES, RETURN_SHORT, ReturnRule } from '@/systems/FleetOrders';
+import { PatrolStance, RETURN_JA, RETURN_RULES, RETURN_SHORT, ReturnRule } from '@/systems/FleetOrders';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { clockText, frontsAt, seaSky } from '@/systems/WorldClock';
 import { addPanel, fitText, UIButton } from '@/ui/components/UIKit';
@@ -35,6 +35,10 @@ export interface IOpenSeaChartData {
   onSwitch?: (index: number) => void;
   /** 指揮を移す to an expedition on its route (0.0.73) */
   onSwitchExpedition?: (id: string) => void;
+  /** 哨戒 (0.0.73): a fleet away sent to patrol round a sector (why not, or null) */
+  onPatrol?: (index: number, centre: ISectorRef, stance: PatrolStance) => string | null;
+  /** 命令を解く: the fleet stops where it is */
+  onStop?: (index: number) => void;
   /** 自動の帰投の基準 */
   onRule?: (index: number, rule: ReturnRule) => void;
   /** Enemy residents within sight of the navy's fleets (0.0.72) */
@@ -98,6 +102,8 @@ export class OpenSeaChartScene extends Phaser.Scene {
   private listMode = false;
   private listPage = 0;
   private listNote = '';
+  /** 哨戒 (0.0.73): what a patrol sent from the list does on finding an enemy */
+  private patrolStance: PatrolStance = 'chase';
 
   constructor() {
     super({ key: SceneKeys.OPEN_SEA_CHART });
@@ -417,7 +423,8 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const note = add(this.add.text(x, y, hint, textStyle(12, this.listNote ? Css.gold : Css.muted, { wordWrap: { width: w, useAdvancedWrap: true } })));
     y += note.height + 10;
     const bh = IS_PORTRAIT ? 44 : 30;
-    const rowH = (IS_PORTRAIT ? 86 : 72) + bh;
+    // 0.0.73: a fleet away has a second row of orders (哨戒・命令を解く・哨戒の構え).
+    const rowH = (IS_PORTRAIT ? 86 : 72) + bh * 2 + 8;
     const per = Math.max(1, Math.floor((bottom - y - bh - 8) / rowH));
     const pages = Math.max(1, Math.ceil(fleets.length / per));
     this.listPage = Math.min(this.listPage, pages - 1);
@@ -462,6 +469,27 @@ export class OpenSeaChartScene extends Phaser.Scene {
           this.drawPanel();
         }, { variant: 'primary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 }));
         go.setEnabled(route !== null && route.length > 1);
+        // 哨戒 (0.0.73): round the place picked on the chart; 命令を解く stops it where it is.
+        const by2 = by + bh + 8;
+        const to = this.dest && !fl.moving ? findRoute(fl.at, this.dest) : null;
+        add(new UIButton(this, x + bw / 2, by2, 'ここを哨戒', () => {
+          if (!to || !this.dest) return;
+          const why = this.d.onPatrol?.(fl.index, this.dest, this.patrolStance) ?? null;
+          this.listNote = why ?? `${fl.label}が哨戒に出ました (${this.patrolStance === 'chase' ? '見つけた敵を追う' : '見つけた敵を知らせるだけ'})`;
+          this.drawChart();
+          this.drawPanel();
+        }, { variant: 'primary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 })).setEnabled(to !== null && this.dest !== null && isSea(this.dest.c, this.dest.r));
+        add(new UIButton(this, x + bw * 1.5 + 8, by2, '命令を解く', () => {
+          this.d.onStop?.(fl.index);
+          this.listNote = `${fl.label}はその場で停泊します`;
+          this.drawChart();
+          this.drawPanel();
+        }, { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 })).setEnabled(fl.moving);
+        add(new UIButton(this, x + bw * 2.5 + 16, by2, this.patrolStance === 'chase' ? '哨戒: 追う' : '哨戒: 知らせる', () => {
+          this.patrolStance = this.patrolStance === 'chase' ? 'report' : 'chase';
+          this.drawPanel();
+        }, { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 12 : 10 }));
+        y += bh + 8;
       }
       y += bh + 10;
     }

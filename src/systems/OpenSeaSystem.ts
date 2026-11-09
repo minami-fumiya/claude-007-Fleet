@@ -443,6 +443,8 @@ export interface IOpenSeaProgress {
   anchors: IAnchoredFleet[];
   /** 自動の帰投の基準 of the fleet the player steers (0.0.72); missing: 大破 */
   returnAt?: ReturnRule;
+  /** 哨戒 (0.0.73): enemies the patrols have found lately (the chart shows them for two world hours) */
+  sightings?: Array<{ id: string; kind: string; c: number; r: number; at: number }>;
 }
 
 export function emptyOpenSea(): IOpenSeaProgress {
@@ -454,7 +456,10 @@ export function parseOpenSea(raw: unknown): IOpenSeaProgress {
   const o = raw && typeof raw === 'object' ? (raw as Partial<IOpenSeaProgress>) : {};
   const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
   const rule = parseReturnRule(o.returnAt);
-  return { explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors), ...(rule ? { returnAt: rule } : {}) };
+  const sightings = Array.isArray(o.sightings)
+    ? o.sightings.filter((x) => x && typeof x.id === 'string' && typeof x.kind === 'string' && Number.isFinite(x.c) && Number.isFinite(x.r) && Number.isFinite(x.at)).slice(-40)
+    : [];
+  return { ...(sightings.length > 0 ? { sightings } : {}), explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors), ...(rule ? { returnAt: rule } : {}) };
 }
 
 /** Sectors sailed, for the record and the medals. */

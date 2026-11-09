@@ -8,7 +8,8 @@ import { baseOfProgress, baseReaches } from '@/systems/BaseSystem';
 import { theatersFor } from '@/systems/CampaignSystem';
 import { fleetPower } from '@/systems/DifficultyCurve';
 import { setDamage } from '@/systems/DockSystem';
-import { advanceOrders, IOffscreenFight, IOffscreenWorld } from '@/systems/FleetOrders';
+import { advanceOrders, IOffscreenFight, IOffscreenWorld, SIGHTING_MS } from '@/systems/FleetOrders';
+import { withQuestEvents } from '@/systems/QuestSystem';
 import { EXPEDITIONS } from '@/systems/ExpeditionSystem';
 import { advanceExpeditions, expeditionPlan } from '@/systems/ExpeditionRoute';
 import { nearestDock } from '@/systems/AnchorageSystem';
@@ -66,7 +67,10 @@ export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: num
   });
   result.hp = sent.hp;
   const fights: IOffscreenFight[] = [...result.fights, ...sent.fights.map((f) => ({ shipIds: f.shipIds, residentId: f.residentId, won: f.won, hurt: {}, turnedHome: f.turnedHome, at: f.at, expedition: f.runId }))];
-  let next: IProgress = { ...progress, expeditions: sent.runs, openSea: { ...progress.openSea, anchors: result.anchors } };
+  // 哨戒 (0.0.73): what the patrols found, kept for two world hours, and counted for the quests and medals.
+  const sightings = [...(progress.openSea.sightings ?? []), ...result.sightings].filter((x) => now - x.at <= SIGHTING_MS).slice(-40);
+  let next: IProgress = { ...progress, expeditions: sent.runs, openSea: { ...progress.openSea, anchors: result.anchors, sightings } };
+  if (result.sightings.length > 0) next = withQuestEvents(next, [['patrolSighting', result.sightings.length]], now);
   for (const [id, h] of Object.entries(result.hp)) {
     if (h !== hp[id]) next = { ...next, ...setDamage(next, id, h) };
   }

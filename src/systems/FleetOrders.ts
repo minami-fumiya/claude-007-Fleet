@@ -10,10 +10,10 @@ import {
   FUEL_MAX, IAnchorPlace, IAnchoredFleet, ISectorRef, SECTOR_PX, WORLD_PX, colGap, routeFuel, sectorAt,
 } from '@/systems/OpenSeaSystem';
 import { WORLD_HOUR_MS } from '@/systems/WorldClock';
-import { IFleetOrder, ReturnRule } from '@/systems/FleetOrderTypes';
+import { IFleetOrder, PatrolStance, ReturnRule } from '@/systems/FleetOrderTypes';
 
 export { parseOrder, parseReturnRule } from '@/systems/FleetOrderTypes';
-export type { IFleetOrder, ReturnRule } from '@/systems/FleetOrderTypes';
+export type { IFleetOrder, PatrolStance, ReturnRule } from '@/systems/FleetOrderTypes';
 import { IResident, MEET_PX, residentPos, worldGap } from '@/systems/WorldSim';
 
 export const RETURN_RULES: readonly ReturnRule[] = ['heavy', 'medium', 'none'];
@@ -51,12 +51,43 @@ export function runMs(route: readonly ISectorRef[]): number {
 }
 
 export function arrivesAt(order: IFleetOrder): number {
+  // A patrol never arrives: it keeps its loop until called off.
+  if (order.patrol) return Infinity;
   return order.startedAt + runMs(order.route);
+}
+
+/** Where along a path of sectors a fleet is after `d` sectors (world px; the end once past it). */
+function pathPoint(path: readonly ISectorRef[], d: number): { x: number; y: number } | null {
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    const len = segLength(a, b);
+    if (d <= len) {
+      const k = len > 0 ? d / len : 0;
+      let dc = b.c - a.c;
+      if (Math.abs(dc) > WORLD_PX.w / SECTOR_PX / 2) dc -= Math.sign(dc) * (WORLD_PX.w / SECTOR_PX);
+      const x = ((((a.c + 0.5 + dc * k) * SECTOR_PX) % WORLD_PX.w) + WORLD_PX.w) % WORLD_PX.w;
+      return { x, y: (a.r + 0.5 + (b.r - a.r) * k) * SECTOR_PX };
+    }
+    d -= len;
+  }
+  return null;
 }
 
 /** Where a fleet under orders is at `t` (world px; at the destination once arrived). */
 export function orderPos(order: IFleetOrder, t: number): { x: number; y: number } {
   const done = ((Math.max(0, t - order.startedAt) / WORLD_HOUR_MS) * OFFSCREEN_SPEED);
+  // 哨戒: past its way out, round and round its loop.
+  if (order.patrol) {
+    const out = routeSectors(order.route);
+    if (done > out) {
+      const loop = [...order.patrol.loop, order.patrol.loop[0]];
+      const len = routeSectors(loop);
+      const at = len > 0 ? pathPoint(loop, (done - out) % len) : null;
+      const s = order.patrol.loop[0];
+      return at ?? { x: (s.c + 0.5) * SECTOR_PX, y: (s.r + 0.5) * SECTOR_PX };
+    }
+  }
   let d = done;
   for (let i = 1; i < order.route.length; i++) {
     const a = order.route[i - 1];
@@ -133,9 +164,10 @@ export function offscreenHurt(ours: number, theirs: number, seed: string): numbe
  * Brings every fleet under orders up to `now`: fights met on the way, the turn for home, and the arrival (the fleet
  * lies at its destination; a base fills the tank, at sea the route's fuel is spent).
  */
-export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Record<string, number>>, now: number, w: IOffscreenWorld): { anchors: IMovingFleet[]; hp: Record<string, number>; fights: IOffscreenFight[] } {
+export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Record<string, number>>, now: number, w: IOffscreenWorld): { anchors: IMovingFleet[]; hp: Record<string, number>; fights: IOffscreenFight[]; sightings: ISighting[] } {
   const health: Record<string, number> = { ...hp };
   const fights: IOffscreenFight[] = [];
+  const sightings: ISighting[] = [];
   const out: IMovingFleet[] = [];
   for (const fleet of anchors) {
     let f = fleet;
@@ -148,6 +180,20 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
     const end = Math.min(now, arrivesAt(order));
     for (let t = from; t <= end && order; t += STEP_HOURS * WORLD_HOUR_MS) {
       const at = orderPos(order, t);
+      // 哨戒 (0.0.73): enemies within its sight are reported (shown on the chart); one that only reports keeps out of fights.
+      const patrol = order.patrol;
+      if (patrol) {
+        const seen: string[] = order.seen ?? [];
+        const found = w.residents.filter((r) => r.kind !== 'friend' && !seen.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= PATROL_SIGHT_PX);
+        if (found.length > 0) {
+          for (const r of found) {
+            const p = residentPos(r, t);
+            sightings.push({ id: r.id, kind: r.kind, c: Math.floor(p.x / SECTOR_PX), r: Math.floor(p.y / SECTOR_PX), at: t });
+          }
+          order = { ...order, seen: [...seen, ...found.map((r) => r.id)] };
+        }
+        if (patrol.stance === 'report') continue;
+      }
       const foe = w.residents.find((r) => r.kind !== 'friend' && r.kind !== 'superweapon' && !order!.met.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= MEET_PX);
       if (!foe) continue;
       const ours = w.power(f.shipIds, health);
@@ -169,6 +215,7 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
       if (low && !order.home) {
         const back = w.homeFrom(sectorAt(at.x, at.y));
         if (back) {
+          // A patrol hurt down to its rule gives up its loop too.
           order = { route: back.route, dest: back.dest, startedAt: t, checkedAt: t, met: order.met, home: true };
           turnedHome = true;
         }
@@ -183,6 +230,46 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
     } else f = { ...f, order: { ...order, checkedAt: now } };
     out.push(f);
   }
-  return { anchors: out, hp: health, fights };
+  return { anchors: out, hp: health, fights, sightings };
+}
+
+/** Sight of a patrol (px): three sectors. */
+export const PATROL_SIGHT_PX = SECTOR_PX * 3;
+
+/** An enemy a patrol has found (0.0.73): where it was and when; the chart shows it for a world hour or two. */
+export interface ISighting {
+  id: string;
+  kind: string;
+  c: number;
+  r: number;
+  at: number;
+}
+
+/** How long a sighting stays on the chart (real ms: two world hours). */
+export const SIGHTING_MS = 2 * WORLD_HOUR_MS;
+
+/** A loop of four turning points round `centre` (three sectors out, two where the sea is narrow), each leg on the sea. */
+export function patrolLoop(centre: ISectorRef, isSeaAt: (c: number, r: number) => boolean, seaLine: (a: ISectorRef, b: ISectorRef) => boolean): ISectorRef[] {
+  for (const k of [3, 2, 1]) {
+    const pts = [[0, -k], [k, 0], [0, k], [-k, 0]].map(([dc, dr]) => ({ c: (centre.c + dc + WORLD_PX.w / SECTOR_PX) % (WORLD_PX.w / SECTOR_PX), r: centre.r + dr }));
+    if (!pts.every((p) => isSeaAt(p.c, p.r))) continue;
+    if (pts.every((p, i) => seaLine(p, pts[(i + 1) % pts.length]))) return pts;
+  }
+  return [centre, centre];
+}
+
+/** 哨戒の命令: sail to the loop's first point, then round the loop until called off. */
+export function orderPatrol(fleet: IMovingFleet, route: ISectorRef[] | null, loop: ISectorRef[], stance: PatrolStance, now: number): IMovingFleet | string {
+  if (!route || route.length < 1) return '海の上の航路がありません';
+  const way = route.length === 1 ? [route[0], route[0]] : route;
+  const end = way[way.length - 1];
+  return { ...fleet, order: { route: way, dest: { x: (end.c + 0.5) * SECTOR_PX, y: (end.r + 0.5) * SECTOR_PX }, startedAt: now, checkedAt: now, met: [], patrol: { loop, stance }, seen: [] } };
+}
+
+/** 命令を解く: the fleet stops where it is and lies there at sea. */
+export function stopOrder(fleet: IMovingFleet, now: number): IMovingFleet {
+  if (!fleet.order) return fleet;
+  const at = orderPos(fleet.order, now);
+  return { shipIds: fleet.shipIds, at: { x: at.x, y: at.y }, fuel: fleet.fuel, ...(fleet.returnAt ? { returnAt: fleet.returnAt } : {}) };
 }
 
