@@ -46,6 +46,13 @@ export class ScenarioScene extends Phaser.Scene {
     super({ key: SceneKeys.SCENARIO });
   }
 
+  /** 記念の海戦 (0.0.73): the scenario to open on, when the fleet came from its place on the sea. */
+  private openOn: string | null = null;
+
+  init(data?: { scenario?: string }): void {
+    this.openOn = data?.scenario ?? null;
+  }
+
   create(): void {
     // First-visit help (#61): drawn above the screen, so it can be made first.
     showScreenHelp(this);
@@ -53,10 +60,10 @@ export class ScenarioScene extends Phaser.Scene {
     // Only the battles the nation fought in, from its own side (#224).
     this.nation = loadProgress().nation;
     this.scenarios = playableScenarios(DataLoader.getScenarios(this), this.nation);
-    this.selected = 0;
-    this.side = this.scenarios[0] ? playableSides(this.scenarios[0], this.nation)[0] ?? 0 : 0;
+    this.selected = Math.max(0, this.scenarios.findIndex((sc) => sc.id === this.openOn));
+    this.side = this.scenarios[this.selected] ? playableSides(this.scenarios[this.selected], this.nation)[0] ?? 0 : 0;
     this.theater = 'all';
-    this.page = 0;
+    this.page = this.openOn ? Math.floor(this.selected / (L.cols * L.rows)) : 0;
     this.cardFrames = [];
     this.detail = [];
     addBackdrop(this, 'menu');

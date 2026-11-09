@@ -32,7 +32,17 @@ export interface IExpeditionRun {
   id: string;
   shipIds: string[];
   endsAt: number;
+  /** 遠征の航路 (0.0.73): when it set out (its place on the route counts from here) */
+  startedAt?: number;
+  /** How far the watch for enemies on its way has come, and those already met */
+  checkedAt?: number;
+  met?: string[];
+  /** Turned home early by its 帰投の基準: half the reward */
+  cut?: boolean;
 }
+
+/** An expedition turned home early pays this share. */
+export const CUT_REWARD_MUL = 0.5;
 
 export const EXPEDITIONS = expeditionData.expeditions as IExpedition[];
 
@@ -115,7 +125,7 @@ export function startExpedition(runs: readonly IExpeditionRun[], exp: IExpeditio
   if (expeditionState(exp, runs, rankIndex, idle) !== 'ready') return null;
   const chosen = group && group.every((s) => idle.some((i) => i.id === s.id)) && groupProblem(exp, group) === null ? group : null;
   const ships = chosen ?? pickShips(exp, idle)!;
-  return [...runs, { id: exp.id, shipIds: ships.map((s) => s.id), endsAt: now + exp.minutes * 60_000 }];
+  return [...runs, { id: exp.id, shipIds: ships.map((s) => s.id), endsAt: now + exp.minutes * 60_000, startedAt: now, checkedAt: now, met: [] }];
 }
 
 /** 呼び戻す (#337): the expedition comes home at once, its ships free again, without its reward. */
@@ -148,7 +158,7 @@ export function collectExpeditions(
     const exp = EXPEDITIONS.find((e) => e.id === r.id);
     if (!exp) continue;
     // 前進遠征拠点 Lv2 (#373): a sea's expedition pays more.
-    const mul = rewardMul(exp);
+    const mul = rewardMul(exp) * (r.cut ? CUT_REWARD_MUL : 1);
     const reward: Partial<IResources> = Object.fromEntries(Object.entries(exp.reward).map(([k, v]) => [k, Math.round((v ?? 0) * mul)]));
     const g = gainResources(res, reward, cap);
     res = g.resources;

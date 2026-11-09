@@ -21,7 +21,18 @@ export interface IAnniversary {
   nations: Nation[];
   /** The historical scenario fought on the day, when there is one */
   scenario?: string;
+  /** 記念日を海の上に (0.0.73): where it was fought (longitude, latitude) */
+  at?: [number, number];
 }
+
+/** Where each anniversary's battle was fought (0.0.73): its ring on the world's sea that day. */
+export const ANNIVERSARY_PLACES: Readonly<Record<string, [number, number]>> = {
+  pearl_harbor: [-158.0, 21.0], river_plate: [-55.0, -35.5], north_cape: [25.0, 72.5], second_sirte: [18.0, 33.5],
+  matapan: [21.5, 35.5], bonomisaki: [128.0, 30.4], coral_sea: [155.0, -15.0], denmark_strait: [-28.0, 66.0],
+  bismarck: [-16.0, 48.0], midway: [-177.4, 28.2], sevastopol: [33.0, 44.0], mers_el_kebir: [-0.7, 36.2],
+  cape_spada: [24.0, 35.9], savo: [159.8, -9.0], tallinn: [24.0, 59.7], dakar: [-17.8, 14.6], leyte: [125.5, 10.5],
+  samar: [126.0, 11.8], guadalcanal: [160.0, -9.2], tassafaronga: [159.9, -9.4],
+};
 
 export const ANNIVERSARIES: readonly IAnniversary[] = [
   { id: 'pearl_harbor', md: '12-08', name: '真珠湾攻撃', nations: [Nation.IJN, Nation.USN] },

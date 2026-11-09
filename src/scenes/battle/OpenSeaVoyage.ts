@@ -40,13 +40,15 @@ export interface IVoyageHost {
   openSeparation(): void;
   /** Starts a drill at a practice ground (訓練海域・演習場, 0.0.70) */
   startDrill(kind: 'training' | 'exercise'): void;
+  /** 記念日 (0.0.73): the day's historical battle, from its own place on the sea */
+  startAnniversary(id: string): void;
 }
 
 /** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
-export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise' | 'convoy' | 'fort' | 'special';
+export type VoyageStopKind = 'base' | 'port' | 'oil' | 'mine' | 'training' | 'exercise' | 'convoy' | 'fort' | 'special' | 'anniversary';
 export type IVoyageStop = { id: string; name: string; kind?: VoyageStopKind } & ISectorRef;
 
-const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演', convoy: '船', fort: '要', special: '特' };
+const STOP_MARK: Record<VoyageStopKind, string> = { base: '⚓', port: '⚓', oil: '油', mine: '鉱', training: '訓', exercise: '演', convoy: '船', fort: '要', special: '特', anniversary: '記' };
 
 interface ILoadedSector {
   /** Unwrapped column (may be -1 or cols) and row */
@@ -145,6 +147,7 @@ export class OpenSeaVoyage {
       if (!here) return;
       if (here.kind === 'port') this.host.callAt(here.id);
       else if (here.kind === 'training' || here.kind === 'exercise') this.host.startDrill(here.kind);
+      else if (here.kind === 'anniversary') this.host.startAnniversary(here.id);
       else this.host.enterPort(here.id);
     }, {
       variant: 'gold', width: IS_PORTRAIT ? 320 : 300, height: IS_PORTRAIT ? 60 : 48, fontSize: IS_PORTRAIT ? 17 : 15,
@@ -219,7 +222,7 @@ export class OpenSeaVoyage {
     const port = resource ? null : ring;
     if (port?.id !== this.portHere?.id) {
       this.portHere = port;
-      if (port) this.portBtn?.setLabel(port.kind === 'port' ? `${port.name}で補給する` : port.kind === 'training' ? '訓練を始める' : port.kind === 'exercise' ? '演習を始める' : `${port.name}に入港する`);
+      if (port) this.portBtn?.setLabel(port.kind === 'port' ? `${port.name}で補給する` : port.kind === 'training' ? '訓練を始める' : port.kind === 'exercise' ? '演習を始める' : port.kind === 'anniversary' ? '記念の海戦に挑む' : `${port.name}に入港する`);
     }
     this.portBtn?.setVisible(port !== null);
     this.drawRoute();
@@ -307,8 +310,8 @@ export class OpenSeaVoyage {
       const cy = y0 + SECTOR_PX / 2;
       const kind = port.kind ?? 'base';
       const enemy = kind === 'convoy' || kind === 'fort' || kind === 'special';
-      const color = enemy ? Colors.danger : kind === 'base' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
-      const css = enemy ? Css.danger : kind === 'base' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
+      const color = enemy ? Colors.danger : kind === 'base' || kind === 'anniversary' ? Colors.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Colors.cyan : Colors.success;
+      const css = enemy ? Css.danger : kind === 'base' || kind === 'anniversary' ? Css.gold : kind === 'port' || kind === 'training' || kind === 'exercise' ? Css.cyan : Css.success;
       const ring = scene.add.graphics().setDepth(DEPTH_WATER_FX - 1);
       ring.lineStyle(6, color, 0.55).strokeCircle(cx, cy, PORT_RADIUS);
       ring.fillStyle(color, 0.08).fillCircle(cx, cy, PORT_RADIUS);

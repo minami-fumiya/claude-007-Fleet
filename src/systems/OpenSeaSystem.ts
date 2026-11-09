@@ -106,6 +106,23 @@ export function lonLatOf(s: ISectorRef, map: IWorldMap = WORLD_MAP): { lon: numb
   return { lon, lat: map.lat0 - (s.r + 0.5) * map.dLat };
 }
 
+/** The sea sector at a longitude and latitude (0.0.73), or the nearest sea sector within three when that one is land. */
+export function seaSectorAt(lon: number, lat: number, map: IWorldMap = WORLD_MAP): ISectorRef | null {
+  const c0 = wrapCol(Math.floor((lon - map.lon0) / map.dLon), map.cols);
+  const r0 = Math.floor((map.lat0 - lat) / map.dLat);
+  for (let k = 0; k <= 3; k++) {
+    for (let dr = -k; dr <= k; dr++) {
+      for (let dc = -k; dc <= k; dc++) {
+        if (Math.max(Math.abs(dc), Math.abs(dr)) !== k) continue;
+        const c = wrapCol(c0 + dc, map.cols);
+        const r = r0 + dr;
+        if (inRows(r, map) && isSea(c, r, map)) return { c, r };
+      }
+    }
+  }
+  return null;
+}
+
 export function lonLatText(s: ISectorRef): string {
   const { lon, lat } = lonLatOf(s);
   const ew = lon >= 0 ? `東経 ${Math.round(lon)}°` : `西経 ${Math.round(-lon)}°`;
@@ -443,6 +460,8 @@ export interface IOpenSeaProgress {
   anchors: IAnchoredFleet[];
   /** 自動の帰投の基準 of the fleet the player steers (0.0.72); missing: 大破 */
   returnAt?: ReturnRule;
+  /** 哨戒 (0.0.73): enemies the patrols have found lately (the chart shows them for two world hours) */
+  sightings?: Array<{ id: string; kind: string; c: number; r: number; at: number }>;
 }
 
 export function emptyOpenSea(): IOpenSeaProgress {
@@ -454,7 +473,10 @@ export function parseOpenSea(raw: unknown): IOpenSeaProgress {
   const o = raw && typeof raw === 'object' ? (raw as Partial<IOpenSeaProgress>) : {};
   const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
   const rule = parseReturnRule(o.returnAt);
-  return { explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors), ...(rule ? { returnAt: rule } : {}) };
+  const sightings = Array.isArray(o.sightings)
+    ? o.sightings.filter((x) => x && typeof x.id === 'string' && typeof x.kind === 'string' && Number.isFinite(x.c) && Number.isFinite(x.r) && Number.isFinite(x.at)).slice(-40)
+    : [];
+  return { ...(sightings.length > 0 ? { sightings } : {}), explored: readExplored(o.explored), sailedPx: num(o.sailedPx), voyages: Math.floor(num(o.voyages)), anchors: parseAnchors(o.anchors), ...(rule ? { returnAt: rule } : {}) };
 }
 
 /** Sectors sailed, for the record and the medals. */

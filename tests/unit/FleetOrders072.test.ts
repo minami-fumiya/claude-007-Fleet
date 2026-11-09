@@ -106,3 +106,40 @@ describe('0.0.72 画面の外の戦いと帰投の基準', () => {
     expect(advanceOrders([ordered], {}, T0 + runMs(route) * 0.9, { ...w, won: () => true }).fights).toHaveLength(0);
   });
 });
+
+describe('0.0.73 哨戒', () => {
+  const route = findRoute(fromSector, toSector)!;
+  const fleet = anchorAt([], ['a', 'b'], sea, 'IJN', 80)[0];
+  const centre = route[Math.floor(route.length / 2)];
+  const loop = [centre, { c: centre.c + 1, r: centre.r }];
+  const foe: IResident = { id: '99:patrol:pacific:1', kind: 'patrol', theater: 'pacific', danger: 4, path: [centre, centre], speed: 0, phase: 0 };
+
+  it('sails out, then keeps its loop for good (never arrives) until called off', async () => {
+    const { orderPatrol, stopOrder, arrivesAt: arrives } = await import('@/systems/FleetOrders');
+    const p = orderPatrol(fleet, route, loop, 'report', T0) as typeof fleet;
+    expect(arrives(p.order!)).toBe(Infinity);
+    const later = orderPos(p.order!, T0 + runMs(route) * 5);
+    expect(Math.abs(Math.floor(later.y / SECTOR_PX) - centre.r)).toBeLessThanOrEqual(1);
+    const stopped = stopOrder(p, T0 + runMs(route) * 5);
+    expect(stopped.order).toBeUndefined();
+    expect(stopped.at).toEqual(later);
+  });
+
+  it('reports what comes within three sectors once; only reporting, it keeps out of fights', async () => {
+    const { orderPatrol } = await import('@/systems/FleetOrders');
+    const p = orderPatrol(fleet, route, loop, 'report', T0) as typeof fleet;
+    const r = advanceOrders([p], {}, T0 + runMs(route) * 3, { ...quiet, residents: [foe] });
+    expect(r.sightings.map((x) => x.id)).toEqual([foe.id]);
+    expect(r.fights).toHaveLength(0);
+    const again = advanceOrders(r.anchors, r.hp, T0 + runMs(route) * 4, { ...quiet, residents: [foe] });
+    expect(again.sightings).toHaveLength(0);
+    const chase = advanceOrders([orderPatrol(fleet, route, loop, 'chase', T0) as typeof fleet], {}, T0 + runMs(route) * 3, { ...quiet, residents: [foe] });
+    expect(chase.fights.length).toBeGreaterThan(0);
+  });
+
+  it('reads a patrol back from a save', () => {
+    const back = parseAnchors(JSON.parse(JSON.stringify([{ ...fleet, order: { route, dest: truk, startedAt: T0, checkedAt: T0, met: [], patrol: { loop, stance: 'report' }, seen: ['x'] } }])));
+    expect(back[0].order?.patrol).toEqual({ loop, stance: 'report' });
+    expect(back[0].order?.seen).toEqual(['x']);
+  });
+});

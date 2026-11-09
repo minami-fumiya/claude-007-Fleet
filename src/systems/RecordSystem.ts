@@ -484,6 +484,9 @@ export const MEDALS: IMedalRule[] = [
   ...ladder('focus_reset', '方針転換章', 'growth', [1], () => '国家方針を見直す', (_r, c) => total(c, 'focusReset')),
   ...ladder('planned', '計画艦章', 'base', [1, 4, 10], (g) => `計画艦・未成艦 (架空艦) を 1 つの国で ${g} 隻持つ`, (_r, c) => c.plannedOwned ?? 0),
   ...ladder('designer', '設計章', 'base', [1, 3, 5], (g) => `1 つの国で、艦を ${g} 隻設計する`, (_r, c) => c.designsDrawn ?? 0),
+  // 0.0.73 遠征と哨戒 (#445): sectors sailed by expeditions, enemies found by patrols
+  ...ladder('expedition_voyage', '遠洋航海章', 'base', [100, 1000, 5000], (g) => `遠征で ${g} 区画を航海する`, (_r, c) => total(c, 'expeditionSectors')),
+  ...ladder('patrol_eye', '哨戒章', 'campaign', [1, 20, 100], (g) => `哨戒の艦隊で敵を ${g} 回見つける`, (_r, c) => total(c, 'patrolSighting')),
   // 0.0.72 動く世界 (#445): resident convoys raided, running patrols caught, the helm moved to another fleet
   ...ladder('convoy_raider', '船団襲撃章', 'campaign', [1, 10, 50], (g) => `広い海で敵の船団を ${g} 回襲う`, (_r, c) => total(c, 'convoyRaid')),
   ...ladder('pursuit', '追撃戦章', 'battle', [1, 10, 30], (g) => `逃げる敵の巡回艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'chaseWin')),
