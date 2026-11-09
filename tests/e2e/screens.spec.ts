@@ -2453,3 +2453,52 @@ test('船団護衛を海の上で (0.0.73): the convoy comes from the navy\'s ne
   await page.screenshot({ path: info.outputPath('convoy-at-sea.png') });
   expect(errors).toEqual([]);
 });
+
+test('遠征と哨戒 (0.0.73): a fleet patrols round a place and is called off; an expedition on its route is taken over (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const sea = (dc: number, dr: number): { x: number; y: number } => ({ x: (255 + dc + 0.5) * 3200, y: (50 + dr + 0.5) * 3200 });
+  const now = Date.now();
+  const anchors = [{ shipIds: ['nagato'], at: sea(6, 6), fuel: 90 }];
+  const expeditions = [{ id: 'ex_long_patrol', shipIds: ['takao', 'sendai', 'fubuki', 'yukikaze', 'i19', 'akagi'], endsAt: now + 300 * 60_000, startedAt: now - 60 * 60_000, checkedAt: now - 60 * 60_000, met: [] }];
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: [...SCREENS, 'OpenSeaChartScene'], nations: { IJN: { ...SAVE.nations.IJN, openSea: { anchors }, expeditions } } });
+  type G = { game: Phaser.Game };
+  type F = { index: number; expedition?: string; label: string };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  const listed = await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { listMode: boolean; drawPanel(): void; d: { fleets(): F[] } };
+    c.listMode = true;
+    c.drawPanel();
+    return c.d.fleets().map((f) => f.expedition ?? f.index);
+  });
+  expect(listed).toEqual([-1, 0, 'ex_long_patrol']);
+  await page.waitForTimeout(300);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene'), `list (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene'), `list overlaps (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('patrol-list.png') });
+  type S = { anchors: Array<{ shipIds: string[]; order?: { patrol?: { stance: string } } }>; expeditions: Array<{ id: string }> };
+  const stored = (): Promise<S> => page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { openSea: { anchors: S['anchors'] }; expeditions: S['expeditions'] } } };
+    return { anchors: s.nations.IJN.openSea.anchors, expeditions: s.nations.IJN.expeditions };
+  });
+  // 哨戒: 長門 patrols four sectors east of where it lies, only reporting; then it is called off.
+  const why = await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { onPatrol(i: number, at: { c: number; r: number }, s: string): string | null } };
+    return c.d.onPatrol(0, { c: 255 + 10, r: 50 + 6 }, 'report');
+  });
+  expect(why).toBeNull();
+  expect((await stored()).anchors[0].order?.patrol?.stance).toBe('report');
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { onStop(i: number): void } }).d.onStop(0));
+  expect((await stored()).anchors[0].order).toBeUndefined();
+  // 指揮を移す to the expedition: it is called off and its ships are steered from where they are.
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: { onSwitchExpedition(id: string): void } }).d.onSwitchExpedition('ex_long_patrol'));
+  await page.waitForFunction(() => {
+    const b = (window as unknown as G).game.scene.getScene('BattleScene') as unknown as { flagship?: { dataId?: string }; voyage: unknown };
+    return b.sys.settings.active && b.voyage !== null && b.flagship?.dataId === 'takao';
+  }, null, { timeout: 20_000 });
+  expect((await stored()).expeditions).toEqual([]);
+  expect(errors).toEqual([]);
+});

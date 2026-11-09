@@ -141,4 +141,9 @@ describe('ladder names', () => {
     expect(ids).toEqual(expect.arrayContaining(['convoy_raider', 'pursuit', 'pursuit_2', 'fleet_command']));
     expect(ids).not.toContain('convoy_raider_2');
   });
+  it('0.0.73: 遠洋航海章・哨戒章 (#445)', () => {
+    const ids = newMedals(emptyRecord(), { clearedTheaters: [], totals: { expeditionSectors: 1000, patrolSighting: 1 } }).map((m) => m.id);
+    expect(ids).toEqual(expect.arrayContaining(['expedition_voyage', 'expedition_voyage_2', 'patrol_eye']));
+    expect(ids).not.toContain('patrol_eye_2');
+  });
 });
