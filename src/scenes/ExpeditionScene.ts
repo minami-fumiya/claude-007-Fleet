@@ -34,7 +34,7 @@ import { showScreenHelp } from '@/ui/components/ScreenHelpSheet';
 type Tab = 'expedition' | 'dorm';
 
 const L = IS_PORTRAIT
-  ? { left: 16, top: 250, cols: 2, cardH: 152, gap: 12, tabY: 170 }
+  ? { left: 16, top: 250, cols: 2, cardH: 160, gap: 12, tabY: 170 }
   : { left: 24, top: 166, cols: 3, cardH: 150, gap: 10, tabY: 104 };
 const CARD_W = (CANVAS_W - L.left * 2 - L.gap * (L.cols - 1)) / L.cols;
 
@@ -185,7 +185,12 @@ export class ExpeditionScene extends Phaser.Scene {
       const line = run ? `${run.cut ? '引き返し中' : leg || '出撃中'}: ${run.shipIds.map(short).join('・')}` : `${e.ships} 隻${this.needsText(e)}`;
       const lineText = this.track(this.add.text(x + 14, y + 36, line, textStyle(12, run ? Css.text : Css.muted)));
       fitText(lineText, CARD_W - 28);
-      this.track(this.add.text(x + 14, y + 58, `${formatResources(e.reward)}・熟練度 +${expeditionProficiencyGain(e)}${plan ? `・往復 ${expeditionSectors(plan)} 区画・危険度 ${plan.danger} (×${expeditionDangerMul(plan.danger).toFixed(2)})` : ''}`, textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
+      const rewardText = this.track(this.add.text(x + 14, y + 54, `${formatResources(e.reward)}・熟練度 +${expeditionProficiencyGain(e)}`, textStyle(12, Css.cyan, { wordWrap: { width: CARD_W - 28, useAdvancedWrap: true } })));
+      if (plan) {
+        // The route on a line of its own, so that a long reward never pushes it onto the buttons.
+        const routeText = this.track(this.add.text(x + 14, rewardText.y + rewardText.height, `往復 ${expeditionSectors(plan)} 区画・危険度 ${plan.danger} (×${expeditionDangerMul(plan.danger).toFixed(2)})`, textStyle(12, Css.muted)));
+        fitText(routeText, CARD_W - 28);
+      }
       const by = y + L.cardH - (IS_PORTRAIT ? 26 : 22);
       const bh = IS_PORTRAIT ? 40 : 32;
       if (run) {
