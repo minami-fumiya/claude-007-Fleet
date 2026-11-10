@@ -177,7 +177,7 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const ctl = new UIButton(this, x + zw * 2.5 + 24, zy, '制海権', () => {
       this.showControl = !this.showControl;
       ctl.setLabel(this.showControl ? '探索' : '制海権');
-      this.drawTexture();
+      this.drawTexture(true);
       this.drawPanel();
     }, { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
     this.add.text(x + zw * 3 + 42, zy, 'ドラッグで動かせます', textStyle(12, Css.muted)).setOrigin(0, 0.5);
@@ -203,9 +203,11 @@ export class OpenSeaChartScene extends Phaser.Scene {
   }
 
   /** One pixel a sector: land, the explored sea, the open seas and the seas not yet open. */
-  private drawTexture(): void {
-    if (this.textures.exists(TEXTURE)) this.textures.remove(TEXTURE);
-    const tex = this.textures.createCanvas(TEXTURE, WORLD_MAP.cols, WORLD_MAP.rows)!;
+  private drawTexture(redraw = false): void {
+    // Redrawn in place while the chart is open (the 制海権 switch): the images keep the same texture.
+    const kept = redraw && this.textures.exists(TEXTURE) ? this.textures.get(TEXTURE) : null;
+    if (!kept && this.textures.exists(TEXTURE)) this.textures.remove(TEXTURE);
+    const tex = kept instanceof Phaser.Textures.CanvasTexture ? kept : this.textures.createCanvas(TEXTURE, WORLD_MAP.cols, WORLD_MAP.rows)!;
     const ctx = tex.getContext();
     const img = ctx.createImageData(WORLD_MAP.cols, WORLD_MAP.rows);
     for (let r = 0; r < WORLD_MAP.rows; r++) {
