@@ -253,6 +253,8 @@ export interface IMedalContext {
   focusDone?: number;
   /** 制海権 (#50): the most seas one navy holds */
   seasHeld?: number;
+  /** 海の地方 (0.0.74): the most regions one navy holds at 50% or more */
+  regionsHeld?: number;
   /** 国の道 (#416): navies whose own way is done */
   waysDone?: number;
   /** 艦ごとの戦歴 (#416): the most enemies one ship has sunk */
@@ -487,6 +489,15 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.73 遠征と哨戒 (#445): sectors sailed by expeditions, enemies found by patrols
   ...ladder('expedition_voyage', '遠洋航海章', 'base', [100, 1000, 5000], (g) => `遠征で ${g} 区画を航海する`, (_r, c) => total(c, 'expeditionSectors')),
   ...ladder('patrol_eye', '哨戒章', 'campaign', [1, 20, 100], (g) => `哨戒の艦隊で敵を ${g} 回見つける`, (_r, c) => total(c, 'patrolSighting')),
+  // 0.0.74 制海権 (#445): regions held at 50%+, counterattacks beaten at sea, convoys sunk on 通商破壊, hours of 船団護衛,
+  // enemies intercepted, mines laid and seas swept, ship-hours trained
+  ...ladder('region_held', '海上優勢章', 'campaign', [5, 15, 30], (g) => `1 つの国で、${g} の海の地方の制海権を 50% 以上にする`, (_r, c) => c.regionsHeld ?? 0),
+  ...ladder('counter_repel', '反攻撃退章', 'campaign', [1, 5, 20], (g) => `海の上で敵の反攻艦隊を ${g} 回撃退する`, (_r, c) => total(c, 'counterRepel')),
+  ...ladder('commerce_raider', '通商破壊章', 'campaign', [1, 10, 50], (g) => `通商破壊の任務で敵の船団を ${g} 回沈める`, (_r, c) => total(c, 'dutyRaid')),
+  ...ladder('convoy_guard', '船団護衛章', 'campaign', [6, 60, 300], (g) => `船団護衛の任務で ${g} 時間 (世界の時間) 護衛する`, (_r, c) => total(c, 'escortHours')),
+  ...ladder('interceptor', '迎撃章', 'campaign', [1, 10, 50], (g) => `迎撃の艦隊で敵に ${g} 回勝つ`, (_r, c) => total(c, 'interceptWin')),
+  ...ladder('mine_war', '機雷戦章', 'campaign', [1, 10, 30], (g) => `機雷敷設か掃海を ${g} 回する`, (_r, c) => total(c, 'mineLaid') + total(c, 'seaSwept')),
+  ...ladder('training_cruise', '訓練章', 'base', [60, 600, 3000], (g) => `訓練の任務で ${g} 隻・時間 訓練する`, (_r, c) => total(c, 'trainHours')),
   // 0.0.72 動く世界 (#445): resident convoys raided, running patrols caught, the helm moved to another fleet
   ...ladder('convoy_raider', '船団襲撃章', 'campaign', [1, 10, 50], (g) => `広い海で敵の船団を ${g} 回襲う`, (_r, c) => total(c, 'convoyRaid')),
   ...ladder('pursuit', '追撃戦章', 'battle', [1, 10, 30], (g) => `逃げる敵の巡回艦隊に ${g} 回勝つ`, (_r, c) => total(c, 'chaseWin')),

@@ -12,7 +12,9 @@ import {
 import { ICampaignData, Objective } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
 import { Weather } from '@/types/Weather';
-import { PatrolStance, RETURN_JA, RETURN_RULES, RETURN_SHORT, ReturnRule } from '@/systems/FleetOrders';
+import { MISSION_JA, MissionKind, PatrolStance, RETURN_JA, RETURN_RULES, RETURN_SHORT, ReturnRule } from '@/systems/FleetOrders';
+import { CONTROL_LOW, CONTROL_SAFE, controlWord, regionAt } from '@/systems/SeaRegionSystem';
+import { navyControl } from '@/utils/SeaControlView';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { clockText, frontsAt, seaSky } from '@/systems/WorldClock';
 import { addPanel, fitText, UIButton } from '@/ui/components/UIKit';
@@ -36,7 +38,9 @@ export interface IOpenSeaChartData {
   /** 指揮を移す to an expedition on its route (0.0.73) */
   onSwitchExpedition?: (id: string) => void;
   /** 哨戒 (0.0.73): a fleet away sent to patrol round a sector (why not, or null) */
-  onPatrol?: (index: number, centre: ISectorRef, stance: PatrolStance) => string | null;
+  onPatrol?: (index: number, centre: ISectorRef, stance: PatrolStance, mission?: MissionKind) => string | null;
+  /** 迎撃 (0.0.74): a fleet in a base waits to sail out to the enemies found near it (why not, or null) */
+  onIntercept?: (index: number) => string | null;
   /** 命令を解く: the fleet stops where it is */
   onStop?: (index: number) => void;
   /** 自動の帰投の基準 */
@@ -59,6 +63,10 @@ export interface IChartFleet {
   minHp: number;
   fuel: number;
   rule: ReturnRule;
+  /** 迎撃の待機中 (0.0.74) */
+  intercept?: boolean;
+  /** Lying in a base (it can be set to 迎撃) */
+  atBase?: boolean;
 }
 
 const DATA = campaignJson as unknown as ICampaignData;
@@ -76,7 +84,19 @@ const L = IS_PORTRAIT
 const ZOOMS = [L.chart.w / WORLD_MAP.cols, 6, 12, 24];
 const TEXTURE = 'open-sea-chart';
 
-const COLOR = { land: 0x5f7d4c, seen: 0x2f6f9a, open: 0x163a55, closed: 0x0d1d2c };
+const COLOR = { land: 0x5f7d4c, seen: 0x2f6f9a, open: 0x163a55, closed: 0x0d1d2c, held: 0x2f7a5a, contested: 0x8a7330, enemy: 0x8a3340 };
+
+/** 任務の選び方 (0.0.74): what the list's duty button cycles through. */
+const DUTIES: ReadonlyArray<{ mission: MissionKind | 'intercept'; stance: PatrolStance; label: string; hint: string }> = [
+  { mission: 'patrol', stance: 'chase', label: '哨戒 (追う)', hint: '見つけた敵を追う' },
+  { mission: 'patrol', stance: 'report', label: '哨戒 (知らせる)', hint: '見つけた敵を知らせるだけ' },
+  { mission: 'escort', stance: 'chase', label: '船団護衛', hint: 'その地方の収入が減らない・敵の巡回を追い払う' },
+  { mission: 'raid', stance: 'chase', label: '通商破壊', hint: '敵の船団を襲って積荷を奪う' },
+  { mission: 'mine', stance: 'report', label: '機雷敷設', hint: '6 時間で機雷を敷き、制海権が上がる' },
+  { mission: 'sweep', stance: 'report', label: '掃海', hint: '4 時間で敵の機雷を取り除く' },
+  { mission: 'train', stance: 'report', label: '訓練', hint: `制海権 ${CONTROL_SAFE}% 以上の海で練度を上げる (燃料を使う)` },
+  { mission: 'intercept', stance: 'chase', label: '迎撃', hint: '基地で待ち、近くで見つかった敵へ向かう' },
+];
 
 /**
  * 海図 (#445): the whole world over the battle screen, kept apart from it (the minimap shows only the sectors round
@@ -102,8 +122,11 @@ export class OpenSeaChartScene extends Phaser.Scene {
   private listMode = false;
   private listPage = 0;
   private listNote = '';
-  /** 哨戒 (0.0.73): what a patrol sent from the list does on finding an enemy */
-  private patrolStance: PatrolStance = 'chase';
+  /** 任務 (0.0.74): the duty a fleet sent from the list takes up (哨戒 has its two stances; 迎撃 waits in its base) */
+  private duty = 0;
+  /** 制海権 (0.0.74): the chart coloured by the navy's control of each region */
+  private showControl = false;
+  private control: Record<string, number> = {};
 
   constructor() {
     super({ key: SceneKeys.OPEN_SEA_CHART });
@@ -130,6 +153,7 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const progress = loadProgress();
     const reach = baseOfProgress(progress);
     this.open = new Set(theatersFor(DATA, this.d.nation as Nation).filter((t) => baseReaches(reach, t.id)).map((t) => t.id));
+    this.control = navyControl(progress, Date.now(), this.open);
 
     this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 50 : 40, '海図', displayStyle(IS_PORTRAIT ? 28 : 24)).setOrigin(0.5);
@@ -150,7 +174,13 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const zh = IS_PORTRAIT ? 52 : 40;
     new UIButton(this, x + zw / 2, zy, '縮小', () => this.setZoom(this.zoom - 1), { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
     new UIButton(this, x + zw * 1.5 + 12, zy, '拡大', () => this.setZoom(this.zoom + 1), { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
-    this.add.text(x + zw * 2 + 30, zy, 'ドラッグで動かせます', textStyle(12, Css.muted)).setOrigin(0, 0.5);
+    const ctl = new UIButton(this, x + zw * 2.5 + 24, zy, '制海権', () => {
+      this.showControl = !this.showControl;
+      ctl.setLabel(this.showControl ? '探索' : '制海権');
+      this.drawTexture();
+      this.drawPanel();
+    }, { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
+    this.add.text(x + zw * 3 + 42, zy, 'ドラッグで動かせます', textStyle(12, Css.muted)).setOrigin(0, 0.5);
 
     const hit = this.add.zone(x, y, w, h).setOrigin(0, 0).setInteractive();
     hit.on('pointerdown', (p: Phaser.Input.Pointer) => {
@@ -184,6 +214,12 @@ export class OpenSeaChartScene extends Phaser.Scene {
         if (isSea(c, r)) {
           const t = theaterOf(c, r);
           col = isExplored(this.d.explored, { c, r }) ? COLOR.seen : t && this.open.has(t) ? COLOR.open : COLOR.closed;
+          // 制海権 (0.0.74): green where held (50%+), amber contested, red the enemy's (below 20%).
+          if (this.showControl && t && this.open.has(t)) {
+            const region = regionAt({ c, r });
+            const v = region ? this.control[region.id] : undefined;
+            if (v !== undefined) col = v >= CONTROL_SAFE ? COLOR.held : v >= CONTROL_LOW ? COLOR.contested : COLOR.enemy;
+          }
         }
         const i = (r * WORLD_MAP.cols + c) * 4;
         img.data[i] = (col >> 16) & 0xff;
@@ -321,7 +357,10 @@ export class OpenSeaChartScene extends Phaser.Scene {
     }
     for (const e of this.d.sightings?.() ?? []) {
       const p = this.pointOf(e);
-      if (p) g.fillStyle(e.kind === 'convoy' ? Colors.gold : Colors.danger, 0.95).fillCircle(p.x, p.y, Math.max(2.5, k * 0.3));
+      if (!p) continue;
+      // 反攻艦隊 (0.0.74): larger and orange, wherever it is.
+      if (e.kind === 'counter') g.fillStyle(0xff8a3d, 1).fillCircle(p.x, p.y, Math.max(4, k * 0.5));
+      else g.fillStyle(e.kind === 'convoy' ? Colors.gold : Colors.danger, 0.95).fillCircle(p.x, p.y, Math.max(2.5, k * 0.3));
     }
     const f = this.pointOf(this.d.at);
     if (f) {
@@ -382,6 +421,10 @@ export class OpenSeaChartScene extends Phaser.Scene {
       const areaId = areaAt(dest);
       const area = areaId ? DATA.areas.find((a) => a.id === areaId) : undefined;
       if (area && this.open.has(area.theater)) line(`作戦海域: ${area.name} (${OBJECTIVE_LABEL[area.objective ?? Objective.Annihilate]})`, 13, Css.gold);
+      // 海の地方 (0.0.74)
+      const region = isSea(dest.c, dest.r) ? regionAt(dest) : null;
+      const v = region ? this.control[region.id] : undefined;
+      if (region && v !== undefined) line(`${region.name} · 制海権 ${v}% (${controlWord(v)})`, 13, v >= CONTROL_SAFE ? Css.success : v >= CONTROL_LOW ? Css.gold : Css.danger);
       if (!isSea(dest.c, dest.r)) line('陸です。海を選んでください', 13, Css.danger);
       else if (!this.plan) line('ここへの海の道がありません', 13, Css.danger);
       else {
@@ -398,7 +441,9 @@ export class OpenSeaChartScene extends Phaser.Scene {
         }
       }
     } else line('海をタップすると、行き先と航路・燃料が出ます。決めると自動航行で走ります', 13, Css.muted);
-    line('金の丸: 軍港 · 白い四角: 基地 · 赤い枠: 作戦海域 (緑は攻略済み) · 三角: 艦隊 · 明るい海: 探索済み', 11, Css.muted);
+    line(this.showControl
+      ? `制海権: 緑 ${CONTROL_SAFE}% 以上 (船団が通る) · 黄 拮抗 · 赤 ${CONTROL_LOW}% 未満 (敵が多く、燃料が多く要る)`
+      : '金の丸: 軍港 · 白い四角: 基地 · 赤い枠: 作戦海域 (緑は攻略済み) · 三角: 艦隊 · 明るい海: 探索済み', 11, Css.muted);
 
     const by = P.y + P.h - 16 - L.bh / 2;
     const half = (w - 12) / 2;
@@ -469,24 +514,32 @@ export class OpenSeaChartScene extends Phaser.Scene {
           this.drawPanel();
         }, { variant: 'primary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 }));
         go.setEnabled(route !== null && route.length > 1);
-        // 哨戒 (0.0.73): round the place picked on the chart; 命令を解く stops it where it is.
+        // 任務 (0.0.73 哨戒, 0.0.74 the rest): round the place picked on the chart (迎撃: in the base it lies in);
+        // 命令を解く stops it where it is.
         const by2 = by + bh + 8;
+        const duty = DUTIES[this.duty];
         const to = this.dest && !fl.moving ? findRoute(fl.at, this.dest) : null;
-        add(new UIButton(this, x + bw / 2, by2, 'ここを哨戒', () => {
-          if (!to || !this.dest) return;
-          const why = this.d.onPatrol?.(fl.index, this.dest, this.patrolStance) ?? null;
-          this.listNote = why ?? `${fl.label}が哨戒に出ました (${this.patrolStance === 'chase' ? '見つけた敵を追う' : '見つけた敵を知らせるだけ'})`;
+        const intercept = duty.mission === 'intercept';
+        add(new UIButton(this, x + bw / 2, by2, intercept ? 'ここで迎撃' : 'ここで任務', () => {
+          let why: string | null;
+          if (intercept) why = this.d.onIntercept?.(fl.index) ?? null;
+          else {
+            if (!to || !this.dest) return;
+            why = this.d.onPatrol?.(fl.index, this.dest, duty.stance, duty.mission as MissionKind) ?? null;
+          }
+          this.listNote = why ?? `${fl.label}が${MISSION_JA[duty.mission]}の任務に就きました (${duty.hint})`;
           this.drawChart();
           this.drawPanel();
-        }, { variant: 'primary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 })).setEnabled(to !== null && this.dest !== null && isSea(this.dest.c, this.dest.r));
+        }, { variant: 'primary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 })).setEnabled(intercept ? !!fl.atBase && !fl.intercept : to !== null && this.dest !== null && isSea(this.dest.c, this.dest.r));
         add(new UIButton(this, x + bw * 1.5 + 8, by2, '命令を解く', () => {
           this.d.onStop?.(fl.index);
-          this.listNote = `${fl.label}はその場で停泊します`;
+          this.listNote = fl.intercept ? `${fl.label}は迎撃の待機を解きました` : `${fl.label}はその場で停泊します`;
           this.drawChart();
           this.drawPanel();
-        }, { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 })).setEnabled(fl.moving);
-        add(new UIButton(this, x + bw * 2.5 + 16, by2, this.patrolStance === 'chase' ? '哨戒: 追う' : '哨戒: 知らせる', () => {
-          this.patrolStance = this.patrolStance === 'chase' ? 'report' : 'chase';
+        }, { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 13 : 11 })).setEnabled(fl.moving || !!fl.intercept);
+        add(new UIButton(this, x + bw * 2.5 + 16, by2, `任務: ${duty.label}`, () => {
+          this.duty = (this.duty + 1) % DUTIES.length;
+          this.listNote = `任務「${DUTIES[this.duty].label}」: ${DUTIES[this.duty].hint}`;
           this.drawPanel();
         }, { variant: 'secondary', width: bw, height: bh, fontSize: IS_PORTRAIT ? 12 : 10 }));
         y += bh + 8;

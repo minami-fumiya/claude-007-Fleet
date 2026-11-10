@@ -146,4 +146,10 @@ describe('ladder names', () => {
     expect(ids).toEqual(expect.arrayContaining(['expedition_voyage', 'expedition_voyage_2', 'patrol_eye']));
     expect(ids).not.toContain('patrol_eye_2');
   });
+
+  it('0.0.74: 制海権の勲章 (#445 段階 C1)', () => {
+    const ids = newMedals(emptyRecord(), { clearedTheaters: [], regionsHeld: 5, totals: { counterRepel: 1, dutyRaid: 10, escortHours: 6, interceptWin: 1, mineLaid: 1, trainHours: 60 } }).map((m) => m.id);
+    expect(ids).toEqual(expect.arrayContaining(['region_held', 'counter_repel', 'commerce_raider', 'commerce_raider_2', 'convoy_guard', 'interceptor', 'mine_war', 'training_cruise']));
+    expect(ids).not.toContain('region_held_2');
+  });
 });
