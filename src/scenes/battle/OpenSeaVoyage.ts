@@ -42,6 +42,8 @@ export interface IVoyageHost {
   startDrill(kind: 'training' | 'exercise'): void;
   /** 記念日 (0.0.73): the day's historical battle, from its own place on the sea */
   startAnniversary(id: string): void;
+  /** 制海権 (0.0.74): the fuel a sector costs here as a multiple (1 in waters held, more in the enemy's) */
+  fuelMulAt?(x: number, y: number): number;
 }
 
 /** A ring on the sea: one of the navy's bases (put in and lie there), a port (supply), an oil field or a mine. */
@@ -95,6 +97,8 @@ export class OpenSeaVoyage {
   /** The tank at the last fill (0.0.70: a fleet lying at sea puts out with what it had left) and the distance then */
   private tank = FUEL_MAX;
   private filledAtPx = 0;
+  /** 制海権 (0.0.74): the sea sailed weighted by its fuel multiple (enemy waters burn more) */
+  private burntPx = 0;
 
   constructor(private readonly host: IVoyageHost, readonly nation: string, saved: IOpenSeaProgress, ports: IVoyageStop[], startFuel = FUEL_MAX) {
     this.explored = saved.explored;
@@ -106,7 +110,7 @@ export class OpenSeaVoyage {
   /** A full tank (a port on the sea, 0.0.70). */
   refuel(): void {
     this.tank = FUEL_MAX;
-    this.filledAtPx = this.sailedPx;
+    this.filledAtPx = this.burntPx;
     this.fuel = FUEL_MAX;
   }
 
@@ -201,9 +205,13 @@ export class OpenSeaVoyage {
     if (f.x >= WORLD_PX.w) this.shift(-WORLD_PX.w);
     else if (f.x < 0) this.shift(WORLD_PX.w);
 
-    if (this.last) this.sailedPx += Math.hypot(f.x - this.last.x, f.y - this.last.y);
+    if (this.last) {
+      const step = Math.hypot(f.x - this.last.x, f.y - this.last.y);
+      this.sailedPx += step;
+      this.burntPx += step * (this.host.fuelMulAt?.(f.x, f.y) ?? 1);
+    }
     this.last = { x: f.x, y: f.y };
-    this.fuel = Math.max(0, this.tank - fuelForPx(this.sailedPx - this.filledAtPx));
+    this.fuel = Math.max(0, this.tank - fuelForPx(this.burntPx - this.filledAtPx));
     if (this.fuel <= 0) for (const s of this.host.ships()) s.envSpeedMul *= NO_FUEL_SPEED;
 
     const here = { c: Math.floor(f.x / SECTOR_PX), r: Math.max(0, Math.min(WORLD_MAP.rows - 1, Math.floor(f.y / SECTOR_PX))) };

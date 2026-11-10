@@ -529,6 +529,15 @@ export interface IAnchoredFleet {
   order?: IFleetOrder;
   /** 自動の帰投の基準 (0.0.72), missing: 大破 */
   returnAt?: ReturnRule;
+  /** 迎撃 (0.0.74): waits in its base and sails out to the enemies found near it */
+  intercept?: { checkedAt: number };
+}
+
+/** The fleet stood down from 迎撃 (0.0.74). */
+export function withoutIntercept(f: IAnchoredFleet): IAnchoredFleet {
+  const out = { ...f };
+  delete out.intercept;
+  return out;
 }
 
 /** The home port as an anchorage. */
@@ -591,7 +600,9 @@ export function parseAnchors(raw: unknown): IAnchoredFleet[] {
     // 0.0.72: a run under way and the fleet's 帰投の基準, each dropped when unreadable.
     const order = parseOrder(o.order);
     const rule = parseReturnRule(o.returnAt);
-    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y }, ...fuel, ...(order ? { order } : {}), ...(rule ? { returnAt: rule } : {}) }];
+    const ic = o.intercept as { checkedAt?: unknown } | undefined;
+    const intercept = ic && typeof ic.checkedAt === 'number' && Number.isFinite(ic.checkedAt) && typeof at.base === 'string' && !order ? { intercept: { checkedAt: ic.checkedAt } } : {};
+    return [{ shipIds, at: { ...(typeof at.base === 'string' ? { base: at.base } : {}), x: at.x, y: at.y }, ...fuel, ...(order ? { order } : {}), ...(rule ? { returnAt: rule } : {}), ...intercept }];
   });
 }
 

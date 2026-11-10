@@ -1,5 +1,6 @@
 import { IResources } from '@/types/Progression';
 import { RESOURCE_KEYS, resources } from '@/systems/ResourceSystem';
+import { IRegionEvent, parseRegionEvents } from '@/systems/SeaRegionSystem';
 
 /**
  * 制海権と敵の反攻 (#50, pure). Every area a navy has won is its sea: the seas held pay an hourly income on top of the
@@ -14,6 +15,9 @@ export interface ICounterattack {
   startedAt: number;
   /** Epoch ms after which the sea is lost if not defended */
   endsAt: number;
+  /** 反攻艦隊 (0.0.74): its way by sea from where it gathers to the area, and when it sets out (it arrives at endsAt) */
+  route?: Array<{ c: number; r: number }>;
+  sailAt?: number;
 }
 
 export interface ISeaControl {
@@ -27,6 +31,8 @@ export interface ISeaControl {
   count: number;
   /** Epoch ms the hourly income counts from (0 = not started) */
   incomeAt: number;
+  /** 海の地方 (0.0.74): the fights and duties of late, by region (they move its control) */
+  events?: IRegionEvent[];
 }
 
 export function emptySeaControl(): ISeaControl {
@@ -54,9 +60,12 @@ export function parseSeaControl(raw: unknown): ISeaControl {
   const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
   const c = d.counter as Record<string, unknown> | null | undefined;
-  const counter = c && typeof c.areaId === 'string' && typeof c.endsAt === 'number' ? { areaId: c.areaId, startedAt: num(c.startedAt), endsAt: c.endsAt } : null;
+  const route = Array.isArray(c?.route) ? (c!.route as unknown[]).filter((s): s is { c: number; r: number } => typeof (s as { c?: unknown })?.c === 'number' && typeof (s as { r?: unknown })?.r === 'number').map((s) => ({ c: s.c, r: s.r })) : [];
+  const fleet = route.length >= 2 && typeof c?.sailAt === 'number' ? { route, sailAt: c.sailAt } : {};
+  const counter = c && typeof c.areaId === 'string' && typeof c.endsAt === 'number' ? { areaId: c.areaId, startedAt: num(c.startedAt), endsAt: c.endsAt, ...fleet } : null;
   const lost = Array.isArray(d.lost) ? [...new Set(d.lost.filter((x): x is string => typeof x === 'string'))] : [];
-  return { lost, counter, sorties: num(d.sorties), count: num(d.count), incomeAt: num(d.incomeAt) };
+  const events = parseRegionEvents(d.events);
+  return { lost, counter, sorties: num(d.sorties), count: num(d.count), incomeAt: num(d.incomeAt), ...(events.length > 0 ? { events } : {}) };
 }
 
 /** The seas held: areas won and not taken back, training areas aside. */
@@ -67,7 +76,8 @@ export function heldAreas(areas: readonly IAreaLike[], cleared: readonly string[
 /** The hourly income of `held` seas. */
 export function seaIncome(held: number): IResources {
   const r = resources();
-  for (const k of RESOURCE_KEYS) r[k] = SEA_INCOME_PER_AREA[k] * held;
+  // 0.0.74: an area whose region is not held pays half, so `held` may be fractional.
+  for (const k of RESOURCE_KEYS) r[k] = Math.round(SEA_INCOME_PER_AREA[k] * held);
   return r;
 }
 

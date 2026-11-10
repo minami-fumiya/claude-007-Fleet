@@ -2502,3 +2502,63 @@ test('遠征と哨戒 (0.0.73): a fleet patrols round a place and is called off;
   expect((await stored()).expeditions).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('制海権と任務 (0.0.74): the chart shows each region’s control; fleets take up duties and wait to intercept (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const sea = (dc: number, dr: number): { x: number; y: number } => ({ x: (255 + dc + 0.5) * 3200, y: (50 + dr + 0.5) * 3200 });
+  const base = { base: 'ijn_cruiser', x: (247 + 0.5) * 3200, y: (52 + 0.5) * 3200 };
+  const anchors = [{ shipIds: ['takao', 'sendai'], at: base, fuel: 100 }, { shipIds: ['nagato'], at: sea(6, 6), fuel: 90 }];
+  const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: [...SCREENS, 'OpenSeaChartScene'], nations: { IJN: { ...SAVE.nations.IJN, openSea: { anchors } } } });
+  type G = { game: Phaser.Game };
+  type C = { listMode: boolean; showControl: boolean; duty: number; drawTexture(redraw?: boolean): void; drawPanel(): void; drawChart(): void; control: Record<string, number>; d: {
+    onPatrol(i: number, at: { c: number; r: number }, s: string, m?: string): string | null; onIntercept(i: number): string | null; onStop(i: number): void;
+  } };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  // 制海権の色分け: the regions of the navy's seas have their control.
+  const regions = await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as C;
+    c.showControl = true;
+    c.drawTexture(true);
+    c.drawPanel();
+    return Object.keys(c.control).length;
+  });
+  expect(regions).toBeGreaterThan(10);
+  await page.waitForTimeout(300);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene'), `control (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene'), `control overlaps (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('control.png') });
+  // The list with a duty picked (機雷敷設).
+  await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as C;
+    c.listMode = true;
+    c.duty = 4;
+    c.drawPanel();
+  });
+  await page.waitForTimeout(300);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene'), `duties (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene'), `duties overlaps (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('duties.png') });
+  type S = Array<{ shipIds: string[]; intercept?: { checkedAt: number }; order?: { patrol?: { mission?: string } } }>;
+  const stored = (): Promise<S> => page.evaluate(() => (JSON.parse(localStorage.getItem('ww2fleet.progress.v2') ?? '{}') as { nations: { IJN: { openSea: { anchors: S } } } }).nations.IJN.openSea.anchors);
+  const call = <T,>(fn: string, ...args: unknown[]): Promise<T> => page.evaluate(([f, a]) => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as { d: Record<string, (...x: unknown[]) => T> };
+    return c.d[f as string](...(a as unknown[]));
+  }, [fn, args] as const);
+  // 機雷敷設: 長門 lays mines four sectors east of where it lies.
+  expect(await call<string | null>('onPatrol', 1, { c: 255 + 10, r: 50 + 6 }, 'report', 'mine')).toBeNull();
+  expect((await stored())[1].order?.patrol?.mission).toBe('mine');
+  // 訓練 is refused in the enemy's waters.
+  await call('onStop', 1);
+  expect(await call<string | null>('onPatrol', 1, { c: 200, r: 70 }, 'report', 'train')).toMatch(/制海権/);
+  // 迎撃: the cruisers wait in their base, then are stood down.
+  expect(await call<string | null>('onIntercept', 0)).toBeNull();
+  expect((await stored())[0].intercept).toBeTruthy();
+  expect(await call<string | null>('onIntercept', 1)).toMatch(/基地/);
+  await call('onStop', 0);
+  expect((await stored())[0].intercept).toBeUndefined();
+  expect(errors).toEqual([]);
+});

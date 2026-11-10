@@ -7,14 +7,20 @@
  * to its 帰投の基準 turns for the nearest dock.
  */
 import {
-  FUEL_MAX, IAnchorPlace, IAnchoredFleet, ISectorRef, SECTOR_PX, WORLD_PX, colGap, routeFuel, sectorAt,
+  FUEL_MAX, IAnchorPlace, IAnchoredFleet, ISectorRef, SECTOR_PX, WORLD_PX, colGap, routeFuel, sectorAt, withoutIntercept,
 } from '@/systems/OpenSeaSystem';
 import { WORLD_HOUR_MS } from '@/systems/WorldClock';
-import { IFleetOrder, PatrolStance, ReturnRule } from '@/systems/FleetOrderTypes';
+import { IFleetOrder, MissionKind, PatrolStance, ReturnRule } from '@/systems/FleetOrderTypes';
 
 export { parseOrder, parseReturnRule } from '@/systems/FleetOrderTypes';
-export type { IFleetOrder, PatrolStance, ReturnRule } from '@/systems/FleetOrderTypes';
-import { IResident, MEET_PX, residentPos, worldGap } from '@/systems/WorldSim';
+export type { IFleetOrder, MissionKind, PatrolStance, ReturnRule } from '@/systems/FleetOrderTypes';
+export { MISSION_KINDS } from '@/systems/FleetOrderTypes';
+
+/** 任務の名前 (0.0.74) */
+export const MISSION_JA: Record<MissionKind | 'intercept', string> = {
+  patrol: '哨戒', escort: '船団護衛', raid: '通商破壊', mine: '機雷敷設', sweep: '掃海', train: '訓練', intercept: '迎撃',
+};
+import { IResident, MEET_PX, ResidentKind, residentPos, worldGap } from '@/systems/WorldSim';
 
 export const RETURN_RULES: readonly ReturnRule[] = ['heavy', 'medium', 'none'];
 export const RETURN_AT: Record<ReturnRule, number> = { none: 0, heavy: 0.25, medium: 0.5 };
@@ -145,6 +151,12 @@ export interface IOffscreenFight {
   at: number;
   /** 0.0.73: an expedition's fight on its route (its id) */
   expedition?: string;
+  /** 0.0.74: what was fought and where (the region's control follows the fight) */
+  kind?: ResidentKind;
+  x?: number;
+  y?: number;
+  /** The duty the fleet was on */
+  mission?: MissionKind | 'intercept';
 }
 
 /** A fixed pseudo-random 0..1 from a text (the same fight always hurts the same). */
@@ -160,14 +172,77 @@ export function offscreenHurt(ours: number, theirs: number, seed: string): numbe
   return Math.max(0.05, Math.min(0.5, base * (0.8 + 0.4 * hash01(seed))));
 }
 
+/** What a fleet on a duty does with what it meets: report it, fight it, or keep clear. */
+function dutyRules(mission: MissionKind, stance: PatrolStance): { reports: boolean; fights: (kind: ResidentKind) => boolean } {
+  switch (mission) {
+    // 船団護衛: drives off the enemy's warships that come for the convoys, and lets the enemy's own convoys be.
+    case 'escort': return { reports: false, fights: (k) => k === 'patrol' || k === 'counter' };
+    // 通商破壊: goes for the enemy's convoys (and fights what guards them).
+    case 'raid': return { reports: false, fights: (k) => k === 'convoy' || k === 'patrol' };
+    // 機雷敷設・掃海・訓練: keep out of fights.
+    case 'mine': case 'sweep': case 'train': return { reports: false, fights: () => false };
+    default: return { reports: true, fights: (k) => stance !== 'report' && k !== 'superweapon' };
+  }
+}
+
+/** The work of a duty done round its loop (0.0.74): mines laid, a sea swept, hours trained. */
+export interface IDutyWork {
+  shipIds: string[];
+  mission: MissionKind;
+  /** The loop's first point (its region is where the work counts) */
+  at: ISectorRef;
+  /** When it was done */
+  t: number;
+  /** Hours trained (訓練) or escorted (船団護衛) */
+  hours?: number;
+}
+
+/** World hours on station before the mines are laid / the sea is swept, and then again every DUTY_REPEAT_HOURS. */
+export const MINE_HOURS = 6;
+export const SWEEP_HOURS = 4;
+export const DUTY_REPEAT_HOURS = 24;
+/** 訓練 is counted in steps of this many world hours. */
+export const TRAIN_STEP_HOURS = 2;
+
+/** The work due from a duty's time on station up to `now`, and where its count got to. */
+export function dutyWork(order: IFleetOrder, shipIds: readonly string[], now: number): { works: IDutyWork[]; workAt?: number } {
+  const p = order.patrol;
+  const mission = p?.mission;
+  if (!p || !mission || mission === 'patrol' || mission === 'raid') return { works: [] };
+  const onStation = order.startedAt + runMs(order.route);
+  if (now <= onStation) return { works: [] };
+  const H = WORLD_HOUR_MS;
+  const at = p.loop[0];
+  const works: IDutyWork[] = [];
+  // 訓練 and 船団護衛 count their hours on station (training in steps of TRAIN_STEP_HOURS, escorting by the hour).
+  if (mission === 'train' || mission === 'escort') {
+    const step = mission === 'train' ? TRAIN_STEP_HOURS : 1;
+    const from = Math.max(order.workAt ?? onStation, onStation, now - CATCH_UP_HOURS * H);
+    const hours = Math.floor((now - from) / (step * H)) * step;
+    if (hours <= 0) return { works: [], workAt: order.workAt };
+    works.push({ shipIds: [...shipIds], mission, at, t: from + hours * H, hours });
+    return { works, workAt: from + hours * H };
+  }
+  let next = order.workAt !== undefined ? order.workAt + DUTY_REPEAT_HOURS * H : onStation + (mission === 'mine' ? MINE_HOURS : SWEEP_HOURS) * H;
+  let workAt = order.workAt;
+  while (next <= now && works.length < 4) {
+    works.push({ shipIds: [...shipIds], mission, at, t: next });
+    workAt = next;
+    next += DUTY_REPEAT_HOURS * H;
+  }
+  return { works, workAt };
+}
+
 /**
  * Brings every fleet under orders up to `now`: fights met on the way, the turn for home, and the arrival (the fleet
- * lies at its destination; a base fills the tank, at sea the route's fuel is spent).
+ * lies at its destination; a base fills the tank, at sea the route's fuel is spent). 0.0.74: a fleet on a duty round
+ * its loop reports, fights or keeps clear by its duty, and does its work (mines, sweeping, training).
  */
-export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Record<string, number>>, now: number, w: IOffscreenWorld): { anchors: IMovingFleet[]; hp: Record<string, number>; fights: IOffscreenFight[]; sightings: ISighting[] } {
+export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Record<string, number>>, now: number, w: IOffscreenWorld): { anchors: IMovingFleet[]; hp: Record<string, number>; fights: IOffscreenFight[]; sightings: ISighting[]; works: IDutyWork[] } {
   const health: Record<string, number> = { ...hp };
   const fights: IOffscreenFight[] = [];
   const sightings: ISighting[] = [];
+  const works: IDutyWork[] = [];
   const out: IMovingFleet[] = [];
   for (const fleet of anchors) {
     let f = fleet;
@@ -178,11 +253,12 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
     }
     const from = Math.max(order.checkedAt, now - CATCH_UP_HOURS * WORLD_HOUR_MS);
     const end = Math.min(now, arrivesAt(order));
+    const mission: MissionKind = order.patrol?.mission ?? 'patrol';
+    const rules = order.patrol ? dutyRules(mission, order.patrol.stance) : { reports: false, fights: (k: ResidentKind) => k !== 'superweapon' };
     for (let t = from; t <= end && order; t += STEP_HOURS * WORLD_HOUR_MS) {
       const at = orderPos(order, t);
-      // 哨戒 (0.0.73): enemies within its sight are reported (shown on the chart); one that only reports keeps out of fights.
-      const patrol = order.patrol;
-      if (patrol) {
+      // 哨戒 (0.0.73): enemies within its sight are reported (shown on the chart).
+      if (order.patrol && rules.reports) {
         const seen: string[] = order.seen ?? [];
         const found = w.residents.filter((r) => r.kind !== 'friend' && !seen.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= PATROL_SIGHT_PX);
         if (found.length > 0) {
@@ -192,9 +268,8 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
           }
           order = { ...order, seen: [...seen, ...found.map((r) => r.id)] };
         }
-        if (patrol.stance === 'report') continue;
       }
-      const foe = w.residents.find((r) => r.kind !== 'friend' && r.kind !== 'superweapon' && !order!.met.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= MEET_PX);
+      const foe = w.residents.find((r) => r.kind !== 'friend' && rules.fights(r.kind) && !order!.met.includes(r.id) && !w.won(r.id) && worldGap(residentPos(r, t), at) <= MEET_PX);
       if (!foe) continue;
       const ours = w.power(f.shipIds, health);
       const theirs = w.enemyPower(foe);
@@ -215,22 +290,80 @@ export function advanceOrders(anchors: readonly IMovingFleet[], hp: Readonly<Rec
       if (low && !order.home) {
         const back = w.homeFrom(sectorAt(at.x, at.y));
         if (back) {
-          // A patrol hurt down to its rule gives up its loop too.
+          // A fleet on a duty hurt down to its rule gives up its loop too.
           order = { route: back.route, dest: back.dest, startedAt: t, checkedAt: t, met: order.met, home: true };
           turnedHome = true;
         }
       }
-      fights.push({ shipIds: [...f.shipIds], residentId: foe.id, won, hurt, turnedHome, at: t });
+      fights.push({ shipIds: [...f.shipIds], residentId: foe.id, won, hurt, turnedHome, at: t, kind: foe.kind, x: at.x, y: at.y, ...(fleet.order?.patrol ? { mission } : {}) });
       if (turnedHome) break;
     }
     if (!order) continue;
+    if (order.patrol) {
+      const done = dutyWork(order, f.shipIds, now);
+      works.push(...done.works);
+      if (done.workAt !== undefined) order = { ...order, workAt: done.workAt };
+    }
     if (now >= arrivesAt(order)) {
       const fuel = order.dest.base ? FUEL_MAX : Math.max(0, (f.fuel ?? FUEL_MAX) - routeFuel(order.route));
       f = { shipIds: f.shipIds, at: order.dest, fuel, ...(f.returnAt ? { returnAt: f.returnAt } : {}) };
     } else f = { ...f, order: { ...order, checkedAt: now } };
     out.push(f);
   }
-  return { anchors: out, hp: health, fights, sightings };
+  return { anchors: out, hp: health, fights, sightings, works };
+}
+
+/** 迎撃 (0.0.74): how far from its base an intercepting fleet sails out to an enemy found (px). */
+export const INTERCEPT_PX = SECTOR_PX * 8;
+
+/** An enemy known to be at sea (found by a patrol, or a counterattack under way) that a base's fleet may go for. */
+export interface IKnownFoe {
+  id: string;
+  kind: ResidentKind;
+  x: number;
+  y: number;
+  at: number;
+  /** The resident to fight (the reckoning needs its strength) */
+  resident: IResident;
+}
+
+/**
+ * 迎撃: each fleet waiting in its base on 迎撃 sails out to the enemies found within INTERCEPT_PX since it last looked
+ * and fights them (as off-screen fights go: never sunk), back in its base after. Hurt down to its 帰投の基準 it stops
+ * intercepting until it is set to it again.
+ */
+export function advanceIntercepts(anchors: readonly IMovingFleet[], hp: Readonly<Record<string, number>>, now: number, w: IOffscreenWorld, known: readonly IKnownFoe[]): { anchors: IMovingFleet[]; hp: Record<string, number>; fights: IOffscreenFight[] } {
+  const health: Record<string, number> = { ...hp };
+  const fights: IOffscreenFight[] = [];
+  const beaten = new Set<string>();
+  const out = anchors.map((f) => {
+    if (!f.intercept || f.order) return f;
+    const since = f.intercept.checkedAt;
+    let keep = true;
+    for (const k of [...known].sort((a, b) => a.at - b.at)) {
+      if (k.at <= since || k.at > now || beaten.has(k.id) || w.won(k.id) || (k.kind !== 'patrol' && k.kind !== 'counter')) continue;
+      if (worldGap(k, f.at) > INTERCEPT_PX) continue;
+      const ours = w.power(f.shipIds, health);
+      const theirs = w.enemyPower(k.resident);
+      const hurt: Record<string, number> = {};
+      for (const id of f.shipIds) {
+        const before = health[id] ?? 1;
+        const after = Math.max(OFFSCREEN_FLOOR, before - offscreenHurt(ours, theirs, `${k.id}:${id}`));
+        hurt[id] = before - after;
+        health[id] = after;
+      }
+      const won = ours >= theirs;
+      if (won) beaten.add(k.id);
+      fights.push({ shipIds: [...f.shipIds], residentId: k.id, won, hurt, turnedHome: false, at: k.at, kind: k.kind, x: k.x, y: k.y, mission: 'intercept' });
+      if (f.shipIds.some((id) => (health[id] ?? 1) <= RETURN_AT[f.returnAt ?? 'heavy'])) {
+        keep = false;
+        break;
+      }
+    }
+    if (!keep) return withoutIntercept(f);
+    return { ...f, intercept: { checkedAt: now } };
+  });
+  return { anchors: out, hp: health, fights };
 }
 
 /** Sight of a patrol (px): three sectors. */
@@ -259,11 +392,11 @@ export function patrolLoop(centre: ISectorRef, isSeaAt: (c: number, r: number) =
 }
 
 /** 哨戒の命令: sail to the loop's first point, then round the loop until called off. */
-export function orderPatrol(fleet: IMovingFleet, route: ISectorRef[] | null, loop: ISectorRef[], stance: PatrolStance, now: number): IMovingFleet | string {
+export function orderPatrol(fleet: IMovingFleet, route: ISectorRef[] | null, loop: ISectorRef[], stance: PatrolStance, now: number, mission: MissionKind = 'patrol'): IMovingFleet | string {
   if (!route || route.length < 1) return '海の上の航路がありません';
   const way = route.length === 1 ? [route[0], route[0]] : route;
   const end = way[way.length - 1];
-  return { ...fleet, order: { route: way, dest: { x: (end.c + 0.5) * SECTOR_PX, y: (end.r + 0.5) * SECTOR_PX }, startedAt: now, checkedAt: now, met: [], patrol: { loop, stance }, seen: [] } };
+  return { ...fleet, order: { route: way, dest: { x: (end.c + 0.5) * SECTOR_PX, y: (end.r + 0.5) * SECTOR_PX }, startedAt: now, checkedAt: now, met: [], patrol: { loop, stance, ...(mission !== 'patrol' ? { mission } : {}) }, seen: [] } };
 }
 
 /** 命令を解く: the fleet stops where it is and lies there at sea. */

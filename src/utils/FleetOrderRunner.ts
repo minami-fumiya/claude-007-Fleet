@@ -8,14 +8,23 @@ import { baseOfProgress, baseReaches } from '@/systems/BaseSystem';
 import { theatersFor } from '@/systems/CampaignSystem';
 import { fleetPower } from '@/systems/DifficultyCurve';
 import { setDamage } from '@/systems/DockSystem';
-import { advanceOrders, IOffscreenFight, IOffscreenWorld, SIGHTING_MS } from '@/systems/FleetOrders';
+import { advanceIntercepts, advanceOrders, IKnownFoe, IOffscreenFight, IOffscreenWorld, SIGHTING_MS } from '@/systems/FleetOrders';
 import { withQuestEvents } from '@/systems/QuestSystem';
 import { EXPEDITIONS } from '@/systems/ExpeditionSystem';
 import { advanceExpeditions, expeditionPlan } from '@/systems/ExpeditionRoute';
 import { nearestDock } from '@/systems/AnchorageSystem';
 import { WORLD_MAP, baseAnchor, findRoute } from '@/systems/OpenSeaSystem';
-import { residentDay, residentsFor } from '@/systems/WorldSim';
+import { IResident, residentDay, residentPos, residentsFor } from '@/systems/WorldSim';
+import { addResources, gainResources } from '@/systems/ResourceSystem';
+import { defenseReward, settleDefense } from '@/systems/SeaControlSystem';
+import { holdCap } from '@/systems/FacilitySystem';
+import { recordLedger } from '@/systems/LedgerSystem';
+import { addProficiency } from '@/systems/ProficiencySystem';
+import { counterResident, controlAtPx, hotSeas, isCounterId, withRegionEvent } from '@/utils/SeaControlView';
+import { resourceReward } from '@/systems/WorldSystem';
+import { CONTROL_SAFE } from '@/systems/SeaRegionSystem';
 import { markResidentWon, spotWon, worldEnemyFleet, worldEnemyScale, emptyWorld } from '@/systems/WorldSystem';
+import { SECTOR_PX } from '@/systems/OpenSeaSystem';
 import { ICampaignData } from '@/types/Campaign';
 import { IShipData } from '@/types/Ship';
 import { Nation } from '@/types/Nation';
@@ -32,14 +41,30 @@ export function navyTheaters(progress: IProgress): string[] {
   return theatersFor(campaignData as ICampaignData, progress.nation).filter((t) => baseReaches(reach, t.id)).map((t) => t.id);
 }
 
+/** 訓練 (0.0.74): proficiency a ship gains a world hour of training, up to TRAIN_CAP; the fuel it burns. */
+export const TRAIN_PER_HOUR = 0.5;
+export const TRAIN_CAP = 60;
+export const TRAIN_FUEL_PER_SHIP_HOUR = 2;
+
+/**
+ * The day's residents of the seas a navy sails, as the battle screen and the off-screen fleets both see them (0.0.74):
+ * one more enemy patrol round each sea where its control is low, and the counterattack under way.
+ */
+export function worldResidents(progress: IProgress, theaters: readonly string[], now: number, giants: Parameters<typeof residentsFor>[3] = []): IResident[] {
+  const hot = hotSeas(progress, now, new Set(theaters));
+  const list = residentsFor(progress.nation, theaters, residentDay(now), giants, hot);
+  const counter = counterResident(progress);
+  return counter ? [...list, counter] : list;
+}
+
 /** The fleets under orders brought up to `now`; null when none is under way. */
 export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: number): { progress: IProgress; fights: IOffscreenFight[] } | null {
-  // 遠征の航路 (0.0.73): expeditions sail their routes too.
+  // 遠征の航路 (0.0.73): expeditions sail their routes too; 0.0.74: fleets waiting in a base to intercept.
   const routed = progress.expeditions.some((x) => x.startedAt !== undefined && !x.cut && x.endsAt > (x.checkedAt ?? 0));
-  if (!progress.openSea.anchors.some((a) => a.order) && !routed) return null;
+  if (!progress.openSea.anchors.some((a) => a.order || a.intercept) && !routed) return null;
   const data = campaignData as ICampaignData;
   const theaters = navyTheaters(progress);
-  const residents = residentsFor(progress.nation, theaters, residentDay(now));
+  const residents = worldResidents(progress, theaters, now);
   const hp: Record<string, number> = {};
   for (const a of progress.openSea.anchors) for (const id of a.shipIds) hp[id] = progress.damage[id] ?? 1;
   for (const x of progress.expeditions) for (const id of x.shipIds) hp[id] = progress.damage[id] ?? 1;
@@ -60,7 +85,20 @@ export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: num
       return at && route ? { route, dest: at } : null;
     },
   };
-  const result = advanceOrders(progress.openSea.anchors, hp, now, offscreen);
+  const ordered = advanceOrders(progress.openSea.anchors, hp, now, offscreen);
+  // 迎撃 (0.0.74): what the patrols found just now, and the counterattack at sea, for the fleets waiting in a base.
+  const byId = new Map(residents.map((r) => [r.id, r]));
+  const known: IKnownFoe[] = ordered.sightings.flatMap((x) => {
+    const r = byId.get(x.id);
+    return r ? [{ id: x.id, kind: r.kind, x: (x.c + 0.5) * SECTOR_PX, y: (x.r + 0.5) * SECTOR_PX, at: x.at, resident: r }] : [];
+  });
+  const counter = residents.find((r) => r.kind === 'counter');
+  if (counter) {
+    const at = residentPos(counter, now);
+    known.push({ id: counter.id, kind: 'counter', x: at.x, y: at.y, at: now, resident: counter });
+  }
+  const caught = advanceIntercepts(ordered.anchors, ordered.hp, now, offscreen, known);
+  const result = { ...ordered, anchors: caught.anchors, hp: caught.hp, fights: [...ordered.fights, ...caught.fights] };
   const sent = advanceExpeditions(progress.expeditions, result.hp, now, offscreen, (id) => {
     const exp = EXPEDITIONS.find((e) => e.id === id);
     return exp ? expeditionPlan(progress.nation, exp) : null;
@@ -77,7 +115,62 @@ export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: num
   let w = next.world ?? emptyWorld();
   for (const f of fights) if (f.won) w = markResidentWon(w, f.residentId);
   next = { ...next, world: w };
+  next = applyDutyResults(next, fights, ordered.works, residents, now);
   return { progress: next, fights };
+}
+
+/**
+ * 制海権 (0.0.74): what the fights and the duties did — each fight moves its region's control (won up, lost down), a
+ * convoy sunk pays its cargo, a counterattack beaten keeps its sea, the mines and the sweeping count in their region,
+ * and the ships in training gain proficiency for the fuel they burn.
+ */
+function applyDutyResults(progress: IProgress, fights: readonly IOffscreenFight[], works: ReturnType<typeof advanceOrders>['works'], residents: readonly IResident[], now: number): IProgress {
+  let next = progress;
+  const data = campaignData as ICampaignData;
+  for (const f of fights) {
+    if (f.x === undefined || f.y === undefined) continue;
+    const counter = isCounterId(f.residentId);
+    next = withRegionEvent(next, f.x, f.y, f.won ? (counter ? 'counter' : f.kind === 'convoy' ? 'raid' : 'win') : 'loss', f.at);
+    if (!f.won) continue;
+    if (f.kind === 'convoy') {
+      const r = residents.find((x) => x.id === f.residentId);
+      const cargo = resourceReward('convoy', r?.danger ?? 3);
+      const g = gainResources(next.resources, cargo, holdCap(next.facilities));
+      next = withQuestEvents({ ...next, resources: g.resources, ledger: recordLedger(recordLedger(next.ledger, 'battle', addResources(cargo, g.lost, -1), now), 'overflow', g.lost, now) }, [['convoyRaid', 1], ['dutyRaid', 1]], now);
+    }
+    if (counter && next.sea?.counter) {
+      const area = data.areas.find((a) => a.id === next.sea!.counter!.areaId);
+      next = { ...next, sea: settleDefense(next.sea, next.sea.counter.areaId, true) };
+      if (area) {
+        const reward = defenseReward(area.reward);
+        const g = gainResources(next.resources, reward, holdCap(next.facilities));
+        next = withQuestEvents({ ...next, resources: g.resources, ledger: recordLedger(recordLedger(next.ledger, 'battle', addResources(reward, g.lost, -1), now), 'overflow', g.lost, now) }, [['defenseWin', 1], ['counterRepel', 1]], now);
+      }
+    }
+    if (f.mission === 'intercept') next = withQuestEvents(next, [['interceptWin', 1]], now);
+  }
+  for (const wk of works) {
+    const x = (wk.at.c + 0.5) * SECTOR_PX;
+    const y = (wk.at.r + 0.5) * SECTOR_PX;
+    if (wk.mission === 'mine') next = withQuestEvents(withRegionEvent(next, x, y, 'mine', wk.t), [['mineLaid', 1]], now);
+    else if (wk.mission === 'sweep') next = withQuestEvents(withRegionEvent(next, x, y, 'sweep', wk.t), [['seaSwept', 1]], now);
+    else if (wk.mission === 'escort' && wk.hours) next = withQuestEvents(next, [['escortHours', wk.hours]], now);
+    else if (wk.mission === 'train' && wk.hours) {
+      // Only in safe waters, and only for the fuel there is.
+      const here = controlAtPx(next, x, y, now);
+      const fuel = TRAIN_FUEL_PER_SHIP_HOUR * wk.shipIds.length * wk.hours;
+      if (!here || here.control < CONTROL_SAFE || next.resources.fuel < fuel) continue;
+      const proficiency = { ...next.proficiency };
+      for (const id of wk.shipIds) {
+        const before = proficiency[id] ?? 0;
+        if (before >= TRAIN_CAP) continue;
+        proficiency[id] = Math.min(TRAIN_CAP, addProficiency(before, TRAIN_PER_HOUR * wk.hours));
+      }
+      const spent = { fuel, ammo: 0, steel: 0, bauxite: 0 };
+      next = withQuestEvents({ ...next, proficiency, resources: { ...next.resources, fuel: next.resources.fuel - fuel }, ledger: recordLedger(next.ledger, 'training', spent, now) }, [['trainHours', wk.hours * wk.shipIds.length]], now);
+    }
+  }
+  return next;
 }
 
 /** A line for a fight fought off-screen. */

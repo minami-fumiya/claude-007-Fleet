@@ -112,6 +112,9 @@ export const QUEST_EVENTS = [
   'convoyRaid', 'chaseWin', 'commandSwitch',
   // 0.0.73 (#445): enemies a patrol found, sectors expeditions sailed
   'patrolSighting', 'expeditionSectors',
+  // 0.0.74 (#445): 制海権 — convoys sunk on 通商破壊, counterattacks beaten, enemies intercepted, mines laid, seas swept,
+  // and ship-hours trained
+  'dutyRaid', 'counterRepel', 'interceptWin', 'mineLaid', 'seaSwept', 'trainHours', 'escortHours',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];

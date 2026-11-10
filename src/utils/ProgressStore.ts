@@ -25,6 +25,7 @@ import { emptyWorld, IWorld, parseWorld } from '@/systems/WorldSystem';
 import { emptyOpenSea, IOpenSeaProgress, parseOpenSea } from '@/systems/OpenSeaSystem';
 import { IGiantRecord, IShipRecord, parseGiantRecords, parseShipRecords } from '@/systems/ShipRecordSystem';
 import { accrueSeaIncome, emptySeaControl, expireCounter, heldAreas, ISeaControl, parseSeaControl } from '@/systems/SeaControlSystem';
+import { incomeAreas, withAreaEvent } from '@/utils/SeaControlView';
 import campaignData from '@/data/campaign.json';
 import { gainResources, LEGACY_STARTING_RESOURCES, regenerate, resources, STARTING_RESOURCES } from '@/systems/ResourceSystem';
 import { emptyRecord, parseRecord } from '@/systems/RecordSystem';
@@ -276,17 +277,21 @@ export function progressView(save: ISave, now?: number): IProgress {
   const regen = r.resources === built.resources && r.regenAt === built.regenAt
     ? built
     : { ...built, resources: r.resources, regenAt: r.regenAt, ledger: recordLedger(built.ledger, 'regen', resourceDelta(built.resources, r.resources).gained, now) };
-  return applySeaControl(regen, now);
+  return applySeaControl(regen, now, view.nation);
 }
 
 /**
  * 制海権 (#50): a counterattack past its deadline takes its sea, then the seas held pay the hours of income since the
  * last (up to the holding cap, the rest in the ledger's overflow).
  */
-export function applySeaControl<T extends INationProgress>(p: T, now: number): T {
+export function applySeaControl<T extends INationProgress>(p: T, now: number, nation?: string): T {
   const sea0 = p.sea ?? emptySeaControl();
-  const expired = expireCounter(sea0, now).sea;
-  const held = heldAreas((campaignData as { areas: Array<{ id: string; theater: string; training?: boolean; requires: string[] }> }).areas, p.campaign, expired).length;
+  const ex = expireCounter(sea0, now);
+  // 反攻 (0.0.74): a counterattack that got through costs its region's control as well as the area.
+  const expired = ex.lostArea && nation ? withAreaEvent({ sea: ex.sea }, ex.lostArea, 'lost', now).sea : ex.sea;
+  const heldIds = heldAreas((campaignData as { areas: Array<{ id: string; theater: string; training?: boolean; requires: string[] }> }).areas, p.campaign, expired);
+  // 海の地方 (0.0.74): an area pays in full only where its region is held (or the convoys there are escorted).
+  const held = nation ? incomeAreas({ nation, campaign: p.campaign, sea: expired, openSea: p.openSea }, heldIds, now) : heldIds.length;
   const acc = accrueSeaIncome(expired, held, now);
   if (acc.sea === sea0) return p;
   const any = Object.values(acc.gain).some((v) => v > 0);
