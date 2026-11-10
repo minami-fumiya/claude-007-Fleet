@@ -38,7 +38,8 @@ import { ReconSystem } from '@/systems/ReconSystem';
 import { FogOfWar } from '@/ui/FogOfWar';
 import { drawMap } from '@/ui/MapView';
 import { avoidHeading, clearSpawn, currentAt, inShoal, resolveMap, SHOAL_SPEED } from '@/systems/MapSystem';
-import { anchorAt, colGap, findRoute, FUEL_MAX, homePort, IAnchorPlace, isSea, seaSectorAt, lonLatOf, wrapCol, placeName, samePlace, sectorAt, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, homeAnchor, placeFuel, theaterOf } from '@/systems/OpenSeaSystem';
+import { anchorAt, colGap, findRoute, FUEL_MAX, homePort, IAnchorPlace, isSea, seaSectorAt, lonLatOf, wrapCol, placeName, samePlace, sectorAt, practiceGrounds, SECTOR_PX, WORLD_MAP, WORLD_PX, areaAt, areaCentre, baseAnchor, homeAnchor, placeFuel, theaterOf, withoutIntercept,
+} from '@/systems/OpenSeaSystem';
 import { IVoyageStop, OpenSeaVoyage } from '@/scenes/battle/OpenSeaVoyage';
 import { markPlace, placeDanger, placeReady, placeReward, PLACE_FIGHT_RANGE, seaPlaces } from '@/systems/SeaPlaceSystem';
 import { nearestDock } from '@/systems/AnchorageSystem';
@@ -68,12 +69,12 @@ import { battleDifficulty, DIFFICULTIES, IDifficulty } from '@/systems/Difficult
 import { SoundKind } from '@/systems/SoundRules';
 import { battleConditions, revealedByFlash, TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { ISeaSky, seaSky } from '@/systems/WorldClock';
-import { arrivesAt, orderPatrol, orderPos, orderVoyage, patrolLoop, PatrolStance, RETURN_AT, ReturnRule, runMs, SIGHTING_MS, stopOrder } from '@/systems/FleetOrders';
+import { arrivesAt, MISSION_JA, MissionKind, orderPatrol, orderPos, orderVoyage, patrolLoop, PatrolStance, RETURN_AT, ReturnRule, runMs, SIGHTING_MS, stopOrder } from '@/systems/FleetOrders';
 import { recallExpedition } from '@/systems/ExpeditionSystem';
 import { expeditionPlan, expeditionPos } from '@/systems/ExpeditionRoute';
 import { fightNote, runFleetOrders } from '@/utils/FleetOrderRunner';
 import type { IChartFleet } from '@/scenes/OpenSeaChartScene';
-import { fleePoint, IGiantSea, IResident, IResidentPos, seaLine, meetResponse, MEET_PX, RESIDENT_CLEAR, ResidentKind, residentDay, residentsFor, residentsNear, worldGap } from '@/systems/WorldSim';
+import { fleePoint, IGiantSea, IResident, IResidentPos, seaLine, meetResponse, MEET_PX, RESIDENT_CLEAR, ResidentKind, residentDay, residentPos, residentsNear, worldGap } from '@/systems/WorldSim';
 import { IBattleConditions, TimeOfDay, Weather } from '@/types/Weather';
 import { primaryWeapon, selectWeapons, weaponKind, WeaponKind } from '@/systems/WeaponSelector';
 import { BattleMode } from '@/types/Battle';
@@ -119,6 +120,9 @@ import type { ICampaignArea, ICampaignData } from '@/types/Campaign';
 import { campaignSide, enemyNationFor, enemyShips, firstSReward, isUnlocked, recordClear, theatersFor, TRAINING_SCALE } from '@/systems/CampaignSystem';
 import { addBattle, addGiantBattle } from '@/systems/ShipRecordSystem';
 import { COUNTER_HOURS, counterTargets, countSortie, defenseReward, emptySeaControl, retakeArea, settleDefense } from '@/systems/SeaControlSystem';
+import { CONTROL_SAFE, controlWord, fuelMul, regionAt, regionAtPx, regionOfArea } from '@/systems/SeaRegionSystem';
+import { counterId, isCounterId, navyControl, planCounter, sweptArea, withAreaEvent, withRegionEvent } from '@/utils/SeaControlView';
+import { worldResidents } from '@/utils/FleetOrderRunner';
 import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
 import { LAST_STAND_HP, lastStandArmor, luckChance, skillModifiers, skillOf } from '@/systems/ShipSkillSystem';
@@ -243,6 +247,8 @@ export class BattleScene extends Phaser.Scene {
   /** 住人 (0.0.72): the day's residents of the seas the navy sails, and those near the fleet (for the minimap) */
   private residents: IResident[] = [];
   private residentsDay = -1;
+  private residentsAt = 0;
+  private controlCache: { at: number; map: Record<string, number> } | null = null;
   private nearResidents: Array<{ r: IResident; pos: IResidentPos }> = [];
   /** Friendly patrols already called to a fight (once each) */
   private calledFriends = new Set<string>();
@@ -1055,7 +1061,9 @@ export class BattleScene extends Phaser.Scene {
   /** 海の障害 (#368): the sea's minefields and nets, by its depth and objective (none in exercises or scenarios). */
   private setupHazards(area: ICampaignArea | undefined): void {
     if (!area || this.exercise || this.scenario) return;
-    const plan = hazardPlan(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
+    const laid = hazardPlan(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
+    // 掃海 (0.0.74): a sea swept lately holds no minefields.
+    const plan = laid.mines > 0 && sweptArea(loadProgress(), area.id, Date.now()) ? { ...laid, mines: 0 } : laid;
     const f = this.frame;
     if (f) {
       // At sea (0.0.70): laid out on the battle square, then turned onto the ocean.
@@ -1305,9 +1313,24 @@ export class BattleScene extends Phaser.Scene {
       const counted = countSortie(sea, counterTargets(data.areas, progress.campaign, sea, theaters), now);
       sea = counted.sea;
       const target = counted.started ? data.areas.find((a) => a.id === counted.started!.areaId) : undefined;
-      if (target) lines.push(`敵の反攻: ${target.name} に敵艦隊が迫っています。${COUNTER_HOURS} 時間以内に作戦の地図から防衛戦へ`);
+      // 反攻艦隊 (0.0.74): the counterattack gathers in the enemy's waters and sails for the area by sea.
+      if (target && sea.counter) {
+        const planned = planCounter({ ...progress, sea }, sea.counter, now);
+        sea = { ...sea, counter: planned };
+        lines.push(planned.route
+          ? `敵の反攻: ${target.name} に向けて敵の反攻艦隊が集結しています。${COUNTER_HOURS} 時間以内に、海の上で迎え撃つか作戦の地図から防衛戦へ`
+          : `敵の反攻: ${target.name} に敵艦隊が迫っています。${COUNTER_HOURS} 時間以内に作戦の地図から防衛戦へ`);
+      }
     }
-    return { progress: { ...progress, sea }, line: lines.join('  ·  ') };
+    // 海の地方 (0.0.74): the battle moves its region's control.
+    let next: IProgress = { ...progress, sea };
+    next = withAreaEvent(next, area.id, victory ? 'win' : 'loss', now);
+    const region = regionOfArea(area.id);
+    if (region) {
+      const v = navyControl(next, now, new Set([region.theater]))[region.id];
+      if (v !== undefined) lines.push(`${region.name}の制海権 ${v}% (${controlWord(v)})`);
+    }
+    return { progress: next, line: lines.join('  ·  ') };
   }
 
   private subtypeOf(ship: BaseShip): ShipSubtype | undefined {
@@ -2105,6 +2128,7 @@ export class BattleScene extends Phaser.Scene {
       openSeparation: () => this.openSeparation(),
       startDrill: (kind) => this.startDrill(kind),
       startAnniversary: (id) => this.startAnniversary(id),
+      fuelMulAt: (x, y) => this.fuelMulAt(x, y),
     }, nation, loadProgress().openSea, this.voyagePorts(), this.battleData?.openSeaFuel ?? placeFuel(loadProgress().openSea.anchors, this.battleData?.openSeaFrom ?? homeAnchor(nation)));
     // 画面の外の艦隊 (0.0.72): the fleets under orders are brought up to now as the voyage begins.
     this.runOrders();
@@ -2154,10 +2178,13 @@ export class BattleScene extends Phaser.Scene {
       const lead = registry.byId(a.shipIds[0])?.name.replace(/\s*\(.*\)\s*$/, '') ?? a.shipIds[0];
       const pos = a.order ? orderPos(a.order, now) : a.at;
       const left = a.order ? Math.max(0, arrivesAt(a.order) - now) : 0;
-      const place = a.order?.patrol ? `哨戒中 (${a.order.patrol.stance === 'chase' ? '見つけた敵を追う' : '知らせるだけ'})` : a.order ? `回航中 → ${placeName(a.order.dest, names)} (あと ${Math.ceil(left / 60000)} 分)` : placeName(a.at, names);
+      const mission = a.order?.patrol?.mission ?? 'patrol';
+      const duty = a.order?.patrol ? (mission === 'patrol' ? `哨戒中 (${a.order.patrol.stance === 'chase' ? '見つけた敵を追う' : '知らせるだけ'})` : `${MISSION_JA[mission]}の任務中`) : '';
+      const place = duty || (a.order ? `回航中 → ${placeName(a.order.dest, names)} (あと ${Math.ceil(left / 60000)} 分)` : `${placeName(a.at, names)}${a.intercept ? ' · 迎撃の待機中' : ''}`);
       return {
         index, label: `${lead}${a.shipIds.length > 1 ? ` ほか ${a.shipIds.length - 1} 隻` : ''}`, place, at: sectorAt(pos.x, pos.y), moving: !!a.order,
         minHp: Math.min(...a.shipIds.map((id) => p.damage[id] ?? 1)), fuel: a.fuel ?? FUEL_MAX, rule: a.returnAt ?? 'heavy',
+        ...(a.intercept ? { intercept: true } : {}), ...(a.at.base && !a.order ? { atBase: true } : {}),
       };
     });
     // 遠征の航路 (0.0.73): the expeditions on their routes, to be taken over too.
@@ -2188,6 +2215,11 @@ export class BattleScene extends Phaser.Scene {
         seen.set(r.id, { ...sectorAt(pos.x, pos.y), kind: r.kind });
       }
     }
+    // 反攻艦隊 (0.0.74): the counterattack is known wherever it is.
+    for (const r of this.residentList()) if (r.kind === 'counter' && !spotWon(world, r.id)) {
+      const at = residentPos(r, now);
+      seen.set(r.id, { ...sectorAt(at.x, at.y), kind: r.kind });
+    }
     // 哨戒 (0.0.73): what the patrols found in the last two world hours.
     for (const x of p.openSea.sightings ?? []) if (now - x.at <= SIGHTING_MS && !seen.has(x.id) && !spotWon(world, x.id)) seen.set(x.id, { c: x.c, r: x.r, kind: x.kind });
     return [...seen.values()];
@@ -2208,14 +2240,20 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 哨戒 (0.0.73): a fleet away sails to a loop round `centre` and keeps it, chasing or only reporting what it finds. */
-  private patrolFleet(index: number, centre: { c: number; r: number }, stance: PatrolStance): string | null {
+  private patrolFleet(index: number, centre: { c: number; r: number }, stance: PatrolStance, mission: MissionKind = 'patrol'): string | null {
     const p = loadProgress();
     const fleet = p.openSea.anchors[index];
     if (!fleet || fleet.order) return '回航中の艦隊です';
+    const now = Date.now();
+    // 任務 (0.0.74): 訓練 only in waters held; 通商破壊 only where the enemy's convoys sail (not in the navy's own waters).
+    const region = regionAt(centre);
+    const control = region ? navyControl(p, now, new Set([region.theater]))[region.id] : undefined;
+    if (mission === 'train' && (control === undefined || control < CONTROL_SAFE)) return `訓練は制海権 ${CONTROL_SAFE}% 以上の海でしかできません${region && control !== undefined ? ` (${region.name}は ${control}%)` : ''}`;
+    if (mission === 'raid' && region?.home === this.playerNation) return '自国の近海に敵の船団はいません';
     const loop = patrolLoop(centre, isSea, seaLine);
     const here = sectorAt(fleet.at.x, fleet.at.y);
     const route = here.c === loop[0].c && here.r === loop[0].r ? [here] : findRoute(here, loop[0]);
-    const ordered = orderPatrol(fleet, route, loop, stance, Date.now());
+    const ordered = orderPatrol(withoutIntercept(fleet), route, loop, stance, now, mission);
     if (typeof ordered === 'string') return ordered;
     saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? ordered : a)) } });
     return null;
@@ -2225,8 +2263,23 @@ export class BattleScene extends Phaser.Scene {
   private stopFleet(index: number): void {
     const p = loadProgress();
     const fleet = p.openSea.anchors[index];
+    // 迎撃 (0.0.74): a fleet waiting to intercept is simply stood down.
+    if (fleet?.intercept && !fleet.order) {
+      saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? withoutIntercept(a) : a)) } });
+      return;
+    }
     if (!fleet?.order) return;
     saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? stopOrder(a, Date.now()) : a)) } });
+  }
+
+  /** 迎撃 (0.0.74): a fleet lying in a base waits there and sails out to the enemies found near it. */
+  private interceptFleet(index: number): string | null {
+    const p = loadProgress();
+    const fleet = p.openSea.anchors[index];
+    if (!fleet || fleet.order) return '回航中の艦隊です';
+    if (!fleet.at.base) return '迎撃は基地に停泊している艦隊だけです';
+    saveProgress({ ...p, openSea: { ...p.openSea, anchors: p.openSea.anchors.map((a, i) => (i === index ? { ...a, intercept: { checkedAt: Date.now() } } : a)) } });
+    return null;
   }
 
   /** 自動の帰投の基準 (0.0.72) of a fleet away, or (-1) of the one steered. */
@@ -2325,7 +2378,8 @@ export class BattleScene extends Phaser.Scene {
       onOrder: (index: number, route: Array<{ c: number; r: number }>) => this.orderFleet(index, route),
       onSwitch: (index: number) => this.switchToFleet(index),
       onSwitchExpedition: (id: string) => this.switchToFleet({ expedition: id }),
-      onPatrol: (index: number, centre: { c: number; r: number }, stance: PatrolStance) => this.patrolFleet(index, centre, stance),
+      onPatrol: (index: number, centre: { c: number; r: number }, stance: PatrolStance, mission?: MissionKind) => this.patrolFleet(index, centre, stance, mission),
+      onIntercept: (index: number) => this.interceptFleet(index),
       onStop: (index: number) => this.stopFleet(index),
       onRule: (index: number, rule: ReturnRule) => this.setFleetRule(index, rule),
       sightings: () => this.sightings(),
@@ -2463,20 +2517,40 @@ export class BattleScene extends Phaser.Scene {
         this.startGiant(r, pos);
         return;
       }
-      if (harbour) continue;
+      // The counterattack (0.0.74) sails right up to its area: it is met there too.
+      if (harbour && r.kind !== 'counter') continue;
       this.startResident(r, pos);
       return;
     }
   }
 
-  /** The day's residents of the seas the navy sails (drawn again when the world's day turns). */
+  /**
+   * The day's residents of the seas the navy sails (drawn again when the world's day turns), with one more enemy patrol
+   * round each sea whose control is low and the counterattack under way (0.0.74, refreshed every ten seconds).
+   */
   private residentList(): IResident[] {
-    const day = residentDay(Date.now());
-    if (day !== this.residentsDay) {
+    const now = Date.now();
+    const day = residentDay(now);
+    if (day !== this.residentsDay || now - this.residentsAt > 10_000) {
       this.residentsDay = day;
-      this.residents = residentsFor(this.playerNation, [...this.seaTheaters()], day, this.giantSeas());
+      this.residentsAt = now;
+      this.residents = worldResidents(loadProgress(), [...this.seaTheaters()], now, this.giantSeas());
     }
     return this.residents;
+  }
+
+  /** 制海権 (0.0.74): the control of each region of the navy's seas, reckoned again every ten seconds. */
+  private controlNow(): Record<string, number> {
+    const now = Date.now();
+    if (!this.controlCache || now - this.controlCache.at > 10_000) this.controlCache = { at: now, map: navyControl(loadProgress(), now, this.seaTheaters()) };
+    return this.controlCache.map;
+  }
+
+  /** The fuel a sector costs at a point: more where the navy's control is low. */
+  private fuelMulAt(x: number, y: number): number {
+    const region = regionAtPx(x, y, SECTOR_PX);
+    const v = region ? this.controlNow()[region.id] : undefined;
+    return v === undefined ? 1 : fuelMul(v);
   }
 
   /** The navy's harbour (an open base or a port on the sea) nearest a point: where a convoy comes from (0.0.73). */
@@ -2689,8 +2763,9 @@ export class BattleScene extends Phaser.Scene {
         ai.goalThrottle = 1;
       }
     }
-    const title = convoy ? `敵の船団 (危険度 ${r.danger})` : `敵の巡回艦隊 (危険度 ${r.danger})${flee ? ' — 逃げ出した' : ''}`;
-    const goalText = convoy ? '逃げる船団と護衛を沈めると積荷が入る' : flee ? '逃げ切られる前に沈める' : '全艦を沈めると勝利';
+    const counter = r.kind === 'counter';
+    const title = counter ? `敵の反攻艦隊 (危険度 ${r.danger})` : convoy ? `敵の船団 (危険度 ${r.danger})` : `敵の巡回艦隊 (危険度 ${r.danger})${flee ? ' — 逃げ出した' : ''}`;
+    const goalText = counter ? '全艦を沈めると反攻を退けられる' : convoy ? '逃げる船団と護衛を沈めると積荷が入る' : flee ? '逃げ切られる前に沈める' : '全艦を沈めると勝利';
     this.beginSeaFight({ kind: 'encounter', spotId: r.id, danger: r.danger, resident: r.kind, flee, convoy: false, ...at }, title, nation, goalText);
     this.callFriends(at);
   }
@@ -3167,6 +3242,15 @@ export class BattleScene extends Phaser.Scene {
     const v = this.voyage;
     const place = seaPlaces(this.playerNation).find((p) => p.id === id);
     if (!v || !place || this.engagement) return;
+    // 制海権 (0.0.74): a port supplies only where the navy holds the sea (50%+).
+    const held = this.controlNow()[regionAt(place)?.id ?? ''];
+    if (held !== undefined && held < CONTROL_SAFE) {
+      if (!this.notedAreas.has(`port:${place.id}`)) {
+        this.notedAreas.add(`port:${place.id}`);
+        this.seaNote(`${place.name}: 制海権が ${held}% で補給船が入れません (${CONTROL_SAFE}% 以上で補給できます)`);
+      }
+      return;
+    }
     v.refuel();
     for (const s of this.friendlies()) if (s.isAlive) s.stats.currentHp = Math.max(s.stats.currentHp, Math.round(s.stats.maxHp * PORT_REPAIR));
     const now = Date.now();
@@ -4272,6 +4356,21 @@ export class BattleScene extends Phaser.Scene {
       const w = this.battleData.world;
       let world = afterBattle(progress.world ?? emptyWorld(), w.spotId, w.danger, victory);
       let line = `外洋 (危険度 ${w.danger}): ${victory ? '勝利' : '敗北'}`;
+      // 海の地方 (0.0.74): a fight at sea moves the control of the region it was fought in; a counterattack beaten
+      // keeps its sea.
+      const counterHit = isCounterId(w.spotId) && progress.sea?.counter && counterId(progress.sea.counter) === w.spotId;
+      progress = withRegionEvent(progress, this.flagship.x, this.flagship.y, victory ? (counterHit ? 'counter' : w.raid ? 'raid' : 'win') : 'loss', now);
+      if (counterHit && victory && progress.sea?.counter) {
+        const target = (campaignData as ICampaignData).areas.find((a) => a.id === progress.sea!.counter!.areaId);
+        progress = { ...progress, sea: settleDefense(progress.sea, progress.sea.counter.areaId, true) };
+        if (target) {
+          const reward = defenseReward(target.reward);
+          const g5 = gainResources(progress.resources, reward, holdCap(progress.facilities));
+          progress = withQuestEvents({ ...progress, resources: g5.resources, ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(reward, g5.lost, -1), now), 'overflow', g5.lost, now) }, [['defenseWin', 1], ['counterRepel', 1]], now);
+          lost = addResources(lost, g5.lost);
+          line += `  ·  反攻艦隊を撃退: ${target.name}の制海権を守りました (${formatResources(reward)})`;
+        }
+      }
       if (victory) {
         // 制海権 (#65 第 3 段階): a ring the navy holds pays more; every win counts towards holding it.
         const base = worldReward(w.danger);

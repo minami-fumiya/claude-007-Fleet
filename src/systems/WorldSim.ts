@@ -10,9 +10,10 @@
 import {
   ISectorRef, SECTOR_PX, WORLD_MAP, WORLD_PX, colGap, dangerAt, homePort, isSea, theaterOf, wrapCol,
 } from '@/systems/OpenSeaSystem';
-import { worldHours } from '@/systems/WorldClock';
+import { WORLD_HOUR_MS, worldHours } from '@/systems/WorldClock';
 
-export type ResidentKind = 'patrol' | 'convoy' | 'friend' | 'superweapon';
+/** 0.0.74: `counter` — an enemy counterattack sailing for a sea the navy holds */
+export type ResidentKind = 'patrol' | 'convoy' | 'friend' | 'superweapon' | 'counter';
 
 export interface IResident {
   /** `<day>:<kind>:<theater>:<n>` — the day first, so a sinking is kept for the day only (WorldSystem's spots) */
@@ -26,8 +27,10 @@ export interface IResident {
   speed: number;
   /** Where on its path it was at the day's start (0..1) */
   phase: number;
-  /** 超兵器 (0.0.72): the campaign area whose superweapon it is (it patrols round that area) */
+  /** 超兵器 (0.0.72): the campaign area whose superweapon it is (it patrols round that area); 反攻 (0.0.74): the area it sails for */
   areaId?: string;
+  /** 反攻 (0.0.74): real ms it sets out along its path (it gathers at the start till then, and stays at the end) */
+  sailAt?: number;
 }
 
 /** A superweapon's sea open to the navy: the area, its middle sector and its theater. */
@@ -41,7 +44,7 @@ export interface IGiantSea {
 export const RESIDENT_DAY_HOURS = 24;
 /** Residents close enough to the fleet to be drawn and watched at once (重さの目安). */
 export const MAX_NEAR = 60;
-export const SPEED: Record<ResidentKind, number> = { patrol: 4, convoy: 3, friend: 4, superweapon: 2 };
+export const SPEED: Record<ResidentKind, number> = { patrol: 4, convoy: 3, friend: 4, superweapon: 2, counter: 4 };
 /** Residents a sea sector, by kind (an enemy patrol every ~85 sectors: a fleet meets about as many as the 0.0.69 groups). */
 export const PATROL_DENSITY = 0.012;
 export const CONVOY_DENSITY = 0.0024;
@@ -160,8 +163,8 @@ const cache = new Map<string, IResident[]>();
  * The residents of a day in the seas a navy sails (`theaters`): the enemy's patrols and convoys there, and the navy's
  * own patrols in the sea of its home port. Drawn by a fixed seed, so the same for every call.
  */
-export function residentsFor(nation: string, theaters: readonly string[], day: number, giants: readonly IGiantSea[] = []): IResident[] {
-  const key = `${nation}|${day}|${[...theaters].sort().join(',')}|${giants.map((g) => g.areaId).join(',')}`;
+export function residentsFor(nation: string, theaters: readonly string[], day: number, giants: readonly IGiantSea[] = [], hot: readonly ISectorRef[] = []): IResident[] {
+  const key = `${nation}|${day}|${[...theaters].sort().join(',')}|${giants.map((g) => g.areaId).join(',')}|${hot.map((s) => `${s.c}.${s.r}`).join(',')}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const cells = theaterCells();
@@ -199,6 +202,15 @@ export function residentsFor(nation: string, theaters: readonly string[], day: n
     add('convoy', Math.max(1, Math.round(sea.length * CONVOY_DENSITY)));
     if (theater === homeTheater) add('friend', Math.max(2, Math.round(sea.length * FRIEND_DENSITY)));
   }
+  // 制海権 (0.0.74): where the navy's control is low the enemy patrols more — one more patrol round each such sea.
+  for (const s of hot) {
+    const theater = theaterOf(s.c, s.r);
+    const sea = theater ? cells[theater] ?? [] : [];
+    if (!theater || !theaters.includes(theater) || sea.length === 0) continue;
+    const next = rng(hashText(`${nation}:hot:${s.c}:${s.r}:${day}`));
+    const path = loopFrom(s, sea, next);
+    if (path) out.push({ id: `${day}:patrol:hot:${s.c}.${s.r}`, kind: 'patrol', theater, danger: dangerAt(nation, s), path, speed: SPEED.patrol, phase: next() });
+  }
   // 超兵器 (0.0.72): each open superweapon's sea has its giant slowly patrolling round the area.
   for (const g of giants) {
     const sea = cells[g.theater] ?? [];
@@ -215,6 +227,7 @@ export function residentsFor(nation: string, theaters: readonly string[], day: n
 
 /** The full path a resident sails round: a loop closes on its start, a run comes back the same way. */
 function legs(r: IResident): ISectorRef[] {
+  if (r.kind === 'counter') return r.path;
   return r.kind === 'convoy' ? [...r.path, ...r.path.slice(0, -1).reverse()] : [...r.path, r.path[0]];
 }
 
@@ -237,7 +250,10 @@ export function residentPos(r: IResident, now: number): IResidentPos {
   const pts = legs(r);
   const total = pathLength(r);
   const hours = worldHours(now) - residentDay(now) * RESIDENT_DAY_HOURS;
-  let d = ((r.phase * total + hours * r.speed) % total + total) % total;
+  // 反攻 (0.0.74): gathered at its start, then along its way once, then at its end.
+  let d = r.sailAt !== undefined
+    ? Math.max(0, Math.min(total, ((now - r.sailAt) / WORLD_HOUR_MS) * r.speed))
+    : ((r.phase * total + hours * r.speed) % total + total) % total;
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1];
     const b = pts[i];
@@ -267,7 +283,7 @@ export function residentsNear(list: readonly IResident[], at: { x: number; y: nu
   for (const r of list) {
     // A cheap first cut on the path's first sector (a patrol keeps within PATROL_REACH of it; a run within 30).
     const s = r.path[0];
-    const far = r.kind === 'convoy' ? 32 : PATROL_REACH + 2;
+    const far = r.kind === 'counter' ? 200 : r.kind === 'convoy' ? 32 : PATROL_REACH + 2;
     if (colGap(s.c, Math.floor(at.x / SECTOR_PX)) > far + range / SECTOR_PX || Math.abs(s.r - at.y / SECTOR_PX) > far + range / SECTOR_PX) continue;
     const pos = residentPos(r, now);
     const dist = worldGap(pos, at);
@@ -279,6 +295,8 @@ export function residentsNear(list: readonly IResident[], at: { x: number; y: nu
 /** On meeting: an enemy patrol much weaker than the fleet runs; a convoy always runs; otherwise it closes. */
 export function meetResponse(kind: ResidentKind, enemyPower: number, playerPower: number): 'chase' | 'flee' {
   if (kind === 'convoy') return 'flee';
+  // 反攻艦隊 (0.0.74): it is set on its target and never runs.
+  if (kind === 'counter') return 'chase';
   return enemyPower < playerPower * FLEE_BELOW ? 'flee' : 'chase';
 }
 

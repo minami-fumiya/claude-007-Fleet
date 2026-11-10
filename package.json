@@ -1,6 +1,6 @@
 {
   "name": "claude-007-fleet",
-  "version": "0.0.73-alpha",
+  "version": "0.0.74-alpha",
   "private": true,
   "type": "module",
   "scripts": {
