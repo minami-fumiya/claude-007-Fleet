@@ -14,7 +14,7 @@
  */
 import type { ISectorRef } from '@/systems/OpenSeaSystem';
 import { SECTOR_PX, colGap, dangerAt } from '@/systems/OpenSeaSystem';
-import type { ISeaRegion } from '@/systems/SeaRegionSystem';
+import { ISeaRegion, regionAt } from '@/systems/SeaRegionSystem';
 import { WORLD_HOUR_MS } from '@/systems/WorldClock';
 import { IResident, residentPos, worldGap } from '@/systems/WorldSim';
 
@@ -80,9 +80,9 @@ function gap(a: ISectorRef, b: ISectorRef): number {
   return Math.hypot(colGap(a.c, b.c), a.r - b.r);
 }
 
-/** Whether an airfield's planes reach a region (its middle). */
-export function inAirRange(field: Pick<IAirField, 'at'>, region: Pick<ISeaRegion, 'seed'>): boolean {
-  return gap(field.at, region.seed) <= AIR_RANGE;
+/** Whether an airfield's planes reach a region: its middle within AIR_RANGE, or the airfield in the region itself. */
+export function inAirRange(field: Pick<IAirField, 'at'>, region: Pick<ISeaRegion, 'seed' | 'id'>): boolean {
+  return gap(field.at, region.seed) <= AIR_RANGE || regionAt(field.at)?.id === region.id;
 }
 
 /** The navy's air over a region. */

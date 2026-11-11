@@ -2562,3 +2562,49 @@ test('制海権と任務 (0.0.74): the chart shows each region’s control; flee
   expect((await stored())[0].intercept).toBeUndefined();
   expect(errors).toEqual([]);
 });
+
+test('制空権と補給線 (0.0.75): the chart colours the sky and the supply; a base air group reaching a sea can be sent (#445)', async ({ page }, info) => {
+  test.setTimeout(120_000);
+  const layout = info.project.metadata.layout as string;
+  const ijn = SAVE.nations.IJN as Record<string, unknown>;
+  const errors = await boot(page, layout, {
+    ...SAVE, version: 23, seenHelp: [...SCREENS, 'OpenSeaChartScene'],
+    nations: { IJN: { ...ijn, merit: 900, rankFloor: 8, basesOpen: ['ijn_light', 'ijn_fb_north_pacific'], baseWork: null, facilityJobs: [], facilities: { ...((ijn.facilities as object) ?? {}), ijn_fb_north_pacific: { baseAir: 2 } } } },
+  });
+  type G = { game: Phaser.Game };
+  type C = { showControl: string; dest: { c: number; r: number } | null; plan: unknown; drawTexture(redraw?: boolean): void; drawPanel(): void; drawChart(): void; air: Record<string, number>; supplied: Set<string> };
+  await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => ((window as unknown as G).game.scene.getScene('BattleScene') as unknown as { openChart(): void }).openChart());
+  await page.waitForFunction(() => (window as unknown as G).game.scene.getScene('OpenSeaChartScene')?.sys.settings.active === true);
+  for (const layer of ['air', 'supply']) {
+    const counts = await page.evaluate((l) => {
+      const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as C;
+      c.showControl = l;
+      c.drawTexture(true);
+      c.drawPanel();
+      return { air: Object.keys(c.air).length, supplied: c.supplied.size };
+    }, layer);
+    expect(counts.air).toBeGreaterThan(10);
+    expect(counts.supplied).toBeGreaterThan(0);
+    await page.waitForTimeout(300);
+    expect(await overflowingTexts(page, 'OpenSeaChartScene'), `${layer} (${layout})`).toEqual([]);
+    expect(await overlappingTexts(page, 'OpenSeaChartScene'), `${layer} overlaps (${layout})`).toEqual([]);
+    await page.screenshot({ path: info.outputPath(`${layer}.png`) });
+  }
+  // A sea beside the cruiser base: its air group reaches, and the panel offers it a mission.
+  const offered = await page.evaluate(() => {
+    const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as C & { layer: Phaser.GameObjects.GameObject[] };
+    c.dest = { c: 265, r: 30 };
+    c.plan = null;
+    c.drawChart();
+    c.drawPanel();
+    return c.layer.some((o) => (o as unknown as { label?: { text?: string } }).label?.text?.includes('から出す') || (o as Phaser.GameObjects.Text).text?.includes?.('基地航空隊'));
+  });
+  expect(offered).toBe(true);
+  await page.waitForTimeout(300);
+  expect(await overflowingTexts(page, 'OpenSeaChartScene'), `air ops (${layout})`).toEqual([]);
+  expect(await overlappingTexts(page, 'OpenSeaChartScene'), `air ops overlaps (${layout})`).toEqual([]);
+  await page.screenshot({ path: info.outputPath('air-ops.png') });
+  expect(errors).toEqual([]);
+});

@@ -127,3 +127,18 @@ describe('0.0.75 航空の任務', () => {
     expect(ids).not.toContain('air_superior_2');
   });
 });
+
+describe('0.0.75 前線基地の施設を読み込む', () => {
+  it('keeps the forward bases’ facilities and their works on loading (they were dropped since 0.0.50)', async () => {
+    const { emptySave, parseSave } = await import('@/utils/ProgressStore');
+    const save = emptySave();
+    const base = 'ijn_fb_north_pacific';
+    const np = { facilities: { [base]: { supply: 2, anchorage: 1, baseAir: 3, frontShop: 1, outpost: 1 }, ijn_home: { fuelTank: 2 } }, facilityJobs: [{ base, id: 'baseAir', level: 3, endsAt: 99 }] };
+    const raw = JSON.parse(JSON.stringify(save));
+    raw.nations = { IJN: np };
+    const back = parseSave(JSON.stringify(raw)).nations.IJN!;
+    expect(back.facilities[base]).toEqual({ supply: 2, anchorage: 1, baseAir: 3, frontShop: 1, outpost: 1 });
+    expect(back.facilities.ijn_home).toEqual({ fuelTank: 2 });
+    expect(back.facilityJobs).toHaveLength(1);
+  });
+});
