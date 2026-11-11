@@ -1,6 +1,7 @@
 import { IResources } from '@/types/Progression';
 import { RESOURCE_KEYS, resources } from '@/systems/ResourceSystem';
 import { IRegionEvent, parseRegionEvents } from '@/systems/SeaRegionSystem';
+import { IAirOp, parseAirOps } from '@/systems/AirControlSystem';
 
 /**
  * 制海権と敵の反攻 (#50, pure). Every area a navy has won is its sea: the seas held pay an hourly income on top of the
@@ -33,6 +34,12 @@ export interface ISeaControl {
   incomeAt: number;
   /** 海の地方 (0.0.74): the fights and duties of late, by region (they move its control) */
   events?: IRegionEvent[];
+  /** 航空の任務 (0.0.75): each base air group's mission */
+  airOps?: IAirOp[];
+  /** 対艦攻撃 (0.0.75): residents struck from the air (id → when), so they fight weaker */
+  struck?: Record<string, number>;
+  /** 前線基地 (0.0.75): the strongholds taken whose islands hold a forward base (sea place ids) */
+  outposts?: string[];
 }
 
 export function emptySeaControl(): ISeaControl {
@@ -65,7 +72,14 @@ export function parseSeaControl(raw: unknown): ISeaControl {
   const counter = c && typeof c.areaId === 'string' && typeof c.endsAt === 'number' ? { areaId: c.areaId, startedAt: num(c.startedAt), endsAt: c.endsAt, ...fleet } : null;
   const lost = Array.isArray(d.lost) ? [...new Set(d.lost.filter((x): x is string => typeof x === 'string'))] : [];
   const events = parseRegionEvents(d.events);
-  return { lost, counter, sorties: num(d.sorties), count: num(d.count), incomeAt: num(d.incomeAt), ...(events.length > 0 ? { events } : {}) };
+  const airOps = parseAirOps(d.airOps);
+  const struckRaw = d.struck && typeof d.struck === 'object' ? (d.struck as Record<string, unknown>) : {};
+  const struck = Object.fromEntries(Object.entries(struckRaw).filter(([, v]) => typeof v === 'number' && Number.isFinite(v)) as Array<[string, number]>);
+  const outposts = Array.isArray(d.outposts) ? [...new Set(d.outposts.filter((x): x is string => typeof x === 'string'))] : [];
+  return {
+    lost, counter, sorties: num(d.sorties), count: num(d.count), incomeAt: num(d.incomeAt),
+    ...(events.length > 0 ? { events } : {}), ...(airOps.length > 0 ? { airOps } : {}), ...(Object.keys(struck).length > 0 ? { struck } : {}), ...(outposts.length > 0 ? { outposts } : {}),
+  };
 }
 
 /** The seas held: areas won and not taken back, training areas aside. */

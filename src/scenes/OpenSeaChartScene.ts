@@ -13,13 +13,15 @@ import { ICampaignData, Objective } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
 import { Weather } from '@/types/Weather';
 import { MISSION_JA, MissionKind, PatrolStance, RETURN_JA, RETURN_RULES, RETURN_SHORT, ReturnRule } from '@/systems/FleetOrders';
-import { CONTROL_LOW, CONTROL_SAFE, controlWord, regionAt } from '@/systems/SeaRegionSystem';
-import { navyControl } from '@/utils/SeaControlView';
+import { CONTROL_LOW, CONTROL_SAFE, ISeaRegion, controlWord, regionAt, regionById } from '@/systems/SeaRegionSystem';
+import { airFields, navyAir, navyControl, suppliedRegions } from '@/utils/SeaControlView';
+import { AIR_HIGH, AIR_LOW, AIR_MISSIONS, AIR_MISSION_JA, clearAirOp, fieldsFor, setAirOp } from '@/systems/AirControlSystem';
+import { emptySeaControl } from '@/systems/SeaControlSystem';
 import { TIME_LABEL, WEATHER_LABEL } from '@/systems/WeatherSystem';
 import { clockText, frontsAt, seaSky } from '@/systems/WorldClock';
 import { addPanel, fitText, UIButton } from '@/ui/components/UIKit';
 import { Colors, Css, displayStyle, eyebrowStyle, textStyle } from '@/ui/theme';
-import { loadProgress } from '@/utils/ProgressStore';
+import { loadProgress, saveProgress } from '@/utils/ProgressStore';
 
 export interface IOpenSeaChartData {
   nation: string;
@@ -84,6 +86,17 @@ const L = IS_PORTRAIT
 const ZOOMS = [L.chart.w / WORLD_MAP.cols, 6, 12, 24];
 const TEXTURE = 'open-sea-chart';
 
+/** 海図の色分け (0.0.74 制海権, 0.0.75 制空権・補給線) */
+type ChartLayer = 'explore' | 'sea' | 'air' | 'supply';
+const LAYERS: readonly ChartLayer[] = ['explore', 'sea', 'air', 'supply'];
+const LAYER_JA: Record<ChartLayer, string> = { explore: '探索', sea: '制海権', air: '制空権', supply: '補給線' };
+const LEGEND: Record<ChartLayer, string> = {
+  explore: '金の丸: 軍港 · 白い四角: 基地 · 赤い枠: 作戦海域 (緑は攻略済み) · 三角: 艦隊 · 明るい海: 探索済み',
+  sea: `制海権: 緑 ${CONTROL_SAFE}% 以上 (船団が通る) · 黄 拮抗 · 赤 ${CONTROL_LOW}% 未満 (敵が多く、燃料が多く要る)`,
+  air: `制空権: 緑 ${AIR_HIGH}% 以上 (偵察が出る) · 黄 拮抗 · 赤 ${AIR_LOW}% 以下 (敵の陸上機が空襲に来る)`,
+  supply: '補給線: 緑 補給が届く (燃料が減りにくく、港の修理が増える) · 赤 補給の切れた海 (制海権が下がる)',
+};
+
 const COLOR = { land: 0x5f7d4c, seen: 0x2f6f9a, open: 0x163a55, closed: 0x0d1d2c, held: 0x2f7a5a, contested: 0x8a7330, enemy: 0x8a3340 };
 
 /** 任務の選び方 (0.0.74): what the list's duty button cycles through. */
@@ -125,7 +138,11 @@ export class OpenSeaChartScene extends Phaser.Scene {
   /** 任務 (0.0.74): the duty a fleet sent from the list takes up (哨戒 has its two stances; 迎撃 waits in its base) */
   private duty = 0;
   /** 制海権 (0.0.74): the chart coloured by the navy's control of each region */
-  private showControl = false;
+  private showControl: ChartLayer = 'explore';
+  private air: Record<string, number> = {};
+  private supplied = new Set<string>();
+  /** 航空の任務 (0.0.75): the mission picked for a base air group */
+  private airMission = 0;
   private control: Record<string, number> = {};
 
   constructor() {
@@ -154,6 +171,8 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const reach = baseOfProgress(progress);
     this.open = new Set(theatersFor(DATA, this.d.nation as Nation).filter((t) => baseReaches(reach, t.id)).map((t) => t.id));
     this.control = navyControl(progress, Date.now(), this.open);
+    this.air = navyAir(progress, Date.now(), this.open);
+    this.supplied = suppliedRegions(progress, Date.now());
 
     this.add.rectangle(0, 0, CANVAS_W, CANVAS_H, Colors.bgDeep, 0.94).setOrigin(0, 0).setInteractive();
     this.add.text(CANVAS_W / 2, IS_PORTRAIT ? 50 : 40, '海図', displayStyle(IS_PORTRAIT ? 28 : 24)).setOrigin(0.5);
@@ -174,9 +193,10 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const zh = IS_PORTRAIT ? 52 : 40;
     new UIButton(this, x + zw / 2, zy, '縮小', () => this.setZoom(this.zoom - 1), { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
     new UIButton(this, x + zw * 1.5 + 12, zy, '拡大', () => this.setZoom(this.zoom + 1), { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
-    const ctl = new UIButton(this, x + zw * 2.5 + 24, zy, '制海権', () => {
-      this.showControl = !this.showControl;
-      ctl.setLabel(this.showControl ? '探索' : '制海権');
+    // 0.0.74 制海権, 0.0.75 制空権・補給線: the chart's colouring in turn.
+    const ctl = new UIButton(this, x + zw * 2.5 + 24, zy, LAYER_JA.sea, () => {
+      this.showControl = LAYERS[(LAYERS.indexOf(this.showControl) + 1) % LAYERS.length];
+      ctl.setLabel(LAYER_JA[LAYERS[(LAYERS.indexOf(this.showControl) + 1) % LAYERS.length]]);
       this.drawTexture(true);
       this.drawPanel();
     }, { variant: 'secondary', width: zw, height: zh, fontSize: 15 });
@@ -217,10 +237,12 @@ export class OpenSeaChartScene extends Phaser.Scene {
           const t = theaterOf(c, r);
           col = isExplored(this.d.explored, { c, r }) ? COLOR.seen : t && this.open.has(t) ? COLOR.open : COLOR.closed;
           // 制海権 (0.0.74): green where held (50%+), amber contested, red the enemy's (below 20%).
-          if (this.showControl && t && this.open.has(t)) {
+          if (this.showControl !== 'explore' && t && this.open.has(t)) {
             const region = regionAt({ c, r });
-            const v = region ? this.control[region.id] : undefined;
-            if (v !== undefined) col = v >= CONTROL_SAFE ? COLOR.held : v >= CONTROL_LOW ? COLOR.contested : COLOR.enemy;
+            const v = region ? (this.showControl === 'air' ? this.air : this.control)[region.id] : undefined;
+            if (region && this.showControl === 'supply') col = this.supplied.has(region.id) ? COLOR.held : (this.control[region.id] ?? 0) >= CONTROL_SAFE ? COLOR.enemy : COLOR.open;
+            else if (v !== undefined && this.showControl === 'air') col = v >= AIR_HIGH ? COLOR.held : v > AIR_LOW ? COLOR.contested : COLOR.enemy;
+            else if (v !== undefined) col = v >= CONTROL_SAFE ? COLOR.held : v >= CONTROL_LOW ? COLOR.contested : COLOR.enemy;
           }
         }
         const i = (r * WORLD_MAP.cols + c) * 4;
@@ -416,6 +438,7 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const home = homePort(this.d.nation);
     const dest = this.dest;
     let go: ISectorRef[] | null = null;
+    let airRegion: ISeaRegion | null = null;
     if (dest) {
       add(this.add.text(x, y, '行き先', eyebrowStyle(11, Css.gold)));
       y += 20;
@@ -426,7 +449,8 @@ export class OpenSeaChartScene extends Phaser.Scene {
       // 海の地方 (0.0.74)
       const region = isSea(dest.c, dest.r) ? regionAt(dest) : null;
       const v = region ? this.control[region.id] : undefined;
-      if (region && v !== undefined) line(`${region.name} · 制海権 ${v}% (${controlWord(v)})`, 13, v >= CONTROL_SAFE ? Css.success : v >= CONTROL_LOW ? Css.gold : Css.danger);
+      if (region && v !== undefined) line(`${region.name} · 制海権 ${v}% (${controlWord(v)}) · 制空権 ${this.air[region.id] ?? 50}%${this.supplied.has(region.id) ? ' · 補給線の中' : ''}`, 13, v >= CONTROL_SAFE ? Css.success : v >= CONTROL_LOW ? Css.gold : Css.danger);
+      airRegion = region && v !== undefined ? region : null;
       if (!isSea(dest.c, dest.r)) line('陸です。海を選んでください', 13, Css.danger);
       else if (!this.plan) line('ここへの海の道がありません', 13, Css.danger);
       else {
@@ -443,9 +467,7 @@ export class OpenSeaChartScene extends Phaser.Scene {
         }
       }
     } else line('海をタップすると、行き先と航路・燃料が出ます。決めると自動航行で走ります', 13, Css.muted);
-    line(this.showControl
-      ? `制海権: 緑 ${CONTROL_SAFE}% 以上 (船団が通る) · 黄 拮抗 · 赤 ${CONTROL_LOW}% 未満 (敵が多く、燃料が多く要る)`
-      : '金の丸: 軍港 · 白い四角: 基地 · 赤い枠: 作戦海域 (緑は攻略済み) · 三角: 艦隊 · 明るい海: 探索済み', 11, Css.muted);
+    line(LEGEND[this.showControl], 11, Css.muted);
 
     const by = P.y + P.h - 16 - L.bh / 2;
     const half = (w - 12) / 2;
@@ -454,7 +476,38 @@ export class OpenSeaChartScene extends Phaser.Scene {
     const homeRoute = home ? findRoute(this.d.at, home) : null;
     const homeBtn = add(new UIButton(this, x + w - half / 2, by, '軍港へ', () => homeRoute && this.choose(homeRoute), { variant: 'primary', width: half, height: L.bh, fontSize: IS_PORTRAIT ? 16 : 13 }));
     homeBtn.setEnabled(homeRoute !== null && homeRoute.length > 1);
+    // 航空の任務 (0.0.75): a base air group that reaches the region picked can be sent on a mission there.
+    if (airRegion) this.drawAirOps(add, airRegion, x, w, by - L.bh - 10);
     for (const o of this.layer) if (o instanceof Phaser.GameObjects.Text) fitText(o, w);
+  }
+
+  /** 航空の任務 (0.0.75): the nearest base air group reaching the region, its mission picked in turn, sent or called off. */
+  private drawAirOps(add: <T extends Phaser.GameObjects.GameObject>(o: T) => T, region: ISeaRegion, x: number, w: number, by: number): void {
+    const progress = loadProgress();
+    const field = fieldsFor(region, airFields(progress))[0];
+    if (!field) return;
+    const ops = progress.sea?.airOps ?? [];
+    const current = ops.find((o) => o.base === field.id);
+    const here = current?.region === region.id;
+    const mission = AIR_MISSIONS[this.airMission];
+    const half = (w - 12) / 2;
+    const bh = IS_PORTRAIT ? 48 : 36;
+    add(new UIButton(this, x + half / 2, by, `航空: ${AIR_MISSION_JA[mission]}`, () => {
+      this.airMission = (this.airMission + 1) % AIR_MISSIONS.length;
+      this.drawPanel();
+    }, { variant: 'secondary', width: half, height: bh, fontSize: IS_PORTRAIT ? 14 : 12 }));
+    add(new UIButton(this, x + w - half / 2, by, here ? '航空任務を解く' : `${field.name}から出す`, () => {
+      const p = loadProgress();
+      const sea = p.sea ?? emptySeaControl();
+      const next = here ? clearAirOp(sea.airOps ?? [], field.id) : setAirOp(sea.airOps ?? [], field.id, mission, region.id, Date.now());
+      saveProgress({ ...p, sea: { ...sea, airOps: next } });
+      this.air = navyAir(loadProgress(), Date.now(), this.open);
+      if (this.showControl === 'air') this.drawTexture(true);
+      this.drawPanel();
+    }, { variant: here ? 'secondary' : 'primary', width: half, height: bh, fontSize: IS_PORTRAIT ? 14 : 12 }));
+    const note = current ? `${field.name}の基地航空隊: ${AIR_MISSION_JA[current.mission]} (${regionById(current.region)?.name ?? ''})` : `${field.name}の基地航空隊が届きます (待機中)`;
+    const t = add(this.add.text(x, by - bh / 2 - 8, note, textStyle(11, current ? Css.cyan : Css.muted)).setOrigin(0, 1));
+    fitText(t, w);
   }
 
   /**
