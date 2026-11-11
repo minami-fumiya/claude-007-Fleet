@@ -16,13 +16,15 @@ import { nearestDock } from '@/systems/AnchorageSystem';
 import { WORLD_MAP, baseAnchor, findRoute } from '@/systems/OpenSeaSystem';
 import { IResident, residentDay, residentPos, residentsFor } from '@/systems/WorldSim';
 import { addResources, gainResources } from '@/systems/ResourceSystem';
-import { defenseReward, settleDefense } from '@/systems/SeaControlSystem';
+import { defenseReward, emptySeaControl, settleDefense } from '@/systems/SeaControlSystem';
+import { advanceAirOps, IAirWork, STRUCK_MUL } from '@/systems/AirControlSystem';
+import { CONTROL_SAFE, addRegionEvent, regionById } from '@/systems/SeaRegionSystem';
+import { WORLD_HOUR_MS } from '@/systems/WorldClock';
 import { holdCap } from '@/systems/FacilitySystem';
 import { recordLedger } from '@/systems/LedgerSystem';
 import { addProficiency } from '@/systems/ProficiencySystem';
-import { counterResident, controlAtPx, hotSeas, isCounterId, withRegionEvent } from '@/utils/SeaControlView';
+import { counterResident, controlAtPx, hotSeas, isCounterId, wasStruck, withRegionEvent } from '@/utils/SeaControlView';
 import { resourceReward } from '@/systems/WorldSystem';
-import { CONTROL_SAFE } from '@/systems/SeaRegionSystem';
 import { markResidentWon, spotWon, worldEnemyFleet, worldEnemyScale, emptyWorld } from '@/systems/WorldSystem';
 import { SECTOR_PX } from '@/systems/OpenSeaSystem';
 import { ICampaignData } from '@/types/Campaign';
@@ -61,7 +63,8 @@ export function worldResidents(progress: IProgress, theaters: readonly string[],
 export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: number): { progress: IProgress; fights: IOffscreenFight[] } | null {
   // 遠征の航路 (0.0.73): expeditions sail their routes too; 0.0.74: fleets waiting in a base to intercept.
   const routed = progress.expeditions.some((x) => x.startedAt !== undefined && !x.cut && x.endsAt > (x.checkedAt ?? 0));
-  if (!progress.openSea.anchors.some((a) => a.order || a.intercept) && !routed) return null;
+  // 0.0.75: the base air groups' missions too.
+  if (!progress.openSea.anchors.some((a) => a.order || a.intercept) && !routed && (progress.sea?.airOps ?? []).length === 0) return null;
   const data = campaignData as ICampaignData;
   const theaters = navyTheaters(progress);
   const residents = worldResidents(progress, theaters, now);
@@ -75,7 +78,8 @@ export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: num
     power: (ids, health) => fleetPower(ids.map((id) => ships.byId(id)).filter((s): s is IShipData => s !== undefined).map((s) => ({ hp: s.hp * (health[s.id] ?? 1), armor: s.armor }))),
     enemyPower: (r) => {
       const opponent = data.theaters.find((t) => t.id === r.theater)?.opponents?.[progress.nation] ?? Nation.USN;
-      return fleetPower(worldEnemyFleet(ships.byNation(opponent), { id: r.id, danger: r.danger })) * worldEnemyScale(r.danger);
+      // 対艦攻撃 (0.0.75): a fleet struck from the air fights weaker.
+      return fleetPower(worldEnemyFleet(ships.byNation(opponent), { id: r.id, danger: r.danger })) * worldEnemyScale(r.danger) * (wasStruck(progress, r.id) ? STRUCK_MUL : 1);
     },
     homeFrom: (s) => {
       const base = nearestDock(progress, s);
@@ -86,6 +90,16 @@ export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: num
     },
   };
   const ordered = advanceOrders(progress.openSea.anchors, hp, now, offscreen);
+  // 航空の任務 (0.0.75): the base air groups search, strike the ships found and strike the enemy's harbours.
+  const air = advanceAirOps({
+    ops: progress.sea?.airOps ?? [],
+    regions: (id) => regionById(id),
+    residents,
+    won: (id) => spotWon(world, id),
+    struck: (id) => wasStruck(progress, id),
+    enemyHarbour: (r) => !!r.areaId && (!progress.campaign.includes(r.areaId) || (progress.sea?.lost ?? []).includes(r.areaId)),
+  }, now);
+  ordered.sightings.push(...air.found.map(({ base: _b, ...x }) => x));
   // 迎撃 (0.0.74): what the patrols found just now, and the counterattack at sea, for the fleets waiting in a base.
   const byId = new Map(residents.map((r) => [r.id, r]));
   const known: IKnownFoe[] = ordered.sightings.flatMap((x) => {
@@ -116,7 +130,21 @@ export function runFleetOrders(progress: IProgress, ships: IShipLookup, now: num
   for (const f of fights) if (f.won) w = markResidentWon(w, f.residentId);
   next = { ...next, world: w };
   next = applyDutyResults(next, fights, ordered.works, residents, now);
+  next = applyAirWork(next, air, now);
   return { progress: next, fights };
+}
+
+/** 航空の任務 (0.0.75): the missions counted on; the ships struck kept two world days; the harbours struck in their regions. */
+function applyAirWork(progress: IProgress, air: IAirWork, now: number): IProgress {
+  const sea = progress.sea ?? emptySeaControl();
+  if ((sea.airOps ?? []).length === 0) return progress;
+  const struck = Object.fromEntries(Object.entries(sea.struck ?? {}).filter(([, at]) => now - at < 48 * WORLD_HOUR_MS));
+  for (const id of air.struck) struck[id] = now;
+  let events = sea.events;
+  for (const p of air.ports) events = addRegionEvent(events, p.region, 'portStrike', p.at);
+  let next: IProgress = { ...progress, sea: { ...sea, airOps: air.ops, struck, ...(events ? { events } : {}) } };
+  next = withQuestEvents(next, [['airRecon', air.found.length], ['airStrike', air.struck.length], ['portStrike', air.ports.length]], now);
+  return next;
 }
 
 /**

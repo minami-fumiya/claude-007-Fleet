@@ -16,7 +16,7 @@ import { awardEarnedMedals } from './MedalContext';
 import { ISortieState } from '@/types/Sortie';
 import { IBaseWork, nationBases } from '@/systems/BaseSystem';
 import { completeTimers, finishBuilds } from '@/systems/TimerSystem';
-import { Facilities, FacilityId, holdCap, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
+import { COMMON_FACILITIES, Facilities, FacilityId, FORWARD_FACILITIES, holdCap, IFacilityJob, regenRules } from '@/systems/FacilitySystem';
 import { INCOME, Ledger, LedgerCategory, recordLedger, resourceDelta } from '@/systems/LedgerSystem';
 import { Nation } from '@/types/Nation';
 import { parseSeenNew, SeenNew } from '@/systems/NewMarks';
@@ -534,7 +534,9 @@ function parseJobs(v: unknown): IDockJob[] {
     .map((d) => (typeof d.base === 'string' ? { shipId: d.shipId, endsAt: d.endsAt, base: d.base } : { shipId: d.shipId, endsAt: d.endsAt }));
 }
 
-const FACILITY_IDS = new Set<string>(['fuelTank', 'ammoDepot', 'steelMill', 'airBase', 'workshop', 'unique']);
+// 0.0.75: the forward bases' facilities (#373: 補給廠・泊地修理所・基地航空隊・前線工作所・前進遠征拠点) were dropped on
+// loading since 0.0.50; every facility id is kept now.
+const FACILITY_IDS = new Set<string>(['unique', ...COMMON_FACILITIES.map((f) => f.id), ...FORWARD_FACILITIES.map((f) => f.id)]);
 
 function parseFacilities(v: unknown): Facilities {
   const out: Facilities = {};

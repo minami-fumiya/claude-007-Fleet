@@ -57,7 +57,7 @@ export const CLASS_WEIGHT: Record<ShipClass, number> = {
 };
 
 /** What a fight or a duty did to a region (saved with the navy's 制海権). */
-export type RegionEventKind = 'win' | 'loss' | 'raid' | 'mine' | 'sweep' | 'counter' | 'lost';
+export type RegionEventKind = 'win' | 'loss' | 'raid' | 'mine' | 'sweep' | 'counter' | 'lost' | 'portStrike';
 export interface IRegionEvent {
   region: string;
   kind: RegionEventKind;
@@ -65,7 +65,7 @@ export interface IRegionEvent {
   d: number;
   at: number;
 }
-export const EVENT_POINTS: Record<RegionEventKind, number> = { win: 8, loss: -10, raid: 5, mine: 15, sweep: 5, counter: 12, lost: -40 };
+export const EVENT_POINTS: Record<RegionEventKind, number> = { win: 8, loss: -10, raid: 5, mine: 15, sweep: 5, counter: 12, lost: -40, portStrike: 4 };
 /** The events kept (the oldest drop first). */
 export const MAX_EVENTS = 120;
 
@@ -77,6 +77,8 @@ interface IRegionIndex {
   regions: ISeaRegion[];
   /** Region index of each sector (row-major), -1 for land */
   cell: Int16Array;
+  /** 補給線 (0.0.75): the regions whose sea touches each region's */
+  next: Map<string, Set<string>>;
 }
 
 let index: IRegionIndex | null = null;
@@ -148,7 +150,23 @@ function build(map: IWorldMap = WORLD_MAP): IRegionIndex {
     }
   }
   for (let k = 0; k < cell.length; k++) if (cell[k] >= 0) regions[cell[k]].cells++;
-  return { regions, cell };
+  // Regions side by side on the sea (across the theaters too: the sea is one).
+  const next = new Map<string, Set<string>>(regions.map((r) => [r.id, new Set<string>()]));
+  for (let r = 0; r < map.rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const a = cell[r * cols + c];
+      if (a < 0) continue;
+      for (const [dc, dr] of [[1, 0], [0, 1]]) {
+        const nr = r + dr;
+        if (!inRows(nr, map)) continue;
+        const b = cell[nr * cols + wrapCol(c + dc, cols)];
+        if (b < 0 || b === a) continue;
+        next.get(regions[a].id)!.add(regions[b].id);
+        next.get(regions[b].id)!.add(regions[a].id);
+      }
+    }
+  }
+  return { regions, cell, next };
 }
 
 function idx(): IRegionIndex {
@@ -170,6 +188,11 @@ export function regionAt(s: ISectorRef): ISeaRegion | null {
   if (!inRows(s.r)) return null;
   const k = cell[s.r * WORLD_MAP.cols + wrapCol(s.c)];
   return k >= 0 ? regions[k] : null;
+}
+
+/** The regions whose sea touches a region's (補給線, 0.0.75). */
+export function regionNeighbours(id: string): ReadonlySet<string> {
+  return idx().next.get(id) ?? new Set();
 }
 
 /** The region an area is round. */
@@ -200,7 +223,19 @@ export interface IControlInput {
   events: readonly IRegionEvent[];
   /** A ship's class (for its weight on duty); undefined counts half */
   classOf: (shipId: string) => ShipClass | undefined;
+  /** 制空権 (0.0.75): each region's air control (0..100); above 50 it helps hold the sea */
+  airOf?: (regionId: string) => number;
+  /** 補給線 (0.0.75): the regions held but cut off from every harbour (their control sinks) */
+  cut?: ReadonlySet<string>;
 }
+
+/** 制空権 (0.0.75): the sky held helps hold the sea — up to +10 at 100% (nothing below 50%). */
+export function airSeaPoints(air: number): number {
+  return Math.max(0, air - 50) * 0.2;
+}
+
+/** 補給線 (0.0.75): what a region held but cut off from every harbour loses. */
+export const CUT_PENALTY = 15;
 
 /** The fights of late in a region, faded by their age (world hours). */
 export function eventPoints(events: readonly IRegionEvent[], region: string, now: number): number {
@@ -238,7 +273,9 @@ export function basePoints(region: ISeaRegion, input: Pick<IControlInput, 'natio
 
 /** 制海権 of a region for a navy: 0..100. */
 export function regionControl(region: ISeaRegion, input: IControlInput, now: number): number {
-  const v = basePoints(region, input) + presencePoints(input.duties, region.id, input.classOf) + eventPoints(input.events, region.id, now);
+  const air = input.airOf ? airSeaPoints(input.airOf(region.id)) : 0;
+  const cut = input.cut?.has(region.id) ? CUT_PENALTY : 0;
+  const v = basePoints(region, input) + presencePoints(input.duties, region.id, input.classOf) + eventPoints(input.events, region.id, now) + air - cut;
   return Math.max(0, Math.min(100, Math.round(v)));
 }
 

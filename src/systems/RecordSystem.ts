@@ -255,6 +255,10 @@ export interface IMedalContext {
   seasHeld?: number;
   /** 海の地方 (0.0.74): the most regions one navy holds at 50% or more */
   regionsHeld?: number;
+  /** 0.0.75: the most regions one navy holds the sky of (60%+), its supply reaches, its forward bases */
+  airHeld?: number;
+  suppliedRegions?: number;
+  outposts?: number;
   /** 国の道 (#416): navies whose own way is done */
   waysDone?: number;
   /** 艦ごとの戦歴 (#416): the most enemies one ship has sunk */
@@ -489,6 +493,14 @@ export const MEDALS: IMedalRule[] = [
   // 0.0.73 遠征と哨戒 (#445): sectors sailed by expeditions, enemies found by patrols
   ...ladder('expedition_voyage', '遠洋航海章', 'base', [100, 1000, 5000], (g) => `遠征で ${g} 区画を航海する`, (_r, c) => total(c, 'expeditionSectors')),
   ...ladder('patrol_eye', '哨戒章', 'campaign', [1, 20, 100], (g) => `哨戒の艦隊で敵を ${g} 回見つける`, (_r, c) => total(c, 'patrolSighting')),
+  // 0.0.75 制空権・補給線 (#445 #50): skies held, ships struck from the air, harbours struck, enemies found from the air,
+  // regions the supply reaches, forward bases on strongholds taken
+  ...ladder('air_superior', '制空章', 'campaign', [3, 10, 25], (g) => `1 つの国で、${g} の空の地方の制空権を 60% 以上にする`, (_r, c) => c.airHeld ?? 0),
+  ...ladder('air_striker', '対艦攻撃章', 'campaign', [1, 10, 50], (g) => `基地航空隊の対艦攻撃で敵艦隊を ${g} 回攻撃する`, (_r, c) => total(c, 'airStrike')),
+  ...ladder('port_raid', '港湾攻撃章', 'campaign', [1, 10, 30], (g) => `基地航空隊で敵の港を ${g} 回攻撃する`, (_r, c) => total(c, 'portStrike')),
+  ...ladder('air_recon', '航空索敵章', 'campaign', [1, 20, 100], (g) => `基地航空隊の索敵で敵を ${g} 回見つける`, (_r, c) => total(c, 'airRecon')),
+  ...ladder('supply_line', '補給線章', 'campaign', [5, 15, 30], (g) => `1 つの国で、補給線を ${g} の海の地方に届かせる`, (_r, c) => c.suppliedRegions ?? 0),
+  ...ladder('outpost', '前線基地章', 'campaign', [1], () => '要塞を落とした島に前線基地を置く', (_r, c) => c.outposts ?? 0),
   // 0.0.74 制海権 (#445): regions held at 50%+, counterattacks beaten at sea, convoys sunk on 通商破壊, hours of 船団護衛,
   // enemies intercepted, mines laid and seas swept, ship-hours trained
   ...ladder('region_held', '海上優勢章', 'campaign', [5, 15, 30], (g) => `1 つの国で、${g} の海の地方の制海権を 50% 以上にする`, (_r, c) => c.regionsHeld ?? 0),

@@ -10,16 +10,20 @@ import rn from '@/data/ships/rn.json';
 import fr from '@/data/ships/fr.json';
 import su from '@/data/ships/su.json';
 import rm from '@/data/ships/rm.json';
-import { baseOfProgress, baseReaches } from '@/systems/BaseSystem';
+import { baseOfProgress, baseReaches, openBases } from '@/systems/BaseSystem';
 import { theatersFor } from '@/systems/CampaignSystem';
 import type { IAnchoredFleet, IOpenSeaProgress, ISectorRef } from '@/systems/OpenSeaSystem';
-import { SECTOR_PX, colGap, dangerAt, findRoute, routeLength, wrapCol } from '@/systems/OpenSeaSystem';
+import { SECTOR_PX, WORLD_MAP, colGap, dangerAt, findRoute, homePort, routeLength, wrapCol } from '@/systems/OpenSeaSystem';
+import { AIR_HIGH, BASE_AIR_PER_LEVEL, HOME_AIR, IAirField, IAirInput, LAND_PLANE_MUL, PORT_DOWN_HOURS, airControl, airEffect } from '@/systems/AirControlSystem';
+import { landModelsFor } from '@/systems/AircraftSystem';
+import { Facilities, facilityLevel } from '@/systems/FacilitySystem';
+import { AircraftType } from '@/types/Aircraft';
 import { WORLD_HOUR_MS } from '@/systems/WorldClock';
 import type { IResident } from '@/systems/WorldSim';
 import { orderPos, runMs } from '@/systems/FleetOrders';
 import { emptySeaControl, ICounterattack, ISeaControl } from '@/systems/SeaControlSystem';
 import {
-  CONTROL_ENEMY, CONTROL_LOW, CONTROL_SAFE, IControlInput, IDutyFleet, ISeaRegion, RegionEventKind, addRegionEvent, incomeShare, regionAt, regionAtPx, regionControl, regionOfArea, seaRegions,
+  CONTROL_ENEMY, CONTROL_LOW, CONTROL_SAFE, IControlInput, IDutyFleet, ISeaRegion, RegionEventKind, addRegionEvent, incomeShare, regionAt, regionAtPx, regionById, regionControl, regionNeighbours, regionOfArea, seaRegions,
 } from '@/systems/SeaRegionSystem';
 import { ICampaignData } from '@/types/Campaign';
 import { Nation } from '@/types/Nation';
@@ -35,11 +39,17 @@ export function shipClassOf(id: string): ShipClass | undefined {
   return CLASS_OF.get(id);
 }
 
-interface IControlSource {
+export interface IControlSource {
   nation: string;
   campaign: readonly string[];
   sea?: ISeaControl;
   openSea?: Pick<IOpenSeaProgress, 'anchors'>;
+  /** 制空権・補給線 (0.0.75): the bases open and their facilities, the land planes developed */
+  facilities?: Facilities;
+  basesOpen?: string[];
+  merit?: number;
+  rankFloor?: number;
+  aircraftDev?: string[];
 }
 
 /** The mission a fleet away is on, if any: its duty's kind and the region it works in. */
@@ -65,15 +75,106 @@ export function dutyFleets(anchors: readonly IAnchoredFleet[], now: number): IDu
   });
 }
 
-export function controlInputOf(p: IControlSource, now: number): IControlInput {
-  return {
-    nation: p.nation,
-    cleared: p.campaign,
-    lost: p.sea?.lost ?? [],
-    duties: dutyFleets(p.openSea?.anchors ?? [], now),
-    events: p.sea?.events ?? [],
-    classOf: shipClassOf,
+/** The navy's bases open (the first always is). */
+function basesOpenOf(p: IControlSource): ReturnType<typeof openBases> {
+  return openBases({ ...p, campaign: [...p.campaign] });
+}
+
+/** 制空権 (0.0.75): the navy's airfields — the home port's own, and each base open with a 基地航空隊. */
+export function airFields(p: IControlSource): IAirField[] {
+  const mul = (p.aircraftDev ?? []).some((id) => landModelsFor(p.nation, AircraftType.Fighter).some((m) => m.id === id)) ? LAND_PLANE_MUL : 1;
+  const home = homePort(p.nation);
+  const out: IAirField[] = home ? [{ id: 'home', name: `${home.name}の飛行場`, at: { c: home.c, r: home.r }, power: HOME_AIR * mul }] : [];
+  for (const b of basesOpenOf(p)) {
+    const lv = facilityLevel(p.facilities ?? {}, b.id, 'baseAir');
+    const at = WORLD_MAP.bases[b.id];
+    if (lv > 0 && at) out.push({ id: b.id, name: b.name, at: { c: at.c, r: at.r }, power: BASE_AIR_PER_LEVEL * lv * mul });
+  }
+  return out;
+}
+
+export function airInputOf(p: IControlSource, duties: readonly IDutyFleet[]): IAirInput {
+  const carriers: Record<string, number> = {};
+  for (const d of duties) for (const id of d.shipIds) if (shipClassOf(id) === ShipClass.Carrier) carriers[d.region] = (carriers[d.region] ?? 0) + 1;
+  return { nation: p.nation, cleared: p.campaign, lost: p.sea?.lost ?? [], fields: airFields(p), carriers, ops: p.sea?.airOps ?? [] };
+}
+
+/** Every region's air control (id → %). */
+export function navyAir(p: IControlSource, now: number, theaters?: ReadonlySet<string>): Record<string, number> {
+  const air = airInputOf(p, dutyFleets(p.openSea?.anchors ?? [], now));
+  const out: Record<string, number> = {};
+  for (const r of seaRegions()) if (!theaters || theaters.has(r.theater)) out[r.id] = airControl(r, air);
+  return out;
+}
+
+/** 補給線 (0.0.75): where the supply starts — the home port, the bases open, the forward bases on strongholds taken. */
+export function supplySources(p: IControlSource): ISeaRegion[] {
+  const out: ISeaRegion[] = [];
+  const home = homePort(p.nation);
+  const at = (s: ISectorRef | undefined): void => {
+    const r = s ? regionAt(s) : null;
+    if (r && !out.includes(r)) out.push(r);
   };
+  if (home) at(home);
+  for (const b of basesOpenOf(p)) at(WORLD_MAP.bases[b.id]);
+  for (const id of p.sea?.outposts ?? []) at(WORLD_MAP.places?.[id]);
+  return out;
+}
+
+/** The regions the supply reaches: from its sources through the regions not the enemy's (CONTROL_LOW and up), side by side on the sea. */
+export function supplyReach(sources: readonly ISeaRegion[], held: (id: string) => boolean): Set<string> {
+  const seen = new Set(sources.map((r) => r.id));
+  const queue = [...seen];
+  for (let i = 0; i < queue.length; i++) {
+    for (const n of regionNeighbours(queue[i])) {
+      if (seen.has(n) || !held(n)) continue;
+      seen.add(n);
+      queue.push(n);
+    }
+  }
+  return seen;
+}
+
+/**
+ * What the control of a navy's regions is reckoned from: its areas, its fleets on duty, the fights of late, its sky
+ * (0.0.75), and the regions held but cut off from every harbour (they lose CUT_PENALTY).
+ */
+export function controlInputOf(p: IControlSource, now: number): IControlInput {
+  const duties = dutyFleets(p.openSea?.anchors ?? [], now);
+  const air = airInputOf(p, duties);
+  const airMemo = new Map<string, number>();
+  const airOf = (id: string): number => {
+    let v = airMemo.get(id);
+    if (v === undefined) {
+      const r = regionById(id);
+      v = r ? airControl(r, air) : 50;
+      airMemo.set(id, v);
+    }
+    return v;
+  };
+  const base: IControlInput = { nation: p.nation, cleared: p.campaign, lost: p.sea?.lost ?? [], duties, events: p.sea?.events ?? [], classOf: shipClassOf, airOf };
+  const memo = new Map<string, number>();
+  const held = (id: string): number => {
+    let v = memo.get(id);
+    if (v === undefined) {
+      const r = regionById(id);
+      v = r ? regionControl(r, base, now) : 0;
+      memo.set(id, v);
+    }
+    return v;
+  };
+  const reach = supplyReach(supplySources(p), (id) => held(id) >= CONTROL_LOW);
+  const cut = new Set(seaRegions().filter((r) => r.areaId && !reach.has(r.id) && held(r.id) >= CONTROL_SAFE).map((r) => r.id));
+  return { ...base, cut };
+}
+
+/** 補給線: the regions the navy's supply reaches now. */
+export function suppliedRegions(p: IControlSource, now: number): Set<string> {
+  const input = controlInputOf(p, now);
+  return supplyReach(supplySources(p), (id) => {
+    const r = regionById(id);
+    return !!r && regionControl(r, input, now) >= CONTROL_LOW;
+  });
 }
 
 /** The seas a navy sails (its theaters its bases reach). */
@@ -207,4 +308,37 @@ export function withAreaEvent<T extends { sea?: ISeaControl }>(p: T, areaId: str
   if (!region) return p;
   const sea = p.sea ?? emptySeaControl();
   return { ...p, sea: { ...sea, events: addRegionEvent(sea.events, region.id, kind, now) } };
+}
+
+/** 制空章 (0.0.75): the regions (not home waters) whose sky the navy holds at AIR_HIGH or more. */
+export function airHeldBy(p: IControlSource, now: number): number {
+  const air = navyAir(p, now);
+  return seaRegions().filter((r) => !r.home && (air[r.id] ?? 0) >= AIR_HIGH).length;
+}
+
+/** 補給線章 (0.0.75): the regions (not home waters) the supply reaches. */
+export function suppliedBy(p: IControlSource, now: number): number {
+  const reach = suppliedRegions(p, now);
+  return seaRegions().filter((r) => !r.home && reach.has(r.id)).length;
+}
+
+/** 補給線: within it a sector burns this share of the plain fuel, and a port patches the ships this much further. */
+export const SUPPLIED_FUEL_MUL = 0.8;
+export const SUPPLIED_REPAIR_BONUS = 0.2;
+
+/** 制空権 (0.0.75): what the sky over an area's region does to its battle (scouts out, or a raid coming). */
+export function areaAirEffect(p: IControlSource, areaId: string, now: number): 'scout' | 'raid' | null {
+  const region = regionOfArea(areaId);
+  return region ? airEffect(region, airInputOf(p, dutyFleets(p.openSea?.anchors ?? [], now))) : null;
+}
+
+/** 港湾攻撃 (0.0.75): whether the harbour of an area's region was struck lately (its ships go unrepaired). */
+export function portDown(p: { sea?: ISeaControl }, areaId: string, now: number): boolean {
+  const region = regionOfArea(areaId);
+  return !!region && (p.sea?.events ?? []).some((e) => e.kind === 'portStrike' && e.region === region.id && now >= e.at && now - e.at < PORT_DOWN_HOURS * WORLD_HOUR_MS);
+}
+
+/** 対艦攻撃 (0.0.75): whether a resident was struck from the air. */
+export function wasStruck(p: { sea?: ISeaControl }, residentId: string): boolean {
+  return (p.sea?.struck?.[residentId] ?? 0) > 0;
 }
