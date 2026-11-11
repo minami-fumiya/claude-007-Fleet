@@ -1,4 +1,6 @@
 # Todo - WW2 Naval Fleet Game
+
+> **過去の記録** (Sprint 0〜12 の作業一覧)。今の作業は GitHub の issue、版の計画は `docs/VERSIONS.md`、ブランチと CI の流れは `CLAUDE.md` を読む。この文書は更新しない。
 > Phaser.js 3 + TypeScript + Vite | GitHub: `claude-007-Fleet` | Vercel: `claude-007-fleet`
 
 ---

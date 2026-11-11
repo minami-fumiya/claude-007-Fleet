@@ -1,6 +1,6 @@
 # Roadmap
 
-> バージョン番号 (アルファ版のくくり) は `docs/VERSIONS.md` を正とする。下の「v1.0」などの表記は旧来の呼び方。
+> **過去の記録** (スプリントの時代の計画)。今の版と計画は `docs/VERSIONS.md` を正とする。下の「v1.0」などの表記は旧来の呼び方。この文書は更新しない。
 
 ## Phase 1: Foundation (Sprints 0–2)
 - Sprint 0: Environment & infrastructure setup

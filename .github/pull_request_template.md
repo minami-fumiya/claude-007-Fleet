@@ -1,21 +1,31 @@
-## Sprint
-<!-- Sprint number and name. e.g., Sprint 1 — 型定義・シーン基盤・大和1隻 -->
+## 概要
+<!-- 何のための PR か。版の PR は版番号と名前、対応する issue (#番号) -->
 
-## 変更内容 (Changes)
-<!-- Bullet list of what was added or changed -->
--
+## 変更
+<!-- 足した・変えた・消したものを箇条書きで -->
 -
 
-## テスト確認 (Test Checklist)
-- [ ] `npm run typecheck` passes
-- [ ] `npm run test` passes
-- [ ] `npm run build` succeeds
-- [ ] Manual smoke test in browser (dev server)
-- [ ] Vercel Preview URL verified (if applicable)
+## 保存 (セーブ)
+<!-- 保存形式に触れたか。触れた時: 新しい項目と既定値。触れていなければ「変更なし」 -->
 
-## 仕様書参照 (Spec References)
-<!-- Links to relevant docs/specs/ files -->
--
+## 確認
+- [ ] `npm run lint`
+- [ ] `npm run typecheck`
+- [ ] `npm run test`
+- [ ] `npm run build` (コードを変えた時)
+- [ ] `npm run test:e2e` (画面を変えた時、縦・横)
+
+## 版の PR の時
+<!-- 版に入らない PR (docs・小さな修正) はこの節を消す -->
+- [ ] `package.json` の版・`src/data/changelog.json`・`docs/VERSIONS.md`
+- [ ] `docs/balance/<版>.md` (版ごとのバランス確認)
+- [ ] 新しい要素の勲章 (任務・図鑑・ヘルプも)
+
+## issue の完成の条件
+<!-- issue の「完成の条件」を 1 つずつ、満たしたかどうか。満たせなかったものは理由も -->
+
+## 質問・引き継ぎ
+<!-- ユーザーに決めてほしいこと、範囲の外で見つけた問題 (issue に切り出したものは番号) -->
 
 ## スクリーンショット / 動画
-<!-- Attach if UI changes were made -->
+<!-- 画面を変えた時 -->
