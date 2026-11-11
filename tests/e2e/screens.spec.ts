@@ -2511,7 +2511,7 @@ test('制海権と任務 (0.0.74): the chart shows each region’s control; flee
   const anchors = [{ shipIds: ['takao', 'sendai'], at: base, fuel: 100 }, { shipIds: ['nagato'], at: sea(6, 6), fuel: 90 }];
   const errors = await boot(page, layout, { ...SAVE, version: 7, seenHelp: [...SCREENS, 'OpenSeaChartScene'], nations: { IJN: { ...SAVE.nations.IJN, openSea: { anchors } } } });
   type G = { game: Phaser.Game };
-  type C = { listMode: boolean; showControl: boolean; duty: number; drawTexture(redraw?: boolean): void; drawPanel(): void; drawChart(): void; control: Record<string, number>; d: {
+  type C = { listMode: boolean; showControl: string; duty: number; drawTexture(redraw?: boolean): void; drawPanel(): void; drawChart(): void; control: Record<string, number>; d: {
     onPatrol(i: number, at: { c: number; r: number }, s: string, m?: string): string | null; onIntercept(i: number): string | null; onStop(i: number): void;
   } };
   await open(page, 'BattleScene', { openSea: true, mapKey: 'open-sea' });
@@ -2521,7 +2521,7 @@ test('制海権と任務 (0.0.74): the chart shows each region’s control; flee
   // 制海権の色分け: the regions of the navy's seas have their control.
   const regions = await page.evaluate(() => {
     const c = (window as unknown as G).game.scene.getScene('OpenSeaChartScene') as unknown as C;
-    c.showControl = true;
+    c.showControl = 'sea';
     c.drawTexture(true);
     c.drawPanel();
     return Object.keys(c.control).length;

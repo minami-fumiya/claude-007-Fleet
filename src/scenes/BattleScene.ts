@@ -121,7 +121,8 @@ import { campaignSide, enemyNationFor, enemyShips, firstSReward, isUnlocked, rec
 import { addBattle, addGiantBattle } from '@/systems/ShipRecordSystem';
 import { COUNTER_HOURS, counterTargets, countSortie, defenseReward, emptySeaControl, retakeArea, settleDefense } from '@/systems/SeaControlSystem';
 import { CONTROL_SAFE, controlWord, fuelMul, regionAt, regionAtPx, regionOfArea } from '@/systems/SeaRegionSystem';
-import { counterId, isCounterId, navyControl, planCounter, sweptArea, withAreaEvent, withRegionEvent } from '@/utils/SeaControlView';
+import { areaAirEffect, counterId, isCounterId, navyControl, planCounter, portDown, SUPPLIED_FUEL_MUL, SUPPLIED_REPAIR_BONUS, suppliedRegions, sweptArea, wasStruck, withAreaEvent, withRegionEvent } from '@/utils/SeaControlView';
+import { PORT_DOWN_MUL, STRUCK_MUL } from '@/systems/AirControlSystem';
 import { worldResidents } from '@/utils/FleetOrderRunner';
 import { noteEnemies, PX_PER_NM, recordBattle } from '@/systems/RecordSystem';
 import { techLevel, techModifiers, techPoints } from '@/systems/FleetTechSystem';
@@ -179,6 +180,8 @@ function setWorldSize(w: number, h: number): void {
 /** 基地航空隊 (#373): how long the base's scouts show the enemy, and when its strikes fly (battle ms). */
 const BASE_AIR_SCOUT_MS = 20_000;
 const BASE_AIR_STRIKES_AT = [25_000, 70_000];
+/** 制空権 (0.0.75): the enemy's land planes come this long into a battle in a sky it holds. */
+const AIR_RAID_AFTER_MS = 45_000;
 const CAMERA_LERP = 0.12;
 /** Ships spawn at least this far apart (line-ahead spacing is 90 px). */
 const SPAWN_GAP = 80;
@@ -249,6 +252,7 @@ export class BattleScene extends Phaser.Scene {
   private residentsDay = -1;
   private residentsAt = 0;
   private controlCache: { at: number; map: Record<string, number> } | null = null;
+  private supplyCache: { at: number; set: Set<string> } | null = null;
   private nearResidents: Array<{ r: IResident; pos: IResidentPos }> = [];
   /** Friendly patrols already called to a fight (once each) */
   private calledFriends = new Set<string>();
@@ -431,6 +435,10 @@ export class BattleScene extends Phaser.Scene {
   private baseAirSent = 0;
   /** How long the base's scouts show the enemy (longer with a flying boat, #408) */
   private baseScoutMs = BASE_AIR_SCOUT_MS;
+  /** 制空権 (0.0.75): the sky held (scouts out) or the enemy's (a raid at airRaidAt) */
+  private airScout = false;
+  private airRaidAt = -1;
+  private airRaidField: BaseShip | null = null;
   /** 海の障害 (#368): minefields and nets of this sea, their drawing, and what came of them */
   private hazards: IHazard[] = [];
   private hazardGfx: Phaser.GameObjects.Graphics | null = null;
@@ -621,6 +629,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.objective === Objective.Bombard) this.spawnLandTargets();
     this.setupConsumables();
     this.setupBaseAir(battleArea);
+    this.setupAirControl(battleArea);
     const startAngle = this.scenarioSetup?.player.positions[0]?.angle;
     if (startAngle !== undefined) for (const s of this.friendlies()) s.setAngle(startAngle);
     this.drawObjectiveZone();
@@ -1460,7 +1469,7 @@ export class BattleScene extends Phaser.Scene {
     // 特別海域 (#416): one class of ship against the main fleet, which comes in a little weaker.
     // 外洋 (#65): the group's strength follows the danger of the water.
     const world = this.battleData?.world;
-    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) : world ? worldEnemyScale(world.danger) * (world.controlled ? CONTROL_ENEMY_MUL : 1) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
+    const scaled = scaleModifiers((area && !this.exercise ? enemyScale(campaignData as ICampaignData, area, this.playerNation) * this.portDownMul(area) : world ? worldEnemyScale(world.danger) * (world.controlled ? CONTROL_ENEMY_MUL : 1) : 1) * (this.battleData?.special ? SPECIAL_ENEMY_SCALE : 1));
     // A theater's first area (#433): its torpedoes hit softer still, so one spread doesn't decide the navy's first fight.
     const opening = area !== undefined && !this.exercise && isOpeningArea(area, areaDepth(campaignData as ICampaignData, area, this.playerNation));
     const reach = opening ? { ...scaled, torpedoPowerMul: (scaled.torpedoPowerMul ?? 1) * OPENING_TORPEDO_MUL } : scaled;
@@ -1603,7 +1612,7 @@ export class BattleScene extends Phaser.Scene {
   private visionSources(ships: BaseShip[], recon: ReconSystem, air: AirOpsSystem): VisionSource[] {
     const sources: VisionSource[] = [];
     // 基地航空隊 (#373): the base's scouts show the whole enemy fleet for the first seconds of the battle.
-    if (air === this.playerAir && this.baseAirLevel > 0 && this.battleNow() < this.baseScoutMs) {
+    if (air === this.playerAir && (this.baseAirLevel > 0 || this.airScout) && this.battleNow() < this.baseScoutMs) {
       sources.push({ kind: 'circle', x: WORLD.w / 2, y: WORLD.h / 2, radius: Math.hypot(WORLD.w, WORLD.h) });
     }
     const env = this.conditions.visionMul;
@@ -1833,6 +1842,7 @@ export class BattleScene extends Phaser.Scene {
     // The player's own carrier strikes on command, unless touch / AUTO play is handling the fighting.
     const playerAuto = (carrier: BaseShip): boolean => carrier !== this.baseAirField && (carrier !== this.flagship || this.isTouch || this.autoMode);
     this.updateBaseAir(enemyView);
+    this.updateAirRaid(playerView);
     this.playerAir.update(
       time,
       delta,
@@ -1901,6 +1911,49 @@ export class BattleScene extends Phaser.Scene {
     this.baseAirField = field;
     // 陸上機 (#408): the base flies the navy's newest land planes developed.
     this.playerAir.register(field, AirOpsSystem.wingFor(data, NO_MODIFIERS, { perf: baseAirPerf(loadProgress(), this.playerNation) }));
+  }
+
+  /** 港湾攻撃 (0.0.75): an area whose harbour was struck lately meets its ships unrepaired. */
+  private portDownMul(area: ICampaignArea | undefined): number {
+    return area && !this.exercise && portDown(loadProgress(), area.id, Date.now()) ? PORT_DOWN_MUL : 1;
+  }
+
+  /**
+   * 制空権 (0.0.75): the sky over the area's region. Held (AIR_HIGH+), the navy's scouts show the enemy at the start;
+   * the enemy's (AIR_LOW or less, its airfields strong), its land planes raid the battle once, from out of sight.
+   */
+  private setupAirControl(area: ICampaignArea | undefined): void {
+    this.airScout = false;
+    this.airRaidAt = -1;
+    // The last fight's raiding airfield is gone (the scene goes on at sea).
+    if (this.airRaidField?.active) this.airRaidField.destroy();
+    this.airRaidField = null;
+    if (!area || area.training || this.scenario || this.exercise) return;
+    const effect = areaAirEffect(loadProgress(), area.id, Date.now());
+    if (effect === 'scout') this.airScout = true;
+    if (effect === 'raid') this.airRaidAt = this.battleNow() + AIR_RAID_AFTER_MS;
+  }
+
+  /** The enemy's land planes come in once, at their time, from beyond the enemy's side (0.0.75). */
+  private updateAirRaid(playerView: IShipView[]): void {
+    if (this.airRaidAt < 0 || this.gameOver || this.battleNow() < this.airRaidAt) return;
+    this.airRaidAt = -1;
+    const strip = (specialData as unknown as ISpecialData).landTargets.find((t) => t.airWing) as IShipData | undefined;
+    const lead = this.enemies.find((e) => e.isAlive);
+    if (!strip || !lead || !this.flagship.isAlive) return;
+    const data: IShipData = { ...strip, nation: this.enemyNation, airWing: { fighters: 0, diveBombers: 2, torpedoBombers: 2 } };
+    // Out of sight behind the enemy's fleet, never to come again this battle (it does not re-arm in time).
+    const dx = lead.x - this.flagship.x;
+    const dy = lead.y - this.flagship.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const field = this.spawnShip(data, lead.x + (dx / len) * 600, lead.y + (dy / len) * 600, NO_MODIFIERS, false);
+    field.setVisible(false);
+    (field.body as Phaser.Physics.Arcade.Body).enable = false;
+    this.airRaidField = field;
+    this.enemyAir.register(field, AirOpsSystem.wingFor(data, { ...NO_MODIFIERS, rearmMul: 100 }, { perf: eraLandPerf(this.enemyNation, airfieldYear(4)) }));
+    const target = chooseTarget(aiSelf(field), playerView.filter((v) => v.alive && !v.submerged).map((v) => ({ ...v, detected: true })), TACTICS[this.enemyNation]);
+    if (target) this.enemyAir.launchStrike(field, target.ship);
+    this.showToast('敵の陸上機が空襲に来ます (制空権が低い海)');
   }
 
   /** Sends the base's strikes at their times, at the nearest visible foe in reach (#373). */
@@ -2546,11 +2599,19 @@ export class BattleScene extends Phaser.Scene {
     return this.controlCache.map;
   }
 
+  /** 補給線 (0.0.75): the regions the supply reaches, reckoned again every ten seconds. */
+  private suppliedNow(): Set<string> {
+    const now = Date.now();
+    if (!this.supplyCache || now - this.supplyCache.at > 10_000) this.supplyCache = { at: now, set: suppliedRegions(loadProgress(), now) };
+    return this.supplyCache.set;
+  }
+
   /** The fuel a sector costs at a point: more where the navy's control is low. */
   private fuelMulAt(x: number, y: number): number {
     const region = regionAtPx(x, y, SECTOR_PX);
     const v = region ? this.controlNow()[region.id] : undefined;
-    return v === undefined ? 1 : fuelMul(v);
+    // 補給線 (0.0.75): within it the fleet burns less.
+    return (v === undefined ? 1 : fuelMul(v)) * (region && this.suppliedNow().has(region.id) ? SUPPLIED_FUEL_MUL : 1);
   }
 
   /** The navy's harbour (an open base or a port on the sea) nearest a point: where a convoy comes from (0.0.73). */
@@ -2676,7 +2737,7 @@ export class BattleScene extends Phaser.Scene {
     if (harbour) this.seaNote(`船団は${harbour.name}の方から来て、向こうの海へ抜けます。守り抜いてください`, 5000);
     if (homeAt && enemyHome) this.seaNote(`敵は${enemyHome.name}の方へ逃げます。先回りするか追って沈めてください`, 5000);
     this.enemyNation = nation;
-    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(enemyScale(data, area, this.playerNation)) };
+    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(enemyScale(data, area, this.playerNation) * this.portDownMul(area)) };
     const route = sortieRoute(area, ships);
     // The escorts wait between the fleet and the main body; a supply cache or a whirlpool pays or costs on entry.
     const node = route.find((n) => n.kind !== 'boss');
@@ -2698,6 +2759,7 @@ export class BattleScene extends Phaser.Scene {
     if (objective === Objective.Convoy) this.spawnConvoy();
     if (objective === Objective.Bombard) this.spawnLandTargets();
     this.setupHazards(area);
+    this.setupAirControl(area);
     this.drawObjectiveZone();
     if (objective !== Objective.Annihilate) {
       this.objectiveText = this.add
@@ -2735,7 +2797,9 @@ export class BattleScene extends Phaser.Scene {
     const registry = DataLoader.getRegistry(this);
     const theater = (campaignData as ICampaignData).theaters.find((t) => t.id === r.theater);
     const nation = (theater?.opponents?.[this.playerNation] ?? FORT_NATION[this.playerNation] ?? Nation.USN) as Nation;
-    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(r.danger)) };
+    // 対艦攻撃 (0.0.75): a fleet struck from the air comes in weaker.
+    const struck = wasStruck(loadProgress(), r.id);
+    const mods: IShipModifiers = { ...NO_MODIFIERS, ...scaleModifiers(worldEnemyScale(r.danger) * (struck ? STRUCK_MUL : 1)) };
     const at = { x: this.nearX(pos.x), y: pos.y };
     const warships = worldEnemyFleet(registry.byNation(nation), { id: r.id, danger: r.danger });
     if (warships.length === 0) {
@@ -3204,7 +3268,12 @@ export class BattleScene extends Phaser.Scene {
     const specials: IVoyageStop[] = special ? [{ id: special.id, name: `特別海域 (${weeklyRule(Date.now()).name})`, kind: 'special', c: special.c, r: special.r }] : [];
     // 記念日 (0.0.73): the day's historical battle where it was fought.
     const annivs: IVoyageStop[] = this.anniversarySeas().map((x) => ({ id: x.id, name: `${x.a.name} (記念日)`, kind: 'anniversary', c: x.c, r: x.r }));
-    return [...bases, ...stops, ...drills, ...specials, ...annivs];
+    // 前線基地 (0.0.75): the islands of the strongholds taken, as ports.
+    const outposts: IVoyageStop[] = (progress.sea?.outposts ?? []).flatMap((id) => {
+      const p = seaPlaces(progress.nation).find((x) => x.id === id);
+      return p ? [{ id: `outpost:${id}`, name: `${p.name}の前線基地`, kind: 'port' as const, c: p.c, r: p.r }] : [];
+    });
+    return [...bases, ...stops, ...drills, ...specials, ...annivs, ...outposts];
   }
 
   /**
@@ -3240,7 +3309,9 @@ export class BattleScene extends Phaser.Scene {
   /** A port on the sea (0.0.70): a full tank, the ships patched to PORT_REPAIR; the voyage goes on. */
   private callAtSeaPort(id: string): void {
     const v = this.voyage;
-    const place = seaPlaces(this.playerNation).find((p) => p.id === id);
+    const outpost = id.startsWith('outpost:');
+    const found = seaPlaces(this.playerNation).find((p) => p.id === (outpost ? id.slice('outpost:'.length) : id));
+    const place = found && outpost ? { ...found, id, name: `${found.name}の前線基地` } : found;
     if (!v || !place || this.engagement) return;
     // 制海権 (0.0.74): a port supplies only where the navy holds the sea (50%+).
     const held = this.controlNow()[regionAt(place)?.id ?? ''];
@@ -3252,11 +3323,13 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     v.refuel();
-    for (const s of this.friendlies()) if (s.isAlive) s.stats.currentHp = Math.max(s.stats.currentHp, Math.round(s.stats.maxHp * PORT_REPAIR));
+    // 補給線 (0.0.75): a port the supply reaches patches the ships further.
+    const repair = PORT_REPAIR + (this.suppliedNow().has(regionAt(place)?.id ?? '') ? SUPPLIED_REPAIR_BONUS : 0);
+    for (const s of this.friendlies()) if (s.isAlive) s.stats.currentHp = Math.max(s.stats.currentHp, Math.round(s.stats.maxHp * repair));
     const now = Date.now();
     const progress = loadProgress();
     saveProgress(withQuestEvents({ ...progress, world: markPlace(progress.world ?? emptyWorld(), place, now) }, [['portCall', 1]], now));
-    this.seaNote(`${place.name}で補給: 燃料 ${FUEL_MAX}・耐久 ${Math.round(PORT_REPAIR * 100)}% まで応急修理`);
+    this.seaNote(`${place.name}で補給: 燃料 ${FUEL_MAX}・耐久 ${Math.round(repair * 100)}% まで応急修理${repair > PORT_REPAIR ? ' (補給線の中)' : ''}`);
   }
 
   /** An oil field or a mine sailed through (0.0.70): its resources, once a game hour. */
@@ -4414,6 +4487,12 @@ export class BattleScene extends Phaser.Scene {
           progress = withQuestEvents({ ...progress, resources: g2.resources, wallet: addGold(walletOf(progress), FORT_GOLD), ledger: recordLedger(recordLedger(progress.ledger, 'battle', addResources(FORT_REWARD, g2.lost, -1), now), 'overflow', g2.lost, now) }, [['fortTaken', 1]], now);
           lost = addResources(lost, g2.lost);
           line += `  ·  要塞を攻略: ${formatResources(FORT_REWARD)}・ゴールド ${FORT_GOLD} (今週はまわりの敵が弱くなる)`;
+          // 前線基地 (0.0.75): the island taken holds a forward base from now on (supply, fuel and a patch-up).
+          const sea0 = progress.sea ?? emptySeaControl();
+          if (!(sea0.outposts ?? []).includes(w.spotId)) {
+            progress = { ...progress, sea: { ...sea0, outposts: [...(sea0.outposts ?? []), w.spotId] } };
+            line += '  ·  島に前線基地を置きました (補給線の起点・燃料と応急修理)';
+          }
         }
       }
       if (mustReturn(victory, fleet.map((s) => (s.isAlive ? s.stats.currentHp / Math.max(1, s.stats.maxHp) : 0)), HEAVY_DAMAGE)) {

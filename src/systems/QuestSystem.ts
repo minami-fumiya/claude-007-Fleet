@@ -115,6 +115,8 @@ export const QUEST_EVENTS = [
   // 0.0.74 (#445): 制海権 — convoys sunk on 通商破壊, counterattacks beaten, enemies intercepted, mines laid, seas swept,
   // and ship-hours trained
   'dutyRaid', 'counterRepel', 'interceptWin', 'mineLaid', 'seaSwept', 'trainHours', 'escortHours',
+  // 0.0.75 (#445): 制空権 — enemies found by air recon, ships struck from the air, harbours struck
+  'airRecon', 'airStrike', 'portStrike',
 ] as const;
 
 export type QuestEvent = (typeof QUEST_EVENTS)[number];
