@@ -1,5 +1,7 @@
 # Backlog — 未割り当てタスク
 
+> **過去の記録。** 未対応の作業は GitHub の issue と `docs/VERSIONS.md` の計画で管理する。この一覧は更新しない (実装済みの項目も、印は当時のまま)。
+
 Tasks not yet assigned to a sprint. Review before each sprint planning.
 
 ## Deferred from Sprint Planning

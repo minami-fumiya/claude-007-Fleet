@@ -1,5 +1,8 @@
 # Game Design Document — WW2 Naval Fleet
 
+> **最初の設計の記録** (スプリントの時代、0.0.1〜0.0.7-alpha)。遊びの骨組み (編成 → 戦闘 → 結果 → 母港) は今も同じだが、範囲・国の数・操作は今の版と違う。
+> 今の内容と計画は `docs/VERSIONS.md`、仕組みごとの仕様は `docs/specs/systems/` を正とする。
+
 ## Overview
 A real-time naval combat game set in World War II. Players command a fleet of
 historically accurate warships across Pacific, Atlantic, and Mediterranean theaters.
